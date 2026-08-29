@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@shared/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
 import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTemplate";
 import { Button } from "@shared/ui/button";
-import { Coins, Users } from "lucide-react";
+import { BarChart3, Coins, Users } from "lucide-react";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { PartnerProfitShareView } from "@modules/reports/components/PartnerProfitShareView";
 import { PartnerStatementView } from "@modules/reports/components/PartnerStatementView";
@@ -11,6 +11,13 @@ import { ReportLoadingSkeleton, ReportErrorState } from "@widgets/reports";
 import { useReportFilters } from "@shared/hooks/useReportFilters";
 import { usePartnerRightsReport } from "@modules/reports/hooks/usePartnerRightsReport";
 import { ProfitDistributionSidePanel } from "@modules/accounting/profit-distribution/components/ProfitDistributionSidePanel";
+
+type ViewMode = "profit-share" | "statement";
+
+const VIEW_OPTIONS: Record<ViewMode, string> = {
+  "profit-share": "تقاسم الأرباح",
+  "statement": "كشف الحساب",
+};
 
 export default function PartnerRightsReport() {
   const { baseCurrency, currencies, formatAmount, hasMultipleCurrencies } = useCurrencyContext();
@@ -21,6 +28,7 @@ export default function PartnerRightsReport() {
   const { loading, refreshing, lastLoadedAt, error, loadReportData, computed } = usePartnerRightsReport(filters);
 
   const [showProfitDistribution, setShowProfitDistribution] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>("profit-share");
 
   const formatValue = (value: number) =>
     formatAmount(value, {
@@ -45,14 +53,27 @@ export default function PartnerRightsReport() {
             onRefresh={() => void loadReportData()}
             lastLoadedAt={lastLoadedAt}
             extraFilters={
-              <Button
-                size="sm"
-                className="h-9 rounded-lg bg-white font-black text-slate-700 border border-slate-200 hover:bg-slate-50"
-                onClick={() => setShowProfitDistribution(true)}
-              >
-                <Coins className="me-2 h-4 w-4" />
-                توزيع الأرباح
-              </Button>
+              <>
+                <Select value={viewMode} onValueChange={(v) => setViewMode(v as ViewMode)}>
+                  <SelectTrigger className="h-9 w-auto min-w-[140px] rounded-lg border-slate-200 bg-white text-xs">
+                    <BarChart3 className="w-3.5 h-3.5 ms-1.5 text-slate-400" />
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(VIEW_OPTIONS).map(([value, label]) => (
+                      <SelectItem key={value} value={value}>{label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button
+                  size="sm"
+                  className="h-9 rounded-lg bg-white font-black text-slate-700 border border-slate-200 hover:bg-slate-50"
+                  onClick={() => setShowProfitDistribution(true)}
+                >
+                  <Coins className="me-2 h-4 w-4" />
+                  توزيع الأرباح
+                </Button>
+              </>
             }
           />
         }
@@ -66,21 +87,10 @@ export default function PartnerRightsReport() {
               <Users className="mb-3 h-12 w-12" />
               <p className="text-sm font-bold">لا يوجد شركاء نشطون لعرض التقرير</p>
             </div>
+          ) : viewMode === "profit-share" ? (
+            <PartnerProfitShareView computed={computed.profitShare} formatValue={formatValue} />
           ) : (
-            <Tabs defaultValue="profit-share" className="flex flex-col h-full" dir="rtl">
-              <div className="px-4 pt-3">
-                <TabsList className="bg-white border border-slate-200 p-1 h-11 rounded-xl shadow-sm">
-                  <TabsTrigger value="profit-share" className="rounded-lg px-5 gap-1.5 data-[state=active]:bg-blue-600 data-[state=active]:text-white transition-all font-bold">تقاسم الأرباح</TabsTrigger>
-                  <TabsTrigger value="statement" className="rounded-lg px-5 gap-1.5 data-[state=active]:bg-blue-600 data-[state=active]:text-white transition-all font-bold">كشف الحساب</TabsTrigger>
-                </TabsList>
-              </div>
-              <TabsContent value="profit-share" className="flex-1 min-h-0 mt-0">
-                <PartnerProfitShareView computed={computed.profitShare} formatValue={formatValue} />
-              </TabsContent>
-              <TabsContent value="statement" className="flex-1 min-h-0 mt-0">
-                <PartnerStatementView computed={computed.statement} formatValue={formatValue} />
-              </TabsContent>
-            </Tabs>
+            <PartnerStatementView computed={computed.statement} formatValue={formatValue} />
           )
         }
       />
