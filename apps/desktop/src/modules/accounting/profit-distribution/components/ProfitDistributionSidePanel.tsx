@@ -34,19 +34,10 @@ export function ProfitDistributionSidePanel({
     <FormPanel
       title="توزيع الأرباح"
       subtitle={sourceLabel}
-      icon={<Coins className="w-4 h-4" />}
+      icon={<Coins className="w-5 h-5 text-blue-600" />}
       onClose={onClose}
       width="lg"
       forceOverlay
-      footer={
-        <Button
-          variant="outline"
-          onClick={onClose}
-          className="h-9 px-4 rounded-lg text-slate-600 border-slate-200 text-xs font-bold"
-        >
-          إغلاق
-        </Button>
-      }
     >
       {sourceLoading || poolLoading ? (
         <div className="flex flex-col items-center justify-center py-16 text-slate-400">
