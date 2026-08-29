@@ -136,7 +136,6 @@ const rootNode = useMemo<AccountTreeNode>(() => ({
   return (
     <HierarchicalTreeTemplate
       title="دليل الحسابات"
-      toolbar={<></>}
       treeHeaderActions={
         <>
           <button

@@ -250,7 +250,6 @@ export default function Categories() {
     <>
       <HierarchicalTreeTemplate
       title="تصنيفات المواد"
-      toolbar={<></>}
       treeHeaderActions={
         <>
           <button
