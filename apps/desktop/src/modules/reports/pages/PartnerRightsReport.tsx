@@ -84,10 +84,11 @@ export default function PartnerRightsReport() {
           )
         }
       />
-      <ProfitDistributionSidePanel
-        isOpen={showProfitDistribution}
-        onClose={() => setShowProfitDistribution(false)}
-      />
+      {showProfitDistribution && (
+        <ProfitDistributionSidePanel
+          onClose={() => setShowProfitDistribution(false)}
+        />
+      )}
     </>
   );
 }

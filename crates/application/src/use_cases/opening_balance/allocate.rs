@@ -274,7 +274,7 @@ impl AllocateNetProfitUseCase {
                     return Err(AppError::Forbidden("يجب إغلاق أو قفل الفترة المالية قبل توزيع الأرباح".into()));
                 }
                 let window_end = cutover_end_of_day(period.end_date);
-                let journal_date = period.end_date.clone();
+                let journal_date = period.end_date;
                 (
                     format!("profit_distribution:period:{period_id}"),
                     window_end,

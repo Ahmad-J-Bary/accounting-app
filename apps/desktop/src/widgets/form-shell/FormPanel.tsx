@@ -6,6 +6,7 @@ import type { SidebarWidth } from "@widgets/sidebar-shell/types";
 
 interface FormPanelProps {
   title: string;
+  subtitle?: string;
   icon?: ReactNode;
   onClose: () => void;
   onSave?: () => void;
@@ -14,12 +15,14 @@ interface FormPanelProps {
   footer?: ReactNode;
   className?: string;
   width?: SidebarWidth;
+  forceOverlay?: boolean;
   saveLabel?: string;
   saveDisabled?: boolean;
 }
 
 export function FormPanel({
   title,
+  subtitle,
   icon,
   onClose,
   onSave,
@@ -28,12 +31,13 @@ export function FormPanel({
   footer,
   className,
   width,
+  forceOverlay,
   saveLabel = "حفظ البيانات",
   saveDisabled = false,
 }: FormPanelProps) {
   return (
-    <SidebarShell className={className} width={width} onClose={onClose}>
-      <SidebarHeader title={title} icon={icon} onClose={onClose} />
+    <SidebarShell className={className} width={width} onClose={onClose} forceOverlay={forceOverlay}>
+      <SidebarHeader title={title} subtitle={subtitle} icon={icon} onClose={onClose} />
       <div className="flex-1 overflow-y-auto custom-scrollbar"
         style={{
           padding: "var(--sidebar-container-py) var(--sidebar-container-px)",

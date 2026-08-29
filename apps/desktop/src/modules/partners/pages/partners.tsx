@@ -289,10 +289,11 @@ export default function Partners() {
         onClose={() => setPendingCapital(null)}
         onConfirm={handleCapitalConfirm}
       />
-      <ProfitDistributionSidePanel
-        isOpen={showProfitDistribution}
-        onClose={() => setShowProfitDistribution(false)}
-      />
+      {showProfitDistribution && (
+        <ProfitDistributionSidePanel
+          onClose={() => setShowProfitDistribution(false)}
+        />
+      )}
     </>
   );
 }
