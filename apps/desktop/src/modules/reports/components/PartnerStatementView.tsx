@@ -19,8 +19,8 @@ function SummaryCards({ computed, formatValue }: { computed: PartnerStatementCom
     let capital = 0, profits = 0, drawings = 0, finalAmount = 0;
     for (const row of computed.rows) {
       capital += row.capitalAmount;
-      profits += row.accumulatedProfits + row.thisYearProfit;
-      drawings += row.accumulatedDrawings + row.thisYearDrawings;
+      profits += row.currentAccount;
+      drawings += row.drawingsTotal;
       finalAmount += row.finalAmount;
     }
     return { capital, profits, drawings, finalAmount };
@@ -56,48 +56,48 @@ function usePartnerStatementColumns(formatValue: (value: number) => string) {
     },
     {
       id: "accumulatedProfits",
-      header: "أرباح سنوات سابقة",
-      label: "أرباح سنوات سابقة",
+      header: "أرباح مبقاة (فترات سابقة)",
+      label: "أرباح مبقاة (فترات سابقة)",
       accessor: (row) => formatValue(row.accumulatedProfits),
       align: "left",
       className: "justify-end tabular-nums font-black text-emerald-700",
     },
     {
       id: "accumulatedDrawings",
-      header: "مسحوبات سنوات سابقة",
-      label: "مسحوبات سنوات سابقة",
+      header: "مسحوبات (فترات سابقة)",
+      label: "مسحوبات (فترات سابقة)",
       accessor: (row) => formatValue(row.accumulatedDrawings),
       align: "left",
       className: "justify-end tabular-nums font-black text-rose-700",
     },
     {
       id: "currentAccount",
-      header: "الحساب الجاري",
-      label: "الحساب الجاري",
+      header: "الحساب الجاري (الأرباح المتراكمة)",
+      label: "الحساب الجاري (الأرباح المتراكمة)",
       accessor: (row) => formatValue(row.currentAccount),
       align: "left",
       className: "justify-end tabular-nums font-black text-indigo-700",
     },
     {
       id: "thisYearProfit",
-      header: "أرباح هذه السنة",
-      label: "أرباح هذه السنة",
+      header: "أرباح السنة الحالية",
+      label: "أرباح السنة الحالية",
       accessor: (row) => formatValue(row.thisYearProfit),
       align: "left",
       className: "justify-end tabular-nums font-black text-emerald-700",
     },
     {
       id: "thisYearDrawings",
-      header: "مسحوبات هذه السنة",
-      label: "مسحوبات هذه السنة",
+      header: "مسحوبات السنة الحالية",
+      label: "مسحوبات السنة الحالية",
       accessor: (row) => formatValue(row.thisYearDrawings),
       align: "left",
       className: "justify-end tabular-nums font-black text-rose-700",
     },
     {
       id: "finalAmount",
-      header: "المبلغ النهائي",
-      label: "المبلغ النهائي",
+      header: "إجمالي حقوق الشريك",
+      label: "إجمالي حقوق الشريك",
       accessor: (row) => formatValue(row.finalAmount),
       align: "left",
       className: "justify-end tabular-nums font-black text-indigo-700",
@@ -153,7 +153,7 @@ export function PartnerStatementView({ computed, formatValue }: PartnerStatement
         return { id: "capitalAmount_summary", columnId: "capitalAmount", align: "left", label: "إجمالي رأس المال", value: formatValue(totals.capitalAmount), className: "text-indigo-700 font-black" };
       }
       if (col.id === "accumulatedProfits") {
-        return { id: "accumulatedProfits_summary", columnId: "accumulatedProfits", align: "left", label: "إجمالي أرباح سابقة", value: formatValue(totals.accumulatedProfits), className: "text-emerald-700 font-black" };
+        return { id: "accumulatedProfits_summary", columnId: "accumulatedProfits", align: "left", label: "إجمالي أرباح مبقاة", value: formatValue(totals.accumulatedProfits), className: "text-emerald-700 font-black" };
       }
       if (col.id === "accumulatedDrawings") {
         return { id: "accumulatedDrawings_summary", columnId: "accumulatedDrawings", align: "left", label: "إجمالي مسحوبات سابقة", value: formatValue(totals.accumulatedDrawings), className: "text-rose-700 font-black" };
@@ -162,13 +162,13 @@ export function PartnerStatementView({ computed, formatValue }: PartnerStatement
         return { id: "currentAccount_summary", columnId: "currentAccount", align: "left", label: "الحساب الجاري", value: formatValue(totals.currentAccount), className: "text-indigo-700 font-black" };
       }
       if (col.id === "thisYearProfit") {
-        return { id: "thisYearProfit_summary", columnId: "thisYearProfit", align: "left", label: "أرباح هذه السنة", value: formatValue(totals.thisYearProfit), className: "text-emerald-700 font-black" };
+        return { id: "thisYearProfit_summary", columnId: "thisYearProfit", align: "left", label: "أرباح السنة الحالية", value: formatValue(totals.thisYearProfit), className: "text-emerald-700 font-black" };
       }
       if (col.id === "thisYearDrawings") {
-        return { id: "thisYearDrawings_summary", columnId: "thisYearDrawings", align: "left", label: "مسحوبات هذه السنة", value: formatValue(totals.thisYearDrawings), className: "text-rose-700 font-black" };
+        return { id: "thisYearDrawings_summary", columnId: "thisYearDrawings", align: "left", label: "مسحوبات السنة الحالية", value: formatValue(totals.thisYearDrawings), className: "text-rose-700 font-black" };
       }
       if (col.id === "finalAmount") {
-        return { id: "finalAmount_summary", columnId: "finalAmount", align: "left", label: "المبلغ النهائي", value: formatValue(totals.finalAmount), className: "text-indigo-700 font-black" };
+        return { id: "finalAmount_summary", columnId: "finalAmount", align: "left", label: "إجمالي حقوق الشريك", value: formatValue(totals.finalAmount), className: "text-indigo-700 font-black" };
       }
       return createSummarySpacer(col.id);
     });
@@ -176,7 +176,7 @@ export function PartnerStatementView({ computed, formatValue }: PartnerStatement
 
   return (
     <div className="flex flex-col h-full">
-      <ReportMeta title="كشف حساب الشريك" description="تقرير شامل يوضح تفاصيل رأس المال والأرباح المتراكمة والمسحوبات والحسابات الجارية لكل شريك" />
+      <ReportMeta title="كشف حساب الشريك" description="تقرير شامل يوضح رأس المال والحساب الجاري والأرباح المبقاة والمسحوبات وإجمالي حقوق كل شريك" />
       <SummaryCards computed={computed} formatValue={formatValue} />
       <div className="flex-1 min-h-0 overflow-hidden pb-4">
         <TableShell

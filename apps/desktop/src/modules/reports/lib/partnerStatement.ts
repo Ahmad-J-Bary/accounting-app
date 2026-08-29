@@ -7,6 +7,7 @@ export type PartnerStatementRow = {
   currentAccount: number;
   thisYearProfit: number;
   thisYearDrawings: number;
+  drawingsTotal: number;
   finalAmount: number;
 };
 

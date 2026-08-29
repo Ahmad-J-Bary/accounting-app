@@ -7,6 +7,8 @@ export type PartnerProfitShareRow = {
   capitalAmount: number;
   profitShareRatio: number;
   profitShareAmount: number;
+  currentYearProfitShare: number;
+  totalProfitAllocated: number;
   drawings: number;
   finalAmount: number;
   inventoryShare: number;
