@@ -88,6 +88,7 @@ export default function OpeningBalanceMigration() {
       await openingBalanceService.lockMigration(id);
       toast.success("تم قفل الترحيل");
       refetchMigrations();
+      await invalidateAccountingMutationQueries(queryClient);
     } catch (e) {
       toast.error("فشل القفل: " + e);
     } finally {

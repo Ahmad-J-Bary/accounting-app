@@ -97,7 +97,6 @@ export function PartnerForm({ open, onClose, partner, onSave, saving }: PartnerF
               <Label className="font-bold">المبلغ المشارك به</Label>
               
               <div className="grid grid-cols-2 gap-4">
-              {currencies.length > 1 && (
               <div className="space-y-2">
                 <Label className="text-xs font-bold text-slate-600">العملة الافتراضية</Label>
                 <Select value={formData.currency} onValueChange={(val) => setFormData({...formData, currency: val})}>
@@ -109,7 +108,6 @@ export function PartnerForm({ open, onClose, partner, onSave, saving }: PartnerF
                   </SelectContent>
                 </Select>
               </div>
-              )}
                 <div className="space-y-2">
                   <Label className="text-xs block text-right">المبلغ</Label>
                   <Input 

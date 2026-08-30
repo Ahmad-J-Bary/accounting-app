@@ -204,7 +204,6 @@ export function PartnerDetailPanel({
                       { label: "اتجاه الرصيد", value: settled ? "—" : balanceDirectionLabel(parseFloat((partner as CustomerDto | SupplierDto).debit || "0"), parseFloat((partner as CustomerDto | SupplierDto).credit || "0"), type) },
                     ]
                   : []),
-                { label: "العملة", value: currencyName ? `${currencyName.code} - ${currencyName.name_ar}` : baseCurrency?.code || "" },
                 { label: "الرصيد الحالي", value: settled ? "0" : String(bal) },
               ]}
             />

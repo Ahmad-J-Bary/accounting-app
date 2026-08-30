@@ -260,19 +260,6 @@ export function PartnerFormPanel({
                   </button>
                 </div>
               </div>
-              {currencies.length > 1 && (
-              <div className="space-y-1.5 col-span-2 sm:col-span-1">
-                <FieldLabel>العملة الافتراضية</FieldLabel>
-                <Select value={currency} onValueChange={setCurrency}>
-                  <SelectTrigger className="h-9 font-bold"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {currencies.map(c => (
-                      <SelectItem key={c.code} value={c.code}>{c.code} - {c.name_ar}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              )}
             </div>
           </SidebarSection>
         )}

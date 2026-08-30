@@ -5,7 +5,7 @@ import type { AccountDto, FiscalPeriodDto, CustomerDto, SupplierDto, ResidualCla
 import type { WizardStepDef } from "@modules/opening-balance/components/WizardShell";
 
 type AssetType = "buildings_land" | "automotive" | "equipment" | "furniture";
-import { queryClient, QUERY_KEYS } from "@shared/hooks/queryClient";
+import { queryClient, QUERY_KEYS, invalidateAccountingMutationQueries } from "@shared/hooks/queryClient";
 import { toLocalDatePart } from "@shared/lib/format";
 import { accountingService } from "@modules/accounting/api/accountingService";
 import { settingsService } from "@modules/core/api/settingsService";
@@ -216,7 +216,7 @@ export function useOpeningBalanceWizard() {
   const [inventoryInputs, setInventoryInputs] = useState<Record<string, { qty: string; cost: string }>>({});
   const [inventoryAccountId, setInventoryAccountId] = useState("");
   const [inventoryPosted, setInventoryPosted] = useState(false);
-  const [inventoryPosting, setInventoryPosting] = useState(false);
+  const [_inventoryPosting, setInventoryPosting] = useState(false);
   const [migration, setMigration] = useState<OpeningBalanceMigrationDto | null>(null);
   const [reconciliation, setReconciliation] = useState<OpeningReconciliationDto | null>(null);
   const [busy, setBusy] = useState(false);
@@ -285,7 +285,6 @@ export function useOpeningBalanceWizard() {
         }
       })
       .catch(() => {});
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [settingsReady, startMode]);
 
   // ── Persisted migration + reconciliation (re-entry at any step) ──────────
@@ -310,7 +309,6 @@ export function useOpeningBalanceWizard() {
           .catch(() => {});
       })
       .catch(() => {});
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [settingsReady, startMode]);
 
   const saveDraft = useCallback(async (): Promise<boolean> => {
@@ -458,7 +456,6 @@ export function useOpeningBalanceWizard() {
     if (!fiscalPeriodsLoaded) return;
     postLockJumped.current = true;
     setStep(STEPS_EXISTING.length - 1);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [settingsReady, startMode, migration, fiscalPeriods, fiscalPeriodsLoaded]);
 
   // ── Residual-classification spec (meaning-first: system picks the account) ─
@@ -647,19 +644,19 @@ export function useOpeningBalanceWizard() {
     setter((prev) => prev.map((l) => (l.key === key ? { ...l, ...patch } : l)));
   };
 
-  const addCashRow = useCallback(() => {
+  const _addCashRow = useCallback(() => {
     setCashBanks((prev) => [
       ...prev,
       { key: newLine().key, account_id: defaultCashAccount || "", amount: "", kind: "cash" },
     ]);
   }, [defaultCashAccount]);
-  const addBankRow = useCallback(() => {
+  const _addBankRow = useCallback(() => {
     setCashBanks((prev) => [
       ...prev,
       { key: newLine().key, account_id: defaultBankAccount || "", amount: "", kind: "bank" },
     ]);
   }, [defaultBankAccount]);
-  const addLoanRow = useCallback(() => {
+  const _addLoanRow = useCallback(() => {
     setLoans((prev) => [...prev, { key: newLine().key, account_id: defaultLoanAccount || "", amount: "", kind: "loan" }]);
   }, [defaultLoanAccount]);
 
@@ -1019,7 +1016,7 @@ export function useOpeningBalanceWizard() {
   // Builds and posts the OpeningBalance invoice from the wizard's inventory
   // rows so real stock lots are seeded; the MaterialOpeningBalance journal is
   // deferred while the opening window is open (single ledger posting R1).
-  const handlePostInventoryInvoice = useCallback(async (): Promise<boolean> => {
+  const _handlePostInventoryInvoice = useCallback(async (): Promise<boolean> => {
     const rows = effectiveInventory.filter((r) => toNum(r.qty) > 0 && toNum(r.cost) > 0);
     if (rows.length === 0) {
       toast.error("أدخل كميات وتكاليف للمواد قبل ترحيل رصيد البضاعة");
@@ -1118,7 +1115,6 @@ export function useOpeningBalanceWizard() {
     loans,
     liabilitiesManual,
     equityManual,
-    arManualLines,
     inventoryTotal,
     effectiveInventoryAccountId,
     hasResidualPlug,
@@ -1402,6 +1398,7 @@ export function useOpeningBalanceWizard() {
             await clearDraft();
           }
           toast.success("تم إتمام الترحيل بنجاح");
+          await invalidateAccountingMutationQueries(queryClient);
           setBusy(false);
           return true;
         } catch (e) {
