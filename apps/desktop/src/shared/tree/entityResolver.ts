@@ -1,10 +1,17 @@
 import { SYSTEM_ACCOUNT_IDS, type AccountDto } from "@erp/shared-types";
+import {
+  detectFixedAssetTypeFromName,
+  FIXED_ASSET_TYPE_BY_ACCOUNT_ID,
+  type FixedAssetType,
+} from "./fixedAssetTypes";
 import type {
   ResolvedTreeNode,
   TreeNodeBranch,
   TreeNodeCreatePanelKind,
   TreeNodeEntityType,
 } from "./nodeTypes";
+
+export type { FixedAssetType };
 
 /**
  * CENTRAL node resolver — the single place that classifies an account node and
@@ -141,6 +148,38 @@ function entityTypeFor(
   return "account-group";
 }
 
+function partnerRoleFor(node: AccountDto): "capital" | "drawings" | "current" | null {
+  switch (node.purpose) {
+    case "partner_capital":
+      return "capital";
+    case "partner_drawings":
+      return "drawings";
+    case "partner_current":
+      return "current";
+    default:
+      return null;
+  }
+}
+
+/**
+ * Infer the fixed-asset subtype (نوع الأصل) implied by a fixed-assets node:
+ * exact account id → ancestor asset-type account → name keywords. Returns null
+ * when the node does not map to one of the four asset types (e.g. the "الأصول
+ * الثابتة" parent group, which groups multiple types).
+ */
+export function inferFixedAssetType(node: AccountDto, nodes: AccountDto[]): FixedAssetType | null {
+  const byId = FIXED_ASSET_TYPE_BY_ACCOUNT_ID[node.id];
+  if (byId) return byId;
+  for (const id of ancestorIds(node, nodes)) {
+    const type = FIXED_ASSET_TYPE_BY_ACCOUNT_ID[id];
+    if (type) return type;
+  }
+  return (
+    detectFixedAssetTypeFromName(node.name_ar) ??
+    detectFixedAssetTypeFromName(node.name_en)
+  );
+}
+
 /**
  * Resolve an account node into its semantic classification + capabilities.
  * The virtual root (or a null node) yields an inert node with no operations.
@@ -177,6 +216,7 @@ export function resolveAccountNode(ctx: ResolveAccountNodeContext): ResolvedTree
     },
     linkedEntityId:
       node.linked_customer_id ?? node.linked_supplier_id ?? null,
+    linkedPartnerRole: branch === "partners" ? partnerRoleFor(node) : null,
   };
 }
 

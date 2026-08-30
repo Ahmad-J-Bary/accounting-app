@@ -1,5 +1,6 @@
 import {
   resolveAccountNode,
+  inferFixedAssetType,
   type ResolveAccountNodeContext,
 } from "@shared/tree/entityResolver";
 import { BRANCH_LABELS, CREATE_LABELS } from "@shared/tree/actionsResolver";
@@ -7,6 +8,7 @@ import type {
   ResolvedTreeNode,
   TreeNodeCreatePanelKind,
 } from "@shared/tree/nodeTypes";
+import type { FixedAssetType } from "@shared/tree/fixedAssetTypes";
 
 /**
  * Chart-of-accounts branch helpers. The classification itself lives in the
@@ -24,4 +26,6 @@ export const chartCreateLabel = (
   kind: TreeNodeCreatePanelKind | null,
 ): string => (kind ? CREATE_LABELS[kind] : "جديد");
 
-export type { ResolvedTreeNode, TreeNodeCreatePanelKind };
+export { inferFixedAssetType };
+
+export type { ResolvedTreeNode, TreeNodeCreatePanelKind, FixedAssetType };

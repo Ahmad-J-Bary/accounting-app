@@ -35,6 +35,11 @@ import { toast } from "sonner";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { getExchangeRate } from "@shared/lib/currency-strategy";
 import { useCompanyCapabilities } from "@shared/hooks";
+import {
+  detectFixedAssetTypeFromName,
+  FIXED_ASSET_TYPE_LABELS,
+  type FixedAssetType,
+} from "@shared/tree/fixedAssetTypes";
 
 interface FixedAssetFormProps {
   onClose: () => void;
@@ -42,15 +47,8 @@ interface FixedAssetFormProps {
   currencies: CurrencyDto[];
   asset?: FixedAssetDto;
   initialCategoryId?: string;
-}
-
-function detectAssetTypeFromCategory(catName: string): "buildings_land" | "automotive" | "equipment" | "furniture" | "" {
-  const lower = catName.toLowerCase();
-  if (lower.includes("أبنية") || lower.includes("أراضي") || lower.includes("land") || lower.includes("building")) return "buildings_land";
-  if (lower.includes("آليات") || lower.includes("سيارات") || lower.includes("مركبات") || lower.includes("automotive")) return "automotive";
-  if (lower.includes("معدات") || lower.includes("تجهيزات") || lower.includes("equipment")) return "equipment";
-  if (lower.includes("أثاث") || lower.includes("مفروشات") || lower.includes("furniture")) return "furniture";
-  return "";
+  /** Fixed-asset subtype implied by the selected COA account; locks the field. */
+  initialAssetType?: FixedAssetType;
 }
 
 // ===== Constants =====
@@ -91,6 +89,7 @@ export function FixedAssetForm({
   currencies,
   asset,
   initialCategoryId,
+  initialAssetType,
 }: FixedAssetFormProps) {
   const [saving, setSaving] = useState(false);
   const [categories, setCategories] = useState<AssetCategoryDto[]>([]);
@@ -117,7 +116,9 @@ export function FixedAssetForm({
   // --- Basic info ---
   const code = asset?.code ?? "";
   const [name, setName] = useState(asset?.name ?? "");
-  const [assetType, setAssetType] = useState<"buildings_land" | "automotive" | "equipment" | "furniture" | "">("");
+  const [assetType, setAssetType] = useState<FixedAssetType | "">("");
+  const isTypeLocked = !!initialAssetType && !isEditing;
+  const displayAssetType: FixedAssetType | "" = assetType || initialAssetType || "";
   const [categoryId, setCategoryId] = useState(asset?.category_id ?? "");
   const [warehouseId, setWarehouseId] = useState<string | undefined>(asset?.warehouse_id ?? undefined);
   const [location, setLocation] = useState(asset?.location ?? "");
@@ -216,7 +217,7 @@ export function FixedAssetForm({
       if (initialCategoryId && cats.length > 0) {
         const cat = cats.find((c) => c.id === initialCategoryId);
         if (cat) {
-          setAssetType(detectAssetTypeFromCategory(cat.name));
+          setAssetType(detectFixedAssetTypeFromName(cat.name) ?? "");
         }
       }
 
@@ -224,11 +225,16 @@ export function FixedAssetForm({
       if (asset && cats.length > 0) {
         const cat = cats.find((c) => c.id === asset.category_id);
         if (cat) {
-          setAssetType(detectAssetTypeFromCategory(cat.name));
+          setAssetType(detectFixedAssetTypeFromName(cat.name) ?? "");
         }
       }
     })();
   }, [initialCategoryId, asset, setWarehouses]);
+
+  // Fixed-asset subtype implied by the selected COA account.
+  useEffect(() => {
+    if (initialAssetType) setAssetType(initialAssetType);
+  }, [initialAssetType]);
 
   // Set default currency when currencies are loaded
   useEffect(() => {
@@ -382,7 +388,7 @@ export function FixedAssetForm({
   };
 
   // Panel icon based on assetType
-  const panelIcon = getAssetTypeIcon(assetType);
+  const panelIcon = getAssetTypeIcon(displayAssetType);
 
   return (
     <FormPanel
@@ -396,18 +402,29 @@ export function FixedAssetForm({
       {/* ── Section 1: Basic Info ── */}
       <SidebarSection title="البيانات الأساسية" icon={<FileText className="w-3.5 h-3.5" />} defaultOpen>
         <FormField label="نوع الأصل" required>
-          <Select dir="rtl" value={assetType} onValueChange={(v) => setAssetType(v as "buildings_land" | "automotive" | "equipment" | "furniture")}>
-            <SelectTrigger className="bg-white border-slate-200 h-9 w-full text-right text-xs font-bold text-slate-800">
-              <SelectValue placeholder="اختر نوع الأصل" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="buildings_land" className="text-xs">أبنية وأراضي</SelectItem>
-              <SelectItem value="automotive" className="text-xs">آليات ومركبات</SelectItem>
-              <SelectItem value="equipment" className="text-xs">معدات وتجهيزات</SelectItem>
-              <SelectItem value="furniture" className="text-xs">أثاث ومفروشات</SelectItem>
-            </SelectContent>
-          </Select>
-
+          {isTypeLocked && displayAssetType ? (
+            <div className="flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs">
+              {getAssetTypeIcon(displayAssetType)}
+              <span className="font-bold text-blue-800">
+                {FIXED_ASSET_TYPE_LABELS[displayAssetType as FixedAssetType]}
+              </span>
+              <span className="mr-auto text-[10px] font-normal text-blue-500">
+                مضمّن من الحساب المحدد
+              </span>
+            </div>
+          ) : (
+            <Select dir="rtl" value={assetType} onValueChange={(v) => setAssetType(v as FixedAssetType)}>
+              <SelectTrigger className="bg-white border-slate-200 h-9 w-full text-right text-xs font-bold text-slate-800">
+                <SelectValue placeholder="اختر نوع الأصل" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="buildings_land" className="text-xs">أبنية وأراضي</SelectItem>
+                <SelectItem value="automotive" className="text-xs">آليات ومركبات</SelectItem>
+                <SelectItem value="equipment" className="text-xs">معدات وتجهيزات</SelectItem>
+                <SelectItem value="furniture" className="text-xs">أثاث ومفروشات</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
         </FormField>
 
         {/* Code (read-only for editing) & Name */}

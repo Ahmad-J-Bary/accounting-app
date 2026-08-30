@@ -4,6 +4,7 @@ import type { PartnerFormPayload } from "@modules/partners/components/PartnerFor
 import type { ExpenseFormPayload } from "@modules/expenses/components/ExpenseFormPanel";
 import type { PartnerRequest } from "@modules/partners/api/partnerService";
 import type { TreeNodeCreatePanelKind, ResolvedTreeNode } from "@shared/tree/nodeTypes";
+import type { FixedAssetType } from "@shared/tree/fixedAssetTypes";
 import { AccountPanel } from "./AccountPanel";
 
 /*
@@ -58,6 +59,8 @@ interface BranchPanelProps {
   expenseParentCode?: string;
   /** Currency list forwarded to the FixedAssetForm. */
   currencies: CurrencyDto[];
+  /** Fixed-asset subtype implied by the selected asset account (locks the field). */
+  initialFixedAssetType?: FixedAssetType | null;
   entitySaving: boolean;
   onClose: () => void;
   onSavedAccount: () => void | Promise<void>;
@@ -85,6 +88,7 @@ export function BranchPanel({
   expenseItems,
   expenseParentCode,
   currencies,
+  initialFixedAssetType,
   entitySaving,
   onClose,
   onSavedAccount,
@@ -140,6 +144,7 @@ export function BranchPanel({
           <Suspense fallback={<LazyFallback />}>
             <FixedAssetFormLazy
               currencies={currencies}
+              initialAssetType={initialFixedAssetType ?? undefined}
               onClose={onClose}
               onSaved={onAssetSaved}
             />

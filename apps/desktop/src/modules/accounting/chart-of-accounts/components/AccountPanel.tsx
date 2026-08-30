@@ -3,6 +3,8 @@ import { DetailPanel } from "@widgets/sidebar-shell/DetailPanel";
 import { SidebarDetailGrid } from "@widgets/sidebar-shell/SidebarDetailGrid";
 import type { ResolvedTreeNode } from "@shared/tree/nodeTypes";
 import { AccountForm } from "./AccountForm";
+import { LinkedEntityDetails } from "./LinkedEntityDetails";
+import { TYPE_LABELS } from "../lib/types";
 
 export type AccountPanelMode = "view" | "create" | "edit";
 
@@ -63,6 +65,13 @@ export function AccountPanel({
   if (!selected) return null;
 
   const badge = resolved ? LINKED_BADGES[resolved.entityType] : undefined;
+  const typeMeta = TYPE_LABELS[selected.account_type];
+  const categoryLabel =
+    selected.category === "Summary"
+      ? "مجموعة ملخص"
+      : selected.category === "Detail"
+        ? "حساب تفصيلي"
+        : selected.category;
 
   return (
       <DetailPanel title="تفاصيل الحساب" subtitle={selected.code ?? undefined} onClose={onClose}>
@@ -75,6 +84,7 @@ export function AccountPanel({
         )}
         <SidebarDetailGrid
           title="بيانات الحساب"
+          columns={2}
           fields={[
             { label: "رقم الحساب", value: selected.code ?? "—" },
             { label: "اسم الحساب", value: selected.name_ar ?? "—" },
@@ -83,8 +93,17 @@ export function AccountPanel({
               value: parentName && parentName.trim().length > 0 ? parentName : "—",
             },
             { label: "المستوى", value: String(selected.level ?? 1) },
+            {
+              label: "نوع الحساب",
+              value: typeMeta?.label ?? selected.account_type ?? "—",
+            },
+            { label: "التصنيف", value: categoryLabel ?? "—" },
+            { label: "حساب نهائي (ورقة)", value: selected.is_final ? "نعم" : "لا" },
+            { label: "العملة", value: selected.currency || "—" },
+            { label: "الرصيد", value: selected.balance ?? "0" },
           ]}
         />
+        <LinkedEntityDetails resolved={resolved} account={selected} />
       </DetailPanel>
   );
 }

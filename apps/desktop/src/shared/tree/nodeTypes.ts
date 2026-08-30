@@ -53,6 +53,12 @@ export interface ResolvedTreeNode {
   capabilities: TreeNodeCapabilities;
   /** Linked partner id (customer/supplier) when entityType is *-account. */
   linkedEntityId?: string | null;
+  /**
+   * For partner accounts: which partner account slot matches this account
+   * (capital ↔ linked_account_id, drawings ↔ drawings_account_id,
+   * current ↔ current_account_id). Set only for entityType "partner-account".
+   */
+  linkedPartnerRole?: "capital" | "drawings" | "current" | null;
 }
 
 /** A toolbar action descriptor produced by the central action resolver. */

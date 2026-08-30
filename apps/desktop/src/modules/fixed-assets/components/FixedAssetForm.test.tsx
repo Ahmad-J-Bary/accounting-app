@@ -68,4 +68,24 @@ describe("FixedAssetForm", () => {
     expect(screen.getByText("شراء أصل جديد")).toBeInTheDocument();
     expect(screen.queryByText(/إضافة أصل سابق/)).not.toBeInTheDocument();
   });
+
+  it("initialAssetType: unlocks the type as an embedded fixed badge (no 'اختر نوع الأصل')", () => {
+    renderWithCompanyType(
+      <FixedAssetForm
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+        currencies={[]}
+        initialAssetType="automotive"
+      />,
+      COMPANY_TYPE_NEW as never,
+    );
+    expect(screen.getByText("آليات ومركبات")).toBeInTheDocument();
+    expect(screen.getByText("مضمّن من الحساب المحدد")).toBeInTheDocument();
+    expect(screen.queryByText("اختر نوع الأصل")).not.toBeInTheDocument();
+  });
+
+  it("without initialAssetType: the type selector is still offered", () => {
+    renderForm(COMPANY_TYPE_NEW);
+    expect(screen.queryByText("مضمّن من الحساب المحدد")).not.toBeInTheDocument();
+  });
 });

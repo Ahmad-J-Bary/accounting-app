@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { SYSTEM_ACCOUNT_IDS, type AccountDto } from "@erp/shared-types";
-import { resolveAccountNode } from "./entityResolver";
+import { resolveAccountNode, inferFixedAssetType } from "./entityResolver";
 import { resolveAccountNodeActions } from "./actionsResolver";
 import { CREATE_LABELS } from "./actionsResolver";
 
@@ -157,5 +157,61 @@ describe("resolveAccountNode — operational branches", () => {
 
     expect(resolved.branch).toBe("partners");
     expect(resolved.capabilities.createPanelKind).toBe("partner");
+  });
+});
+
+describe("inferFixedAssetType — implied asset subtype", () => {
+  const FIXED_ID = SYSTEM_ACCOUNT_IDS.FIXED_ASSET_BUILDINGS;
+
+  it("maps an exact asset-type account id to its subtype", () => {
+    const node = account({ id: SYSTEM_ACCOUNT_IDS.FIXED_ASSET_AUTOMOTIVE, name_ar: "آليات ومركبات" });
+    expect(inferFixedAssetType(node, [node])).toBe("automotive");
+  });
+
+  it("maps a descendant account to its ancestor asset-type subtype", () => {
+    const parent = account({ id: FIXED_ID, name_ar: "أبنية وأراضي" });
+    const child = account({ id: "1101-1", parent_id: parent.id, name_ar: "مبنى الإدارة" });
+    expect(inferFixedAssetType(child, [parent, child])).toBe("buildings_land");
+  });
+
+  it("returns null for the fixed-assets parent group (type is ambiguous)", () => {
+    const group = account({ id: "11", purpose: "fixed_asset", name_ar: "الأصول الثابتة" });
+    const child = account({ id: FIXED_ID, parent_id: group.id, name_ar: "أبنية وأراضي" });
+    expect(inferFixedAssetType(group, [group, child])).toBeNull();
+  });
+
+  it("falls back to name keywords for custom fixed-asset accounts", () => {
+    const node = account({ id: "x", purpose: "fixed_asset", name_ar: "معدات مكتبية", name_en: "" });
+    expect(inferFixedAssetType(node, [node])).toBe("equipment");
+  });
+
+  it("returns null for non fixed-asset accounts", () => {
+    const node = account({ id: "1202", name_ar: "الصندوق" });
+    expect(inferFixedAssetType(node, [node])).toBeNull();
+  });
+});
+
+describe("resolveAccountNode — partner account roles", () => {
+  for (const [purpose, role] of [
+    ["partner_capital", "capital"],
+    ["partner_drawings", "drawings"],
+    ["partner_current", "current"],
+  ] as const) {
+    it(`maps purpose ${purpose} to role ${role}`, () => {
+      const node = account({ id: `acc-${role}`, account_type: "Equity", purpose });
+      const resolved = resolveAccountNode({ node, nodes: [node], rootId: ROOT_ID });
+      expect(resolved.linkedPartnerRole).toBe(role);
+    });
+  }
+
+  it("leaves linkedPartnerRole null for a linked customer account", () => {
+    const node = account({
+      id: "1230-1",
+      linked_customer_id: "c1",
+      parent_id: SYSTEM_ACCOUNT_IDS.CUSTOMERS,
+    });
+    const resolved = resolveAccountNode({ node, nodes: [node], rootId: ROOT_ID });
+    expect(resolved.linkedPartnerRole).toBeNull();
+    expect(resolved.linkedEntityId).toBe("c1");
   });
 });

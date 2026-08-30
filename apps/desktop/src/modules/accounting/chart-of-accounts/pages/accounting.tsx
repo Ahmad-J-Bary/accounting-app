@@ -30,7 +30,7 @@ import { partnerService, type PartnerRequest } from "@modules/partners/api/partn
 import type { PartnerFormPayload } from "@modules/partners/components/PartnerFormPanel";
 import type { ExpenseFormPayload } from "@modules/expenses/components/ExpenseFormPanel";
 import { resolveAccountNodeActions } from "@shared/tree/actionsResolver";
-import { resolveChartNode } from "../lib/branches";
+import { resolveChartNode, inferFixedAssetType } from "../lib/branches";
 import type { TreeNodeCreatePanelKind } from "@shared/tree/nodeTypes";
 import { SYSTEM_ACCOUNT_IDS } from "@erp/shared-types";
 
@@ -155,6 +155,16 @@ export default function Accounting() {
   const resolved = useMemo(
     () => resolveChartNode({ node: selected, nodes: accounts, rootId: ROOT_ACCOUNT_ID }),
     [selected, accounts],
+  );
+
+  // Fixed-asset subtype implied by the selected asset account (e.g. selecting
+  // "آليات ومركبات" → automotive). Null = unknown → the form shows the selector.
+  const initialFixedAssetType = useMemo(
+    () =>
+      resolved?.branch === "fixed-assets" && selected
+        ? inferFixedAssetType(selected, accounts)
+        : null,
+    [resolved, selected, accounts],
   );
 
   const handleSelect = useCallback((node: AccountTreeNode) => {
@@ -441,6 +451,7 @@ export default function Accounting() {
             expenseItems={expenseItems}
             expenseParentCode={expensesParentAccount?.code}
             currencies={currencies}
+            initialFixedAssetType={initialFixedAssetType}
             entitySaving={entitySaving}
             onClose={() => setPanelMode(null)}
             onSavedAccount={handleSavedAccount}
