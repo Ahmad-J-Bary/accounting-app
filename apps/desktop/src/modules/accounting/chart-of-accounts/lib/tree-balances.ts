@@ -17,7 +17,17 @@ export function computeTreeBalances(
 ): AccountTreeNode[] {
   return nodes.map((node) => {
     const lt = ltMap.get(node.id);
-    const ownBalance = lt ? lt.debit - lt.credit : 0;
+    const isCreditNature =
+      node.account_type === "Liabilities" ||
+      node.account_type === "Equity" ||
+      node.account_type === "Revenue";
+
+    const ownBalance = lt
+      ? isCreditNature
+        ? lt.credit - lt.debit
+        : lt.debit - lt.credit
+      : parseSafeNumber(node.opening_balance);
+
     if (!node.children?.length) {
       return { ...node, balance: String(ownBalance) };
     }

@@ -51,7 +51,7 @@ describe("resolveAccountNode — general branch", () => {
     expect(resolved.entityType).toBe("account-group");
     expect(resolved.capabilities.canCreate).toBe(true);
     expect(resolved.capabilities.createPanelKind).toBe("account");
-    expect(resolved.capabilities.canViewLedger).toBe(false);
+    expect(resolved.capabilities.canViewLedger).toBe(true);
   });
 
   it("classifies a posting account with ledger access", () => {

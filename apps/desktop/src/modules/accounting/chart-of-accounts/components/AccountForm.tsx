@@ -6,6 +6,7 @@ import { SidebarSection } from "@widgets/sidebar-shell/SidebarSection";
 import type { AccountDto } from "@erp/shared-types";
 import { accountingService, type AccountCategory, type AccountType } from "@modules/accounting/api/accountingService";
 import { useCompanyCapabilities } from "@shared/hooks";
+import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import type { ResolvedTreeNode } from "@shared/tree/nodeTypes";
 
 interface AccountFormProps {
@@ -25,20 +26,6 @@ interface AccountFormProps {
   onSaved: () => void | Promise<void>;
 }
 
-const LINKED_EDIT_HINTS: Partial<Record<ResolvedTreeNode["entityType"], string>> = {
-  "customer-account": "هذا الحساب مرتبط بعميل. تُعدَّل بياناته المالية (الهاتف، العنوان، الرصيد، العملة) من صفحة العملاء.",
-  "supplier-account": "هذا الحساب مرتبط بمورد. تُعدَّل بياناته المالية (الهاتف، العنوان، الرصيد، العملة) من صفحة الموردين.",
-  "partner-account": "هذا الحساب مرتبط برأس مال شريك. تُعدَّل البيانات المالية (المبلغ المشارك به، المبلغ، نسبة الأرباح، طريقة التوزيع) من صفحة الشركاء.",
-};
-
-/**
- * Unified account create/edit form rendered inside the shared FormPanel.
- * Holds the numbering/child-code suggestion and the opening-balance field.
- * Linked accounts only permit editing the account identity (code/name/parent/
- * notes); their financial fields are edited from the partner pages, so the
- * COA form no longer carries phone/address/debit/credit/currency inputs (those
- * used to write the account row directly and break the ledger-driven tree).
- */
 export function AccountForm({
   open,
   mode,
@@ -50,6 +37,7 @@ export function AccountForm({
   onSaved,
 }: AccountFormProps) {
   const { canAccessOpeningWorkflow } = useCompanyCapabilities();
+  const { hasMultipleCurrencies } = useCurrencyContext();
 
   const [code, setCode] = useState("");
   const [codeSuffix, setCodeSuffix] = useState("");
@@ -72,14 +60,6 @@ export function AccountForm({
     (resolved?.entityType === "customer-account" ||
       resolved?.entityType === "supplier-account" ||
       resolved?.entityType === "partner-account");
-  const isPartnerOperational =
-    resolved?.entityType === "partner-account" &&
-    (resolved.linkedPartnerRole === "drawings" || resolved.linkedPartnerRole === "current");
-  const linkedHint = isLinkedAccount
-    ? isPartnerOperational
-      ? "هذا حساب شريك تشغيلي (مسحوبات أو حساب جاري). يُعدَّل اسم الحساب ورقمه هنا فقط؛ وهو حساب حركي تظهر قيمته من القيود ولا يُكوَّن برصيد افتتاحي."
-      : LINKED_EDIT_HINTS[resolved?.entityType ?? "root"]
-    : undefined;
 
   const suggestChildCode = useCallback(
     (account: AccountDto | null): string => {
@@ -234,11 +214,6 @@ export function AccountForm({
             {error}
           </div>
         )}
-        {linkedHint && (
-          <div className="bg-blue-50 text-blue-800 border border-blue-200 rounded-md px-3 py-2 text-xs leading-relaxed">
-            {linkedHint}
-          </div>
-        )}
         <SidebarSection title="المعلومات الأساسية">
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
@@ -292,40 +267,40 @@ export function AccountForm({
           </div>
         </SidebarSection>
 
-        {mode === "edit" && selected && !isLinkedAccount && (
+        {mode === "edit" && selected && !isLinkedAccount && canAccessOpeningWorkflow && (
           <SidebarSection title="البيانات المالية">
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <FieldLabel>العملة</FieldLabel>
-                <Input
-                  value={selected.currency || "العملة الأساسية"}
-                  disabled
-                  readOnly
-                  className="h-9 bg-slate-50 text-slate-600"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <FieldLabel>سعر الصرف</FieldLabel>
-                <Input
-                  value={selected.exchange_rate ?? "1.0000"}
-                  disabled
-                  readOnly
-                  className="h-9 bg-slate-50 text-slate-600"
-                />
-              </div>
-            </div>
-            {canAccessOpeningWorkflow && (
-              <div className="space-y-1.5 pt-3">
-                <FieldLabel>الرصيد الافتتاحي</FieldLabel>
-                <Input
-                  type="number"
-                  step="any"
-                  value={openingBalance}
-                  onChange={(e) => setOpeningBalance(e.target.value)}
-                  className="h-9 bg-white tabular-nums"
-                />
+            {hasMultipleCurrencies && (
+              <div className="grid grid-cols-2 gap-3 pb-3">
+                <div className="space-y-1.5">
+                  <FieldLabel>العملة</FieldLabel>
+                  <Input
+                    value={selected.currency || "العملة الأساسية"}
+                    disabled
+                    readOnly
+                    className="h-9 bg-slate-50 text-slate-600"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <FieldLabel>سعر الصرف</FieldLabel>
+                  <Input
+                    value={selected.exchange_rate ?? "1.0000"}
+                    disabled
+                    readOnly
+                    className="h-9 bg-slate-50 text-slate-600"
+                  />
+                </div>
               </div>
             )}
+            <div className="space-y-1.5">
+              <FieldLabel>الرصيد الافتتاحي</FieldLabel>
+              <Input
+                type="number"
+                step="any"
+                value={openingBalance}
+                onChange={(e) => setOpeningBalance(e.target.value)}
+                className="h-9 bg-white tabular-nums"
+              />
+            </div>
           </SidebarSection>
         )}
 

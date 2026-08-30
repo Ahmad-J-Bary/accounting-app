@@ -212,7 +212,7 @@ export function resolveAccountNode(ctx: ResolveAccountNodeContext): ResolvedTree
       createPanelKind: createPanelKindFor(branch),
       canEdit: true,
       canDelete: true,
-      canViewLedger: entityType !== "account-group",
+      canViewLedger: true,
     },
     linkedEntityId:
       node.linked_customer_id ?? node.linked_supplier_id ?? null,

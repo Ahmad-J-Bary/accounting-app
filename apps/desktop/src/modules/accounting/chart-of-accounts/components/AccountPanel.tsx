@@ -26,18 +26,13 @@ interface AccountPanelProps {
   onSaved: () => void | Promise<void>;
 }
 
-const LINKED_BADGES: Partial<Record<ResolvedTreeNode["entityType"], string>> = {
-  "customer-account": "مرتبط بعميل",
-  "supplier-account": "مرتبط بمورد",
-  "fixed-asset-account": "حساب أصل ثابت",
-  root: "الدليل الجذر",
-};
-
 /**
  * Side-panel content of the Chart of Accounts page. View mode renders the
  * unified DetailPanel with a detail grid; create/edit render the AccountForm
  * inside the shared FormPanel. Action buttons live in the page header, not here.
  */
+import { useCurrencyContext } from "@app/providers/CurrencyContext";
+
 export function AccountPanel({
   mode,
   selected,
@@ -48,9 +43,7 @@ export function AccountPanel({
   onClose,
   onSaved,
 }: AccountPanelProps) {
-  // Hooks must run on every render, before any early return. The entity query
-  // is disabled when the selected node is not a linked account, so nothing is
-  // fetched in create/edit or for plain accounts.
+  const { hasMultipleCurrencies } = useCurrencyContext();
   const entity = useLinkedEntityFields(resolved, selected ?? null);
 
   if (mode !== "view") {
@@ -70,15 +63,6 @@ export function AccountPanel({
 
   if (!selected) return null;
 
-  const badge = resolved
-    ? resolved.entityType === "partner-account"
-      ? resolved.linkedPartnerRole === "drawings"
-        ? "حساب المسحوبات (شريك)"
-        : resolved.linkedPartnerRole === "current"
-          ? "الحساب الجاري للشريك"
-          : "حساب رأس مال الشريك"
-      : LINKED_BADGES[resolved.entityType]
-    : undefined;
   const typeMeta = TYPE_LABELS[selected.account_type];
   const categoryLabel =
     selected.category === "Summary"
@@ -114,17 +98,11 @@ export function AccountPanel({
     entity.fields,
     entity.kind,
     resolved?.linkedPartnerRole ?? null,
+    hasMultipleCurrencies,
   );
 
   return (
       <DetailPanel title="تفاصيل الحساب" subtitle={selected.code ?? undefined} onClose={onClose}>
-        {badge && (
-          <div className="flex items-center">
-            <span className="inline-flex items-center rounded-lg bg-blue-50 text-blue-700 border border-blue-200 px-3 py-1 text-xs font-bold">
-              {badge}
-            </span>
-          </div>
-        )}
         <SidebarDetailGrid
           title={entity.title}
           columns={2}

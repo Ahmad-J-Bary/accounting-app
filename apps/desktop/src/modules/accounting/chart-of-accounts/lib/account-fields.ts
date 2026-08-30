@@ -42,11 +42,8 @@ export function mergeAccountEntityFields(
   entityFields: AccountField[],
   entityKind: LinkedEntityKind | null,
   partnerRole: PartnerAccountRole | null = null,
+  hasMultipleCurrencies = false,
 ): AccountField[] {
-  if (!entityKind) {
-    return accountFields.map(({ key, label, value }) => ({ key, label, value }));
-  }
-
   const isPartnerCapital =
     entityKind === "partner" && (partnerRole ?? "capital") === "capital";
 
@@ -54,9 +51,13 @@ export function mergeAccountEntityFields(
     entityKind === "customer" ||
     entityKind === "supplier" ||
     isPartnerCapital;
+
   const merged: AccountField[] = [];
 
   for (const field of accountFields) {
+    if (field.key === "account-currency" && !hasMultipleCurrencies) {
+      continue;
+    }
     const isFinancial =
       field.key === "account-currency" || field.key === "account-balance";
     if (dropFinancial && isFinancial) continue;

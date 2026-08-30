@@ -94,4 +94,20 @@ describe("computeTreeBalances — opening-stock exclusion", () => {
     const [assets] = computeTreeBalances(tree(accounts), ltMap);
     expect(assets.balance).toBe("30000");
   });
+
+  it("computes natural positive credit balances for Liabilities, Equity, and Revenue", () => {
+    const accounts: AccountDto[] = [
+      account("2", "الخصوم", "Liabilities", null, "0"),
+      account("21", "الموردون", "Liabilities", "2", "0"),
+      account("3", "حقوق الملكية", "Equity", null, "0"),
+      account("31", "رأس المال", "Equity", "3", "0"),
+    ];
+    const ltMap = new Map([
+      ledger("21", 0, 15000), // 15000 Credit
+      ledger("31", 0, 50000), // 50000 Credit
+    ]);
+    const [liabilities, equity] = computeTreeBalances(tree(accounts), ltMap);
+    expect(liabilities.balance).toBe("15000");
+    expect(equity.balance).toBe("50000");
+  });
 });

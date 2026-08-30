@@ -114,10 +114,22 @@ export default function Accounting() {
     }
   }, [accounts, rootNode]);
 
-  // Keep the selected account in sync with any updates from queries
+  // Helper to find a node recursively in the computed tree
+  const findNodeInTree = useCallback((nodes: AccountTreeNode[], id: string): AccountTreeNode | null => {
+    for (const node of nodes) {
+      if (node.id === id) return node;
+      if (node.children) {
+        const found = findNodeInTree(node.children, id);
+        if (found) return found;
+      }
+    }
+    return null;
+  }, []);
+
+  // Keep the selected account in sync with any updates from computedTree
   useEffect(() => {
-    if (accounts.length > 0 && selected && selected.id !== ROOT_ACCOUNT_ID) {
-      const updated = accounts.find((a) => a.id === selected.id);
+    if (computedTree.length > 0 && selected && selected.id !== ROOT_ACCOUNT_ID) {
+      const updated = findNodeInTree(computedTree, selected.id);
       if (updated) {
         if (
           updated.name_ar !== selected.name_ar ||
@@ -137,7 +149,7 @@ export default function Accounting() {
         setPanelMode(null);
       }
     }
-  }, [accounts, selected]);
+  }, [computedTree, selected, findNodeInTree]);
 
   // Sync root node balance in selected state when rootBalance changes
   useEffect(() => {
