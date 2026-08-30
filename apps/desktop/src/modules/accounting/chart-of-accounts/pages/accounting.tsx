@@ -125,7 +125,10 @@ export default function Accounting() {
           updated.code !== selected.code ||
           updated.account_type !== selected.account_type ||
           updated.parent_id !== selected.parent_id ||
-          updated.opening_balance !== selected.opening_balance
+          updated.opening_balance !== selected.opening_balance ||
+          updated.debit !== selected.debit ||
+          updated.credit !== selected.credit ||
+          updated.balance !== selected.balance
         ) {
           setSelected((prev) => (prev ? { ...prev, ...updated } : null));
         }

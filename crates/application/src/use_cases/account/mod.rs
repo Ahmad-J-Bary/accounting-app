@@ -6,6 +6,7 @@ pub mod update;
 pub mod delete;
 pub mod queries;
 pub mod display;
+pub mod opening_journal;
 
 pub use error::AccountUseCaseError;
 pub use types::CreateAccountCommand;

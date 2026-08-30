@@ -79,6 +79,8 @@ pub async fn update_account(
         Some(state.customer_repo.clone()),
         Some(state.supplier_repo.clone()),
         state.currency_repo.clone(),
+        state.journal_entry_repo.clone(),
+        state.opening_migration_repo.clone(),
     )
     .execute(account_id, cmd)
     .await

@@ -1,14 +1,9 @@
 use std::sync::Arc;
 use std::str::FromStr;
-use chrono::Utc;
 use rust_decimal::Decimal;
 use domain::accounting::account::Account;
-use domain::accounting::journal_entry::{JournalEntry, JournalLine, JournalType};
 use domain::shared::currency::Currency;
-
 use domain::shared::ids::{CustomerId, SupplierId};
-use domain::shared::money::Money;
-use domain::shared::MonetaryAmount;
 use domain::customers::Customer;
 use domain::suppliers::Supplier;
 
@@ -154,8 +149,6 @@ impl CreateAccountUseCase {
         let credit = cmd.credit.as_deref()
             .and_then(|s| Decimal::from_str(s).ok())
             .unwrap_or(Decimal::ZERO);
-        let currency_code = cmd.currency.unwrap_or_default();
-        let currency = Currency::new(&currency_code, &currency_code, &currency_code, "", 2, false);
 
         // Create AccountOpeningBalance journal entry for every new account
         // (skip for auto-created customer/supplier accounts, their entries are
@@ -166,84 +159,35 @@ impl CreateAccountUseCase {
             pid == RECEIVABLES_PARENT_ID || pid == PAYABLES_PARENT_ID
         }).unwrap_or(false);
 
-        let total_opening = debit - credit;
-
         if !is_receivable_or_payable && !opening_window {
-            let fx_rate = if currency.is_base {
-                Decimal::ONE
-            } else {
-                cmd.exchange_rate
-                    .as_deref()
-                    .and_then(|s| Decimal::from_str(s).ok())
-                    .filter(|r| *r > Decimal::ZERO)
-                    .unwrap_or(Decimal::ONE)
-            };
-            let amount_ma = MonetaryAmount::new(
-                Money::new(total_opening.abs(), currency.clone()),
-                fx_rate,
-            );
-            let zero_ma = MonetaryAmount::zero(currency.clone());
+            let total_opening = debit - credit;
 
-            let equity_account = self.account_repo
-                .find_by_code("53")
-                .await
-                .map_err(|e| AccountUseCaseError::RepositoryError(e.to_string()))?
-                .ok_or_else(|| AccountUseCaseError::Validation("حساب الرصيد الافتتاحي غير موجود: 53".into()))?;
+            // Single-sided entry: the COA account form records only
+            // `opening_balance` (no direction pair). Derive the leg from the
+            // account's normal balance so the opening journal actually books
+            // the balance — otherwise the tree, which feeds off posted
+            // journals, stays zero after the opening window closes.
+            let (opening_amount, debit_nature) =
+                if total_opening == Decimal::ZERO && opening_balance > Decimal::ZERO {
+                    (
+                        opening_balance,
+                        matches!(
+                            account.normal_balance(),
+                            domain::accounting::account::NormalBalance::Debit
+                        ),
+                    )
+                } else {
+                    (total_opening.abs(), total_opening > Decimal::ZERO)
+                };
 
-            let mut lines = Vec::new();
-
-            if total_opening > Decimal::ZERO {
-                // Debit the account, Credit opening balance equity
-                lines.push(JournalLine::new(
-                    account.id,
-                    amount_ma.clone(),
-                    zero_ma.clone(),
-                    format!("رصيد افتتاحي مدين للحساب: {}", account.name_ar),
-                ));
-                lines.push(JournalLine::new(
-                    equity_account.id,
-                    zero_ma,
-                    amount_ma,
-                    format!("رصيد افتتاحي للحساب: {}", account.name_ar),
-                ));
-            } else {
-                // Debit opening balance equity, Credit the account
-                lines.push(JournalLine::new(
-                    equity_account.id,
-                    amount_ma.clone(),
-                    zero_ma.clone(),
-                    format!("رصيد افتتاحي دائن للحساب: {}", account.name_ar),
-                ));
-                lines.push(JournalLine::new(
-                    account.id,
-                    zero_ma,
-                    amount_ma,
-                    format!("رصيد افتتاحي للحساب: {}", account.name_ar),
-                ));
-            }
-
-            let next_number = self.journal_repo
-                .get_next_entry_number()
-                .await
-                .map_err(|e| AccountUseCaseError::RepositoryError(e.to_string()))?;
-
-            let mut entry = JournalEntry::new(
-                next_number,
-                JournalType::AccountOpeningBalance,
-                lines,
-                Utc::now(),
-                format!("قيد افتتاح رصيد الحساب: {}", account.name_ar),
-                Some(account.id.to_string()),
+            super::opening_journal::book_opening_journal(
+                &account,
+                opening_amount,
+                debit_nature,
+                &self.account_repo,
+                &self.journal_repo,
             )
-            .map_err(|e| AccountUseCaseError::Validation(e.to_string()))?;
-
-            entry.post()
-                .map_err(|e| AccountUseCaseError::Validation(e.to_string()))?;
-
-            self.journal_repo
-                .save(&entry)
-                .await
-                .map_err(|e| AccountUseCaseError::RepositoryError(e.to_string()))?;
+            .await?;
         }
 
         // Auto-create customer if account is under Receivables Parent
@@ -266,7 +210,7 @@ impl CreateAccountUseCase {
                     debit,
                     credit,
                     account.opening_balance,
-                    currency.clone(),
+                    account.currency.clone(),
                     cmd.notes.clone(),
                 );
 
@@ -299,7 +243,7 @@ impl CreateAccountUseCase {
                     debit,
                     credit,
                     account.opening_balance,
-                    currency.clone(),
+                    account.currency.clone(),
                     cmd.notes.clone(),
                 );
 

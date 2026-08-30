@@ -1,7 +1,7 @@
 use sqlx::SqlitePool;
 use application::errors::AppError;
 use chrono::{DateTime, Utc};
-use domain::accounting::fiscal_period::FiscalPeriodStatus;
+use domain::accounting::fiscal_period::{FiscalPeriod, FiscalPeriodStatus};
 use domain::accounting::journal_entry::{JournalEntry, JournalEntryStatus, JournalType};
 use domain::settings::START_MODE_EXISTING;
 use domain::shared::{JournalEntryId};
@@ -86,6 +86,17 @@ pub(crate) async fn validate_posting_period(
         if count == 0 {
             return Ok(());
         }
+
+        // Roll-forward: when periods are already in use and this entry is dated
+        // AFTER every existing period (the common "the last manual period ended"
+        // case, e.g. posting today), auto-open a fresh Open period covering the
+        // entry date instead of blocking the move. Backdated entries are never
+        // auto-opened — deliberately opening a past window stays a manual action
+        // and still fails through the error below.
+        if ensure_after_latest_period(tx, entry_date).await?.is_some() {
+            return Ok(());
+        }
+
         return Err(AppError::Forbidden(format!(
             "لا توجد فترة مالية نشطة تغطي تاريخ القيد ({}) — اختر تاريخاً ضمن فترة مالية مفتوحة أو أنشئ فترة تغطيه",
             entry_date.to_rfc3339()
@@ -103,6 +114,74 @@ pub(crate) async fn validate_posting_period(
         "التاريخ {} يقع في فترة مالية مغلقة أو مقفلة — لا يمكن ترحيل حركات في فترة مغلقة أو مقفلة",
         entry_date.to_rfc3339()
     )))
+}
+
+/// Auto-opens an `Open` fiscal period covering `entry_date` when the entry is
+/// dated strictly AFTER the end of the most recent existing period — the common
+/// "the year turned over / the last manual period expired" case where a posted
+/// move must still land on today's date. Returns `Ok(None)` when nothing was
+/// opened: no periods exist, or the date is inside/equal to an existing end
+/// (backdated or window-overlapping dates stay blocked for the caller's own
+/// error path).
+///
+/// The new period runs from just after the latest end date (so it can never
+/// overlap an existing period) to the calendar end of the entry's year, keeping
+/// later business valid until the next roll-forward is required. It is written
+/// inside the caller's open transaction: if the surrounding posting fails, the
+/// opened period rolls back with it — no orphan periods.
+async fn ensure_after_latest_period(
+    tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
+    entry_date: DateTime<Utc>,
+) -> Result<Option<FiscalPeriod>, AppError> {
+    use chrono::{Datelike, Duration, NaiveDate};
+
+    let latest_end: Option<String> =
+        sqlx::query_scalar::<_, Option<String>>("SELECT MAX(end_date) FROM fiscal_periods")
+            .fetch_one(&mut **tx)
+            .await
+            .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+
+    let Some(latest_end) = latest_end else {
+        return Ok(None);
+    };
+
+    let latest_end = DateTime::parse_from_rfc3339(&latest_end)
+        .map(|d| d.with_timezone(&Utc))
+        .map_err(|e| AppError::Infrastructure(format!("fiscal_period date parse: {e}")))?;
+
+    if entry_date <= latest_end {
+        return Ok(None);
+    }
+
+    let year = entry_date.year();
+    let year_end = NaiveDate::from_ymd_opt(year, 12, 31)
+        .and_then(|d| d.and_hms_opt(23, 59, 59))
+        .map(|naive| DateTime::from_naive_utc_and_offset(naive, Utc))
+        .ok_or_else(|| AppError::Infrastructure("فشل حساب نهاية السنة للفترة المالية التلقائية".into()))?;
+
+    let period = FiscalPeriod::new(None, latest_end + Duration::nanoseconds(1), year_end)
+        .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+
+    sqlx::query(
+        "INSERT INTO fiscal_periods (id, company_id, start_date, end_date, status, closed_at, closed_by, locked_at, locked_by, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+    )
+    .bind(period.id.to_string())
+    .bind(&period.company_id)
+    .bind(period.start_date.to_rfc3339())
+    .bind(period.end_date.to_rfc3339())
+    .bind(period.status.as_str())
+    .bind(period.closed_at.map(|d| d.to_rfc3339()))
+    .bind(&period.closed_by)
+    .bind(period.locked_at.map(|d| d.to_rfc3339()))
+    .bind(&period.locked_by)
+    .bind(period.created_at.to_rfc3339())
+    .bind(period.updated_at.to_rfc3339())
+    .execute(&mut **tx)
+    .await
+    .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+
+    Ok(Some(period))
 }
 
 /// Rejects posting NORMAL operational journals while an EXISTING company's
