@@ -6,6 +6,7 @@ import type { PartnerRequest } from "@modules/partners/api/partnerService";
 import type { TreeNodeCreatePanelKind, ResolvedTreeNode } from "@shared/tree/nodeTypes";
 import type { FixedAssetType } from "@shared/tree/fixedAssetTypes";
 import { AccountPanel } from "./AccountPanel";
+import { useLinkedPartner } from "../hooks/useLinkedEntity";
 
 /*
  * Lazy entity create panels for the Chart of Accounts branches. Entity forms
@@ -98,6 +99,17 @@ export function BranchPanel({
   onCreatePartner,
   onAssetSaved,
 }: BranchPanelProps) {
+  const isCapitalPartnerEdit =
+    mode === "edit" &&
+    resolved?.entityType === "partner-account" &&
+    (resolved.linkedPartnerRole === "capital" || !resolved.linkedPartnerRole);
+
+  const partnerQuery = useLinkedPartner(
+    isCapitalPartnerEdit ? selected?.id : null,
+    "capital",
+  );
+  const linkedPartner = partnerQuery.data;
+
   if (mode === "create") {
     switch (createKind) {
       case "customer":
@@ -176,6 +188,20 @@ export function BranchPanel({
           />
         );
     }
+  }
+
+  if (isCapitalPartnerEdit && linkedPartner) {
+    return (
+      <Suspense fallback={<LazyFallback />}>
+        <PartnerFormLazy
+          open
+          partner={linkedPartner}
+          onSave={onCreatePartner}
+          onClose={onClose}
+          saving={entitySaving}
+        />
+      </Suspense>
+    );
   }
 
   return (

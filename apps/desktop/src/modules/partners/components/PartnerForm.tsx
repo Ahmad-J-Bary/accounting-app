@@ -17,7 +17,7 @@ interface PartnerFormProps {
 }
 
 export function PartnerForm({ open, onClose, partner, onSave, saving }: PartnerFormProps) {
-  const { currencies, baseCurrency, rateMap } = useCurrencyContext();
+  const { currencies, baseCurrency, rateMap, hasMultipleCurrencies } = useCurrencyContext();
   
   const [formData, setFormData] = useState({
     name: "",
@@ -93,23 +93,36 @@ export function PartnerForm({ open, onClose, partner, onSave, saving }: PartnerF
               />
             </div>
 
-            <div className="space-y-4 border p-4 rounded-lg bg-slate-50/50">
-              <Label className="font-bold">المبلغ المشارك به</Label>
+            <div className="space-y-3 border p-4 rounded-lg bg-slate-50/50">
+              <Label className="font-bold text-xs text-slate-700 block">المبلغ المشارك به</Label>
               
-              <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label className="text-xs font-bold text-slate-600">العملة الافتراضية</Label>
-                <Select value={formData.currency} onValueChange={(val) => setFormData({...formData, currency: val})}>
-                  <SelectTrigger className="h-9 font-bold"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {currencies.map(c => (
-                      <SelectItem key={c.code} value={c.code}>{c.code} - {c.name_ar}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-                <div className="space-y-2">
-                  <Label className="text-xs block text-right">المبلغ</Label>
+              {hasMultipleCurrencies ? (
+                <div className="grid grid-cols-2 gap-3 items-end">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-bold text-slate-600 block">العملة الافتراضية</Label>
+                    <Select value={formData.currency} onValueChange={(val) => setFormData({...formData, currency: val})}>
+                      <SelectTrigger className="h-9 font-bold"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {currencies.map(c => (
+                          <SelectItem key={c.code} value={c.code}>{c.code} - {c.name_ar}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-bold text-slate-600 block">المبلغ</Label>
+                    <Input 
+                      type="number" 
+                      step="any"
+                      value={formData.amount} 
+                      onChange={e => setFormData({...formData, amount: e.target.value})} 
+                      className="text-left font-bold h-9"
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-bold text-slate-600 block">المبلغ</Label>
                   <Input 
                     type="number" 
                     step="any"
@@ -118,7 +131,7 @@ export function PartnerForm({ open, onClose, partner, onSave, saving }: PartnerF
                     className="text-left font-bold h-9"
                   />
                 </div>
-              </div>
+              )}
             </div>
 
             <div className="space-y-2 pt-2">

@@ -5,8 +5,6 @@ import { FormPanel } from "@widgets/form-shell/FormPanel";
 import { SidebarSection } from "@widgets/sidebar-shell/SidebarSection";
 import type { AccountDto } from "@erp/shared-types";
 import { accountingService, type AccountCategory, type AccountType } from "@modules/accounting/api/accountingService";
-import { useCompanyCapabilities } from "@shared/hooks";
-import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import type { ResolvedTreeNode } from "@shared/tree/nodeTypes";
 
 interface AccountFormProps {
@@ -32,13 +30,9 @@ export function AccountForm({
   selected,
   parentAccount,
   allAccounts,
-  resolved,
   onClose,
   onSaved,
 }: AccountFormProps) {
-  const { canAccessOpeningWorkflow } = useCompanyCapabilities();
-  const { hasMultipleCurrencies } = useCurrencyContext();
-
   const [code, setCode] = useState("");
   const [codeSuffix, setCodeSuffix] = useState("");
   const [nameAr, setNameAr] = useState("");
@@ -54,12 +48,6 @@ export function AccountForm({
     }
     return parentAccount;
   }, [mode, selected, parentAccount, allAccounts]);
-
-  const isLinkedAccount =
-    mode === "edit" &&
-    (resolved?.entityType === "customer-account" ||
-      resolved?.entityType === "supplier-account" ||
-      resolved?.entityType === "partner-account");
 
   const suggestChildCode = useCallback(
     (account: AccountDto | null): string => {
@@ -267,42 +255,7 @@ export function AccountForm({
           </div>
         </SidebarSection>
 
-        {mode === "edit" && selected && !isLinkedAccount && canAccessOpeningWorkflow && (
-          <SidebarSection title="البيانات المالية">
-            {hasMultipleCurrencies && (
-              <div className="grid grid-cols-2 gap-3 pb-3">
-                <div className="space-y-1.5">
-                  <FieldLabel>العملة</FieldLabel>
-                  <Input
-                    value={selected.currency || "العملة الأساسية"}
-                    disabled
-                    readOnly
-                    className="h-9 bg-slate-50 text-slate-600"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <FieldLabel>سعر الصرف</FieldLabel>
-                  <Input
-                    value={selected.exchange_rate ?? "1.0000"}
-                    disabled
-                    readOnly
-                    className="h-9 bg-slate-50 text-slate-600"
-                  />
-                </div>
-              </div>
-            )}
-            <div className="space-y-1.5">
-              <FieldLabel>الرصيد الافتتاحي</FieldLabel>
-              <Input
-                type="number"
-                step="any"
-                value={openingBalance}
-                onChange={(e) => setOpeningBalance(e.target.value)}
-                className="h-9 bg-white tabular-nums"
-              />
-            </div>
-          </SidebarSection>
-        )}
+
 
         <div className="space-y-1.5">
           <FieldLabel>ملاحظات</FieldLabel>

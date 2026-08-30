@@ -252,7 +252,7 @@ export async function invalidateKeys(
   keys: readonly (readonly unknown[])[],
 ) {
   await Promise.all(
-    keys.map((queryKey) => queryClient.invalidateQueries({ queryKey })),
+    keys.map((queryKey) => queryClient.invalidateQueries({ queryKey, refetchType: "all" })),
   );
 }
 
