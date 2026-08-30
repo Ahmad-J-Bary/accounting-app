@@ -1,6 +1,7 @@
 import type { AccountDto } from "@erp/shared-types";
 import { DetailPanel } from "@widgets/sidebar-shell/DetailPanel";
 import { SidebarDetailGrid } from "@widgets/sidebar-shell/SidebarDetailGrid";
+import type { ResolvedTreeNode } from "@shared/tree/nodeTypes";
 import { AccountForm } from "./AccountForm";
 
 export type AccountPanelMode = "view" | "create" | "edit";
@@ -16,9 +17,19 @@ interface AccountPanelProps {
   parentName?: string | null;
   /** Parent account for create mode (null = level-1 account) */
   parentAccount?: AccountDto | null;
+  /** Optional resolved classification used to render the entity badge. */
+  resolved?: ResolvedTreeNode | null;
   onClose: () => void;
   onSaved: () => void | Promise<void>;
 }
+
+const LINKED_BADGES: Partial<Record<ResolvedTreeNode["entityType"], string>> = {
+  "customer-account": "مرتبط بعميل",
+  "supplier-account": "مرتبط بمورد",
+  "fixed-asset-account": "حساب أصل ثابت",
+  "partner-account": "حساب شريك",
+  root: "الدليل الجذر",
+};
 
 /**
  * Side-panel content of the Chart of Accounts page. View mode renders the
@@ -31,6 +42,7 @@ export function AccountPanel({
   allAccounts,
   parentName,
   parentAccount,
+  resolved,
   onClose,
   onSaved,
 }: AccountPanelProps) {
@@ -50,8 +62,17 @@ export function AccountPanel({
 
   if (!selected) return null;
 
+  const badge = resolved ? LINKED_BADGES[resolved.entityType] : undefined;
+
   return (
       <DetailPanel title="تفاصيل الحساب" subtitle={selected.code ?? undefined} onClose={onClose}>
+        {badge && (
+          <div className="flex items-center">
+            <span className="inline-flex items-center rounded-lg bg-blue-50 text-blue-700 border border-blue-200 px-3 py-1 text-xs font-bold">
+              {badge}
+            </span>
+          </div>
+        )}
         <SidebarDetailGrid
           title="بيانات الحساب"
           fields={[

@@ -4,7 +4,7 @@ import { ChevronLeft, ChevronRight, Plus, Edit, Trash2, Scale } from "lucide-rea
 import { toast } from "sonner";
 import { categoryService } from '@modules/inventory/api/categoryService';
 import { materialService } from '@modules/inventory/api/materialService';
-import type { CategoryDto, MaterialDto, CreateMaterialRequest, UpdateMaterialRequest } from "@erp/shared-types";
+import type { CreateMaterialRequest, UpdateMaterialRequest } from "@erp/shared-types";
 
 
 // Refactored Components & Hooks
@@ -121,9 +121,7 @@ export default function Categories() {
   const canOperate = !!selected && !isRootSelected;
   const canDelete = canOperate && !isUncategorizedSelected;
 
-  const newButtonLabel = isMaterialSelected
-    ? "إضافة وحدة"
-    : (!!selected?.parent_id || isUncategorizedSelected ? "مادة جديدة" : "تصنيف جديد");
+  const newButtonLabel = !!selected?.parent_id || isUncategorizedSelected ? "مادة جديدة" : "تصنيف جديد";
 
   const handleSelect = useCallback((node: CategoryTreeNode) => {
     setSelected(node);
@@ -218,11 +216,15 @@ export default function Categories() {
       setPanelAction({ kind: "manage_units" });
       return;
     }
-    if (!!selected?.parent_id || isUncategorizedSelected) {
-      if (selected) setPanelAction({ kind: "create_material", categoryId: selected.id });
+    if (!selected || selected.id === VIRTUAL_ROOT_ID) {
+      setPanelAction({ kind: "create_category", parentId: null });
       return;
     }
-    setPanelAction({ kind: "create_category", parentId: selected?.id ?? null });
+    if (!!selected.parent_id || isUncategorizedSelected) {
+      setPanelAction({ kind: "create_material", categoryId: selected.id });
+      return;
+    }
+    setPanelAction({ kind: "create_category", parentId: selected.id });
   }, [selected, isMaterialSelected, isUncategorizedSelected]);
 
   const handleOpenEdit = useCallback(() => {
@@ -454,9 +456,15 @@ export default function Categories() {
       title="تصنيفات المواد"
       toolbar={
         <>
-          <Button size="sm" onClick={handleOpenNew} className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100">
-            <Plus className="w-4 h-4 ml-2" /> {newButtonLabel}
-          </Button>
+          {isMaterialSelected ? (
+            <Button size="sm" onClick={handleOpenUnits} className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100">
+              <Scale className="w-4 h-4 ml-2" /> الوحدات
+            </Button>
+          ) : (
+            <Button size="sm" onClick={handleOpenNew} className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100">
+              <Plus className="w-4 h-4 ml-2" /> {newButtonLabel}
+            </Button>
+          )}
           <Button
             size="sm"
             variant="outline"
@@ -466,16 +474,6 @@ export default function Categories() {
           >
             <Edit className="w-4 h-4 ml-2" /> تعديل
           </Button>
-          {isMaterialSelected && (
-            <Button
-              size="sm"
-              variant="outline"
-              className="bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
-              onClick={handleOpenUnits}
-            >
-              <Scale className="w-4 h-4 ml-2 text-blue-600" /> الوحدات
-            </Button>
-          )}
           <Button
             size="sm"
             variant="outline"

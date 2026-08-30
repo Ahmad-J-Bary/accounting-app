@@ -1,33 +1,53 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { ChevronLeft, ChevronRight, Plus, Edit, Trash2, BookOpen } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { buildTree, getVisibleRootTree, getErrorMessage } from "../lib/tree-utils";
 import { computeTreeBalances } from "../lib/tree-balances";
 import { parseSafeNumber } from "@shared/lib/parseSafeNumber";
 import type { AccountTreeNode, ToggleNodeHandler } from "../lib/types";
 import { AccountTreeNodeItem } from "../components/AccountTreeNodeItem";
-import { AccountPanel, type AccountPanelMode } from "../components/AccountPanel";
+import { BranchPanel, type PanelMode } from "../components/BranchPanel";
 import { HierarchicalTreeTemplate } from '@widgets/templates/HierarchicalTreeTemplate';
 import { Button } from "@shared/ui/button";
 import { ConfirmDialog } from "@shared/ui/confirm-dialog";
 import { toast } from "sonner";
 import { useChartOfAccountsTree } from "@shared/hooks/queries/useAccountQueries";
 import { accountingService } from '@modules/accounting/api/accountingService';
-import { QUERY_KEYS, CHART_MUTATION_KEYS, invalidateKeys } from "@shared/hooks/queryClient";
+import {
+  CHART_MUTATION_KEYS,
+  QUERY_KEYS,
+  ALL_PARTY_KEYS,
+  ALL_INVENTORY_KEYS,
+  PARTNER_MUTATION_KEYS,
+  invalidateKeys,
+} from "@shared/hooks/queryClient";
 import { useTabs } from "@app/providers/TabContext";
+import { useCurrencyContext } from "@app/providers/CurrencyContext";
+import { getExchangeRate } from "@shared/lib/currency-strategy";
+import { customerService } from "@modules/partners/api/customerService";
+import { supplierService } from "@modules/partners/api/supplierService";
+import { partnerService, type PartnerRequest } from "@modules/partners/api/partnerService";
+import type { PartnerFormPayload } from "@modules/partners/components/PartnerFormPanel";
+import type { ExpenseFormPayload } from "@modules/expenses/components/ExpenseFormPanel";
+import { resolveAccountNodeActions } from "@shared/tree/actionsResolver";
+import { resolveChartNode } from "../lib/branches";
+import type { TreeNodeCreatePanelKind } from "@shared/tree/nodeTypes";
+import { SYSTEM_ACCOUNT_IDS } from "@erp/shared-types";
 
 const ROOT_ACCOUNT_ID = "__chart_of_accounts_root__";
 
 export default function Accounting() {
   const queryClient = useQueryClient();
   const { openTab } = useTabs();
+  const { currencies, rateMap, baseCurrency } = useCurrencyContext();
   const [selected, setSelected] = useState<AccountTreeNode | null>(null);
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
   const [searchQuery] = useState("");
-  const [panelMode, setPanelMode] = useState<AccountPanelMode | null>(null);
+  const [panelMode, setPanelMode] = useState<PanelMode | null>(null);
+  const [panelCreateKind, setPanelCreateKind] = useState<TreeNodeCreatePanelKind | null>(null);
   const [createParent, setCreateParent] = useState<AccountTreeNode | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
-  const [deleting, setDeleting] = useState(false);
+  const [entitySaving, setEntitySaving] = useState(false);
   const hasLoadedOnceRef = useRef(false);
 
   const { data, isLoading } = useChartOfAccountsTree();
@@ -52,33 +72,33 @@ export default function Accounting() {
 
   const collapseAll = useCallback(() => setExpandedNodes(new Set([ROOT_ACCOUNT_ID])), []);
 
-const tree = useMemo(() => buildTree(accounts), [accounts]);
+  const tree = useMemo(() => buildTree(accounts), [accounts]);
 
-const computedTree = useMemo(() => computeTreeBalances(tree, ledgerTotals), [tree, ledgerTotals]);
+  const computedTree = useMemo(() => computeTreeBalances(tree, ledgerTotals), [tree, ledgerTotals]);
 
-// Root balance follows the accounting formula based on direct children only:
-// (Assets + Revenues) - (Liabilities + Expenses)
-const rootBalance = useMemo(() => {
-  let assets = 0, liabilities = 0, revenues = 0, expenses = 0;
-  for (const child of computedTree) {
-    const bal = parseSafeNumber(child.balance);
-    switch (child.account_type) {
-      case "Assets": assets += bal; break;
-      case "Liabilities": liabilities += bal; break;
-      case "Revenue": revenues += bal; break;
-      case "Expenses": expenses += bal; break;
+  // Root balance follows the accounting formula based on direct children only:
+  // (Assets + Revenues) - (Liabilities + Expenses)
+  const rootBalance = useMemo(() => {
+    let assets = 0, liabilities = 0, revenues = 0, expenses = 0;
+    for (const child of computedTree) {
+      const bal = parseSafeNumber(child.balance);
+      switch (child.account_type) {
+        case "Assets": assets += bal; break;
+        case "Liabilities": liabilities += bal; break;
+        case "Revenue": revenues += bal; break;
+        case "Expenses": expenses += bal; break;
+      }
     }
-  }
-  return (assets + revenues) - (liabilities + expenses);
-}, [computedTree]);
+    return (assets + revenues) - (liabilities + expenses);
+  }, [computedTree]);
 
-const visibleTree = useMemo(() => getVisibleRootTree(computedTree, searchQuery), [computedTree, searchQuery]);
-const rootNode = useMemo<AccountTreeNode>(() => ({
-  id: ROOT_ACCOUNT_ID, code: "", name_ar: "دليل الحسابات", name_en: "Chart of Accounts",
-  account_type: "Assets", parent_id: null, category: "Summary", level: 0, opening_balance: "0",
-  balance: String(rootBalance), notes: null, is_active: true, is_default: false, is_final: false,
-  linked_customer_id: null, linked_supplier_id: null, debit: "0", credit: "0", children: visibleTree,
-}), [visibleTree, rootBalance]);
+  const visibleTree = useMemo(() => getVisibleRootTree(computedTree, searchQuery), [computedTree, searchQuery]);
+  const rootNode = useMemo<AccountTreeNode>(() => ({
+    id: ROOT_ACCOUNT_ID, code: "", name_ar: "دليل الحسابات", name_en: "Chart of Accounts",
+    account_type: "Assets", parent_id: null, category: "Summary", level: 0, opening_balance: "0",
+    balance: String(rootBalance), notes: null, is_active: true, is_default: false, is_final: false,
+    linked_customer_id: null, linked_supplier_id: null, debit: "0", credit: "0", children: visibleTree,
+  }), [visibleTree, rootBalance]);
 
   // Expand nodes and set root node as selected on initial load
   useEffect(() => {
@@ -130,6 +150,13 @@ const rootNode = useMemo<AccountTreeNode>(() => ({
     return accounts.find((a) => a.id === selected.parent_id)?.name_ar ?? null;
   }, [selected, accounts]);
 
+  // ── Central resolution: classification + capabilities + actions ──
+
+  const resolved = useMemo(
+    () => resolveChartNode({ node: selected, nodes: accounts, rootId: ROOT_ACCOUNT_ID }),
+    [selected, accounts],
+  );
+
   const handleSelect = useCallback((node: AccountTreeNode) => {
     setSelected(node);
     setCreateParent(node);
@@ -138,17 +165,15 @@ const rootNode = useMemo<AccountTreeNode>(() => ({
   }, []);
 
   const handleOpenNew = useCallback(() => {
-    if (canOperate) {
-      if (selected.is_final) {
-        toast.error("لا يمكن إضافة حسابات فرعية تحت حساب نهائي (ورقة)");
-        return;
-      }
-      setCreateParent(selected);
-    } else {
-      setCreateParent(null);
+    if (!resolved.capabilities.canCreate || !resolved.capabilities.createPanelKind) return;
+    if (resolved.capabilities.createPanelKind === "account" && selected?.is_final) {
+      toast.error("لا يمكن إضافة حسابات فرعية تحت حساب نهائي (ورقة)");
+      return;
     }
+    setCreateParent(selected && selected.id !== ROOT_ACCOUNT_ID ? selected : null);
+    setPanelCreateKind(resolved.capabilities.createPanelKind);
     setPanelMode("create");
-  }, [canOperate, selected]);
+  }, [resolved, selected]);
 
   const handleOpenEdit = useCallback(() => {
     if (!canOperate) return;
@@ -172,7 +197,6 @@ const rootNode = useMemo<AccountTreeNode>(() => ({
 
   const handleConfirmDelete = useCallback(async () => {
     if (!selected || isRootSelected) return;
-    setDeleting(true);
     try {
       await accountingService.deleteAccount(selected.id);
       await invalidateKeys(queryClient, CHART_MUTATION_KEYS);
@@ -182,15 +206,153 @@ const rootNode = useMemo<AccountTreeNode>(() => ({
       setDeleteOpen(false);
     } catch (error) {
       toast.error(`فشلت العملية: ${getErrorMessage(error)}`);
-    } finally {
-      setDeleting(false);
     }
   }, [selected, isRootSelected, queryClient]);
 
-  const handleSaved = useCallback(async () => {
+  const handleSavedAccount = useCallback(async () => {
     await invalidateKeys(queryClient, CHART_MUTATION_KEYS);
     setPanelMode(selected && !isRootSelected ? "view" : null);
   }, [queryClient, selected, isRootSelected]);
+
+  // ── Branch-aware entity creation ──
+
+  const backToView = useCallback(() => {
+    setPanelMode(selected && !isRootSelected ? "view" : null);
+  }, [selected, isRootSelected]);
+
+  const handleCreateCustomer = useCallback(async (payload: PartnerFormPayload) => {
+    setEntitySaving(true);
+    try {
+      await customerService.create({
+        code: "",
+        name: payload.name,
+        phone: payload.phone,
+        address: payload.address,
+        notes: payload.notes,
+        opening_balance: payload.opening_balance,
+        debit: payload.debit,
+        credit: payload.credit,
+        currency: payload.currency || undefined,
+        is_active: true,
+      });
+      toast.success("تم إضافة العميل الجديد بنجاح");
+      await invalidateKeys(queryClient, [...ALL_PARTY_KEYS, ...CHART_MUTATION_KEYS]);
+      backToView();
+    } catch (error) {
+      toast.error(`فشلت العملية: ${getErrorMessage(error)}`);
+    } finally {
+      setEntitySaving(false);
+    }
+  }, [queryClient, backToView]);
+
+  const handleCreateSupplier = useCallback(async (payload: PartnerFormPayload) => {
+    setEntitySaving(true);
+    try {
+      await supplierService.create({
+        code: "",
+        name: payload.name,
+        phone: payload.phone,
+        address: payload.address,
+        notes: payload.notes,
+        opening_balance: payload.opening_balance,
+        debit: payload.debit,
+        credit: payload.credit,
+        currency: payload.currency || undefined,
+        is_active: true,
+      });
+      toast.success("تم إضافة المورد الجديد بنجاح");
+      await invalidateKeys(queryClient, [...ALL_PARTY_KEYS, ...CHART_MUTATION_KEYS]);
+      backToView();
+    } catch (error) {
+      toast.error(`فشلت العملية: ${getErrorMessage(error)}`);
+    } finally {
+      setEntitySaving(false);
+    }
+  }, [queryClient, backToView]);
+
+  const expensesParentAccount = useMemo(
+    () => accounts.find((a) => a.id === SYSTEM_ACCOUNT_IDS.OTHER_EXPENSES) ?? null,
+    [accounts],
+  );
+  const expenseItems = useMemo(() => {
+    const isUnderExpenses = (account: {
+      id: string;
+      parent_id: string | null;
+    }): boolean => {
+      const seen = new Set<string>();
+      let current: { id: string; parent_id: string | null } | null = account;
+      let guard = 0;
+      while (current && !seen.has(current.id) && guard < 64) {
+        if (current.id === SYSTEM_ACCOUNT_IDS.OTHER_EXPENSES) return true;
+        seen.add(current.id);
+        current = current.parent_id ? (accounts.find((a) => a.id === current?.parent_id) ?? null) : null;
+        guard += 1;
+      }
+      return false;
+    };
+    return accounts.filter(isUnderExpenses);
+  }, [accounts]);
+
+  const handleCreateExpense = useCallback(async (payload: ExpenseFormPayload) => {
+    setEntitySaving(true);
+    try {
+      const parent = expensesParentAccount;
+      const exchangeRate = getExchangeRate(payload.currency, rateMap, baseCurrency?.code);
+      await accountingService.createAccount({
+        code: payload.code,
+        name_ar: payload.name_ar,
+        name_en: payload.name_en,
+        account_type: "Expenses",
+        parent_id: parent?.id ?? null,
+        category: "Detail",
+        level: (parent?.level ?? 1) + 1,
+        opening_balance: payload.opening_balance,
+        notes: payload.notes,
+        is_active: true,
+        is_default: false,
+        debit: payload.debit,
+        credit: payload.credit,
+        currency: payload.currency,
+        exchange_rate: exchangeRate.toString(),
+      });
+      toast.success("تم إضافة بند المصروف بنجاح");
+      await invalidateKeys(queryClient, [...CHART_MUTATION_KEYS, QUERY_KEYS.expenseItems]);
+      backToView();
+    } catch (error) {
+      toast.error(`فشلت العملية: ${getErrorMessage(error)}`);
+    } finally {
+      setEntitySaving(false);
+    }
+  }, [expensesParentAccount, rateMap, baseCurrency, queryClient, backToView]);
+
+  const handleCreatePartner = useCallback(async (payload: PartnerRequest) => {
+    setEntitySaving(true);
+    try {
+      await partnerService.addPartner(payload);
+      toast.success("تم إضافة الشريك بنجاح");
+      await invalidateKeys(queryClient, [...PARTNER_MUTATION_KEYS, ...CHART_MUTATION_KEYS]);
+      backToView();
+    } catch (error) {
+      toast.error(`فشلت العملية: ${getErrorMessage(error)}`);
+    } finally {
+      setEntitySaving(false);
+    }
+  }, [queryClient, backToView]);
+
+  const handleAssetSaved = useCallback(async () => {
+    await invalidateKeys(queryClient, [...CHART_MUTATION_KEYS, ...ALL_INVENTORY_KEYS]);
+    backToView();
+  }, [queryClient, backToView]);
+
+  // ── Central action descriptors → toolbar buttons ──
+
+  const actionDescriptors = resolveAccountNodeActions({
+    resolved,
+    onNew: handleOpenNew,
+    onEdit: handleOpenEdit,
+    onLedger: handleOpenLedger,
+    onDelete: handleDeleteRequest,
+  });
 
   // TopBar / external "add new account" entry point
   useEffect(() => {
@@ -200,8 +362,7 @@ const rootNode = useMemo<AccountTreeNode>(() => ({
   }, [handleOpenNew]);
 
   const isLoadingNow = isLoading;
-  const isPanelOpen =
-    panelMode !== null && (panelMode !== "view" || canOperate);
+  const isPanelOpen = panelMode !== null;
   const panelSelected = isRootSelected ? null : selected;
 
   return (
@@ -209,37 +370,27 @@ const rootNode = useMemo<AccountTreeNode>(() => ({
       title="دليل الحسابات"
       toolbar={
         <>
-          <Button size="sm" onClick={handleOpenNew} className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100">
-            <Plus className="w-4 h-4 ml-2" /> جديد
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            className="bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
-            disabled={!canOperate}
-            onClick={handleOpenEdit}
-          >
-            <Edit className="w-4 h-4 ml-2" /> تعديل
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            className="bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
-            disabled={!canOperate}
-            onClick={handleOpenLedger}
-          >
-            <BookOpen className="w-4 h-4 ml-2 text-blue-600" />
-            حركة اليومية
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            className="bg-white border-rose-200 text-rose-700 hover:bg-rose-50"
-            disabled={!canOperate}
-            onClick={handleDeleteRequest}
-          >
-            <Trash2 className="w-4 h-4 ml-2 text-rose-600" /> حذف
-          </Button>
+          {actionDescriptors.map((action) => {
+            const Icon = action.icon;
+            const toneClass =
+              action.tone === "primary"
+                ? "bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100 text-white"
+                : action.tone === "danger"
+                  ? "bg-white border-rose-200 text-rose-700 hover:bg-rose-50"
+                  : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50";
+            return (
+              <Button
+                key={action.key}
+                size="sm"
+                className={toneClass}
+                disabled={action.disabled}
+                onClick={action.onClick}
+              >
+                {Icon && <Icon className={`w-4 h-4 ml-2 ${action.tone === "primary" ? "" : action.tone === "danger" ? "text-rose-600" : action.key === "ledger" ? "text-blue-600" : ""}`} />}
+                {action.label}
+              </Button>
+            );
+          })}
         </>
       }
       treeHeaderActions={
@@ -279,14 +430,25 @@ const rootNode = useMemo<AccountTreeNode>(() => ({
       }
       sidePanel={
         isPanelOpen ? (
-          <AccountPanel
-            mode={panelMode as AccountPanelMode}
+          <BranchPanel
+            mode={panelMode ?? "view"}
+            createKind={panelCreateKind}
             selected={panelSelected}
             allAccounts={accounts}
+            resolved={resolved}
             parentName={parentName}
             parentAccount={createParent}
+            expenseItems={expenseItems}
+            expenseParentCode={expensesParentAccount?.code}
+            currencies={currencies}
+            entitySaving={entitySaving}
             onClose={() => setPanelMode(null)}
-            onSaved={handleSaved}
+            onSavedAccount={handleSavedAccount}
+            onCreateCustomer={handleCreateCustomer}
+            onCreateSupplier={handleCreateSupplier}
+            onCreateExpense={handleCreateExpense}
+            onCreatePartner={handleCreatePartner}
+            onAssetSaved={handleAssetSaved}
           />
         ) : undefined
       }
