@@ -99,6 +99,7 @@ async fn register_partner_with_capital(pool: &Arc<sqlx::SqlitePool>) -> (String,
             "BasedOnCapitalLocal".into(),
             None,
             "NewCompany".into(),
+            None,
         )
         .await
         .expect("create partner");

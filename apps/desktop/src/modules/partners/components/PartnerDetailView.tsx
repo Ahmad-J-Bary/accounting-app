@@ -113,6 +113,14 @@ export function PartnerDetailView({
               </div>
             </div>
           </div>
+          {partner.notes && (
+            <div className="p-5 border border-slate-100 rounded-2xl bg-slate-50/30">
+              <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-2 mb-4">
+                ملاحظات
+              </h4>
+              <p className="text-sm text-slate-700 whitespace-pre-wrap">{partner.notes}</p>
+            </div>
+          )}
         </div>
       </SidebarBody>
     </SidebarShell>

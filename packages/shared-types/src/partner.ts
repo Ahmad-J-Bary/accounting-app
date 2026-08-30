@@ -11,6 +11,7 @@ export interface PartnerDto {
   linked_account_id: string | null;
   drawings_account_id: string | null;
   current_account_id: string | null;
+  notes: string | null;
 }
 
 export interface PartnerRequest {
@@ -24,4 +25,5 @@ export interface PartnerRequest {
   isAmountInOriginal: boolean;
   sharingType: string;
   manualRatio: string | null;
+  notes?: string | null;
 }

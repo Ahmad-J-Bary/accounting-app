@@ -6,8 +6,8 @@ use domain::shared::ids::PartnerId;
 
 pub async fn save(pool: &SqlitePool, partner: &Partner) -> Result<(), AppError> {
     sqlx::query(
-        "INSERT INTO partners (id, code, name, currency, exchange_rate, amount_local, amount_original, is_amount_in_original, profit_sharing_ratio, profit_sharing_type, linked_account_id, drawings_account_id, current_account_id, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        "INSERT INTO partners (id, code, name, currency, exchange_rate, amount_local, amount_original, is_amount_in_original, profit_sharing_ratio, profit_sharing_type, linked_account_id, drawings_account_id, current_account_id, notes, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
     )
     .bind(partner.id.to_string())
     .bind(&partner.code)
@@ -26,6 +26,7 @@ pub async fn save(pool: &SqlitePool, partner: &Partner) -> Result<(), AppError> 
     .bind(partner.linked_account_id.as_ref().map(|id| id.to_string()))
     .bind(partner.drawings_account_id.as_ref().map(|id| id.to_string()))
     .bind(partner.current_account_id.as_ref().map(|id| id.to_string()))
+    .bind(&partner.notes)
     .bind(partner.created_at)
     .bind(partner.updated_at)
     .execute(pool)
@@ -107,8 +108,8 @@ async fn insert_partner_tx<'a>(
     partner: &Partner,
 ) -> Result<(), AppError> {
 sqlx::query(
-        "INSERT INTO partners (id, code, name, currency, exchange_rate, amount_local, amount_original, is_amount_in_original, profit_sharing_ratio, profit_sharing_type, linked_account_id, drawings_account_id, current_account_id, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        "INSERT INTO partners (id, code, name, currency, exchange_rate, amount_local, amount_original, is_amount_in_original, profit_sharing_ratio, profit_sharing_type, linked_account_id, drawings_account_id, current_account_id, notes, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
     )
     .bind(partner.id.to_string())
     .bind(&partner.code)
@@ -127,6 +128,7 @@ sqlx::query(
     .bind(partner.linked_account_id.as_ref().map(|id| id.to_string()))
     .bind(partner.drawings_account_id.as_ref().map(|id| id.to_string()))
     .bind(partner.current_account_id.as_ref().map(|id| id.to_string()))
+    .bind(&partner.notes)
     .bind(partner.created_at)
     .bind(partner.updated_at)
     .execute(&mut **tx)
@@ -137,7 +139,7 @@ sqlx::query(
 
 pub async fn update(pool: &SqlitePool, partner: &Partner) -> Result<(), AppError> {
     sqlx::query(
-        "UPDATE partners SET code = ?, name = ?, currency = ?, exchange_rate = ?, amount_local = ?, amount_original = ?, is_amount_in_original = ?, profit_sharing_ratio = ?, profit_sharing_type = ?, linked_account_id = ?, drawings_account_id = ?, current_account_id = ?, updated_at = ?
+        "UPDATE partners SET code = ?, name = ?, currency = ?, exchange_rate = ?, amount_local = ?, amount_original = ?, is_amount_in_original = ?, profit_sharing_ratio = ?, profit_sharing_type = ?, linked_account_id = ?, drawings_account_id = ?, current_account_id = ?, notes = ?, updated_at = ?
          WHERE id = ?"
     )
     .bind(&partner.code)
@@ -156,6 +158,7 @@ pub async fn update(pool: &SqlitePool, partner: &Partner) -> Result<(), AppError
     .bind(partner.linked_account_id.as_ref().map(|id| id.to_string()))
     .bind(partner.drawings_account_id.as_ref().map(|id| id.to_string()))
     .bind(partner.current_account_id.as_ref().map(|id| id.to_string()))
+    .bind(&partner.notes)
     .bind(partner.updated_at)
     .bind(partner.id.to_string())
     .execute(pool)
@@ -244,7 +247,7 @@ async fn update_tx<'a>(
     partner: &Partner,
 ) -> Result<(), AppError> {
     sqlx::query(
-        "UPDATE partners SET code = ?, name = ?, currency = ?, exchange_rate = ?, amount_local = ?, amount_original = ?, is_amount_in_original = ?, profit_sharing_ratio = ?, profit_sharing_type = ?, linked_account_id = ?, drawings_account_id = ?, current_account_id = ?, updated_at = ?
+        "UPDATE partners SET code = ?, name = ?, currency = ?, exchange_rate = ?, amount_local = ?, amount_original = ?, is_amount_in_original = ?, profit_sharing_ratio = ?, profit_sharing_type = ?, linked_account_id = ?, drawings_account_id = ?, current_account_id = ?, notes = ?, updated_at = ?
          WHERE id = ?"
     )
     .bind(&partner.code)
@@ -263,6 +266,7 @@ async fn update_tx<'a>(
     .bind(partner.linked_account_id.as_ref().map(|id| id.to_string()))
     .bind(partner.drawings_account_id.as_ref().map(|id| id.to_string()))
     .bind(partner.current_account_id.as_ref().map(|id| id.to_string()))
+    .bind(&partner.notes)
     .bind(partner.updated_at)
     .bind(partner.id.to_string())
     .execute(&mut **tx)

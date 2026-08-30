@@ -1,5 +1,6 @@
 import { useMemo, useState, useEffect, useCallback } from "react";
 import { Input } from "@shared/ui/input";
+import { Textarea } from "@shared/ui/textarea";
 import { FieldLabel } from "@widgets/sidebar-shell/FieldLabel";
 import { FormPanel } from "@widgets/form-shell/FormPanel";
 import { SidebarSection } from "@widgets/sidebar-shell/SidebarSection";
@@ -259,11 +260,11 @@ export function AccountForm({
 
         <div className="space-y-1.5">
           <FieldLabel>ملاحظات</FieldLabel>
-          <textarea
-            className="flex min-h-[60px] w-full rounded-md border border-input bg-white px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          <Textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder="ملاحظات اختيارية..."
+            className="min-h-[60px]"
           />
         </div>
       </div>

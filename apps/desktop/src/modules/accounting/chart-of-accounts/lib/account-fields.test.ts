@@ -28,7 +28,7 @@ const partnerOperationalFields: AccountField[] = [
 
 describe("mergeAccountEntityFields", () => {
   it("returns the account grid unchanged when no entity is linked", () => {
-    const merged = mergeAccountEntityFields(accountFields, [], null);
+    const merged = mergeAccountEntityFields(accountFields, [], null, null, true);
     expect(merged).toHaveLength(accountFields.length);
     expect(merged.map((f) => f.key)).toEqual([
       "account-code",
@@ -78,6 +78,7 @@ describe("mergeAccountEntityFields", () => {
       partnerOperationalFields,
       "partner",
       "drawings",
+      true,
     );
     expect(merged.map((f) => f.key)).toEqual([
       "account-code",

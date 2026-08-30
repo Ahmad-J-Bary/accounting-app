@@ -172,6 +172,7 @@ async fn live_ledger_satisfies_debit_credit_and_accounting_equation() {
         "BasedOnCapitalLocal".into(),
         None,
         "NewCompany".into(),
+        None,
     )
     .await
     .expect("create partner");

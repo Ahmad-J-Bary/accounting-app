@@ -182,6 +182,7 @@ async fn register_partner(
             "BasedOnCapitalLocal".into(),
             None,
             START_MODE_EXISTING.into(),
+            None,
         )
         .await
         .expect("create partner")
@@ -307,6 +308,7 @@ async fn update_partner_re_syncs_capital_opening_balance_in_existing_mode() {
                 is_amount_in_original: false,
                 sharing_type: "BasedOnCapitalLocal".into(),
                 manual_ratio: None,
+                notes: None,
             },
             START_MODE_EXISTING.into(),
         )
@@ -367,6 +369,7 @@ async fn update_partner_renames_capital_drawings_and_current_accounts() {
                 is_amount_in_original: false,
                 sharing_type: "BasedOnCapitalLocal".into(),
                 manual_ratio: None,
+                notes: None,
             },
             START_MODE_EXISTING.into(),
         )

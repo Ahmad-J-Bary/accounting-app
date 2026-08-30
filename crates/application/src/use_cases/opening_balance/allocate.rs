@@ -709,6 +709,7 @@ mod tests {
             false,
             domain::accounting::partner::ProfitSharingType::Manual,
             Some(ratio),
+            None,
         )
         .unwrap()
     }

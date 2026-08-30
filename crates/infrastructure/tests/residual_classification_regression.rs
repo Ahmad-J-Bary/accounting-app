@@ -428,6 +428,7 @@ async fn seed_partners(pool: &Arc<sqlx::SqlitePool>, accounts: &Accounts) {
             false,
             ProfitSharingType::BasedOnCapitalLocal,
             None,
+            None,
         )
         .unwrap();
         partner.link_account(account_id);

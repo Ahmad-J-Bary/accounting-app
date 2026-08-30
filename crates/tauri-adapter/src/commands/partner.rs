@@ -20,6 +20,7 @@ pub async fn add_partner(
     is_amount_in_original: bool,
     sharing_type: String,
     manual_ratio: Option<String>,
+    notes: Option<String>,
 ) -> Result<String, String> {
     let rate = Decimal::from_str(&exchange_rate).map_err(|e| e.to_string())?;
     let amt = Decimal::from_str(&amount).map_err(|e| e.to_string())?;
@@ -43,6 +44,7 @@ pub async fn add_partner(
         sharing_type,
         ratio,
         settings.accounting_start_mode,
+        notes,
     ).await.map_err(|e| e.to_string())
 }
 
@@ -159,6 +161,7 @@ pub async fn update_partner(
     is_amount_in_original: bool,
     sharing_type: String,
     manual_ratio: Option<String>,
+    notes: Option<String>,
 ) -> Result<(), String> {
     let rate = Decimal::from_str(&exchange_rate).map_err(|e| e.to_string())?;
     let amt = Decimal::from_str(&amount).map_err(|e| e.to_string())?;
@@ -182,5 +185,6 @@ pub async fn update_partner(
         is_amount_in_original,
         sharing_type,
         manual_ratio: ratio,
+        notes,
     }, settings.accounting_start_mode).await.map_err(|e| e.to_string())
 }

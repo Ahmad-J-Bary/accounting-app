@@ -25,6 +25,7 @@ pub struct UpdatePartnerRequest {
     pub is_amount_in_original: bool,
     pub sharing_type: String,
     pub manual_ratio: Option<Decimal>,
+    pub notes: Option<String>,
 }
 
 impl UpdatePartnerUseCase {
@@ -75,6 +76,7 @@ impl UpdatePartnerUseCase {
             req.is_amount_in_original,
             sharing_enum,
             req.manual_ratio,
+            req.notes,
         ).map_err(AppError::Domain)?;
 
         // Resolve renamed linked accounts + (existing-company) capital amount

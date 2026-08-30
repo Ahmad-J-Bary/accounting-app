@@ -114,6 +114,7 @@ async fn seed_partner(
         false,
         ProfitSharingType::BasedOnCapitalLocal,
         None,
+        None,
     )
     .unwrap();
     let capital = new_account(pool, capital_code, "رأس مال", "51").await;

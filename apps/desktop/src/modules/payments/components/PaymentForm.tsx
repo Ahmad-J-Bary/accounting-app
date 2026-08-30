@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { Input } from "@shared/ui/input";
+import { Textarea } from "@shared/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
 import { SYSTEM_ACCOUNT_IDS, type CreatePaymentRequest, type CustomerDto, type SupplierDto, type PaymentType, type AccountDto } from "@erp/shared-types";
 import { FormPanel } from "@widgets/form-shell/FormPanel";
@@ -221,7 +222,7 @@ export function PaymentForm({ customers, suppliers, accounts, onSave, onClose, s
             </div>
             )}
 
-            <div className="space-y-1.5">
+            <div className={`space-y-1.5 ${currencies.length > 1 ? "" : "col-span-2"}`}>
               <FieldLabel required>المبلغ</FieldLabel>
               <Input 
                 type="number" 
@@ -239,16 +240,6 @@ export function PaymentForm({ customers, suppliers, accounts, onSave, onClose, s
             </div>
 
             <div className="space-y-1.5 col-span-2">
-              <FieldLabel>البيان / ملاحظات</FieldLabel>
-              <Input 
-                value={form.notes ?? ""} 
-                onChange={e => setForm(p => ({ ...p, notes: e.target.value }))} 
-                placeholder="بيان السند (اختياري)"
-                className="h-9 bg-white"
-              />
-            </div>
-
-            <div className="space-y-1.5">
               <FieldLabel>التاريخ</FieldLabel>
               <Input 
                 type="date"
@@ -260,6 +251,16 @@ export function PaymentForm({ customers, suppliers, accounts, onSave, onClose, s
                   setForm(p => ({ ...p, payment_date: old.toISOString() }));
                 }}
                 className="h-9 bg-white tabular-nums text-left"
+              />
+            </div>
+
+            <div className="space-y-1.5 col-span-2">
+              <FieldLabel>البيان / ملاحظات</FieldLabel>
+              <Textarea 
+                value={form.notes ?? ""} 
+                onChange={e => setForm(p => ({ ...p, notes: e.target.value }))} 
+                placeholder="بيان السند (اختياري)"
+                className="min-h-[60px] bg-white border-slate-200"
               />
             </div>
           </div>

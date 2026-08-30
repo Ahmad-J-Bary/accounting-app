@@ -95,6 +95,7 @@ pub fn row_to_partner(row: PartnerRow) -> Result<Partner, AppError> {
         linked_account_id,
         drawings_account_id,
         current_account_id,
+        notes: row.notes,
         created_at,
         updated_at,
     })

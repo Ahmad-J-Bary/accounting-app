@@ -30,6 +30,7 @@ pub struct Partner {
     /// Per-partner current/profit account (accumulated profit allocations),
     /// separate from the capital account (Sec 4 / Sec 13).
     pub current_account_id: Option<AccountId>,
+    pub notes: Option<String>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -44,6 +45,7 @@ impl Partner {
         is_amount_in_original: bool,
         profit_sharing_type: ProfitSharingType,
         profit_sharing_ratio: Option<Decimal>,
+        notes: Option<String>,
     ) -> Result<Self, DomainError> {
         if name.trim().is_empty() {
             return Err(DomainError::Invalid(
@@ -79,6 +81,7 @@ impl Partner {
             linked_account_id: None,
             drawings_account_id: None,
             current_account_id: None,
+            notes,
             created_at: now,
             updated_at: now,
         })
@@ -93,6 +96,7 @@ impl Partner {
         is_amount_in_original: bool,
         profit_sharing_type: ProfitSharingType,
         profit_sharing_ratio: Option<Decimal>,
+        notes: Option<String>,
     ) -> Result<(), DomainError> {
         if name.trim().is_empty() {
             return Err(DomainError::Invalid(
@@ -115,6 +119,7 @@ impl Partner {
         self.amount_original = amount_original;
         self.profit_sharing_type = profit_sharing_type;
         self.profit_sharing_ratio = profit_sharing_ratio;
+        self.notes = notes;
         self.updated_at = Utc::now();
 
         Ok(())

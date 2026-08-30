@@ -68,6 +68,7 @@ async fn seed_partner_uncontributed(pool: &Arc<sqlx::SqlitePool>) -> (String, St
         false,
         ProfitSharingType::BasedOnCapitalLocal,
         None,
+        None,
     )
     .unwrap();
     let capital = Account::new(

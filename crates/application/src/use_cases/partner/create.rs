@@ -36,6 +36,7 @@ impl CreatePartnerUseCase {
         sharing_type: String,
         manual_ratio: Option<Decimal>,
         accounting_start_mode: String,
+        notes: Option<String>,
     ) -> Result<String, AppError> {
         let sharing_enum = match sharing_type.as_str() {
             "BasedOnCapitalLocal" => ProfitSharingType::BasedOnCapitalLocal,
@@ -72,6 +73,7 @@ impl CreatePartnerUseCase {
             is_amount_in_original,
             sharing_enum,
             manual_ratio,
+            notes,
         ).map_err(AppError::Domain)?;
 
         let capital_parent = self.account_repo.find_by_code("51").await?

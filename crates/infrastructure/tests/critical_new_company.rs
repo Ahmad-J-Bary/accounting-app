@@ -221,6 +221,7 @@ async fn register_partner(pool: &Arc<sqlx::SqlitePool>) -> (String, AccountId) {
             "BasedOnCapitalLocal".into(),
             None,
             "NewCompany".into(),
+            None,
         )
         .await
         .expect("create partner");

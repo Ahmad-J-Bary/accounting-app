@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { Input } from "@shared/ui/input";
+import { Textarea } from "@shared/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
 import { SYSTEM_ACCOUNT_IDS, type AccountDto, type CustomerDto, type SupplierDto, type PartnerDto } from "@erp/shared-types";
 import { FormPanel } from '@widgets/form-shell/FormPanel';
@@ -208,24 +209,24 @@ export function PartnerFormPanel({
                 <FieldLabel>العنوان</FieldLabel>
                 <Input value={form.address} onChange={(e) => setForm({...form, address: e.target.value})} placeholder="المدينة، الشارع..." className="h-9" />
               </div>
-              {!canAccessOpeningWorkflow && currencies.length > 1 && (
-                <div className="space-y-1.5">
-                  <FieldLabel>العملة الافتراضية</FieldLabel>
-                  <Select value={currency} onValueChange={setCurrency}>
-                    <SelectTrigger className="h-9 font-bold"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {currencies.map(c => (
-                        <SelectItem key={c.code} value={c.code}>{c.code} - {c.name_ar}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
             </div>
           </SidebarSection>
 
           {canAccessOpeningWorkflow && (
           <SidebarSection title="البيانات المالية">
+            {currencies.length > 1 && (
+              <div className="space-y-1.5 mb-3">
+                <FieldLabel>العملة الافتراضية</FieldLabel>
+                <Select value={currency} onValueChange={setCurrency}>
+                  <SelectTrigger className="h-9 font-bold"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {currencies.map(c => (
+                      <SelectItem key={c.code} value={c.code}>{c.code} - {c.name_ar}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5 col-span-2 sm:col-span-1">
                 <FieldLabel>الرصيد الافتتاحي</FieldLabel>
@@ -266,7 +267,7 @@ export function PartnerFormPanel({
 
           <div className="space-y-1.5">
             <FieldLabel>ملاحظات</FieldLabel>
-            <Input value={form.notes} onChange={(e) => setForm({...form, notes: e.target.value})} className="h-9" />
+            <Textarea value={form.notes} onChange={(e) => setForm({...form, notes: e.target.value})} className="min-h-[60px] bg-white border-slate-200" placeholder="ملاحظات اختيارية..." />
           </div>
         </div>
       </FormPanel>

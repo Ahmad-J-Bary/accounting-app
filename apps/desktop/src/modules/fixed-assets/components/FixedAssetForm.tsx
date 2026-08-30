@@ -427,18 +427,26 @@ export function FixedAssetForm({
           )}
         </FormField>
 
-        {/* Code (read-only for editing) & Name */}
-        <div className={`gap-3 ${code ? "grid grid-cols-[auto_1fr]" : ""}`}>
-          {code && (
+        {code ? (
+          <div className="grid grid-cols-2 gap-3">
             <FormField label="الكود">
               <Input
                 value={code}
                 readOnly
-                className="bg-slate-50 border-slate-200 h-9 text-xs font-mono cursor-not-allowed w-20"
+                className="bg-slate-50 border-slate-200 h-9 text-xs font-mono cursor-not-allowed"
               />
             </FormField>
-          )}
 
+            <FormField label="الاسم" required>
+              <Input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="اسم الأصل"
+                className="bg-white border-slate-200 h-9 text-xs"
+              />
+            </FormField>
+          </div>
+        ) : (
           <FormField label="الاسم" required>
             <Input
               value={name}
@@ -447,30 +455,98 @@ export function FixedAssetForm({
               className="bg-white border-slate-200 h-9 text-xs"
             />
           </FormField>
-        </div>
+        )}
 
-        {showWarehouseField && (
-          <FormField label="المستودع">
-            <Select dir="rtl" value={warehouseId} onValueChange={setWarehouseId}>
-              <SelectTrigger className="bg-white border-slate-200 h-9 w-full text-right text-xs">
-                <SelectValue placeholder="اختر مستودع" />
-              </SelectTrigger>
-              <SelectContent>
-                {activeWarehouses.map((w) => (
-                  <SelectItem key={w.id} value={w.id} className="text-xs">
-                    {w.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+        {showWarehouseField ? (
+          <div className="grid grid-cols-2 gap-3">
+            <FormField label="المستودع">
+              <Select dir="rtl" value={warehouseId} onValueChange={setWarehouseId}>
+                <SelectTrigger className="bg-white border-slate-200 h-9 w-full text-right text-xs">
+                  <SelectValue placeholder="اختر مستودع" />
+                </SelectTrigger>
+                <SelectContent>
+                  {activeWarehouses.map((w) => (
+                    <SelectItem key={w.id} value={w.id} className="text-xs">
+                      {w.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FormField>
+
+            <FormField label={isNonDepreciable ? "الموقع / العنوان" : "الموقع / الغرفة / القسم"}>
+              <Input
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+                placeholder={isNonDepreciable ? "مثال: دمشق - تنظيم كفرسوسة - محضر 12" : "مثال: الطابق الثالث - مكتب المدير"}
+                className="bg-white border-slate-200 h-9 text-xs"
+              />
+            </FormField>
+          </div>
+        ) : (
+          <FormField label={isNonDepreciable ? "الموقع / العنوان" : "الموقع / الغرفة / القسم"}>
+            <Input
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
+              placeholder={isNonDepreciable ? "مثال: دمشق - تنظيم كفرسوسة - محضر 12" : "مثال: الطابق الثالث - مكتب المدير"}
+              className="bg-white border-slate-200 h-9 text-xs"
+            />
+          </FormField>
+        )}
+      </SidebarSection>
+
+      {/* ── Section 2: Purchase & Cost ── */}
+      <SidebarSection title={additionType === "new" ? "الشراء والتكلفة" : "بيانات الأصل السابق"} icon={<BadgeDollarSign className="w-3.5 h-3.5" />} defaultOpen>
+        {currencies.length > 1 ? (
+          <div className="grid grid-cols-2 gap-3">
+            <FormField label="العملة" required>
+              <Select dir="rtl" value={currency} onValueChange={setCurrency}>
+                <SelectTrigger className="bg-white border-slate-200 h-9 w-full text-right text-xs">
+                  <SelectValue placeholder="اختر العملة" />
+                </SelectTrigger>
+                <SelectContent>
+                  {currencies
+                    .filter((c) => c.is_active)
+                    .map((c) => (
+                      <SelectItem key={c.code} value={c.code} className="text-xs">
+                        {c.name_ar} ({c.code})
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </FormField>
+
+            <FormField label={additionType === "new" ? "تكلفة الشراء" : "التكلفة الأصلية"} required>
+              <Input
+                type="number"
+                value={purchaseCost}
+                onChange={(e) => setPurchaseCost(e.target.value)}
+                placeholder="0.00"
+                step="0.01"
+                min="0"
+                className="bg-white border-slate-200 h-9 text-xs"
+              />
+            </FormField>
+          </div>
+        ) : (
+          <FormField label={additionType === "new" ? "تكلفة الشراء" : "التكلفة الأصلية"} required>
+            <Input
+              type="number"
+              value={purchaseCost}
+              onChange={(e) => setPurchaseCost(e.target.value)}
+              placeholder="0.00"
+              step="0.01"
+              min="0"
+              className="bg-white border-slate-200 h-9 text-xs"
+            />
           </FormField>
         )}
 
-        <FormField label={isNonDepreciable ? "الموقع / العنوان" : "الموقع / الغرفة / القسم"}>
+        <FormField label={additionType === "new" ? "تاريخ الشراء" : "تاريخ الحيازة"} required>
           <Input
-            value={location}
-            onChange={(e) => setLocation(e.target.value)}
-            placeholder={isNonDepreciable ? "مثال: دمشق - تنظيم كفرسوسة - محضر 12" : "مثال: الطابق الثالث - مكتب المدير"}
+            type="date"
+            value={purchaseDate}
+            onChange={(e) => setPurchaseDate(e.target.value)}
             className="bg-white border-slate-200 h-9 text-xs"
           />
         </FormField>
@@ -483,72 +559,6 @@ export function FixedAssetForm({
             className="bg-white border-slate-200 min-h-[60px] text-xs"
           />
         </FormField>
-      </SidebarSection>
-
-      {/* ── Section 2: Purchase & Cost ── */}
-      <SidebarSection title={additionType === "new" ? "الشراء والتكلفة" : "بيانات الأصل السابق"} icon={<BadgeDollarSign className="w-3.5 h-3.5" />} defaultOpen>
-        <div className="grid grid-cols-2 gap-3">
-          <FormField label={additionType === "new" ? "تاريخ الشراء" : "تاريخ الحيازة"} required>
-            <Input
-              type="date"
-              value={purchaseDate}
-              onChange={(e) => setPurchaseDate(e.target.value)}
-              className="bg-white border-slate-200 h-9 text-xs"
-            />
-          </FormField>
-
-          <FormField label={additionType === "new" ? "تكلفة الشراء" : "التكلفة الأصلية"} required>
-            <Input
-              type="number"
-              value={purchaseCost}
-              onChange={(e) => setPurchaseCost(e.target.value)}
-              placeholder="0.00"
-              step="0.01"
-              min="0"
-              className="bg-white border-slate-200 h-9 text-xs"
-            />
-          </FormField>
-        </div>
-
-        {currencies.length > 1 && (
-        <div className="grid grid-cols-2 gap-3">
-          <FormField label="العملة" required>
-            <Select dir="rtl" value={currency} onValueChange={setCurrency}>
-              <SelectTrigger className="bg-white border-slate-200 h-9 w-full text-right text-xs">
-                <SelectValue placeholder="اختر العملة" />
-              </SelectTrigger>
-              <SelectContent>
-                {currencies
-                  .filter((c) => c.is_active)
-                  .map((c) => (
-                    <SelectItem key={c.code} value={c.code} className="text-xs">
-                      {c.name_ar} ({c.code})
-                    </SelectItem>
-                  ))}
-              </SelectContent>
-            </Select>
-          </FormField>
-
-          {currencies.length > 1 && (
-            <FormField label="سعر الصرف">
-              <Input
-                type="number"
-                value={fxRate}
-                onChange={(e) => setFxRate(e.target.value)}
-                placeholder="1"
-                step="0.001"
-                min="0"
-                disabled={currency === baseCurrency?.code}
-                className="bg-white border-slate-200 h-9 text-xs"
-              />
-              {currency === baseCurrency?.code && (
-                <span className="text-[10px] text-slate-400 mt-0.5 block">غير مطلوب للعملة الأساسية</span>
-              )}
-            </FormField>
-          )}
-        </div>
-      )}
-
       </SidebarSection>
 
       {/* Account mapping status - hidden informational */}

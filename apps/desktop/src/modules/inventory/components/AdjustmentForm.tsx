@@ -155,15 +155,15 @@ export function AdjustmentForm({ onClose, products, onSave, saving, initialValue
               placeholder="0" />
           </div>
           <div className="space-y-2">
-            <FieldLabel>ملاحظة</FieldLabel>
-            <Textarea value={form.notes ?? ""} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))} className="bg-white border-slate-200" placeholder="سبب التسوية..." />
-          </div>
-          <div className="space-y-2">
             <FieldLabel>تاريخ التسوية</FieldLabel>
             <Input type="date"
               value={form.adjustment_date?.slice(0, 10) ?? ""}
               onChange={e => setForm(p => ({ ...p, adjustment_date: new Date(e.target.value).toISOString() }))}
               className="bg-white border-slate-200" />
+          </div>
+          <div className="space-y-2">
+            <FieldLabel>ملاحظة</FieldLabel>
+            <Textarea value={form.notes ?? ""} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))} className="bg-white border-slate-200 min-h-[60px]" placeholder="سبب التسوية..." />
           </div>
         </div>
       </SidebarSection>

@@ -60,6 +60,7 @@ fn sample_partner(name: &str) -> Partner {
         false,
         ProfitSharingType::BasedOnCapitalLocal,
         None,
+        None,
     )
     .unwrap()
 }

@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { Input } from "@shared/ui/input";
+import { Textarea } from "@shared/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
 import type { WarehouseDto, MaterialDto } from "@erp/shared-types";
 import type { CreateTransferRequest } from "@erp/shared-types";
@@ -399,11 +400,11 @@ export function TransferForm({
             <FieldLabel className="flex items-center gap-1.5">
               <FileText className="w-3.5 h-3.5 text-slate-400" /> ملاحظات
             </FieldLabel>
-            <Input value={form.notes ?? ""}
+            <Textarea value={form.notes ?? ""}
               onChange={e => setForm(p => ({ ...p, notes: e.target.value || null }))}
               disabled={readOnly}
               placeholder="سبب التحويل..."
-              className="bg-white border-slate-200 h-9" />
+              className="min-h-[60px]" />
           </div>
         </div>
       </SidebarSection>

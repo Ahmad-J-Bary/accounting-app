@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
 import { FormPanel } from '@widgets/form-shell/FormPanel';
 import { Input } from "@shared/ui/input";
+import { Textarea } from "@shared/ui/textarea";
 import { Label } from "@shared/ui/label";
+import { FieldLabel } from "@widgets/sidebar-shell/FieldLabel";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
 import { TrendingUp } from "lucide-react";
 import type { PartnerDto, PartnerRequest } from '@modules/partners/api/partnerService';
@@ -24,6 +26,7 @@ export function PartnerForm({ open, onClose, partner, onSave, saving }: PartnerF
     amount: "0",
     currency: baseCurrency?.code || "",
     manualRatio: "",
+    notes: "",
   });
 
   useEffect(() => {
@@ -33,6 +36,7 @@ export function PartnerForm({ open, onClose, partner, onSave, saving }: PartnerF
         amount: partner.is_amount_in_original ? (partner.amount_original || "0") : (partner.amount_local || "0"),
         currency: partner.currency || baseCurrency?.code || "",
         manualRatio: partner.profit_sharing_ratio || "",
+        notes: partner.notes || "",
       });
     } else {
       setFormData({
@@ -40,6 +44,7 @@ export function PartnerForm({ open, onClose, partner, onSave, saving }: PartnerF
         amount: "0",
         currency: baseCurrency?.code || "",
         manualRatio: "",
+        notes: "",
       });
     }
   }, [partner, open, baseCurrency]);
@@ -66,6 +71,7 @@ export function PartnerForm({ open, onClose, partner, onSave, saving }: PartnerF
       isAmountInOriginal: formData.currency !== baseCurrency?.code,
       sharingType,
       manualRatio: formData.manualRatio || null,
+      notes: formData.notes || null,
     });
   };
 
@@ -147,6 +153,16 @@ export function PartnerForm({ open, onClose, partner, onSave, saving }: PartnerF
                 />
                 <TrendingUp className="absolute left-2.5 top-2.5 w-4 h-4 text-muted-foreground opacity-50" />
               </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <FieldLabel>ملاحظات</FieldLabel>
+              <Textarea
+                value={formData.notes}
+                onChange={(e) => setFormData({...formData, notes: e.target.value})}
+                placeholder="ملاحظات اختيارية..."
+                className="min-h-[60px] bg-white border-slate-200"
+              />
             </div>
           </div>
     </FormPanel>

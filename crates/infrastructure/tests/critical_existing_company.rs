@@ -259,6 +259,7 @@ async fn after_lock_company_behaves_like_new_for_capital_contribution() {
             "BasedOnCapitalLocal".into(),
             None,
             START_MODE_EXISTING.into(),
+            None,
         )
         .await
         .expect("create partner");

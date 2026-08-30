@@ -94,6 +94,7 @@ async fn register_partner(pool: &Arc<sqlx::SqlitePool>, name: &str, amount: i64)
             "BasedOnCapitalLocal".into(),
             None,
             START_MODE_EXISTING.into(),
+            None,
         )
         .await
         .expect("create partner")

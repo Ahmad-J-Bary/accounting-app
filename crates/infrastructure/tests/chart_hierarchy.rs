@@ -274,6 +274,7 @@ async fn partner_subtree_built_under_canonical_parents() {
             "BasedOnCapitalLocal".into(),
             None,
             START_MODE_EXISTING.into(),
+            None,
         )
         .await
         .expect("create partner");

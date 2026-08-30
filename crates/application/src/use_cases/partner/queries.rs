@@ -19,6 +19,7 @@ pub struct PartnerDto {
     pub drawings_account_id: Option<String>,
     /// Ledger backing accumulated profit allocations (Sec 4 / Sec 13).
     pub current_account_id: Option<String>,
+    pub notes: Option<String>,
 }
 
 impl From<Partner> for PartnerDto {
@@ -40,6 +41,7 @@ impl From<Partner> for PartnerDto {
             linked_account_id: p.linked_account_id.map(|id| id.to_string()),
             drawings_account_id: p.drawings_account_id.map(|id| id.to_string()),
             current_account_id: p.current_account_id.map(|id| id.to_string()),
+            notes: p.notes,
         }
     }
 }

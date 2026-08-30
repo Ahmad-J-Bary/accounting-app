@@ -87,6 +87,7 @@ async fn seed_partner_with_current(pool: &Arc<sqlx::SqlitePool>) -> PartnerId {
         false,
         ProfitSharingType::BasedOnCapitalLocal,
         None,
+        None,
     )
     .unwrap();
 
@@ -268,6 +269,7 @@ async fn seed_partner_with_ratio(
         false,
         ProfitSharingType::Manual,
         Some(ratio),
+        None,
     )
     .unwrap();
 
