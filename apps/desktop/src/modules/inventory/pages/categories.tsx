@@ -1,55 +1,105 @@
-import { useState, useEffect, useCallback } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { ChevronLeft, ChevronRight, Plus, Edit, Trash2, Scale } from "lucide-react";
 import { toast } from "sonner";
 import { categoryService } from '@modules/inventory/api/categoryService';
 import { materialService } from '@modules/inventory/api/materialService';
-import type { CategoryDto, MaterialDto } from "@erp/shared-types";
+import type { CategoryDto, MaterialDto, CreateMaterialRequest, UpdateMaterialRequest } from "@erp/shared-types";
 
 
 // Refactored Components & Hooks
 import { HierarchicalTreeTemplate } from '@widgets/templates/HierarchicalTreeTemplate';
+import { Button } from "@shared/ui/button";
+import { ConfirmDialog } from "@shared/ui/confirm-dialog";
 import { CategoryTreeNodeItem } from "./categories/CategoryTreeNodeItem";
-import { CategoryDetailsSidebar } from "./categories/CategoryDetailsSidebar";
-import { useCategoryTree, VIRTUAL_ROOT_ID, type CategoryTreeNode } from '@modules/inventory/hooks/useCategoryTree';
+import { CategoryForm } from "./categories/CategoryForm";
+import { CategoryDetailsPanel } from "./categories/CategoryDetailsPanel";
 import { CategoryDeleteDialog, type CategoryDeleteKind } from "./categories/CategoryDeleteDialog";
+import { MaterialForm } from "@modules/inventory/components/MaterialForm";
+import { MaterialUnitsManager } from "@modules/inventory/components/MaterialUnitsManager";
+import { MaterialDetailPanel } from "@modules/inventory/components/MaterialDetailPanel";
+import { useCategoryTree, VIRTUAL_ROOT_ID, type CategoryTreeNode } from '@modules/inventory/hooks/useCategoryTree';
+import { useCategories } from "@shared/hooks/queries/useCategoryQueries";
+import { useMaterials } from "@shared/hooks/queries/useMaterialQueries";
+import { QUERY_KEYS, INVENTORY_MUTATION_KEYS, invalidateKeys } from "@shared/hooks/queryClient";
 
 const DEFAULT_CATEGORY_NAME = "غير مصنف";
 
+/** What the side panel should render for the current selection. */
+type PanelAction =
+  | { kind: "view" }
+  | { kind: "create_category"; parentId: string | null }
+  | { kind: "edit_category" }
+  | { kind: "create_material"; categoryId: string | null }
+  | { kind: "edit_material" }
+  | { kind: "manage_units" }
+  | null;
+
 export default function Categories() {
-  const [categories, setCategories] = useState<CategoryDto[]>([]);
-  const [materials, setMaterials] = useState<MaterialDto[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [, setRefreshing] = useState(false);
+  const queryClient = useQueryClient();
+  const { data: categoriesData = [], isLoading: categoriesLoading } = useCategories();
+  const { data: materialsData = [] } = useMaterials();
+  const categories = useMemo(() => categoriesData, [categoriesData]);
+  const materials = useMemo(() => materialsData, [materialsData]);
+  const isLoading = categoriesLoading;
+
   const [search] = useState("");
   const [selected, setSelected] = useState<CategoryTreeNode | null>(null);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set([VIRTUAL_ROOT_ID]));
+  const [panelAction, setPanelAction] = useState<PanelAction>(null);
 
-  const fetchData = useCallback(async (isInitial = false) => {
-    try {
-      if (isInitial) setLoading(true);
-      else setRefreshing(true);
+  // Category delete dialog state
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteKind, setDeleteKind] = useState<CategoryDeleteKind | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [pendingCategoryDelete, setPendingCategoryDelete] = useState<{
+    id: string;
+    name: string;
+    targetId: string;
+  } | null>(null);
 
-      const [catData, matData] = await Promise.all([
-        categoryService.listCategories(),
-        materialService.list(),
-      ]);
-      setCategories(catData);
-      setMaterials(matData);
-      if (isInitial) {
-        const rootIds = catData.filter(c => !c.parent_id && !c.is_hybrid).map(c => c.id);
-        setExpandedIds(new Set([VIRTUAL_ROOT_ID, ...rootIds]));
-      }
-    } catch (error) { toast.error("فشل جلب البيانات: " + error); }
-    finally { 
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, []);
+  // Material delete confirm state
+  const [materialDeleteOpen, setMaterialDeleteOpen] = useState(false);
+  const [materialDeleteTarget, setMaterialDeleteTarget] = useState<{ id: string; name: string } | null>(null);
+  const [materialSaving, setMaterialSaving] = useState(false);
 
-  useEffect(() => { void fetchData(true); }, [fetchData]);
-
+  const hasLoadedOnceRef = useRef(false);
   const { filteredTree } = useCategoryTree(categories, materials, search);
-  
+
+  // Expand all root categories on first successful load
+  useEffect(() => {
+    if (!hasLoadedOnceRef.current && categories.length > 0) {
+      hasLoadedOnceRef.current = true;
+      const rootIds = categories.filter(c => !c.parent_id && !c.is_hybrid).map(c => c.id);
+      setExpandedIds(new Set([VIRTUAL_ROOT_ID, ...rootIds]));
+    }
+  }, [categories]);
+
+  // Keep the selected node in sync with fresh query data
+  useEffect(() => {
+    setSelected(prev => {
+      if (!prev) return prev;
+      if (prev.isMaterial) {
+        const fresh = materials.find(m => m.id === prev.materialData?.id);
+        if (!fresh || fresh === prev.materialData) return prev;
+        return { ...prev, name: fresh.name, code_prefix: fresh.code, materialData: fresh };
+      }
+      if (prev.id === VIRTUAL_ROOT_ID) return prev;
+      const fresh = categories.find(c => c.id === prev.id);
+      if (!fresh) return prev;
+      if (
+        prev.name === fresh.name &&
+        (prev.code_prefix || null) === (fresh.code_prefix || null) &&
+        prev.parent_id === fresh.parent_id &&
+        prev.material_count === fresh.material_count &&
+        prev.is_active === fresh.is_active
+      ) {
+        return prev;
+      }
+      return { ...prev, ...fresh, children: prev.children };
+    });
+  }, [categories, materials]);
+
   const toggleExpand = useCallback((id: string, event: React.MouseEvent) => {
     event.stopPropagation();
     setExpandedIds(prev => {
@@ -59,15 +109,27 @@ export default function Categories() {
     });
   }, []);
 
-  // Delete dialog state
-  const [deleteOpen, setDeleteOpen] = useState(false);
-  const [deleteKind, setDeleteKind] = useState<CategoryDeleteKind | null>(null);
-  const [deleting, setDeleting] = useState(false);
-  const [pendingCategoryDelete, setPendingCategoryDelete] = useState<{
-    id: string;
-    name: string;
-    targetId: string;
-  } | null>(null);
+  const expandAll = useCallback(() => {
+    setExpandedIds(new Set([VIRTUAL_ROOT_ID, ...categories.map(c => c.id)]));
+  }, [categories]);
+
+  const collapseAll = useCallback(() => setExpandedIds(new Set([VIRTUAL_ROOT_ID])), []);
+
+  const isRootSelected = selected?.id === VIRTUAL_ROOT_ID;
+  const isMaterialSelected = !!selected?.isMaterial;
+  const isUncategorizedSelected = !!selected && !selected.isMaterial && selected.name === DEFAULT_CATEGORY_NAME;
+  const canOperate = !!selected && !isRootSelected;
+  const canDelete = canOperate && !isUncategorizedSelected;
+
+  const newButtonLabel = isMaterialSelected
+    ? "إضافة وحدة"
+    : (!!selected?.parent_id || isUncategorizedSelected ? "مادة جديدة" : "تصنيف جديد");
+
+  const handleSelect = useCallback((node: CategoryTreeNode) => {
+    setSelected(node);
+    if (node.id === VIRTUAL_ROOT_ID) setPanelAction(null);
+    else setPanelAction({ kind: "view" });
+  }, []);
 
   /** Build a `CategoryDeleteKind` from the currently selected node. */
   const computeDeleteKind = useCallback((node: CategoryTreeNode): CategoryDeleteKind | null => {
@@ -151,61 +213,53 @@ export default function Categories() {
     return defaultCat?.id ?? null;
   }, [categories]);
 
-  const handleDelete = useCallback(() => {
-    if (!selected || selected.id === VIRTUAL_ROOT_ID) return;
-
-    // Material deletion keeps the existing flow.
-    if (selected.isMaterial) {
-      const id = selected.id.replace('mat-', '');
-      if (!window.confirm(`هل أنت متأكد من حذف المادة "${selected.name}"؟`)) return;
-      (async () => {
-        try {
-          setLoading(true);
-          await materialService.delete(id);
-          toast.success("تم الحذف بنجاح");
-          setSelected(null);
-          await fetchData(false);
-        } catch (error) {
-          toast.error("فشل الحذف: " + error);
-        } finally {
-          setLoading(false);
-        }
-      })();
+  const handleOpenNew = useCallback(() => {
+    if (isMaterialSelected) {
+      setPanelAction({ kind: "manage_units" });
       return;
     }
+    if (!!selected?.parent_id || isUncategorizedSelected) {
+      if (selected) setPanelAction({ kind: "create_material", categoryId: selected.id });
+      return;
+    }
+    setPanelAction({ kind: "create_category", parentId: selected?.id ?? null });
+  }, [selected, isMaterialSelected, isUncategorizedSelected]);
 
+  const handleOpenEdit = useCallback(() => {
+    if (!canOperate) return;
+    if (selected?.isMaterial) setPanelAction({ kind: "edit_material" });
+    else setPanelAction({ kind: "edit_category" });
+  }, [canOperate, selected]);
+
+  const handleOpenUnits = useCallback(() => {
+    if (!isMaterialSelected) return;
+    setPanelAction({ kind: "manage_units" });
+  }, [isMaterialSelected]);
+
+  const handleDeleteRequest = useCallback(() => {
+    if (!canOperate) return;
+    if (selected?.isMaterial) {
+      const id = selected.id.replace('mat-', '');
+      setMaterialDeleteTarget({ id, name: selected.name });
+      setMaterialDeleteOpen(true);
+      return;
+    }
     if (selected.name === DEFAULT_CATEGORY_NAME) {
       toast.error(`لا يمكن حذف التصنيف الافتراضي "${DEFAULT_CATEGORY_NAME}"`);
       return;
     }
-
     const kind = computeDeleteKind(selected);
     const targetId = computeReassignTargetId(selected);
-
     if (!kind || !targetId) {
-      if (!window.confirm(`هل تريد حذف "${selected.name}"؟`)) return;
-      (async () => {
-        try {
-          setLoading(true);
-          await categoryService.deleteCategory(selected.id);
-          toast.success("تم الحذف بنجاح");
-          setSelected(null);
-          await fetchData(false);
-        } catch (error) {
-          toast.error("فشل الحذف: " + error);
-        } finally {
-          setLoading(false);
-        }
-      })();
+      toast.error("تعذر تحديد إجراء الحذف");
       return;
     }
-
     setDeleteKind(kind);
     setPendingCategoryDelete({ id: selected.id, name: selected.name, targetId });
     setDeleteOpen(true);
-  }, [selected, computeDeleteKind, computeReassignTargetId, fetchData]);
+  }, [canOperate, selected, computeDeleteKind, computeReassignTargetId]);
 
-  const handleConfirmDelete = useCallback(async () => {
+  const handleConfirmCategoryDelete = useCallback(async () => {
     if (!pendingCategoryDelete) return;
     setDeleting(true);
     try {
@@ -227,48 +281,231 @@ export default function Categories() {
         const suffix = parts.length > 0 ? ` (${parts.join("، ")})` : "";
         toast.success(`تم الحذف بنجاح${suffix}`);
       }
+      await invalidateKeys(queryClient, INVENTORY_MUTATION_KEYS);
       setDeleteOpen(false);
       setDeleteKind(null);
       setPendingCategoryDelete(null);
       setSelected(null);
-      await fetchData(false);
+      setPanelAction(null);
     } catch (error) {
       toast.error("فشل الحذف: " + (error instanceof Error ? error.message : String(error)));
     } finally {
       setDeleting(false);
     }
-  }, [pendingCategoryDelete, deleteKind, fetchData]);
+  }, [pendingCategoryDelete, deleteKind, queryClient]);
 
-  const handleCancelDelete = useCallback(() => {
+  const handleCancelCategoryDelete = useCallback(() => {
     if (deleting) return;
     setDeleteOpen(false);
     setDeleteKind(null);
     setPendingCategoryDelete(null);
   }, [deleting]);
 
+  const handleConfirmMaterialDelete = useCallback(async () => {
+    if (!materialDeleteTarget) return;
+    setDeleting(true);
+    try {
+      await materialService.delete(materialDeleteTarget.id);
+      await invalidateKeys(queryClient, INVENTORY_MUTATION_KEYS);
+      toast.success("تم الحذف بنجاح");
+      setMaterialDeleteOpen(false);
+      setMaterialDeleteTarget(null);
+      setSelected(null);
+      setPanelAction(null);
+    } catch (error) {
+      toast.error("فشل الحذف: " + (error instanceof Error ? error.message : String(error)));
+    } finally {
+      setDeleting(false);
+    }
+  }, [materialDeleteTarget, queryClient]);
+
+  const handleSaveMaterial = useCallback(async (data: CreateMaterialRequest | UpdateMaterialRequest) => {
+    setMaterialSaving(true);
+    try {
+      const update = data as UpdateMaterialRequest;
+      if (update.id) {
+        await materialService.update(update);
+        toast.success("تم تحديث المادة");
+      } else {
+        await materialService.create(data as CreateMaterialRequest);
+        toast.success("تمت إضافة المادة");
+      }
+      await invalidateKeys(queryClient, INVENTORY_MUTATION_KEYS);
+      setPanelAction(selected && selected.id !== VIRTUAL_ROOT_ID ? { kind: "view" } : null);
+    } catch (error) {
+      toast.error("فشل الحفظ: " + (error instanceof Error ? error.message : String(error)));
+    } finally {
+      setMaterialSaving(false);
+    }
+  }, [queryClient, selected]);
+
+  const handleCategorySaved = useCallback(async () => {
+    await invalidateKeys(queryClient, [QUERY_KEYS.categories]);
+    setPanelAction(selected && selected.id !== VIRTUAL_ROOT_ID ? { kind: "view" } : null);
+  }, [queryClient, selected]);
+
+  const handleCategoryCreated = useCallback(() => {
+    void invalidateKeys(queryClient, [QUERY_KEYS.categories]);
+  }, [queryClient]);
+
+  const handleUnitsUpdated = useCallback(() => {
+    void invalidateKeys(queryClient, INVENTORY_MUTATION_KEYS);
+  }, [queryClient]);
+
+  // TopBar / external "add new" entry point
+  useEffect(() => {
+    const handler = () => handleOpenNew();
+    window.addEventListener("erp:open-new-category", handler);
+    return () => window.removeEventListener("erp:open-new-category", handler);
+  }, [handleOpenNew]);
+
+  const isPanelOpen = panelAction !== null;
+  const panelSelected = isRootSelected ? null : selected;
+
+  const renderSidebar = () => {
+    switch (panelAction?.kind) {
+      case "view":
+        if (!panelSelected) return null;
+        if (panelSelected.isMaterial) {
+          return (
+            <MaterialDetailPanel
+              material={panelSelected.materialData ?? null}
+              onClose={() => setPanelAction(null)}
+              onEdit={() => setPanelAction({ kind: "edit_material" })}
+              onDelete={handleDeleteRequest}
+              initialTab="units"
+            />
+          );
+        }
+        return (
+          <CategoryDetailsPanel
+            category={panelSelected}
+            prefix={
+              panelSelected.code_prefix ??
+              categories.find(c => c.parent_id === panelSelected.id && c.name.endsWith("عام"))?.code_prefix ??
+              undefined
+            }
+          />
+        );
+      case "create_category":
+        return (
+          <CategoryForm
+            open
+            mode="create_cat"
+            selected={null}
+            parentId={panelAction.parentId}
+            allCategories={categories}
+            onClose={() => setPanelAction(null)}
+            onSaved={handleCategorySaved}
+          />
+        );
+      case "edit_category":
+        return (
+          <CategoryForm
+            open
+            mode="edit_cat"
+            selected={panelSelected && !panelSelected.isMaterial ? panelSelected : null}
+            parentId={panelSelected?.parent_id ?? null}
+            allCategories={categories}
+            onClose={() => setPanelAction(null)}
+            onSaved={handleCategorySaved}
+          />
+        );
+      case "create_material":
+        return (
+          <MaterialForm
+            open
+            material={null}
+            categories={categories}
+            initialCategoryId={panelAction.categoryId}
+            onSave={handleSaveMaterial}
+            saving={materialSaving}
+            onClose={() => setPanelAction(null)}
+            onCategoryCreated={handleCategoryCreated}
+          />
+        );
+      case "edit_material":
+        return (
+          <MaterialForm
+            open
+            material={panelSelected?.materialData ?? null}
+            categories={categories}
+            onSave={handleSaveMaterial}
+            saving={materialSaving}
+            onClose={() => setPanelAction(null)}
+            onCategoryCreated={handleCategoryCreated}
+          />
+        );
+      case "manage_units":
+        return (
+          <MaterialUnitsManager
+            material={panelSelected?.materialData ?? null}
+            onClose={() => setPanelAction(null)}
+            onUnitsUpdated={handleUnitsUpdated}
+          />
+        );
+      default:
+        return null;
+    }
+  };
+
   return (
-    <>
-      <HierarchicalTreeTemplate
+    <HierarchicalTreeTemplate
       title="تصنيفات المواد"
+      toolbar={
+        <>
+          <Button size="sm" onClick={handleOpenNew} className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100">
+            <Plus className="w-4 h-4 ml-2" /> {newButtonLabel}
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            className="bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
+            disabled={!canOperate}
+            onClick={handleOpenEdit}
+          >
+            <Edit className="w-4 h-4 ml-2" /> تعديل
+          </Button>
+          {isMaterialSelected && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
+              onClick={handleOpenUnits}
+            >
+              <Scale className="w-4 h-4 ml-2 text-blue-600" /> الوحدات
+            </Button>
+          )}
+          <Button
+            size="sm"
+            variant="outline"
+            className="bg-white border-rose-200 text-rose-700 hover:bg-rose-50"
+            disabled={!canDelete}
+            onClick={handleDeleteRequest}
+          >
+            <Trash2 className="w-4 h-4 ml-2 text-rose-600" /> حذف
+          </Button>
+        </>
+      }
       treeHeaderActions={
         <>
           <button
-            onClick={() => setExpandedIds(new Set([VIRTUAL_ROOT_ID, ...categories.map(c => c.id)]))}
+            onClick={expandAll}
             className="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-bold text-slate-500 hover:text-slate-800 hover:bg-slate-200/70 transition-colors"
           >
             <ChevronLeft className="w-3 h-3" /> توسيع
           </button>
           <button
-            onClick={() => setExpandedIds(new Set([VIRTUAL_ROOT_ID]))}
+            onClick={collapseAll}
             className="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-bold text-slate-500 hover:text-slate-800 hover:bg-slate-200/70 transition-colors"
           >
             طي <ChevronRight className="w-3 h-3" />
           </button>
         </>
       }
-      treeSidebar={
+      treeContent={
         <div className="space-y-1">
-          {loading ? (
+          {isLoading ? (
              Array.from({ length: 10 }).map((_, i) => (
               <div key={i} className="h-10 bg-slate-50 animate-pulse rounded-lg mb-2" />
             ))
@@ -277,31 +514,34 @@ export default function Categories() {
               key={filteredTree.id}
               node={filteredTree}
               selectedId={selected?.id || ""}
-              onSelect={setSelected}
+              onSelect={handleSelect}
               expandedNodes={expandedIds}
               onToggle={toggleExpand}
             />
           )}
         </div>
       }
-      detailContent={
-        <CategoryDetailsSidebar
-          selected={selected?.id === VIRTUAL_ROOT_ID ? null : selected}
-          allCategories={categories}
-          onSaved={() => void fetchData(false)}
-          onDelete={handleDelete}
-          isVirtualRootSelected={selected?.id === VIRTUAL_ROOT_ID}
-        />
-      }
-      />
+      sidePanel={isPanelOpen ? renderSidebar() : undefined}
+      isPanelOpen={isPanelOpen}
+    >
       <CategoryDeleteDialog
         open={deleteOpen}
         kind={deleteKind}
         categoryName={pendingCategoryDelete?.name ?? ""}
-        onCancel={handleCancelDelete}
-        onConfirm={handleConfirmDelete}
+        onCancel={handleCancelCategoryDelete}
+        onConfirm={handleConfirmCategoryDelete}
         confirming={deleting}
       />
-    </>
+      <ConfirmDialog
+        open={materialDeleteOpen}
+        onOpenChange={setMaterialDeleteOpen}
+        title="حذف المادة"
+        description={materialDeleteTarget ? `هل تريد حذف المادة «${materialDeleteTarget.name}»؟` : undefined}
+        confirmLabel="حذف"
+        cancelLabel="إلغاء"
+        destructive
+        onConfirm={() => void handleConfirmMaterialDelete()}
+      />
+    </HierarchicalTreeTemplate>
   );
 }

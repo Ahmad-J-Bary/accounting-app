@@ -36,6 +36,8 @@ interface MaterialFormProps {
   saving: boolean;
   onCategoryCreated?: (category: CategoryDto) => void;
   warehouses?: { id: string; name: string }[];
+  /** Default category to select when creating from a tree node (create mode only). */
+  initialCategoryId?: string | null;
 }
 
 type InlineCreateMode =
@@ -66,7 +68,7 @@ const EMPTY_FORM = {
   expiry_alert_before_days: 0,
 };
 
-export function MaterialForm({ open, onClose, material, categories, onSave, saving, onCategoryCreated, warehouses }: MaterialFormProps) {
+export function MaterialForm({ open, onClose, material, categories, onSave, saving, onCategoryCreated, warehouses, initialCategoryId }: MaterialFormProps) {
   const [formData, setFormData] = useState(EMPTY_FORM);
   const [activeTab, setActiveTab] = useState("basic");
   const [inlineCreate, setInlineCreate] = useState<InlineCreateMode>(null);
@@ -279,7 +281,9 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
       } else {
         setFormData({
           ...EMPTY_FORM,
-          selectedCategoryIds: uncategorizedCat ? [uncategorizedCat.id] : [],
+          selectedCategoryIds: initialCategoryId
+            ? [initialCategoryId]
+            : (uncategorizedCat ? [uncategorizedCat.id] : []),
         });
         setTierMaxQty({ retail: "0", semi_wholesale: "0" });
         setTierMaxQtyUnit({ retail: "قطعة", semi_wholesale: "قطعة" });
@@ -287,7 +291,7 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
       setActiveTab("basic");
       cancelInlineCreate();
     }
-  }, [open, material, uncategorizedCat, cancelInlineCreate]);
+  }, [open, material, uncategorizedCat, cancelInlineCreate, initialCategoryId]);
 
   // Sync default unit selections if units change
   useEffect(() => {

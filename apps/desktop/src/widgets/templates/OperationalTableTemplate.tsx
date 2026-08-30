@@ -1,7 +1,7 @@
 import { ReactNode } from "react";
 import { cn } from "@shared/lib/utils";
-import { useSidePanelSettings } from "@shared/hooks";
 import { PageHeader } from "./PageHeader";
+import { TemplateDetailPanel } from "./TemplateDetailPanel";
 
 interface OperationalTableTemplateProps {
   /** Page Title */
@@ -44,8 +44,6 @@ export function OperationalTableTemplate({
   className,
   children
 }: OperationalTableTemplateProps) {
-  const { getSidebarWidth, settings } = useSidePanelSettings();
-
   return (
     <div className={cn("flex flex-col h-full w-full bg-muted/30", className)} dir="rtl">
       <PageHeader title={title} badge={badge} actions={toolbar} pinAction pinLabel={title} />
@@ -94,14 +92,7 @@ export function OperationalTableTemplate({
 
         {/* Optional Side Detail Panel */}
         {sidePanel && (
-          <aside className={cn(
-            "bg-card rounded-xl border border-border shadow-xl flex flex-col overflow-hidden transition-all duration-300 shrink-0",
-            isPanelOpen ? "opacity-100" : "w-0 opacity-0 border-none p-0 overflow-hidden"
-          )} style={{ width: isPanelOpen ? getSidebarWidth() : '0px', transitionProperty: "width, opacity" }}>
-            <div className="flex-1 overflow-auto" style={{ minWidth: settings.customWidth + 'px' }}>
-              {sidePanel}
-            </div>
-          </aside>
+          <TemplateDetailPanel isOpen={isPanelOpen}>{sidePanel}</TemplateDetailPanel>
         )}
       </div>
       {children}

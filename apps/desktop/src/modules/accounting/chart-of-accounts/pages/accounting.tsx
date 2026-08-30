@@ -1,25 +1,33 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Edit, Trash2, BookOpen } from "lucide-react";
 import { buildTree, getVisibleRootTree, getErrorMessage } from "../lib/tree-utils";
 import { computeTreeBalances } from "../lib/tree-balances";
 import { parseSafeNumber } from "@shared/lib/parseSafeNumber";
 import type { AccountTreeNode, ToggleNodeHandler } from "../lib/types";
 import { AccountTreeNodeItem } from "../components/AccountTreeNodeItem";
-import { AccountDetailsSidebar } from "../components/AccountDetailsSidebar";
+import { AccountPanel, type AccountPanelMode } from "../components/AccountPanel";
 import { HierarchicalTreeTemplate } from '@widgets/templates/HierarchicalTreeTemplate';
+import { Button } from "@shared/ui/button";
+import { ConfirmDialog } from "@shared/ui/confirm-dialog";
 import { toast } from "sonner";
 import { useChartOfAccountsTree } from "@shared/hooks/queries/useAccountQueries";
 import { accountingService } from '@modules/accounting/api/accountingService';
-import { QUERY_KEYS } from "@shared/hooks/queryClient";
+import { QUERY_KEYS, CHART_MUTATION_KEYS, invalidateKeys } from "@shared/hooks/queryClient";
+import { useTabs } from "@app/providers/TabContext";
 
 const ROOT_ACCOUNT_ID = "__chart_of_accounts_root__";
 
 export default function Accounting() {
   const queryClient = useQueryClient();
+  const { openTab } = useTabs();
   const [selected, setSelected] = useState<AccountTreeNode | null>(null);
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
   const [searchQuery] = useState("");
+  const [panelMode, setPanelMode] = useState<AccountPanelMode | null>(null);
+  const [createParent, setCreateParent] = useState<AccountTreeNode | null>(null);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const hasLoadedOnceRef = useRef(false);
 
   const { data, isLoading } = useChartOfAccountsTree();
@@ -103,6 +111,7 @@ const rootNode = useMemo<AccountTreeNode>(() => ({
         }
       } else {
         setSelected(null);
+        setPanelMode(null);
       }
     }
   }, [accounts, selected]);
@@ -115,27 +124,124 @@ const rootNode = useMemo<AccountTreeNode>(() => ({
   }, [rootBalance, selected?.id, selected?.balance]);
 
   const isRootSelected = selected?.id === ROOT_ACCOUNT_ID;
+  const canOperate = !!selected && !isRootSelected;
   const parentName = useMemo(() => {
     if (!selected?.parent_id) return null;
     return accounts.find((a) => a.id === selected.parent_id)?.name_ar ?? null;
   }, [selected, accounts]);
 
-  const handleDelete = useCallback(async () => {
+  const handleSelect = useCallback((node: AccountTreeNode) => {
+    setSelected(node);
+    setCreateParent(node);
+    if (node.id === ROOT_ACCOUNT_ID) setPanelMode(null);
+    else setPanelMode("view");
+  }, []);
+
+  const handleOpenNew = useCallback(() => {
+    if (canOperate) {
+      if (selected.is_final) {
+        toast.error("لا يمكن إضافة حسابات فرعية تحت حساب نهائي (ورقة)");
+        return;
+      }
+      setCreateParent(selected);
+    } else {
+      setCreateParent(null);
+    }
+    setPanelMode("create");
+  }, [canOperate, selected]);
+
+  const handleOpenEdit = useCallback(() => {
+    if (!canOperate) return;
+    setPanelMode("edit");
+  }, [canOperate]);
+
+  const handleOpenLedger = useCallback(() => {
+    if (!canOperate || !selected) return;
+    openTab({
+      id: `ledger-${selected.id}`,
+      title: `حركة: ${selected.name_ar}`,
+      path: `/accounting/account-ledger/${selected.id}`,
+      closable: true,
+    });
+  }, [canOperate, selected, openTab]);
+
+  const handleDeleteRequest = useCallback(() => {
+    if (!canOperate) return;
+    setDeleteOpen(true);
+  }, [canOperate]);
+
+  const handleConfirmDelete = useCallback(async () => {
     if (!selected || isRootSelected) return;
-    if (!window.confirm(`هل تريد حذف/تعطيل الحساب "${selected.name_ar}"؟`)) return;
+    setDeleting(true);
     try {
       await accountingService.deleteAccount(selected.id);
-      await queryClient.invalidateQueries({ queryKey: QUERY_KEYS.chartOfAccounts });
-      await queryClient.invalidateQueries({ queryKey: QUERY_KEYS.chartOfAccountsTree });
+      await invalidateKeys(queryClient, CHART_MUTATION_KEYS);
       toast.success("تم حذف الحساب بنجاح");
-    } catch (error) { toast.error(`فشلت العملية: ${getErrorMessage(error)}`); }
+      setSelected(null);
+      setPanelMode(null);
+      setDeleteOpen(false);
+    } catch (error) {
+      toast.error(`فشلت العملية: ${getErrorMessage(error)}`);
+    } finally {
+      setDeleting(false);
+    }
   }, [selected, isRootSelected, queryClient]);
 
+  const handleSaved = useCallback(async () => {
+    await invalidateKeys(queryClient, CHART_MUTATION_KEYS);
+    setPanelMode(selected && !isRootSelected ? "view" : null);
+  }, [queryClient, selected, isRootSelected]);
+
+  // TopBar / external "add new account" entry point
+  useEffect(() => {
+    const handler = () => handleOpenNew();
+    window.addEventListener("erp:open-new-account", handler);
+    return () => window.removeEventListener("erp:open-new-account", handler);
+  }, [handleOpenNew]);
+
   const isLoadingNow = isLoading;
+  const isPanelOpen =
+    panelMode !== null && (panelMode !== "view" || canOperate);
+  const panelSelected = isRootSelected ? null : selected;
 
   return (
     <HierarchicalTreeTemplate
       title="دليل الحسابات"
+      toolbar={
+        <>
+          <Button size="sm" onClick={handleOpenNew} className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100">
+            <Plus className="w-4 h-4 ml-2" /> جديد
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            className="bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
+            disabled={!canOperate}
+            onClick={handleOpenEdit}
+          >
+            <Edit className="w-4 h-4 ml-2" /> تعديل
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            className="bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
+            disabled={!canOperate}
+            onClick={handleOpenLedger}
+          >
+            <BookOpen className="w-4 h-4 ml-2 text-blue-600" />
+            حركة اليومية
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            className="bg-white border-rose-200 text-rose-700 hover:bg-rose-50"
+            disabled={!canOperate}
+            onClick={handleDeleteRequest}
+          >
+            <Trash2 className="w-4 h-4 ml-2 text-rose-600" /> حذف
+          </Button>
+        </>
+      }
       treeHeaderActions={
         <>
           <button
@@ -152,7 +258,7 @@ const rootNode = useMemo<AccountTreeNode>(() => ({
           </button>
         </>
       }
-      treeSidebar={
+      treeContent={
         <div className="space-y-1">
           {isLoadingNow ? (
              Array.from({ length: 8 }).map((_, i) => (
@@ -163,7 +269,7 @@ const rootNode = useMemo<AccountTreeNode>(() => ({
               key={rootNode.id}
               account={rootNode}
               selectedId={selected?.id || ""}
-              onSelect={setSelected}
+              onSelect={handleSelect}
               expandedNodes={expandedNodes}
               toggleNode={toggleNode}
               virtualRootId={ROOT_ACCOUNT_ID}
@@ -171,21 +277,35 @@ const rootNode = useMemo<AccountTreeNode>(() => ({
           )}
         </div>
       }
-      detailContent={
-        <AccountDetailsSidebar
-          selected={isRootSelected ? null : selected}
-          allAccounts={accounts}
-          parentName={parentName}
-          onSaved={async () => {
-            await queryClient.invalidateQueries({ queryKey: QUERY_KEYS.chartOfAccounts });
-            await queryClient.invalidateQueries({ queryKey: QUERY_KEYS.chartOfAccountsTree });
-          }}
-          onDelete={() => void handleDelete()}
-          canEdit={!isRootSelected && !!selected}
-          canDelete={!isRootSelected && !!selected}
-        />
+      sidePanel={
+        isPanelOpen ? (
+          <AccountPanel
+            mode={panelMode as AccountPanelMode}
+            selected={panelSelected}
+            allAccounts={accounts}
+            parentName={parentName}
+            parentAccount={createParent}
+            onClose={() => setPanelMode(null)}
+            onSaved={handleSaved}
+          />
+        ) : undefined
       }
-    />
+      isPanelOpen={isPanelOpen}
+    >
+      <ConfirmDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        title="حذف/تعطيل الحساب"
+        description={
+          selected
+            ? `هل تريد حذف/تعطيل الحساب «${selected.name_ar}»؟`
+            : undefined
+        }
+        confirmLabel="حذف"
+        cancelLabel="إلغاء"
+        destructive
+        onConfirm={() => void handleConfirmDelete()}
+      />
+    </HierarchicalTreeTemplate>
   );
 }
-
