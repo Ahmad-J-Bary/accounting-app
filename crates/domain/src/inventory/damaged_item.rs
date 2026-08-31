@@ -10,7 +10,7 @@ pub struct DamagedItem {
     pub id: DamagedItemId,
     pub material_id: MaterialId,
     pub quantity: Decimal,
-    pub reason: String,
+    pub reason: Option<String>,
     pub damage_date: DateTime<Utc>,
     pub cost_impact: Decimal,
     pub notes: Option<String>,
@@ -22,16 +22,13 @@ impl DamagedItem {
     pub fn new(
         material_id: MaterialId,
         quantity: Decimal,
-        reason: String,
+        reason: Option<String>,
         damage_date: DateTime<Utc>,
         cost_impact: Decimal,
         notes: Option<String>,
     ) -> Result<Self, DomainError> {
         if quantity <= Decimal::ZERO {
             return Err(DomainError::Invalid("كمية التالف يجب أن تكون موجبة".into()));
-        }
-        if reason.trim().is_empty() {
-            return Err(DomainError::Invalid("سبب التلف لا يمكن أن يكون فارغًا".into()));
         }
         if cost_impact < Decimal::ZERO {
             return Err(DomainError::Invalid("قيمة التكلفة لا يمكن أن تكون سالبة".into()));

@@ -86,7 +86,7 @@ impl UpdateDamagedItemUseCase {
 
         item.material_id = material_id;
         item.quantity = quantity;
-        item.reason = req.reason.clone();
+        item.reason = req.reason.clone().filter(|r| !r.trim().is_empty());
         item.damage_date = damage_date;
         item.cost_impact = cost_impact;
         item.notes = req.notes;
@@ -115,7 +115,8 @@ impl UpdateDamagedItemUseCase {
         } else {
             Decimal::ZERO
         };
-        let movement_notes = format!("{} - رقم الفاتورة {}", req.reason, reference);
+        let reason_display = req.reason.as_deref().unwrap_or("—");
+        let movement_notes = format!("{} - رقم الفاتورة {}", reason_display, reference);
         let mut movement = StockMovement::new(
             item.material_id,
             MovementType::Damaged,

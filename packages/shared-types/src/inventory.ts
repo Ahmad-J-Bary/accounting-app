@@ -3,7 +3,7 @@ export interface DamagedItem {
   material_id: string;
   material_name?: string;
   quantity: string;
-  reason: string;
+  reason?: string;
   damage_date: string;
   cost_impact: string;
   cost_impact_base?: string;
@@ -17,7 +17,7 @@ export interface DamagedItem {
 export interface CreateDamagedItemRequest {
   material_id: string;
   quantity: number;
-  reason: string;
+  reason?: string;
   damage_date: string;
   cost_impact: number;
   currency_code?: string;
@@ -29,7 +29,7 @@ export interface UpdateDamagedItemRequest {
   id: string;
   material_id: string;
   quantity: number;
-  reason: string;
+  reason?: string;
   damage_date: string;
   cost_impact: number;
   currency_code?: string;

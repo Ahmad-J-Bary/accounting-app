@@ -478,7 +478,7 @@ export function FixedAssetForm({
               <Input
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
-                placeholder={isNonDepreciable ? "مثال: دمشق - تنظيم كفرسوسة - محضر 12" : "مثال: الطابق الثالث - مكتب المدير"}
+                placeholder={isNonDepreciable ? "مثال: دمشق - تنظيم كفرسوسة - محضر 12" : "مثال: مكتب المدير"}
                 className="bg-white border-slate-200 h-9 text-xs"
               />
             </FormField>

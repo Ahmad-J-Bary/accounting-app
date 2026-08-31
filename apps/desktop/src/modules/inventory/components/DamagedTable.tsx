@@ -66,7 +66,7 @@ export function DamagedTable({
         header: `الخسارة ${cs(curr.symbol || curr.code)}`,
         label: `مبلغ الخسارة ${cs(curr.symbol || curr.code)}`,
         accessor: (i) => {
-          const val = parseFloat(i.cost_impact || "0");
+          const val = parseFloat(i.cost_impact_base || "0");
           return val > 0 ? formatAmount(val, { currencyCode: curr.code }) : "";
         },
         className: isBase
@@ -121,7 +121,7 @@ export function DamagedTable({
   }, [currencies, isBaseCurrency, onView, onEdit, onDelete]);
 
   const summaryColumns = useMemo<SummaryColumn[]>(() => {
-    const totalCost = items.reduce((s, i) => s + parseFloat(i.cost_impact || "0"), 0);
+    const totalCost = items.reduce((s, i) => s + parseFloat(i.cost_impact_base || "0"), 0);
     const colIds = allColumns.map(c => c.id);
     return colIds.map(id => {
       if (id === "material_name") {
@@ -150,7 +150,7 @@ export function DamagedTable({
       case "material_name": comparison = (a.material_name || a.material_id || "").localeCompare(b.material_name || b.material_id || "", "ar"); break;
       case "quantity": comparison = parseFloat(a.quantity) - parseFloat(b.quantity); break;
       case "damage_date": comparison = new Date(a.damage_date).getTime() - new Date(b.damage_date).getTime(); break;
-      case "cost_impact": comparison = parseFloat(a.cost_impact || "0") - parseFloat(b.cost_impact || "0"); break;
+      case "cost_impact": comparison = parseFloat(a.cost_impact_base || "0") - parseFloat(b.cost_impact_base || "0"); break;
     }
     return direction === "asc" ? comparison : -comparison;
   };

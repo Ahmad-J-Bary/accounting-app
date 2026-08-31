@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Input } from "@shared/ui/input";
 import { Textarea } from "@shared/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
@@ -7,8 +7,8 @@ import { FormPanel } from "@widgets/form-shell/FormPanel";
 import { SidebarSection } from "@widgets/sidebar-shell/SidebarSection";
 import { FieldLabel } from "@widgets/sidebar-shell/FieldLabel";
 import { AlertTriangle } from "lucide-react";
-import { useCurrencyContext } from "@app/providers/CurrencyContext";
-import { getExchangeRate } from "@shared/lib/currency-strategy";
+import { useCurrencyField } from "@shared/hooks/useCurrencyField";
+import { CurrencyField } from "@shared/ui/CurrencyField";
 
 interface DamagedFormProps {
   onClose: () => void;
@@ -21,18 +21,23 @@ interface DamagedFormProps {
 
 export function DamagedForm({ onClose, products, onSave, saving, initialMaterialId, initialValues }: DamagedFormProps) {
   const isEditMode = !!initialValues;
-  const { currencies, baseCurrency, rateMap } = useCurrencyContext();
-  const hasSecondaryCurrencies = currencies.length > 1;
-  const [currency, setCurrency] = useState<string>(initialValues?.currency_code ?? "");
-  const [fxRate, setFxRate] = useState<string>("1");
-  const currencySymbol = currencies.find(c => c.code === currency)?.symbol ?? "";
+
+  const currencyField = useCurrencyField({
+    initialCurrency: initialValues?.currency_code || undefined,
+    initialFxRate: initialValues?.fx_rate ? String(initialValues.fx_rate) : undefined,
+    disableAutoFx: isEditMode,
+  });
+
+  const baseCostRef = useRef(0);
+  const materialCurrencyRef = useRef("");
+  const { convertBetween } = currencyField;
 
   const getDefaultCurrency = useCallback((mat?: MaterialDto): string => {
-    const baseCode = baseCurrency?.code ?? "";
+    const baseCode = currencyField.baseCurrencyCode;
     const preferred = mat?.default_purchase_currency;
-    const preferredActive = preferred && currencies.some(c => c.is_active && c.code === preferred);
-    return preferredActive ? preferred : baseCode || (currencies[0]?.code ?? "");
-  }, [baseCurrency, currencies]);
+    const preferredActive = preferred && currencyField.currencies.some(c => c.is_active && c.code === preferred);
+    return preferredActive ? preferred : baseCode || currencyField.getDefaultCurrency();
+  }, [currencyField]);
 
   const [form, setForm] = useState<Partial<CreateDamagedItemRequest>>(() => {
     if (initialValues) {
@@ -51,36 +56,53 @@ export function DamagedForm({ onClose, products, onSave, saving, initialMaterial
   useEffect(() => {
     if (initialValues) {
       setForm({ ...initialValues });
-      setCurrency(initialValues.currency_code || baseCurrency?.code || "");
-      setFxRate(initialValues.fx_rate ? String(initialValues.fx_rate) : "1");
+      const savedCurrency = initialValues.currency_code || currencyField.baseCurrencyCode;
+      const savedFxRate = parseFloat(String(initialValues.fx_rate || "1"));
+      currencyField.setCurrency(savedCurrency);
+      currencyField.setFxRate(String(initialValues.fx_rate || "1"));
+      const costImpact = parseFloat(String(initialValues.cost_impact || "0"));
+      baseCostRef.current = costImpact * savedFxRate;
+      materialCurrencyRef.current = savedCurrency;
     } else {
       const prod = products.find(p => p.id === initialMaterialId);
+      const cost = prod ? parseFloat(prod.last_purchase_price || "0") : 0;
+      const matCurrency = prod?.default_purchase_currency || currencyField.baseCurrencyCode;
+      materialCurrencyRef.current = matCurrency;
+      baseCostRef.current = cost;
+      const selectedCurrency = getDefaultCurrency(prod);
+      currencyField.setCurrency(selectedCurrency);
+      currencyField.setFxRate("1");
+      const converted = selectedCurrency === matCurrency
+        ? cost
+        : convertBetween(cost, matCurrency, selectedCurrency);
       setForm({
         damage_date: new Date().toISOString(),
         quantity: 0,
-        cost_impact: prod ? parseFloat(prod.last_purchase_price || "0") : 0,
+        cost_impact: converted,
         reason: "",
         material_id: initialMaterialId ?? "",
       });
-      setCurrency(getDefaultCurrency(prod));
-      setFxRate("1");
     }
-  }, [initialMaterialId, initialValues, products, baseCurrency, getDefaultCurrency]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialMaterialId, initialValues, products]);
 
-  // Auto-fill exchange rate when the selected currency changes.
+  // Reconvert cost when currency changes
   useEffect(() => {
-    if (currency) {
-      const rate = getExchangeRate(currency, rateMap, baseCurrency?.code);
-      setFxRate(String(rate));
+    if (materialCurrencyRef.current && baseCostRef.current > 0) {
+      const converted = currencyField.currency === materialCurrencyRef.current
+        ? baseCostRef.current
+        : convertBetween(baseCostRef.current, materialCurrencyRef.current, currencyField.currency);
+      setForm(p => ({ ...p, cost_impact: converted }));
     }
-  }, [currency, rateMap, baseCurrency]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currencyField.currency]);
 
   const handleSave = async () => {
     if (!form.material_id || !form.quantity) return;
     await onSave({
       ...form,
-      currency_code: currency || undefined,
-      fx_rate: parseFloat(fxRate) || 1,
+      currency_code: currencyField.currency || undefined,
+      fx_rate: parseFloat(currencyField.fxRate) || 1,
     } as CreateDamagedItemRequest);
   };
 
@@ -96,7 +118,6 @@ export function DamagedForm({ onClose, products, onSave, saving, initialMaterial
     >
       <SidebarSection title="بيانات التلف" defaultOpen={true}>
         <div className="space-y-4 text-right">
-          {/* المنتج */}
           <div className="space-y-2">
             <FieldLabel required>المادة</FieldLabel>
             <Select
@@ -104,14 +125,21 @@ export function DamagedForm({ onClose, products, onSave, saving, initialMaterial
               onValueChange={(val) => {
                 const mid = val;
                 const prod = products.find((p) => p.id === mid);
+                const qty = (form.quantity as number) || 1;
+                const baseCost = prod ? parseFloat(prod.last_purchase_price || "0") * qty : 0;
+                const matCurrency = prod?.default_purchase_currency || currencyField.baseCurrencyCode;
+                baseCostRef.current = baseCost;
+                materialCurrencyRef.current = matCurrency;
+                const selectedCurrency = getDefaultCurrency(prod);
+                currencyField.setCurrency(selectedCurrency);
+                const converted = selectedCurrency === matCurrency
+                  ? baseCost
+                  : convertBetween(baseCost, matCurrency, selectedCurrency);
                 setForm((p) => ({
                   ...p,
                   material_id: mid,
-                  cost_impact: prod
-                    ? parseFloat(prod.last_purchase_price || "0") * ((p.quantity as number) || 1)
-                    : p.cost_impact,
+                  cost_impact: converted,
                 }));
-                setCurrency(getDefaultCurrency(prod));
               }}
             >
               <SelectTrigger className="w-full bg-white border-slate-200">
@@ -127,7 +155,6 @@ export function DamagedForm({ onClose, products, onSave, saving, initialMaterial
             </Select>
           </div>
 
-          {/* الكمية */}
           <div className="space-y-2">
             <FieldLabel required>الكمية التالفة</FieldLabel>
             <Input
@@ -138,52 +165,33 @@ export function DamagedForm({ onClose, products, onSave, saving, initialMaterial
               onChange={(e) => {
                 const qty = parseFloat(e.target.value) || 0;
                 const prod = products.find((p) => p.id === form.material_id);
+                const baseCost = prod ? parseFloat(prod.last_purchase_price || "0") * qty : 0;
+                baseCostRef.current = baseCost;
+                const converted = materialCurrencyRef.current && materialCurrencyRef.current !== currencyField.currency
+                  ? convertBetween(baseCost, materialCurrencyRef.current, currencyField.currency)
+                  : baseCost;
                 setForm((p) => ({
                   ...p,
                   quantity: qty,
-                  cost_impact: prod ? parseFloat(prod.last_purchase_price || "0") * qty : p.cost_impact,
+                  cost_impact: converted,
                 }));
               }}
-              className="bg-white border-slate-200"
+              className="bg-white border-slate-200 h-9 text-xs tabular-nums"
               placeholder="أدخل الكمية..."
             />
           </div>
 
-          {/* تأثير التكلفة */}
-          <div className={hasSecondaryCurrencies ? "grid grid-cols-2 gap-3" : ""}>
-            {hasSecondaryCurrencies && (
-              <div className="space-y-2">
-                <FieldLabel>العملة</FieldLabel>
-                <Select dir="rtl" value={currency} onValueChange={setCurrency}>
-                  <SelectTrigger className="bg-white border-slate-200 w-full text-right"><SelectValue placeholder="اختر العملة" /></SelectTrigger>
-                  <SelectContent>
-                    {currencies.filter(c => c.is_active).map(c => (
-                      <SelectItem key={c.code} value={c.code}>{c.name_ar} ({c.code})</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-            <div className="space-y-2">
-              <FieldLabel>تأثير التكلفة المالي</FieldLabel>
-              <div className="relative">
-                <Input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={form.cost_impact || ""}
-                  onChange={(e) => setForm((p) => ({ ...p, cost_impact: parseFloat(e.target.value) || 0 }))}
-                  className="bg-white border-slate-200 font-bold text-slate-700 pl-10"
-                  placeholder="التأثير المالي للمواد التالفة..."
-                />
-                {currencySymbol && (
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-500">{currencySymbol}</span>
-                )}
-              </div>
-            </div>
-          </div>
+          <CurrencyField
+            label="تأثير التكلفة المالي"
+            currency={currencyField.currency}
+            onCurrencyChange={currencyField.setCurrency}
+            amount={form.cost_impact || ""}
+            onAmountChange={(val) => setForm((p) => ({ ...p, cost_impact: parseFloat(val) || 0 }))}
+            symbol={currencyField.symbol}
+            showCurrency={currencyField.hasMultipleCurrencies}
+            currencies={currencyField.currencies}
+          />
 
-          {/* تاريخ التلف */}
           <div className="space-y-2">
             <FieldLabel>تاريخ التلف</FieldLabel>
             <Input
@@ -194,7 +202,6 @@ export function DamagedForm({ onClose, products, onSave, saving, initialMaterial
             />
           </div>
 
-          {/* سبب التلف */}
           <div className="space-y-2">
             <FieldLabel>سبب التلف</FieldLabel>
             <Textarea
