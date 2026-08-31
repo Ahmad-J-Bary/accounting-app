@@ -16,9 +16,11 @@ interface PartnerFormProps {
   partner: PartnerDto | null;
   onSave: (payload: PartnerRequest) => Promise<void>;
   saving?: boolean;
+  /** When editing from the Chart of Accounts, these read-only account fields are displayed. */
+  accountInfo?: { code: string; parentName: string };
 }
 
-export function PartnerForm({ open, onClose, partner, onSave, saving }: PartnerFormProps) {
+export function PartnerForm({ open, onClose, partner, onSave, saving, accountInfo }: PartnerFormProps) {
   const { currencies, baseCurrency, rateMap, hasMultipleCurrencies } = useCurrencyContext();
   
   const [formData, setFormData] = useState({
@@ -88,6 +90,18 @@ export function PartnerForm({ open, onClose, partner, onSave, saving }: PartnerF
     >
 
       <div className="space-y-4 text-right">
+            {accountInfo && (
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <FieldLabel>رقم الحساب</FieldLabel>
+                  <Input value={accountInfo.code} readOnly className="h-9 bg-slate-50 border-slate-200 cursor-not-allowed" />
+                </div>
+                <div className="space-y-1.5">
+                  <FieldLabel>فرعي من</FieldLabel>
+                  <Input value={accountInfo.parentName} readOnly className="h-9 bg-slate-50 border-slate-200 cursor-not-allowed" />
+                </div>
+              </div>
+            )}
             <div className="space-y-2">
               <Label>اسم الشريك</Label>
               <Input 

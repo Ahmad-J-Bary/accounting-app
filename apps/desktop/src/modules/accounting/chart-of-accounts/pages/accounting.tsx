@@ -295,6 +295,60 @@ export default function Accounting() {
     }
   }, [queryClient, backToView]);
 
+  const handleEditCustomer = useCallback(async (payload: PartnerFormPayload) => {
+    if (!payload.id) return;
+    setEntitySaving(true);
+    try {
+      await customerService.update({
+        id: payload.id,
+        code: payload.code,
+        name: payload.name,
+        phone: payload.phone,
+        address: payload.address,
+        notes: payload.notes,
+        opening_balance: payload.opening_balance,
+        debit: payload.debit,
+        credit: payload.credit,
+        currency: payload.currency || undefined,
+        is_active: payload.is_active,
+      });
+      toast.success("تم تحديث بيانات العميل بنجاح");
+      await invalidateKeys(queryClient, [...ALL_PARTY_KEYS, ...CHART_MUTATION_KEYS]);
+      backToView();
+    } catch (error) {
+      toast.error(`فشلت العملية: ${getErrorMessage(error)}`);
+    } finally {
+      setEntitySaving(false);
+    }
+  }, [queryClient, backToView]);
+
+  const handleEditSupplier = useCallback(async (payload: PartnerFormPayload) => {
+    if (!payload.id) return;
+    setEntitySaving(true);
+    try {
+      await supplierService.update({
+        id: payload.id,
+        code: payload.code,
+        name: payload.name,
+        phone: payload.phone,
+        address: payload.address,
+        notes: payload.notes,
+        opening_balance: payload.opening_balance,
+        debit: payload.debit,
+        credit: payload.credit,
+        currency: payload.currency || undefined,
+        is_active: payload.is_active,
+      });
+      toast.success("تم تحديث بيانات المورد بنجاح");
+      await invalidateKeys(queryClient, [...ALL_PARTY_KEYS, ...CHART_MUTATION_KEYS]);
+      backToView();
+    } catch (error) {
+      toast.error(`فشلت العملية: ${getErrorMessage(error)}`);
+    } finally {
+      setEntitySaving(false);
+    }
+  }, [queryClient, backToView]);
+
   const expensesParentAccount = useMemo(
     () => accounts.find((a) => a.id === SYSTEM_ACCOUNT_IDS.OTHER_EXPENSES) ?? null,
     [accounts],
@@ -472,6 +526,8 @@ export default function Accounting() {
             onSavedAccount={handleSavedAccount}
             onCreateCustomer={handleCreateCustomer}
             onCreateSupplier={handleCreateSupplier}
+            onEditCustomer={handleEditCustomer}
+            onEditSupplier={handleEditSupplier}
             onCreateExpense={handleCreateExpense}
             onCreatePartner={handleCreatePartner}
             onAssetSaved={handleAssetSaved}

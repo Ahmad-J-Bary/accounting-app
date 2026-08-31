@@ -6,7 +6,11 @@ import type { PartnerRequest } from "@modules/partners/api/partnerService";
 import type { TreeNodeCreatePanelKind, ResolvedTreeNode } from "@shared/tree/nodeTypes";
 import type { FixedAssetType } from "@shared/tree/fixedAssetTypes";
 import { AccountPanel } from "./AccountPanel";
-import { useLinkedPartner } from "../hooks/useLinkedEntity";
+import {
+  useLinkedCustomer,
+  useLinkedPartner,
+  useLinkedSupplier,
+} from "../hooks/useLinkedEntity";
 
 /*
  * Lazy entity create panels for the Chart of Accounts branches. Entity forms
@@ -67,6 +71,8 @@ interface BranchPanelProps {
   onSavedAccount: () => void | Promise<void>;
   onCreateCustomer: (payload: PartnerFormPayload) => Promise<void>;
   onCreateSupplier: (payload: PartnerFormPayload) => Promise<void>;
+  onEditCustomer: (payload: PartnerFormPayload) => Promise<void>;
+  onEditSupplier: (payload: PartnerFormPayload) => Promise<void>;
   onCreateExpense: (payload: ExpenseFormPayload) => Promise<void>;
   onCreatePartner: (payload: PartnerRequest) => Promise<void>;
   onAssetSaved: () => Promise<void>;
@@ -95,6 +101,8 @@ export function BranchPanel({
   onSavedAccount,
   onCreateCustomer,
   onCreateSupplier,
+  onEditCustomer,
+  onEditSupplier,
   onCreateExpense,
   onCreatePartner,
   onAssetSaved,
@@ -104,11 +112,57 @@ export function BranchPanel({
     resolved?.entityType === "partner-account" &&
     (resolved.linkedPartnerRole === "capital" || !resolved.linkedPartnerRole);
 
+  const isCustomerEdit =
+    mode === "edit" &&
+    resolved?.entityType === "customer-account" &&
+    !!resolved.linkedEntityId;
+  const isSupplierEdit =
+    mode === "edit" &&
+    resolved?.entityType === "supplier-account" &&
+    !!resolved.linkedEntityId;
+
+  const customerEditId = isCustomerEdit ? resolved?.linkedEntityId ?? null : null;
+  const supplierEditId = isSupplierEdit ? resolved?.linkedEntityId ?? null : null;
+
+  const customerQuery = useLinkedCustomer(customerEditId);
+  const supplierQuery = useLinkedSupplier(supplierEditId);
   const partnerQuery = useLinkedPartner(
     isCapitalPartnerEdit ? selected?.id : null,
     "capital",
   );
   const linkedPartner = partnerQuery.data;
+
+  if (isCustomerEdit && customerQuery.data) {
+    return (
+      <Suspense fallback={<LazyFallback />}>
+        <PartnerFormPanelLazy
+          type="customer"
+          partner={customerQuery.data}
+          accounts={allAccounts}
+          onSave={onEditCustomer}
+          onClose={onClose}
+          saving={entitySaving}
+          accountInfo={selected ? { code: selected.code ?? "", parentName: parentName ?? "" } : undefined}
+        />
+      </Suspense>
+    );
+  }
+
+  if (isSupplierEdit && supplierQuery.data) {
+    return (
+      <Suspense fallback={<LazyFallback />}>
+        <PartnerFormPanelLazy
+          type="supplier"
+          partner={supplierQuery.data}
+          accounts={allAccounts}
+          onSave={onEditSupplier}
+          onClose={onClose}
+          saving={entitySaving}
+          accountInfo={selected ? { code: selected.code ?? "", parentName: parentName ?? "" } : undefined}
+        />
+      </Suspense>
+    );
+  }
 
   if (mode === "create") {
     switch (createKind) {
@@ -199,6 +253,7 @@ export function BranchPanel({
           onSave={onCreatePartner}
           onClose={onClose}
           saving={entitySaving}
+          accountInfo={selected ? { code: selected.code ?? "", parentName: parentName ?? "" } : undefined}
         />
       </Suspense>
     );

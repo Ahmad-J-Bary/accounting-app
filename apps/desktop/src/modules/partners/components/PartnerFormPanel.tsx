@@ -46,6 +46,8 @@ interface PartnerFormPanelProps {
   onSave: (payload: PartnerFormPayload) => Promise<void>;
   onClose: () => void;
   saving?: boolean;
+  /** When editing from the Chart of Accounts, these read-only account fields are displayed. */
+  accountInfo?: { code: string; parentName: string };
 }
 
 export function PartnerFormPanel({
@@ -54,7 +56,8 @@ export function PartnerFormPanel({
   accounts,
   onSave,
   onClose,
-  saving
+  saving,
+  accountInfo
 }: PartnerFormPanelProps) {
   const { currencies, baseCurrency, rateMap } = useCurrencyContext();
   const { canAccessOpeningWorkflow, isExistingCompany } = useCompanyCapabilities();
@@ -197,6 +200,18 @@ export function PartnerFormPanel({
         <div className="space-y-6 text-right">
           <SidebarSection title="المعلومات الأساسية">
             <div className="space-y-3">
+              {accountInfo && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <FieldLabel>رقم الحساب</FieldLabel>
+                    <Input value={accountInfo.code} readOnly className="h-9 bg-slate-50 border-slate-200 cursor-not-allowed" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <FieldLabel>فرعي من</FieldLabel>
+                    <Input value={accountInfo.parentName} readOnly className="h-9 bg-slate-50 border-slate-200 cursor-not-allowed" />
+                  </div>
+                </div>
+              )}
               <div className="space-y-1.5">
                 <FieldLabel>{labelName}</FieldLabel>
                 <Input required value={form.name} onChange={(e) => setForm({...form, name: e.target.value})} placeholder={placeholderName} className="h-9" />

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Input } from "@shared/ui/input";
+import { Textarea } from "@shared/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
 import type { CreateDamagedItemRequest, MaterialDto } from "@erp/shared-types";
 import { FormPanel } from "@widgets/form-shell/FormPanel";
@@ -48,7 +49,7 @@ export function DamagedForm({ onClose, products, onSave, saving, initialMaterial
   }, [initialMaterialId, initialValues, products]);
 
   const handleSave = async () => {
-    if (!form.material_id || !form.reason || !form.quantity) return;
+    if (!form.material_id || !form.quantity) return;
     await onSave(form as CreateDamagedItemRequest);
   };
 
@@ -59,7 +60,7 @@ export function DamagedForm({ onClose, products, onSave, saving, initialMaterial
       onClose={onClose}
       onSave={handleSave}
       isSaving={saving}
-      saveDisabled={saving || !form.material_id || !form.reason || !form.quantity}
+      saveDisabled={saving || !form.material_id || !form.quantity}
       saveLabel="تسجيل التالف"
     >
       <SidebarSection title="بيانات التلف" defaultOpen={true}>
@@ -116,17 +117,6 @@ export function DamagedForm({ onClose, products, onSave, saving, initialMaterial
             />
           </div>
 
-          {/* سبب التلف */}
-          <div className="space-y-2">
-            <FieldLabel required>سبب التلف</FieldLabel>
-            <Input
-              value={form.reason ?? ""}
-              onChange={(e) => setForm((p) => ({ ...p, reason: e.target.value }))}
-              placeholder="استهلاك، كسر، انتهاء صلاحية..."
-              className="bg-white border-slate-200"
-            />
-          </div>
-
           {/* تأثير التكلفة */}
           <div className="space-y-2">
             <FieldLabel>تأثير التكلفة المالي</FieldLabel>
@@ -149,6 +139,17 @@ export function DamagedForm({ onClose, products, onSave, saving, initialMaterial
               value={form.damage_date?.slice(0, 10) ?? ""}
               onChange={(e) => setForm((p) => ({ ...p, damage_date: new Date(e.target.value).toISOString() }))}
               className="bg-white border-slate-200"
+            />
+          </div>
+
+          {/* سبب التلف */}
+          <div className="space-y-2">
+            <FieldLabel>سبب التلف</FieldLabel>
+            <Textarea
+              value={form.reason ?? ""}
+              onChange={(e) => setForm((p) => ({ ...p, reason: e.target.value }))}
+              placeholder="استهلاك، كسر، انتهاء صلاحية... (اختياري)"
+              className="min-h-[60px] bg-white border-slate-200"
             />
           </div>
         </div>
