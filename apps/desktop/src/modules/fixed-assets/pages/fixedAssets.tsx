@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Button } from "@shared/ui/button";
 import { Plus, Download } from "lucide-react";
 import { fixedAssetService } from "@modules/fixed-assets/api/fixedAssetService";
-import { INVENTORY_MUTATION_KEYS, invalidateKeys, queryClient } from "@shared/hooks/queryClient";
+import { CHART_MUTATION_KEYS, ALL_INVENTORY_KEYS, invalidateKeys, queryClient } from "@shared/hooks/queryClient";
 import { warehouseService } from "@modules/inventory/api/warehouseService";
 import type {
   FixedAssetDto,
@@ -156,7 +156,7 @@ export default function FixedAssetsPage() {
       toast.success("تم حذف الأصل بنجاح");
       if (selectedAsset?.id === asset.id) setSelectedAsset(null);
       refresh(true);
-      await invalidateKeys(queryClient, INVENTORY_MUTATION_KEYS);
+      await invalidateKeys(queryClient, [...CHART_MUTATION_KEYS, ...ALL_INVENTORY_KEYS]);
     } catch (e) {
       toast.error("فشل حذف الأصل: " + e);
     }
@@ -296,7 +296,7 @@ export default function FixedAssetsPage() {
       const results = await fixedAssetService.runYearlyRotation(new Date().toISOString());
       toast.success(`تم ترحيل إهلاك ${results.length} أصل بنجاح`);
       refresh(true);
-      await invalidateKeys(queryClient, INVENTORY_MUTATION_KEYS);
+      await invalidateKeys(queryClient, [...CHART_MUTATION_KEYS, ...ALL_INVENTORY_KEYS]);
     } catch (e) {
       toast.error("فشل تدوير الحسابات: " + e);
     }
@@ -481,10 +481,11 @@ export default function FixedAssetsPage() {
             asset={editingAsset ?? undefined}
             initialCategoryId={selectedCategoryId}
             onClose={() => { setShowForm(false); setEditingAsset(null); }}
-            onSaved={() => {
+            onSaved={async () => {
               setShowForm(false);
               setEditingAsset(null);
               refresh(true);
+              await invalidateKeys(queryClient, [...CHART_MUTATION_KEYS, ...ALL_INVENTORY_KEYS]);
             }}
           />
         ) : selectedAsset ? (

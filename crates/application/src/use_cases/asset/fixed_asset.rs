@@ -225,6 +225,10 @@ impl FixedAssetUseCases {
             entry.source_type = Some("fixed_asset_opening".to_string());
         }
 
+        // Post the acquisition journal so it appears in the Chart of Accounts
+        // tree and financial reports (balances are computed from POSTED entries).
+        entry.post().map_err(|e| AppError::Invalid(e.to_string()))?;
+
         // --- Update account balances (computed in memory, persisted below) ---
         let base_amount = req.purchase_cost.to_base(req.fx_rate);
         let mut accounts = Vec::new();
@@ -306,7 +310,7 @@ impl FixedAssetUseCases {
             format!("مجمع إهلاك: {}", asset.name),
         ));
 
-        let entry = JournalEntry::new(
+        let mut entry = JournalEntry::new(
             self.journal_repo.get_next_entry_number().await?,
             domain::accounting::JournalType::GeneralJournal,
             lines,
@@ -321,6 +325,10 @@ impl FixedAssetUseCases {
             Some(format!("asset:{}:depreciation:{}", asset.id.0, date.format("%Y-%m"))),
         )
         .map_err(|e| AppError::Invalid(e.to_string()))?;
+
+        // Post the depreciation journal so it flows into the Income Statement
+        // and Balance Sheet (balances are computed from POSTED entries).
+        entry.post().map_err(|e| AppError::Invalid(e.to_string()))?;
 
         // Commit updated asset + movement + journal in ONE transaction
         // (Sec 9 atomicity).
@@ -490,7 +498,7 @@ impl FixedAssetUseCases {
                 ),
             ];
 
-            let entry = JournalEntry::new(
+            let mut entry = JournalEntry::new(
                 self.journal_repo.get_next_entry_number().await?,
                 domain::accounting::JournalType::GeneralJournal,
                 lines,
@@ -505,6 +513,11 @@ impl FixedAssetUseCases {
                 Some(format!("asset:{}:depreciation:year:{}", asset.id.0, date.format("%Y"))),
             )
             .map_err(|e| AppError::Invalid(e.to_string()))?;
+
+            // Post the depreciation journal so it flows into the Income
+            // Statement and Balance Sheet (balances are computed from POSTED
+            // entries).
+            entry.post().map_err(|e| AppError::Invalid(e.to_string()))?;
 
             // Commit updated asset + movement + journal in ONE transaction
             // (Sec 9 atomicity).
