@@ -14,7 +14,7 @@ use crate::ports::stock_movement_repository::StockMovementRepository;
 use crate::dto::adjustment_dto::{CreateStockAdjustmentRequest, StockAdjustmentDto};
 use crate::errors::AppError;
 
-const BASE_CURRENCY: &str = "SAR";
+pub const BASE_CURRENCY: &str = "SAR";
 
 pub struct CreateStockAdjustmentUseCase {
     adjustment_repo: Arc<dyn StockAdjustmentRepository>,
@@ -50,6 +50,22 @@ impl CreateStockAdjustmentUseCase {
         let unit_cost = Decimal::try_from(req.unit_cost)
             .map_err(|_| AppError::Invalid("التكلفة غير صالحة".into()))?;
 
+        // Resolve the entry currency + exchange rate. Defaults to the
+        // material's purchase currency, otherwise the base currency (SAR).
+        let currency_code = req
+            .currency_code
+            .clone()
+            .filter(|c| !c.trim().is_empty())
+            .or_else(|| material.default_purchase_currency.clone())
+            .unwrap_or_else(|| BASE_CURRENCY.to_string());
+        let fx_rate = Decimal::try_from(req.fx_rate.unwrap_or(1.0))
+            .map_err(|_| AppError::Invalid("سعر الصرف غير صالح".into()))?;
+        // Base conversion: 1 base = fx_rate foreign units, so base = / fx_rate.
+        let unit_cost_base = (unit_cost / fx_rate).round_dp_with_strategy(
+            4,
+            rust_decimal::RoundingStrategy::MidpointAwayFromZero,
+        );
+
         let adjustment_date = DateTime::parse_from_rfc3339(&req.adjustment_date)
             .map_err(|_| AppError::Invalid("التاريخ غير صالح".into()))?
             .with_timezone(&chrono::Utc);
@@ -81,7 +97,11 @@ impl CreateStockAdjustmentUseCase {
                 "تسوية: عجز".to_string()
             };
             let quantity_unit_cost = unit_cost / abs_diff;
-            let total_cost_value = unit_cost;
+            let quantity_unit_cost_base = if abs_diff > Decimal::ZERO {
+                unit_cost_base / abs_diff
+            } else {
+                Decimal::ZERO
+            };
             let base_notes = if let Some(ref user_notes) = req.notes {
                 format!("{} - {}", notes, user_notes)
             } else {
@@ -93,21 +113,27 @@ impl CreateStockAdjustmentUseCase {
                 MovementType::Adjustment,
                 abs_diff,
                 quantity_unit_cost,
-                total_cost_value,
+                unit_cost,
                 inventory_ref.clone(),
                 movement_notes,
                 adjustment.adjustment_date,
             ).map_err(|e| AppError::Invalid(e.to_string()))?;
             movement.signed_quantity = Some(difference);
             movement.document_number = Some(display_ref.clone());
+            movement.original_currency = Some(currency_code.clone());
+            movement.fx_rate = fx_rate;
+            movement.unit_cost_base = quantity_unit_cost_base;
+            movement.total_cost_base = unit_cost_base;
+            movement.raw_total_cost_base = unit_cost_base;
             movements.push(movement);
 
-            // Build journal entry for adjustment (persisted atomically below)
+            // Build journal entry for adjustment (persisted atomically below).
+            // Balances are stored in the base currency (converted above).
             let entry_number = self.journal_repo.get_next_entry_number().await?;
             let entry = build_adjustment_journal_entry(
                 &self.account_repo,
                 entry_number,
-                unit_cost,
+                unit_cost_base,
                 difference,
                 &display_ref,
                 adjustment.adjustment_date,
@@ -118,7 +144,7 @@ impl CreateStockAdjustmentUseCase {
         // Commit doc + movement + journal in ONE transaction (Sec 9 atomicity).
         self.adjustment_repo.save_with_accounting(&adjustment, &movements, &entries, None, &[]).await?;
 
-        Ok(to_dto(adjustment, material.name))
+        Ok(to_dto(adjustment, material.name, currency_code, fx_rate))
     }
 }
 
@@ -194,10 +220,15 @@ pub async fn build_adjustment_journal_entry(
     }
 }
 
-pub fn to_dto(a: StockAdjustment, material_name: String) -> StockAdjustmentDto {
+pub fn to_dto(
+    a: StockAdjustment,
+    material_name: String,
+    currency_code: String,
+    fx_rate: Decimal,
+) -> StockAdjustmentDto {
     let diff = a.difference;
     let unit_cost_base = if diff != Decimal::ZERO {
-        a.unit_cost / diff.abs()
+        (a.unit_cost / fx_rate) / diff.abs()
     } else {
         Decimal::ZERO
     };
@@ -209,10 +240,12 @@ pub fn to_dto(a: StockAdjustment, material_name: String) -> StockAdjustmentDto {
         actual_quantity: a.actual_quantity.to_string(),
         difference: diff.to_string(),
         reason: a.reason,
-        unit_cost: unit_cost_base.to_string(),
+        unit_cost: (a.unit_cost / if diff != Decimal::ZERO { diff.abs() } else { Decimal::ONE }).to_string(),
         unit_cost_base: unit_cost_base.to_string(),
         total_cost: a.unit_cost.to_string(),
-        total_cost_base: a.unit_cost.to_string(),
+        total_cost_base: (a.unit_cost / fx_rate).to_string(),
+        currency_code: Some(currency_code),
+        fx_rate: Some(fx_rate.to_string()),
         notes: a.notes,
         reference: a.reference,
         adjustment_date: a.adjustment_date.to_rfc3339(),

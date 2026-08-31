@@ -78,6 +78,8 @@ export default function AdjustmentsPage() {
         material_id: payload.material_id,
         actual_quantity: payload.actual_quantity,
         unit_cost: payload.unit_cost,
+        currency_code: payload.currency_code,
+        fx_rate: payload.fx_rate,
         reason: payload.reason,
         notes: payload.notes,
         adjustment_date: payload.adjustment_date,

@@ -27,7 +27,11 @@ pub async fn create_damaged_item(
 pub async fn list_damaged_items(
     state: State<'_, AppState>,
 ) -> Result<Vec<DamagedItemDto>, String> {
-    DamagedItemQueries::new(state.damaged_repo.clone(), state.material_repo.clone())
+    DamagedItemQueries::new(
+        state.damaged_repo.clone(),
+        state.material_repo.clone(),
+        state.stock_movement_repo.clone(),
+    )
         .list_all().await.map_err(|e| e.to_string())
 }
 

@@ -14,7 +14,7 @@ use domain::shared::{Currency, MonetaryAmount};
 use rust_decimal::Decimal;
 use std::sync::Arc;
 
-const BASE_CURRENCY: &str = "SAR";
+pub const BASE_CURRENCY: &str = "SAR";
 
 pub struct CreateDamagedItemUseCase {
     repo: Arc<dyn DamagedItemRepository>,
@@ -57,6 +57,22 @@ impl CreateDamagedItemUseCase {
             .map_err(|_| AppError::Invalid("الكمية غير صالحة".into()))?;
         let cost_impact = Decimal::try_from(req.cost_impact)
             .map_err(|_| AppError::Invalid("قيمة التكلفة غير صالحة".into()))?;
+
+        // Resolve the entry currency + exchange rate. Defaults to the
+        // material's purchase currency, otherwise the base currency (SAR).
+        let currency_code = req
+            .currency_code
+            .clone()
+            .filter(|c| !c.trim().is_empty())
+            .or_else(|| _material.default_purchase_currency.clone())
+            .unwrap_or_else(|| BASE_CURRENCY.to_string());
+        let fx_rate = Decimal::try_from(req.fx_rate.unwrap_or(1.0))
+            .map_err(|_| AppError::Invalid("سعر الصرف غير صالح".into()))?;
+        // Base conversion: 1 base = fx_rate foreign units, so base = / fx_rate.
+        let cost_impact_base = (cost_impact / fx_rate).round_dp_with_strategy(
+            4,
+            rust_decimal::RoundingStrategy::MidpointAwayFromZero,
+        );
         let damage_date = DateTime::parse_from_rfc3339(&req.damage_date)
             .map_err(|_| AppError::Invalid("التاريخ غير صالح".into()))?
             .with_timezone(&Utc);
@@ -81,6 +97,11 @@ impl CreateDamagedItemUseCase {
         } else {
             Decimal::ZERO
         };
+        let unit_cost_base = if quantity > Decimal::ZERO {
+            cost_impact_base / quantity
+        } else {
+            Decimal::ZERO
+        };
         let movement_notes = format!("{} - رقم الفاتورة {}", req.reason.clone(), display_ref);
         let mut movement = StockMovement::new(
             item.material_id,
@@ -94,13 +115,19 @@ impl CreateDamagedItemUseCase {
         )
         .map_err(|e| AppError::Invalid(e.to_string()))?;
         movement.document_number = Some(display_ref.clone());
+        movement.original_currency = Some(currency_code.clone());
+        movement.fx_rate = fx_rate;
+        movement.unit_cost_base = unit_cost_base;
+        movement.total_cost_base = cost_impact_base;
+        movement.raw_total_cost_base = cost_impact_base;
 
         // Build journal entry: Dr 45 (خسائر المواد التالفة والتسويات), Cr 1241 (بضاعة آخر المدة)
+        // Balances are stored in the base currency (converted above).
         let entry_number = self.journal_repo.get_next_entry_number().await?;
         let entry = build_damaged_journal_entry(
             &self.account_repo,
             entry_number,
-            cost_impact,
+            cost_impact_base,
             &display_ref,
             damage_date,
         ).await?;
@@ -108,7 +135,7 @@ impl CreateDamagedItemUseCase {
         // Commit doc + movement + journal in ONE transaction (Sec 9 atomicity).
         self.repo.save_with_accounting(&item, &[movement], &[entry], None, &[]).await?;
 
-        Ok(to_dto(item, Some(display_ref)))
+        Ok(to_dto(item, Some(display_ref), currency_code, fx_rate, cost_impact_base))
     }
 }
 
@@ -150,7 +177,13 @@ pub async fn build_damaged_journal_entry(
     .map_err(|e| AppError::Invalid(e.to_string()))
 }
 
-pub fn to_dto(d: DamagedItem, reference: Option<String>) -> DamagedItemDto {
+pub fn to_dto(
+    d: DamagedItem,
+    reference: Option<String>,
+    currency_code: String,
+    fx_rate: Decimal,
+    cost_impact_base: Decimal,
+) -> DamagedItemDto {
     DamagedItemDto {
         id: d.id.to_string(),
         material_id: d.material_id.to_string(),
@@ -159,6 +192,9 @@ pub fn to_dto(d: DamagedItem, reference: Option<String>) -> DamagedItemDto {
         reason: d.reason,
         damage_date: d.damage_date.to_rfc3339(),
         cost_impact: d.cost_impact.to_string(),
+        cost_impact_base: Some(cost_impact_base.to_string()),
+        currency_code: Some(currency_code),
+        fx_rate: Some(fx_rate.to_string()),
         notes: d.notes,
         reference,
         created_at: d.created_at.to_rfc3339(),

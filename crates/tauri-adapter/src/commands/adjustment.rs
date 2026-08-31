@@ -25,7 +25,11 @@ pub async fn create_stock_adjustment(
 pub async fn list_stock_adjustments(
     state: State<'_, AppState>,
 ) -> Result<Vec<StockAdjustmentDto>, String> {
-    StockAdjustmentQueries::new(state.adjustment_repo.clone(), state.material_repo.clone())
+    StockAdjustmentQueries::new(
+        state.adjustment_repo.clone(),
+        state.material_repo.clone(),
+        state.stock_movement_repo.clone(),
+    )
         .list_all().await.map_err(|e| e.to_string())
 }
 
@@ -34,7 +38,11 @@ pub async fn get_stock_adjustment(
     id: String,
     state: State<'_, AppState>,
 ) -> Result<StockAdjustmentDto, String> {
-    StockAdjustmentQueries::new(state.adjustment_repo.clone(), state.material_repo.clone())
+    StockAdjustmentQueries::new(
+        state.adjustment_repo.clone(),
+        state.material_repo.clone(),
+        state.stock_movement_repo.clone(),
+    )
         .find_by_id(&id).await
         .map_err(|e| e.to_string())?
         .ok_or_else(|| "التسوية غير موجودة".to_string())

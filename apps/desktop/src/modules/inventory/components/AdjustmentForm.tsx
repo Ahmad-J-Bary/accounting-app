@@ -9,6 +9,8 @@ import { FieldLabel } from "@widgets/sidebar-shell/FieldLabel";
 import { stockMovementService } from '@modules/inventory/api/stockMovementService';
 import { Calculator } from "lucide-react";
 import { toast } from "sonner";
+import { useCurrencyContext } from "@app/providers/CurrencyContext";
+import { getExchangeRate } from "@shared/lib/currency-strategy";
 
 interface AdjustmentFormProps {
   onClose: () => void;
@@ -21,6 +23,8 @@ interface AdjustmentFormProps {
 
 export function AdjustmentForm({ onClose, products, onSave, saving, initialValues, initialMaterialId }: AdjustmentFormProps) {
   const isEditMode = !!initialValues;
+  const { currencies, baseCurrency, rateMap } = useCurrencyContext();
+  const hasSecondaryCurrencies = currencies.length > 1;
   const [form, setForm] = useState<Partial<CreateStockAdjustmentRequest>>({
     adjustment_date: new Date().toISOString(),
     actual_quantity: 0,
@@ -30,6 +34,9 @@ export function AdjustmentForm({ onClose, products, onSave, saving, initialValue
   const [systemQuantity, setSystemQuantity] = useState<number>(0);
   const [unitCostPerUnit, setUnitCostPerUnit] = useState<number>(0);
   const [, setLoadingBalance] = useState(false);
+  const [currency, setCurrency] = useState<string>("");
+  const [fxRate, setFxRate] = useState<string>("1");
+  const currencySymbol = currencies.find(c => c.code === currency)?.symbol ?? "";
 
   const formRef = useRef(form);
   formRef.current = form;
@@ -43,6 +50,10 @@ export function AdjustmentForm({ onClose, products, onSave, saving, initialValue
       const mat = products.find(p => p.id === materialId);
       const unitCost = mat ? parseFloat(mat.last_purchase_price || "0") : 0;
       setUnitCostPerUnit(unitCost);
+      const baseCode = baseCurrency?.code ?? "";
+      const preferred = mat?.default_purchase_currency;
+      const preferredActive = preferred && currencies.some(c => c.is_active && c.code === preferred);
+      setCurrency(preferredActive ? preferred : baseCode || (currencies[0]?.code ?? ""));
       const actual = actualQuantity ?? formRef.current.actual_quantity ?? 0;
       const diff = Math.abs(balNum - actual);
       setForm(p => ({ ...p, unit_cost: diff * unitCost }));
@@ -51,18 +62,20 @@ export function AdjustmentForm({ onClose, products, onSave, saving, initialValue
     } finally {
       setLoadingBalance(false);
     }
-  }, [products]);
+  }, [products, currencies, baseCurrency]);
 
   useEffect(() => {
     if (initialValues) {
       const sys = parseFloat(initialValues.system_quantity || "0");
       setSystemQuantity(sys);
-      const perUnit = parseFloat(initialValues.unit_cost_base || "0");
+      const perUnit = parseFloat(initialValues.unit_cost || "0");
       setUnitCostPerUnit(perUnit);
+      setCurrency(initialValues.currency_code || baseCurrency?.code || "");
+      setFxRate(initialValues.fx_rate || "1");
       setForm({
         material_id: initialValues.material_id,
         actual_quantity: parseFloat(initialValues.actual_quantity),
-        unit_cost: parseFloat(initialValues.total_cost_base || "0"),
+        unit_cost: parseFloat(initialValues.total_cost || "0"),
         notes: initialValues.notes || initialValues.reason || "",
         adjustment_date: initialValues.adjustment_date,
       });
@@ -75,11 +88,21 @@ export function AdjustmentForm({ onClose, products, onSave, saving, initialValue
       });
       setSystemQuantity(0);
       setUnitCostPerUnit(0);
+      setCurrency(baseCurrency?.code ?? "");
+      setFxRate("1");
       if (initialMaterialId) {
         fetchBalance(initialMaterialId);
       }
     }
-  }, [initialValues, initialMaterialId, fetchBalance]);
+  }, [initialValues, initialMaterialId, fetchBalance, baseCurrency]);
+
+  // Auto-fill exchange rate when the selected currency changes.
+  useEffect(() => {
+    if (currency) {
+      const rate = getExchangeRate(currency, rateMap, baseCurrency?.code);
+      setFxRate(String(rate));
+    }
+  }, [currency, rateMap, baseCurrency]);
 
   const handleMaterialChange = async (val: string) => {
     setForm(p => ({ ...p, material_id: val }));
@@ -101,6 +124,8 @@ export function AdjustmentForm({ onClose, products, onSave, saving, initialValue
       material_id: form.material_id,
       actual_quantity: form.actual_quantity,
       unit_cost: form.unit_cost ?? 0,
+      currency_code: currency || undefined,
+      fx_rate: parseFloat(fxRate) || 1,
       reason: form.notes || undefined,
       notes: form.notes || undefined,
       adjustment_date: form.adjustment_date,
@@ -135,7 +160,7 @@ export function AdjustmentForm({ onClose, products, onSave, saving, initialValue
               <Calculator className="w-3.5 h-3.5 text-slate-400" />
               <span>رصيد النظام: <strong className="text-slate-800">{systemQuantity.toFixed(2)}</strong></span>
               <span className="text-slate-300">|</span>
-              <span>تكلفة الوحدة: <strong className="text-slate-800">{unitCostPerUnit.toFixed(2)}</strong></span>
+              <span>تكلفة الوحدة: <strong className="text-slate-800">{unitCostPerUnit.toFixed(2)} {currencySymbol}</strong></span>
             </div>
           )}
           <div className="space-y-2">
@@ -146,13 +171,33 @@ export function AdjustmentForm({ onClose, products, onSave, saving, initialValue
               className="bg-white border-slate-200"
               placeholder="أدخل الكمية..." />
           </div>
-          <div className="space-y-2">
-            <FieldLabel>التكلفة (محسوبة تلقائياً)</FieldLabel>
-            <Input type="number" min="0" step="0.01"
-              value={form.unit_cost ?? ""}
-              onChange={e => setForm(p => ({ ...p, unit_cost: parseFloat(e.target.value) || 0 }))}
-              className="bg-white border-slate-200"
-              placeholder="0" />
+          <div className={hasSecondaryCurrencies ? "grid grid-cols-2 gap-3" : ""}>
+            {hasSecondaryCurrencies && (
+              <div className="space-y-2">
+                <FieldLabel>العملة</FieldLabel>
+                <Select dir="rtl" value={currency} onValueChange={setCurrency}>
+                  <SelectTrigger className="bg-white border-slate-200 w-full text-right"><SelectValue placeholder="اختر العملة" /></SelectTrigger>
+                  <SelectContent>
+                    {currencies.filter(c => c.is_active).map(c => (
+                      <SelectItem key={c.code} value={c.code}>{c.name_ar} ({c.code})</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            <div className="space-y-2">
+              <FieldLabel>التكلفة (محسوبة تلقائياً)</FieldLabel>
+              <div className="relative">
+                <Input type="number" min="0" step="0.01"
+                  value={form.unit_cost ?? ""}
+                  onChange={e => setForm(p => ({ ...p, unit_cost: parseFloat(e.target.value) || 0 }))}
+                  className="bg-white border-slate-200 pl-10"
+                  placeholder="0" />
+                {currencySymbol && (
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-500">{currencySymbol}</span>
+                )}
+              </div>
+            </div>
           </div>
           <div className="space-y-2">
             <FieldLabel>تاريخ التسوية</FieldLabel>

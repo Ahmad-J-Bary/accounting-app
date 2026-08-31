@@ -4,7 +4,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@shared/ui/button";
 import { RefreshCw, Loader2 } from "lucide-react";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
-import { DateRangePicker } from "@widgets/reports";
+import { DateRangePicker } from "./DateRangePicker";
 import type { ReportFilters } from "@shared/types/report";
 
 type Currency = { code: string; symbol?: string; name_ar?: string; name?: string };

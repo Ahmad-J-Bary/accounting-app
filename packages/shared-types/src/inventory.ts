@@ -6,6 +6,9 @@ export interface DamagedItem {
   reason: string;
   damage_date: string;
   cost_impact: string;
+  cost_impact_base?: string;
+  currency_code?: string;
+  fx_rate?: string;
   notes?: string;
   reference?: string | null;
   created_at: string;
@@ -17,6 +20,8 @@ export interface CreateDamagedItemRequest {
   reason: string;
   damage_date: string;
   cost_impact: number;
+  currency_code?: string;
+  fx_rate?: number;
   notes?: string;
 }
 
@@ -27,6 +32,8 @@ export interface UpdateDamagedItemRequest {
   reason: string;
   damage_date: string;
   cost_impact: number;
+  currency_code?: string;
+  fx_rate?: number;
   notes?: string;
 }
 
@@ -43,6 +50,8 @@ export interface StockAdjustment {
   unit_cost_base: string;
   total_cost: string;
   total_cost_base: string;
+  currency_code?: string;
+  fx_rate?: string;
   notes?: string;
   reference?: string | null;
   adjustment_date: string;
@@ -53,6 +62,8 @@ export interface CreateStockAdjustmentRequest {
   material_id: string;
   actual_quantity: number;
   unit_cost: number;
+  currency_code?: string;
+  fx_rate?: number;
   reason?: string;
   notes?: string;
   adjustment_date: string;
@@ -63,6 +74,8 @@ export interface UpdateStockAdjustmentRequest {
   material_id: string;
   actual_quantity: number;
   unit_cost: number;
+  currency_code?: string;
+  fx_rate?: number;
   reason?: string;
   notes?: string;
   adjustment_date: string;

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Input } from "@shared/ui/input";
 import { Textarea } from "@shared/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
@@ -7,6 +7,8 @@ import { FormPanel } from "@widgets/form-shell/FormPanel";
 import { SidebarSection } from "@widgets/sidebar-shell/SidebarSection";
 import { FieldLabel } from "@widgets/sidebar-shell/FieldLabel";
 import { AlertTriangle } from "lucide-react";
+import { useCurrencyContext } from "@app/providers/CurrencyContext";
+import { getExchangeRate } from "@shared/lib/currency-strategy";
 
 interface DamagedFormProps {
   onClose: () => void;
@@ -19,6 +21,19 @@ interface DamagedFormProps {
 
 export function DamagedForm({ onClose, products, onSave, saving, initialMaterialId, initialValues }: DamagedFormProps) {
   const isEditMode = !!initialValues;
+  const { currencies, baseCurrency, rateMap } = useCurrencyContext();
+  const hasSecondaryCurrencies = currencies.length > 1;
+  const [currency, setCurrency] = useState<string>(initialValues?.currency_code ?? "");
+  const [fxRate, setFxRate] = useState<string>("1");
+  const currencySymbol = currencies.find(c => c.code === currency)?.symbol ?? "";
+
+  const getDefaultCurrency = useCallback((mat?: MaterialDto): string => {
+    const baseCode = baseCurrency?.code ?? "";
+    const preferred = mat?.default_purchase_currency;
+    const preferredActive = preferred && currencies.some(c => c.is_active && c.code === preferred);
+    return preferredActive ? preferred : baseCode || (currencies[0]?.code ?? "");
+  }, [baseCurrency, currencies]);
+
   const [form, setForm] = useState<Partial<CreateDamagedItemRequest>>(() => {
     if (initialValues) {
       return { ...initialValues };
@@ -36,6 +51,8 @@ export function DamagedForm({ onClose, products, onSave, saving, initialMaterial
   useEffect(() => {
     if (initialValues) {
       setForm({ ...initialValues });
+      setCurrency(initialValues.currency_code || baseCurrency?.code || "");
+      setFxRate(initialValues.fx_rate ? String(initialValues.fx_rate) : "1");
     } else {
       const prod = products.find(p => p.id === initialMaterialId);
       setForm({
@@ -45,12 +62,26 @@ export function DamagedForm({ onClose, products, onSave, saving, initialMaterial
         reason: "",
         material_id: initialMaterialId ?? "",
       });
+      setCurrency(getDefaultCurrency(prod));
+      setFxRate("1");
     }
-  }, [initialMaterialId, initialValues, products]);
+  }, [initialMaterialId, initialValues, products, baseCurrency, getDefaultCurrency]);
+
+  // Auto-fill exchange rate when the selected currency changes.
+  useEffect(() => {
+    if (currency) {
+      const rate = getExchangeRate(currency, rateMap, baseCurrency?.code);
+      setFxRate(String(rate));
+    }
+  }, [currency, rateMap, baseCurrency]);
 
   const handleSave = async () => {
     if (!form.material_id || !form.quantity) return;
-    await onSave(form as CreateDamagedItemRequest);
+    await onSave({
+      ...form,
+      currency_code: currency || undefined,
+      fx_rate: parseFloat(fxRate) || 1,
+    } as CreateDamagedItemRequest);
   };
 
   return (
@@ -80,6 +111,7 @@ export function DamagedForm({ onClose, products, onSave, saving, initialMaterial
                     ? parseFloat(prod.last_purchase_price || "0") * ((p.quantity as number) || 1)
                     : p.cost_impact,
                 }));
+                setCurrency(getDefaultCurrency(prod));
               }}
             >
               <SelectTrigger className="w-full bg-white border-slate-200">
@@ -118,17 +150,37 @@ export function DamagedForm({ onClose, products, onSave, saving, initialMaterial
           </div>
 
           {/* تأثير التكلفة */}
-          <div className="space-y-2">
-            <FieldLabel>تأثير التكلفة المالي</FieldLabel>
-            <Input
-              type="number"
-              min="0"
-              step="0.01"
-              value={form.cost_impact || ""}
-              onChange={(e) => setForm((p) => ({ ...p, cost_impact: parseFloat(e.target.value) || 0 }))}
-              className="bg-white border-slate-200 font-bold text-slate-700"
-              placeholder="التأثير المالي للمواد التالفة..."
-            />
+          <div className={hasSecondaryCurrencies ? "grid grid-cols-2 gap-3" : ""}>
+            {hasSecondaryCurrencies && (
+              <div className="space-y-2">
+                <FieldLabel>العملة</FieldLabel>
+                <Select dir="rtl" value={currency} onValueChange={setCurrency}>
+                  <SelectTrigger className="bg-white border-slate-200 w-full text-right"><SelectValue placeholder="اختر العملة" /></SelectTrigger>
+                  <SelectContent>
+                    {currencies.filter(c => c.is_active).map(c => (
+                      <SelectItem key={c.code} value={c.code}>{c.name_ar} ({c.code})</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            <div className="space-y-2">
+              <FieldLabel>تأثير التكلفة المالي</FieldLabel>
+              <div className="relative">
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={form.cost_impact || ""}
+                  onChange={(e) => setForm((p) => ({ ...p, cost_impact: parseFloat(e.target.value) || 0 }))}
+                  className="bg-white border-slate-200 font-bold text-slate-700 pl-10"
+                  placeholder="التأثير المالي للمواد التالفة..."
+                />
+                {currencySymbol && (
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-500">{currencySymbol}</span>
+                )}
+              </div>
+            </div>
           </div>
 
           {/* تاريخ التلف */}

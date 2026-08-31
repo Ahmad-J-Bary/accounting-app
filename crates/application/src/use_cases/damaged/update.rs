@@ -64,6 +64,22 @@ impl UpdateDamagedItemUseCase {
             .map_err(|_| AppError::Invalid("الكمية غير صالحة".into()))?;
         let cost_impact = Decimal::try_from(req.cost_impact)
             .map_err(|_| AppError::Invalid("قيمة التكلفة غير صالحة".into()))?;
+
+        // Resolve the entry currency + exchange rate. Defaults to the
+        // material's purchase currency, otherwise the base currency (SAR).
+        let currency_code = req
+            .currency_code
+            .clone()
+            .filter(|c| !c.trim().is_empty())
+            .or_else(|| _material.default_purchase_currency.clone())
+            .unwrap_or_else(|| super::create::BASE_CURRENCY.to_string());
+        let fx_rate = Decimal::try_from(req.fx_rate.unwrap_or(1.0))
+            .map_err(|_| AppError::Invalid("سعر الصرف غير صالح".into()))?;
+        // Base conversion: 1 base = fx_rate foreign units, so base = / fx_rate.
+        let cost_impact_base = (cost_impact / fx_rate).round_dp_with_strategy(
+            4,
+            rust_decimal::RoundingStrategy::MidpointAwayFromZero,
+        );
         let damage_date = DateTime::parse_from_rfc3339(&req.damage_date)
             .map_err(|_| AppError::Invalid("التاريخ غير صالح".into()))?
             .with_timezone(&Utc);
@@ -94,6 +110,11 @@ impl UpdateDamagedItemUseCase {
         } else {
             Decimal::ZERO
         };
+        let unit_cost_base = if quantity > Decimal::ZERO {
+            cost_impact_base / quantity
+        } else {
+            Decimal::ZERO
+        };
         let movement_notes = format!("{} - رقم الفاتورة {}", req.reason, reference);
         let mut movement = StockMovement::new(
             item.material_id,
@@ -107,13 +128,19 @@ impl UpdateDamagedItemUseCase {
         )
         .map_err(|e| AppError::Invalid(e.to_string()))?;
         movement.document_number = Some(reference.clone());
+        movement.original_currency = Some(currency_code.clone());
+        movement.fx_rate = fx_rate;
+        movement.unit_cost_base = unit_cost_base;
+        movement.total_cost_base = cost_impact_base;
+        movement.raw_total_cost_base = cost_impact_base;
 
-        // Build new journal entry (persisted atomically below)
+        // Build new journal entry (persisted atomically below). Balances are
+        // stored in the base currency (converted above).
         let entry_number = self.journal_repo.get_next_entry_number().await?;
         let entry = build_damaged_journal_entry(
             &self.account_repo,
             entry_number,
-            cost_impact,
+            cost_impact_base,
             &reference,
             damage_date,
         ).await?;
@@ -128,6 +155,6 @@ impl UpdateDamagedItemUseCase {
             &delete_entries,
         ).await?;
 
-        Ok(to_dto(item, Some(reference)))
+        Ok(to_dto(item, Some(reference), currency_code, fx_rate, cost_impact_base))
     }
 }

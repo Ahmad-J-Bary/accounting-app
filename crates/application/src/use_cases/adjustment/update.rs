@@ -52,6 +52,20 @@ impl UpdateStockAdjustmentUseCase {
         let unit_cost = Decimal::try_from(req.unit_cost)
             .map_err(|_| AppError::Invalid("التكلفة غير صالحة".into()))?;
 
+        let currency_code = req
+            .currency_code
+            .clone()
+            .filter(|c| !c.trim().is_empty())
+            .or_else(|| material.default_purchase_currency.clone())
+            .unwrap_or_else(|| super::create::BASE_CURRENCY.to_string());
+        let fx_rate = Decimal::try_from(req.fx_rate.unwrap_or(1.0))
+            .map_err(|_| AppError::Invalid("سعر الصرف غير صالح".into()))?;
+        // Base conversion: 1 base = fx_rate foreign units, so base = / fx_rate.
+        let unit_cost_base = (unit_cost / fx_rate).round_dp_with_strategy(
+            4,
+            rust_decimal::RoundingStrategy::MidpointAwayFromZero,
+        );
+
         let adjustment_date = DateTime::parse_from_rfc3339(&req.adjustment_date)
             .map_err(|_| AppError::Invalid("التاريخ غير صالح".into()))?
             .with_timezone(&chrono::Utc);
@@ -101,6 +115,11 @@ impl UpdateStockAdjustmentUseCase {
             } else {
                 Decimal::ZERO
             };
+            let quantity_unit_cost_base = if abs_diff > Decimal::ZERO {
+                unit_cost_base / abs_diff
+            } else {
+                Decimal::ZERO
+            };
             let base_notes = if let Some(ref user_notes) = adjustment.notes {
                 format!("{} - {}", notes, user_notes)
             } else {
@@ -119,14 +138,20 @@ impl UpdateStockAdjustmentUseCase {
             ).map_err(|e| AppError::Invalid(e.to_string()))?;
             movement.signed_quantity = Some(difference);
             movement.document_number = Some(display_ref.clone());
+            movement.original_currency = Some(currency_code.clone());
+            movement.fx_rate = fx_rate;
+            movement.unit_cost_base = quantity_unit_cost_base;
+            movement.total_cost_base = unit_cost_base;
+            movement.raw_total_cost_base = unit_cost_base;
             movements.push(movement);
 
-            // Build journal entry for adjustment (persisted atomically below)
+            // Build journal entry for adjustment (persisted atomically below).
+            // Balances are stored in the base currency (converted above).
             let entry_number = self.journal_repo.get_next_entry_number().await?;
             let entry = build_adjustment_journal_entry(
                 &self.account_repo,
                 entry_number,
-                unit_cost,
+                unit_cost_base,
                 difference,
                 &display_ref,
                 adjustment.adjustment_date,
@@ -144,6 +169,6 @@ impl UpdateStockAdjustmentUseCase {
             &delete_entries,
         ).await?;
 
-        Ok(to_dto(adjustment, material.name))
+        Ok(to_dto(adjustment, material.name, currency_code, fx_rate))
     }
 }

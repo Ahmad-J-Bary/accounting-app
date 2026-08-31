@@ -9,6 +9,9 @@ pub struct DamagedItemDto {
     pub reason: String,
     pub damage_date: String,
     pub cost_impact: String,
+    pub cost_impact_base: Option<String>,
+    pub currency_code: Option<String>,
+    pub fx_rate: Option<String>,
     pub notes: Option<String>,
     pub reference: Option<String>,
     pub created_at: String,
@@ -21,6 +24,8 @@ pub struct CreateDamagedItemRequest {
     pub reason: String,
     pub damage_date: String,
     pub cost_impact: f64,
+    pub currency_code: Option<String>,
+    pub fx_rate: Option<f64>,
     pub notes: Option<String>,
 }
 
@@ -32,5 +37,7 @@ pub struct UpdateDamagedItemRequest {
     pub reason: String,
     pub damage_date: String,
     pub cost_impact: f64,
+    pub currency_code: Option<String>,
+    pub fx_rate: Option<f64>,
     pub notes: Option<String>,
 }
