@@ -57,6 +57,39 @@ pub async fn list_by_reference(pool: &SqlitePool, reference: &str) -> Result<Vec
     rows.into_iter().map(row_to_movement).collect()
 }
 
+pub async fn list_by_document_number(
+    pool: &SqlitePool,
+    document_number: &str,
+    movement_type: Option<&str>,
+) -> Result<Vec<StockMovement>, AppError> {
+    let sql = if movement_type.is_some() {
+        format!(
+            "SELECT {} FROM stock_movements WHERE (document_number = ? OR (reference = ? AND document_number IS NULL)) AND movement_type = ? ORDER BY movement_date ASC",
+            COLUMNS
+        )
+    } else {
+        format!(
+            "SELECT {} FROM stock_movements WHERE document_number = ? OR (reference = ? AND document_number IS NULL) ORDER BY movement_date ASC",
+            COLUMNS
+        )
+    };
+
+    let mut query = sqlx::query_as::<_, StockMovementRow>(&sql)
+        .bind(document_number)
+        .bind(document_number);
+
+    if let Some(mt) = movement_type {
+        query = query.bind(mt);
+    }
+
+    let rows = query
+        .fetch_all(pool)
+        .await
+        .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+
+    rows.into_iter().map(row_to_movement).collect()
+}
+
 pub async fn get_stock_balance(pool: &SqlitePool, material_id: &MaterialId) -> Result<Decimal, AppError> {
     let movements = list_by_material(pool, material_id).await?;
     let mut balance = Decimal::ZERO;

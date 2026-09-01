@@ -5,7 +5,7 @@ use domain::shared::ids::{DamagedItemId};
 use super::models::DamagedItemRow;
 use super::mappers::row_to_damaged;
 
-const COLUMNS: &str = "id, material_id, quantity, reason, damage_date, cost_impact, notes, reference, created_at";
+const COLUMNS: &str = "id, material_id, quantity, reason, damage_date, cost_impact, cost_impact_base, loss, loss_base, currency_code, fx_rate, notes, reference, created_at";
 
 pub async fn find_by_id(pool: &SqlitePool, id: &DamagedItemId) -> Result<Option<DamagedItem>, AppError> {
     let row = sqlx::query_as::<_, DamagedItemRow>(

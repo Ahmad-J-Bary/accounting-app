@@ -59,6 +59,18 @@ pub async fn delete_by_reference(pool: &SqlitePool, reference: &str, movement_ty
     Ok(())
 }
 
+pub async fn delete_by_document_number(pool: &SqlitePool, document_number: &str, movement_type: &str) -> Result<(), AppError> {
+    sqlx::query("DELETE FROM stock_movements WHERE movement_type = ? AND (document_number = ? OR (reference = ? AND document_number IS NULL))")
+        .bind(movement_type)
+        .bind(document_number)
+        .bind(document_number)
+        .execute(pool)
+        .await
+        .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+
+    Ok(())
+}
+
 /// Inserts a stock movement within an open transaction so a stock movement and
 /// its journal entry (and any parent document state) commit together (Sec 9).
 pub(crate) async fn insert_movement_tx<'a>(

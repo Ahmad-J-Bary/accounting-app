@@ -132,10 +132,10 @@ export default function DamagedPage() {
   const { exportData, rateMap, currencies, formatAmount, currencyMode, ratesSheet, baseCode } = useExportSetup();
 
   const handleExport = useCallback(async () => {
-    const currCols = currencyAmountCols("cost", "الخسارة", (row) => parseFloat((row as unknown as DamagedItem).cost_impact_base || "0"), currencies, formatAmount, "", hasSecondaryCurrencies, hasSecondaryCurrencies, currencyMode, baseCode, rateMap);
+    const currCols = currencyAmountCols("loss", "الخسارة", (row) => parseFloat((row as unknown as DamagedItem).loss_base || (row as unknown as DamagedItem).cost_impact_base || "0"), currencies, formatAmount, "", hasSecondaryCurrencies, hasSecondaryCurrencies, currencyMode, baseCode, rateMap);
     applyVisibilityToCurrencyCols(currCols, new Set(visibleColumnIds));
     const summary: Record<string, 'sum' | 'subtotal' | 'average' | null> = { quantity: 'subtotal' };
-    addCurrencySummary(summary, "cost", currencies);
+    addCurrencySummary(summary, "loss", currencies);
 
     const columns: ExcelExportColumn[] = [
       { id: "id", label: "الرقم", accessor: (row) => {

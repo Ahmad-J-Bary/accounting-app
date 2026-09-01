@@ -7,14 +7,19 @@ use domain::shared::ids::{DamagedItemId};
 
 pub async fn save(pool: &SqlitePool, item: &DamagedItem) -> Result<(), AppError> {
     sqlx::query(
-        "INSERT INTO damaged_items (id, material_id, quantity, reason, damage_date, cost_impact, notes, reference, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        "INSERT INTO damaged_items (id, material_id, quantity, reason, damage_date, cost_impact, cost_impact_base, loss, loss_base, currency_code, fx_rate, notes, reference, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(id) DO UPDATE SET
             material_id = excluded.material_id,
             quantity = excluded.quantity,
             reason = excluded.reason,
             damage_date = excluded.damage_date,
             cost_impact = excluded.cost_impact,
+            cost_impact_base = excluded.cost_impact_base,
+            loss = excluded.loss,
+            loss_base = excluded.loss_base,
+            currency_code = excluded.currency_code,
+            fx_rate = excluded.fx_rate,
             notes = excluded.notes,
             reference = excluded.reference"
     )
@@ -23,7 +28,12 @@ pub async fn save(pool: &SqlitePool, item: &DamagedItem) -> Result<(), AppError>
     .bind(item.quantity.to_string())
     .bind(item.reason.as_deref().unwrap_or(""))
     .bind(item.damage_date.to_rfc3339())
-    .bind(item.cost_impact.to_string())
+    .bind(item.cost_impact().to_string())
+    .bind(item.cost_impact_base().to_string())
+    .bind(item.loss().to_string())
+    .bind(item.loss_base().to_string())
+    .bind(&item.financials.currency_code)
+    .bind(item.financials.fx_rate.to_string())
     .bind(&item.notes)
     .bind(&item.reference)
     .bind(item.created_at.to_rfc3339())
@@ -48,10 +58,10 @@ pub async fn save_with_accounting(
     let mut tx = pool.begin().await.map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
     if let Some(reference) = delete_movement_reference {
-        sqlx::query("DELETE FROM stock_movements WHERE (reference = ? OR document_number = ?) AND movement_type = ?")
-            .bind(reference)
-            .bind(reference)
+        sqlx::query("DELETE FROM stock_movements WHERE movement_type = ? AND (document_number = ? OR (reference = ? AND document_number IS NULL))")
             .bind("Damaged")
+            .bind(reference)
+            .bind(reference)
             .execute(&mut *tx)
             .await
             .map_err(|e| AppError::Infrastructure(e.to_string()))?;
@@ -70,15 +80,20 @@ pub async fn save_with_accounting(
     }
 
     sqlx::query(
-        "INSERT INTO damaged_items (id, material_id, quantity, reason, damage_date, cost_impact, notes, reference, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        "INSERT INTO damaged_items (id, material_id, quantity, reason, damage_date, cost_impact, cost_impact_base, loss, loss_base, currency_code, fx_rate, notes, reference, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
     )
     .bind(item.id.0.to_string())
     .bind(item.material_id.to_string())
     .bind(item.quantity.to_string())
     .bind(item.reason.as_deref().unwrap_or(""))
     .bind(item.damage_date.to_rfc3339())
-    .bind(item.cost_impact.to_string())
+    .bind(item.cost_impact().to_string())
+    .bind(item.cost_impact_base().to_string())
+    .bind(item.loss().to_string())
+    .bind(item.loss_base().to_string())
+    .bind(&item.financials.currency_code)
+    .bind(item.financials.fx_rate.to_string())
     .bind(&item.notes)
     .bind(&item.reference)
     .bind(item.created_at.to_rfc3339())

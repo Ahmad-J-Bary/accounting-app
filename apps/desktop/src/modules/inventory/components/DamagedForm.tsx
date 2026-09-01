@@ -30,12 +30,10 @@ export function DamagedForm({ onClose, products, onSave, saving, initialMaterial
   const { convertBetween, baseCurrencyCode, currencies, getDefaultCurrency } = currencyField;
 
   // Source-of-truth for the auto-computed cost, expressed in the material's
-  // purchase currency. Displayed cost is always converted to the selected
-  // currency. `manualRef` tracks whether the user has hand-edited the amount,
-  // in which case we stop recomputing it.
+  // purchase currency. The damaged workflow displays the canonical carrying
+  // cost but does not let the user override it from the form.
   const baseCostRef = useRef(0);
   const materialCurrencyRef = useRef("");
-  const manualRef = useRef(false);
 
   const getDefaultCurrencyFor = useCallback((mat?: MaterialDto): string => {
     const preferred = mat?.default_purchase_currency;
@@ -79,7 +77,6 @@ export function DamagedForm({ onClose, products, onSave, saving, initialMaterial
       } else {
         baseCostRef.current = convertBetween(costImpact, savedCurrency, matCurrency);
       }
-      manualRef.current = true;
     } else {
       const prod = products.find(p => p.id === initialMaterialId);
       const unitCost = unitCostInMaterialCurrency(prod);
@@ -87,7 +84,6 @@ export function DamagedForm({ onClose, products, onSave, saving, initialMaterial
       const qty = 0;
       materialCurrencyRef.current = matCurrency;
       baseCostRef.current = unitCost * qty;
-      manualRef.current = false;
       const selectedCurrency = getDefaultCurrencyFor(prod);
       currencyField.setCurrency(selectedCurrency);
       currencyField.setFxRate("1");
@@ -102,8 +98,7 @@ export function DamagedForm({ onClose, products, onSave, saving, initialMaterial
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialMaterialId, initialValues, products]);
 
-  // Recompute the displayed cost when the selected currency changes — but only
-  // while the value is auto-computed (not manually edited).
+  // Recompute the displayed cost when the selected currency changes.
   useEffect(() => {
     if (!materialCurrencyRef.current) return;
     if (baseCostRef.current <= 0) return;
@@ -121,7 +116,6 @@ export function DamagedForm({ onClose, products, onSave, saving, initialMaterial
     materialCurrencyRef.current = matCurrency;
     const unitCost = unitCostInMaterialCurrency(prod);
     baseCostRef.current = unitCost * qty;
-    manualRef.current = false;
     const selectedCurrency = getDefaultCurrencyFor(prod);
     currencyField.setCurrency(selectedCurrency);
     const converted = selectedCurrency === matCurrency
@@ -141,7 +135,6 @@ export function DamagedForm({ onClose, products, onSave, saving, initialMaterial
     const matCurrency = materialCurrencyRef.current || prod?.default_purchase_currency || baseCurrencyCode;
     materialCurrencyRef.current = matCurrency;
     baseCostRef.current = unitCost * qty;
-    manualRef.current = false;
     const converted = matCurrency === currencyField.currency
       ? baseCostRef.current
       : convertBetween(baseCostRef.current, matCurrency, currencyField.currency);
@@ -208,24 +201,15 @@ export function DamagedForm({ onClose, products, onSave, saving, initialMaterial
           </div>
 
           <CurrencyField
-            label="تأثير التكلفة المالي"
+            label="تأثير التكلفة (محسوب تلقائيًا)"
             currency={currencyField.currency}
             onCurrencyChange={currencyField.setCurrency}
             amount={form.cost_impact || ""}
-            onAmountChange={(val) => {
-              manualRef.current = true;
-              const newAmount = parseFloat(val) || 0;
-              const matCurrency = materialCurrencyRef.current;
-              if (currencyField.currency === matCurrency) {
-                baseCostRef.current = newAmount;
-              } else {
-                baseCostRef.current = convertBetween(newAmount, currencyField.currency, matCurrency);
-              }
-              setForm((p) => ({ ...p, cost_impact: newAmount }));
-            }}
+            onAmountChange={() => {}}
             symbol={currencyField.symbol}
             showCurrency={currencyField.hasMultipleCurrencies}
             currencies={currencyField.currencies}
+            disabled={true}
           />
 
           <div className="space-y-2">

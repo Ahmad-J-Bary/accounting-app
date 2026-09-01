@@ -93,8 +93,16 @@ impl StockMovementRepository for SqliteStockMovementRepository {
         queries::list_by_reference(&self.pool, reference).await
     }
 
+    async fn list_by_document_number(&self, document_number: &str, movement_type: Option<&str>) -> Result<Vec<StockMovement>, AppError> {
+        queries::list_by_document_number(&self.pool, document_number, movement_type).await
+    }
+
     async fn delete_by_reference(&self, reference: &str, movement_type: &str) -> Result<(), AppError> {
         commands::delete_by_reference(&self.pool, reference, movement_type).await
+    }
+
+    async fn delete_by_document_number(&self, document_number: &str, movement_type: &str) -> Result<(), AppError> {
+        commands::delete_by_document_number(&self.pool, document_number, movement_type).await
     }
 
     async fn get_next_inventory_reference(&self) -> Result<String, AppError> {

@@ -8,6 +8,6 @@ pub mod code_policy;
 pub mod inventory_lot;
 pub mod warehouse;
 
-pub use damaged_item::DamagedItem;
+pub use damaged_item::{DamageFinancialSnapshot, DamagedItem};
 pub use production_order::{ProductionOrder, ProductionMaterial, ProductionOutput, ProductionOrderStatus};
 pub use stock_adjustment::StockAdjustment;

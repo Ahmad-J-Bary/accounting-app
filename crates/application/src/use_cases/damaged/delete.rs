@@ -40,7 +40,7 @@ impl DeleteDamagedItemUseCase {
             self.journal_repo.delete(&entry.id).await?;
         }
 
-        self.movement_repo.delete_by_reference(&reference, "Damaged").await?;
+        self.movement_repo.delete_by_document_number(&reference, "Damaged").await?;
 
         self.repo.delete(&damaged_id).await?;
 

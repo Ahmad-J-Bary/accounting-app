@@ -63,16 +63,12 @@ export default function Inventory() {
     quantity: m.quantity,
     reason: m.reason || '',
     damage_date: m.movement_date,
-    cost_impact: (() => {
-      const base = m.total_cost_base ? parseFloat(m.total_cost_base) : 0;
-      const orig = m.total_cost ? parseFloat(m.total_cost) : 0;
-      const unit = m.unit_cost_base ? parseFloat(m.unit_cost_base) : 0;
-      const qty = parseFloat(m.quantity || '0');
-      if (base > 0) return m.total_cost_base!;
-      if (orig > 0) return m.total_cost!;
-      if (unit > 0 && qty > 0) return String(unit * qty);
-      return '0';
-    })(),
+    cost_impact: m.total_cost || '0',
+    cost_impact_base: m.total_cost_base || '0',
+    loss: m.total_cost || '0',
+    loss_base: m.total_cost_base || '0',
+    currency_code: m.original_currency || undefined,
+    fx_rate: m.fx_rate || undefined,
     notes: undefined,
     reference: m.reference,
     created_at: m.created_at,

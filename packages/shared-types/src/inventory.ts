@@ -7,6 +7,8 @@ export interface DamagedItem {
   damage_date: string;
   cost_impact: string;
   cost_impact_base?: string;
+  loss?: string;
+  loss_base?: string;
   currency_code?: string;
   fx_rate?: string;
   notes?: string;

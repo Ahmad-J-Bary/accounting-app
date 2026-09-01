@@ -10,6 +10,8 @@ pub struct DamagedItemDto {
     pub damage_date: String,
     pub cost_impact: String,
     pub cost_impact_base: Option<String>,
+    pub loss: Option<String>,
+    pub loss_base: Option<String>,
     pub currency_code: Option<String>,
     pub fx_rate: Option<String>,
     pub notes: Option<String>,

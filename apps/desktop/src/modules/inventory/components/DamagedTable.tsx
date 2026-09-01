@@ -3,7 +3,7 @@ import { SharedTable } from '@widgets/table-shell/SharedTable';
 import type { UnifiedColumn } from '@widgets/table-shell/UnifiedTable';
 import { TableActions } from '@widgets/table-shell/TableActions';
 import type { SummaryColumn } from '@widgets/table-shell/TableSummary';
-import { formatDateTime, formatNumber, toLocalString } from '@shared/lib/format';
+import { formatCurrency, formatDateTime, formatNumber, toLocalString } from '@shared/lib/format';
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { useBaseCurrencyColumns } from "@shared/hooks";
 import type { DamagedItem } from "@erp/shared-types";
@@ -34,6 +34,13 @@ export function DamagedTable({
   const { formatAmount, currencies } = useCurrencyContext();
   const { isBaseCurrency, currencySuffix: cs } = useBaseCurrencyColumns();
 
+  const originalLossLabel = (i: DamagedItem) => {
+    const amount = parseFloat(i.loss || i.cost_impact || "0");
+    const code = i.currency_code || "";
+    if (!amount || !code) return "";
+    return formatCurrency(amount, code);
+  };
+
   const allColumns = useMemo<UnifiedColumn<DamagedItem>[]>(() => {
     const cols: UnifiedColumn<DamagedItem>[] = [
       {
@@ -57,6 +64,13 @@ export function DamagedTable({
         accessor: (i) => toLocalString(Math.round(parseFloat(i.quantity || "0"))),
         className: "tabular-nums font-black text-amber-600"
       },
+      {
+        id: "loss_original",
+        header: "الخسارة",
+        label: "الخسارة بالعملة الأصلية",
+        accessor: (i) => originalLossLabel(i),
+        className: "tabular-nums font-black text-rose-700"
+      },
     ];
 
     currencies.forEach(curr => {
@@ -66,7 +80,7 @@ export function DamagedTable({
         header: `الخسارة ${cs(curr.symbol || curr.code)}`,
         label: `مبلغ الخسارة ${cs(curr.symbol || curr.code)}`,
         accessor: (i) => {
-          const val = parseFloat(i.cost_impact_base || "0");
+          const val = parseFloat(i.loss_base || i.cost_impact_base || "0");
           return val > 0 ? formatAmount(val, { currencyCode: curr.code }) : "";
         },
         className: isBase
@@ -109,7 +123,7 @@ export function DamagedTable({
   }, [formatAmount, currencies, isBaseCurrency, onView, onEdit, onDelete, cs]);
 
   const defaultVisible = useMemo(() => {
-    const ids: string[] = ["id", "material_name", "quantity"];
+    const ids: string[] = ["id", "material_name", "quantity", "loss_original"];
     currencies.forEach(curr => {
       if (isBaseCurrency(curr.code)) {
         ids.push(`cost_${curr.code}`);
@@ -121,7 +135,7 @@ export function DamagedTable({
   }, [currencies, isBaseCurrency, onView, onEdit, onDelete]);
 
   const summaryColumns = useMemo<SummaryColumn[]>(() => {
-    const totalCost = items.reduce((s, i) => s + parseFloat(i.cost_impact_base || "0"), 0);
+    const totalCost = items.reduce((s, i) => s + parseFloat(i.loss_base || i.cost_impact_base || "0"), 0);
     const colIds = allColumns.map(c => c.id);
     return colIds.map(id => {
       if (id === "material_name") {
@@ -150,7 +164,7 @@ export function DamagedTable({
       case "material_name": comparison = (a.material_name || a.material_id || "").localeCompare(b.material_name || b.material_id || "", "ar"); break;
       case "quantity": comparison = parseFloat(a.quantity) - parseFloat(b.quantity); break;
       case "damage_date": comparison = new Date(a.damage_date).getTime() - new Date(b.damage_date).getTime(); break;
-      case "cost_impact": comparison = parseFloat(a.cost_impact_base || "0") - parseFloat(b.cost_impact_base || "0"); break;
+      case "cost_impact": comparison = parseFloat(a.loss_base || a.cost_impact_base || "0") - parseFloat(b.loss_base || b.cost_impact_base || "0"); break;
     }
     return direction === "asc" ? comparison : -comparison;
   };

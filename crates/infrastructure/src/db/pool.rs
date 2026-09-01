@@ -134,6 +134,85 @@ async fn ensure_currency_columns(pool: &SqlitePool) {
     add_column_if_missing(pool, "stock_movements", "document_number", "TEXT", "NULL").await;
 }
 
+/// Backfill canonical monetary fields for damaged items after the schema is
+/// fully available. This intentionally runs outside SQL migrations because
+/// older databases may not have stock_movements.document_number until the
+/// healing path adds it.
+async fn ensure_damaged_item_financial_snapshot(pool: &SqlitePool) {
+    if !column_exists(pool, "damaged_items", "currency_code").await
+        || !column_exists(pool, "damaged_items", "fx_rate").await
+        || !column_exists(pool, "damaged_items", "cost_impact_base").await
+        || !column_exists(pool, "damaged_items", "loss").await
+        || !column_exists(pool, "damaged_items", "loss_base").await
+    {
+        return;
+    }
+
+    let has_document_number = column_exists(pool, "stock_movements", "document_number").await;
+    let damaged_link_filter = if has_document_number {
+        "sm.movement_type = 'Damaged' AND (sm.document_number = damaged_items.reference OR (sm.reference = damaged_items.reference AND sm.document_number IS NULL))"
+    } else {
+        "sm.movement_type = 'Damaged' AND sm.reference = damaged_items.reference"
+    };
+
+    let sql = format!(
+        "UPDATE damaged_items
+         SET
+             currency_code = COALESCE(
+                 (
+                     SELECT sm.original_currency
+                     FROM stock_movements sm
+                     WHERE {damaged_link_filter}
+                     ORDER BY sm.created_at DESC
+                     LIMIT 1
+                 ),
+                 (
+                     SELECT COALESCE(NULLIF(base_currency_code, ''), NULLIF(currency, ''), 'USD')
+                     FROM settings
+                     LIMIT 1
+                 )
+             ),
+             fx_rate = COALESCE(
+                 (
+                     SELECT sm.fx_rate
+                     FROM stock_movements sm
+                     WHERE {damaged_link_filter}
+                     ORDER BY sm.created_at DESC
+                     LIMIT 1
+                 ),
+                 '1'
+             ),
+             cost_impact_base = COALESCE(
+                 (
+                     SELECT sm.total_cost_base
+                     FROM stock_movements sm
+                     WHERE {damaged_link_filter}
+                     ORDER BY sm.created_at DESC
+                     LIMIT 1
+                 ),
+                 cost_impact
+             ),
+             loss = COALESCE(loss, cost_impact),
+             loss_base = COALESCE(
+                 (
+                     SELECT sm.total_cost_base
+                     FROM stock_movements sm
+                     WHERE {damaged_link_filter}
+                     ORDER BY sm.created_at DESC
+                     LIMIT 1
+                 ),
+                 cost_impact
+             )
+         WHERE currency_code IS NULL
+            OR fx_rate IS NULL
+            OR cost_impact_base IS NULL
+            OR loss IS NULL
+            OR loss_base IS NULL"
+    );
+
+    let _ = sqlx::query(&sql).execute(pool).await;
+}
+
 /// Ensure the Discount Earned account (332) exists under "إيرادات أخرى" (33)
 async fn ensure_discount_earned_account(pool: &SqlitePool) {
     let exists: bool = sqlx::query_scalar("SELECT COUNT(*) > 0 FROM accounts WHERE code = '332'")
@@ -339,6 +418,7 @@ pub async fn run_migrations(pool: &SqlitePool) -> Result<(), sqlx::migrate::Migr
         match migrator.run(pool).await {
             Ok(()) => {
                 ensure_currency_columns(pool).await;
+                ensure_damaged_item_financial_snapshot(pool).await;
                 ensure_discount_earned_account(pool).await;
                 ensure_discount_granted_account(pool).await;
                 ensure_opening_balance_equity_account(pool).await;
@@ -377,6 +457,7 @@ pub async fn run_migrations(pool: &SqlitePool) -> Result<(), sqlx::migrate::Migr
                 if err_msg.contains("duplicate column name") {
                     // Heal the schema by adding any missing columns
                     ensure_currency_columns(pool).await;
+                    ensure_damaged_item_financial_snapshot(pool).await;
                     ensure_discount_earned_account(pool).await;
                     ensure_discount_granted_account(pool).await;
                     ensure_opening_balance_equity_account(pool).await;

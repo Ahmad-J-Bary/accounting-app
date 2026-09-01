@@ -68,7 +68,7 @@ export function CurrencyField({
     <div className="grid grid-cols-2 gap-3">
       <div className="space-y-1.5">
         <FieldLabel>العملة</FieldLabel>
-        <Select dir="rtl" value={currency} onValueChange={onCurrencyChange}>
+        <Select dir="rtl" value={currency} onValueChange={onCurrencyChange} disabled={disabled}>
           <SelectTrigger className="bg-white border-slate-200 h-9 w-full text-right text-xs">
             <SelectValue placeholder="اختر العملة" />
           </SelectTrigger>

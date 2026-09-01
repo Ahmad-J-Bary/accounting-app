@@ -17,6 +17,9 @@ pub async fn create_damaged_item(
         state.damaged_repo.clone(),
         state.material_repo.clone(),
         state.stock_movement_repo.clone(),
+        state.inventory_lot_repo.clone(),
+        state.currency_repo.clone(),
+        state.exchange_rate_repo.clone(),
         state.account_repo.clone(),
         state.journal_entry_repo.clone(),
     )
@@ -30,7 +33,6 @@ pub async fn list_damaged_items(
     DamagedItemQueries::new(
         state.damaged_repo.clone(),
         state.material_repo.clone(),
-        state.stock_movement_repo.clone(),
     )
         .list_all().await.map_err(|e| e.to_string())
 }
@@ -43,6 +45,10 @@ pub async fn update_damaged_item(
     UpdateDamagedItemUseCase::new(
         state.damaged_repo.clone(),
         state.material_repo.clone(),
+        state.stock_movement_repo.clone(),
+        state.inventory_lot_repo.clone(),
+        state.currency_repo.clone(),
+        state.exchange_rate_repo.clone(),
         state.account_repo.clone(),
         state.journal_entry_repo.clone(),
     )
