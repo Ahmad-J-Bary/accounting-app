@@ -11,6 +11,7 @@ interface AccountTreeNodeItemProps {
   level?: number;
   selectedId: string;
   onSelect: (account: AccountTreeNode) => void;
+  onDoubleClick?: (account: AccountTreeNode) => void;
   expandedNodes: Set<string>;
   toggleNode: ToggleNodeHandler;
   virtualRootId?: string;
@@ -21,6 +22,7 @@ export function AccountTreeNodeItem({
   level = 0,
   selectedId,
   onSelect,
+  onDoubleClick,
   expandedNodes,
   toggleNode,
   virtualRootId,
@@ -125,6 +127,7 @@ export function AccountTreeNodeItem({
       level={level}
       selectedId={selectedId}
       onSelect={onSelect}
+      onDoubleClick={onDoubleClick}
       expandedNodes={expandedNodes}
       onToggle={toggleNode}
       renderIcon={renderIcon}

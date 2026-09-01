@@ -33,6 +33,10 @@ import { resolveAccountNodeActions } from "@shared/tree/actionsResolver";
 import { resolveChartNode, inferFixedAssetType } from "../lib/branches";
 import type { TreeNodeCreatePanelKind } from "@shared/tree/nodeTypes";
 import { SYSTEM_ACCOUNT_IDS } from "@erp/shared-types";
+import { resolveAccountNavigation } from "@shared/tree/navigationResolver";
+import { findRouteById } from "@app/shell/routeRegistry";
+import { useCompanyInitState, useCompanyTypeSettings } from "@shared/hooks";
+import { companyTypeOf, hiddenNavIds } from "@modules/opening-balance/lib/company-lifecycle";
 
 const ROOT_ACCOUNT_ID = "__chart_of_accounts_root__";
 
@@ -40,6 +44,8 @@ export default function Accounting() {
   const queryClient = useQueryClient();
   const { openTab } = useTabs();
   const { currencies, rateMap, baseCurrency } = useCurrencyContext();
+  const companySettings = useCompanyTypeSettings();
+  const { initState, isReady } = useCompanyInitState();
   const [selected, setSelected] = useState<AccountTreeNode | null>(null);
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
   const [searchQuery] = useState("");
@@ -160,6 +166,10 @@ export default function Accounting() {
 
   const isRootSelected = selected?.id === ROOT_ACCOUNT_ID;
   const canOperate = !!selected && !isRootSelected;
+  const blockedRouteIds = useMemo(
+    () => hiddenNavIds(companyTypeOf(companySettings), isReady ? initState : "ACTIVE"),
+    [companySettings, initState, isReady],
+  );
   const parentName = useMemo(() => {
     if (!selected?.parent_id) return null;
     return accounts.find((a) => a.id === selected.parent_id)?.name_ar ?? null;
@@ -214,6 +224,38 @@ export default function Accounting() {
       closable: true,
     });
   }, [canOperate, selected, openTab]);
+
+  const handleNodeDoubleClick = useCallback((node: AccountTreeNode) => {
+    const target = resolveAccountNavigation({
+      node,
+      nodes: accounts,
+      rootId: ROOT_ACCOUNT_ID,
+    });
+
+    if (target.type === "none") return;
+
+    if (target.type === "ledger") {
+      openTab({
+        id: `ledger-${target.accountId}`,
+        title: `حركة: ${node.name_ar}`,
+        path: `/accounting/account-ledger/${target.accountId}`,
+        closable: true,
+      });
+      return;
+    }
+
+    if (blockedRouteIds.has(target.routeId)) return;
+
+    const route = findRouteById(target.routeId);
+    if (!route?.to) return;
+
+    openTab({
+      id: route.id,
+      title: route.label,
+      path: route.to,
+      closable: true,
+    });
+  }, [accounts, blockedRouteIds, openTab]);
 
   const handleDeleteRequest = useCallback(() => {
     if (!canOperate) return;
@@ -500,6 +542,7 @@ export default function Accounting() {
               account={rootNode}
               selectedId={selected?.id || ""}
               onSelect={handleSelect}
+              onDoubleClick={handleNodeDoubleClick}
               expandedNodes={expandedNodes}
               toggleNode={toggleNode}
               virtualRootId={ROOT_ACCOUNT_ID}

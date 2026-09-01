@@ -13,6 +13,7 @@ export interface TreeItemProps<T extends BaseTreeNode> {
   level: number;
   selectedId: string;
   onSelect: (node: T) => void;
+  onDoubleClick?: (node: T) => void;
   expandedNodes: Set<string>;
   onToggle: ToggleNodeHandler;
   renderIcon: (node: T, isExpanded: boolean) => ReactNode;

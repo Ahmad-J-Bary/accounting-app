@@ -7,6 +7,7 @@ export function TreeItem<T extends BaseTreeNode>({
   level = 0,
   selectedId,
   onSelect,
+  onDoubleClick,
   expandedNodes,
   onToggle,
   renderIcon,
@@ -73,11 +74,13 @@ export function TreeItem<T extends BaseTreeNode>({
           )}
           style={{ paddingRight: `${level * 16 + 12}px` }}
           onClick={() => onSelect(node)}
+          onDoubleClick={() => onDoubleClick?.(node)}
         >
           <div className="flex items-center justify-center w-6">
             {hasChildren ? (
               <button
                 onClick={(event) => onToggle(node.id, event)}
+                onDoubleClick={(event) => event.stopPropagation()}
                 className={cn(
                   "p-1 rounded-md transition-colors",
                   "hover:bg-slate-200/70 text-slate-500 hover:text-slate-700",
@@ -121,6 +124,7 @@ export function TreeItem<T extends BaseTreeNode>({
               level={level + 1}
               selectedId={selectedId}
               onSelect={onSelect}
+              onDoubleClick={onDoubleClick}
               expandedNodes={expandedNodes}
               onToggle={onToggle}
               renderIcon={renderIcon}
