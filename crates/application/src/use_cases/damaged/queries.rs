@@ -24,12 +24,15 @@ impl DamagedItemQueries {
 
     /// Resolve the currency + fx rate + base cost recorded on the damaged
     /// item's stock movement (defaults to base SAR when none recorded).
+    /// Filters by `movement_type = Damaged` to avoid matching unrelated
+    /// movements that happen to share the same reference number.
     async fn resolve(&self, reference: &Option<String>) -> (String, Decimal, Decimal) {
         let Some(ref_code) = reference else {
             return (super::create::BASE_CURRENCY.to_string(), Decimal::ONE, Decimal::ZERO);
         };
         let movements = self.movement_repo.list_by_reference(ref_code).await.unwrap_or_default();
-        let Some(m) = movements.first() else {
+        let m = movements.iter().find(|m| matches!(m.movement_type, domain::inventory::stock_movement::MovementType::Damaged));
+        let Some(m) = m else {
             return (super::create::BASE_CURRENCY.to_string(), Decimal::ONE, Decimal::ZERO);
         };
         (
@@ -47,7 +50,6 @@ impl DamagedItemQueries {
             let (currency_code, fx_rate, cost_impact_base) = self.resolve(&item.reference).await;
             let mut dto = to_dto(
                 item.clone(),
-                None,
                 currency_code,
                 fx_rate,
                 cost_impact_base,

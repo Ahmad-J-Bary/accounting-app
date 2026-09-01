@@ -59,10 +59,15 @@ impl Partner {
             ));
         }
 
+        // FX convention (matches `Money::to_base` and the rest of the app):
+        // 1 base currency = `exchange_rate` units of the partner currency.
+        // So a partner-currency (original) amount is converted to base by
+        // DIVIDING, and a base (local) amount to the partner currency by
+        // MULTIPLYING.
         let (amount_local, amount_original) = if is_amount_in_original {
-            (amount * exchange_rate, amount)
+            (amount / exchange_rate, amount)
         } else {
-            (amount, amount / exchange_rate)
+            (amount, amount * exchange_rate)
         };
 
         let now = Utc::now();
@@ -109,10 +114,12 @@ impl Partner {
         self.exchange_rate = exchange_rate;
         self.is_amount_in_original = is_amount_in_original;
 
+        // FX convention (matches `Money::to_base`): 1 base = `exchange_rate`
+        // partner units, so original→base divides, base→original multiplies.
         let (amount_local, amount_original) = if is_amount_in_original {
-            (amount * exchange_rate, amount)
+            (amount / exchange_rate, amount)
         } else {
-            (amount, amount / exchange_rate)
+            (amount, amount * exchange_rate)
         };
 
         self.amount_local = amount_local;

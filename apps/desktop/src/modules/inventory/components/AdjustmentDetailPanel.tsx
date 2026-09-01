@@ -2,7 +2,7 @@ import { Pencil, Trash2, ArrowUpCircle, ArrowDownCircle } from "lucide-react";
 import type { StockAdjustment, MaterialDto } from "@erp/shared-types";
 import { cn } from "@shared/lib/utils";
 import { formatDateTime, formatNumber, toFixed } from "@shared/lib/format";
-import { useCurrencyContext } from "@app/providers/CurrencyContext";
+import { formatWithLocale, useCurrencyContext } from "@app/providers/CurrencyContext";
 import {
   SidebarShell,
   SidebarHeader,
@@ -21,8 +21,13 @@ interface AdjustmentDetailPanelProps {
 }
 
 export function AdjustmentDetailPanel({ item, materials: _materials, onClose, onEdit, onDelete }: AdjustmentDetailPanelProps) {
-  const { formatMonetaryAmount } = useCurrencyContext();
+  const { currencies, baseCurrency } = useCurrencyContext();
   const diff = parseFloat(item.difference);
+
+  const itemCurrency = currencies.find((c) => c.code === item.currency_code) || null;
+  const costOriginal = parseFloat(item.total_cost || "0");
+  const costBase = parseFloat(item.total_cost_base || "0");
+  const displayCost = `${formatWithLocale(costOriginal, itemCurrency?.decimals ?? 2)} ${itemCurrency?.symbol || item.currency_code || ""}`.trim();
 
   const actionItems: SidebarAction[] = [
     {
@@ -78,13 +83,24 @@ export function AdjustmentDetailPanel({ item, materials: _materials, onClose, on
                   </span>
                 ),
               },
-              { label: "التكلفة", value: formatMonetaryAmount(parseFloat(item.total_cost_base || "0"), "base") },
+              { label: "التكلفة", value: displayCost },
+            ]}
+          />
+          <SidebarDetailGrid
+            columns={2}
+            fields={[
+              {
+                label: `المكافئ (${baseCurrency?.symbol || baseCurrency?.code || ""})`,
+                value: costBase !== 0
+                  ? formatWithLocale(costBase, baseCurrency?.decimals ?? 2)
+                  : "—",
+              },
+              { label: "المرجع", value: item.reference ? formatNumber(parseInt(item.reference) || 0) : "—" },
             ]}
           />
           <SidebarDetailGrid
             title="معلومات إضافية"
             fields={[
-              { label: "المرجع", value: item.reference ? formatNumber(parseInt(item.reference) || 0) : "—" },
               { label: "ملاحظة", value: item.notes || item.reason || "—" },
               { label: "تاريخ الإنشاء", value: formatDateTime(item.created_at) },
             ]}

@@ -25,12 +25,15 @@ impl StockAdjustmentQueries {
 
     /// Resolve the currency + fx rate recorded on the adjustment's stock
     /// movement (defaults to base SAR when no foreign currency was recorded).
+    /// Filters by `movement_type = Adjustment` to avoid matching unrelated
+    /// movements that happen to share the same reference number.
     async fn resolve_currency(&self, reference: &Option<String>) -> (String, Decimal) {
         let Some(ref_code) = reference else {
             return (super::create::BASE_CURRENCY.to_string(), Decimal::ONE);
         };
         let movements = self.movement_repo.list_by_reference(ref_code).await.unwrap_or_default();
-        let Some(m) = movements.first() else {
+        let m = movements.iter().find(|m| matches!(m.movement_type, domain::inventory::stock_movement::MovementType::Adjustment));
+        let Some(m) = m else {
             return (super::create::BASE_CURRENCY.to_string(), Decimal::ONE);
         };
         (

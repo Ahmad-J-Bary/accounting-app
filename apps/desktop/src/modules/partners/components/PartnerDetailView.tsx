@@ -8,7 +8,7 @@ import {
   SidebarBody,
   type SidebarAction,
 } from "@widgets/sidebar-shell";
-import { useCurrencyContext } from "@app/providers/CurrencyContext";
+import { useCurrencyContext, formatWithLocale } from "@app/providers/CurrencyContext";
 import { toFixed } from "@shared/lib/format";
 import { resolveProfitShareRatio } from "@modules/reports/lib/partnerProfitShare";
 
@@ -27,7 +27,8 @@ export function PartnerDetailView({
   onDelete,
   onClose,
 }: PartnerDetailViewProps) {
-  const { formatAmount } = useCurrencyContext();
+  const { formatAmount, currencies } = useCurrencyContext();
+  const partnerCurrency = currencies.find(c => c.code === partner.currency);
 
   const actualProfitRatio = resolveProfitShareRatio(
     partner.calculatedCapitalRatio,
@@ -82,7 +83,7 @@ export function PartnerDetailView({
                   المبلغ الأصلي
                 </div>
                 <div className="text-lg font-black text-slate-900 tabular-nums">
-                  {formatAmount(parseFloat(partner.amount_original || "0"), { currencyCode: partner.currency })}
+                  {formatWithLocale(parseFloat(partner.amount_original || "0"), partnerCurrency?.decimals ?? 2)} {partnerCurrency?.symbol || partner.currency || ""}
                 </div>
               </div>
               <div className="p-3 bg-white rounded-xl border border-slate-100">

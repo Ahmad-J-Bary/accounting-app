@@ -141,8 +141,7 @@ export default function DamagedPage() {
       { id: "id", label: "الرقم", accessor: (row) => {
         const i = row as unknown as DamagedItem;
         if (i.reference) return parseInt(i.reference, 10) || 0;
-        const idx = items.findIndex(x => x.id === i.id);
-        return idx >= 0 ? idx + 1 : 1;
+        return "—";
       } },
       { id: "material_name", label: "المادة", accessor: (row) => String((row as unknown as DamagedItem).material_name ?? "") },
       { id: "quantity", label: "الكمية", accessor: (row) => Math.round(parseFloat((row as unknown as DamagedItem).quantity || "0")), numeric: true },
@@ -170,6 +169,8 @@ export default function DamagedPage() {
         reason: selectedItem.reason,
         damage_date: selectedItem.damage_date,
         cost_impact: parseFloat(selectedItem.cost_impact),
+        currency_code: selectedItem.currency_code || undefined,
+        fx_rate: selectedItem.fx_rate ? parseFloat(selectedItem.fx_rate) : undefined,
         notes: selectedItem.notes,
       }
     : undefined;

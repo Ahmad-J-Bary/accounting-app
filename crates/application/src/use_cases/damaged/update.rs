@@ -4,7 +4,6 @@ use crate::ports::account_repository::AccountRepository;
 use crate::ports::damaged_item_repository::DamagedItemRepository;
 use crate::ports::journal_entry_repository::JournalEntryRepository;
 use crate::ports::material_repository::MaterialRepository;
-use crate::ports::stock_movement_repository::StockMovementRepository;
 use chrono::{DateTime, Utc};
 use domain::inventory::stock_movement::{MovementType, StockMovement};
 use domain::shared::ids::{DamagedItemId, MaterialId};
@@ -15,7 +14,6 @@ use crate::use_cases::damaged::create::{to_dto, build_damaged_journal_entry};
 pub struct UpdateDamagedItemUseCase {
     repo: Arc<dyn DamagedItemRepository>,
     material_repo: Arc<dyn MaterialRepository>,
-    movement_repo: Arc<dyn StockMovementRepository>,
     account_repo: Arc<dyn AccountRepository>,
     journal_repo: Arc<dyn JournalEntryRepository>,
 }
@@ -24,14 +22,12 @@ impl UpdateDamagedItemUseCase {
     pub fn new(
         repo: Arc<dyn DamagedItemRepository>,
         material_repo: Arc<dyn MaterialRepository>,
-        movement_repo: Arc<dyn StockMovementRepository>,
         account_repo: Arc<dyn AccountRepository>,
         journal_repo: Arc<dyn JournalEntryRepository>,
     ) -> Self {
         Self {
             repo,
             material_repo,
-            movement_repo,
             account_repo,
             journal_repo,
         }
@@ -92,7 +88,7 @@ impl UpdateDamagedItemUseCase {
         item.notes = req.notes;
 
         if item.reference.is_none() {
-            let reference = self.movement_repo.get_next_inventory_reference().await?;
+            let reference = self.repo.get_next_reference().await?;
             item.reference = Some(reference);
         }
         let reference = item.reference.clone().unwrap_or_else(|| format!("DAM-{}", item.id));
@@ -156,6 +152,6 @@ impl UpdateDamagedItemUseCase {
             &delete_entries,
         ).await?;
 
-        Ok(to_dto(item, Some(reference), currency_code, fx_rate, cost_impact_base))
+        Ok(to_dto(item, currency_code, fx_rate, cost_impact_base))
     }
 }

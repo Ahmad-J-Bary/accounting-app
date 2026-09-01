@@ -136,7 +136,7 @@ impl CreateDamagedItemUseCase {
         // Commit doc + movement + journal in ONE transaction (Sec 9 atomicity).
         self.repo.save_with_accounting(&item, &[movement], &[entry], None, &[]).await?;
 
-        Ok(to_dto(item, Some(display_ref), currency_code, fx_rate, cost_impact_base))
+        Ok(to_dto(item, currency_code, fx_rate, cost_impact_base))
     }
 }
 
@@ -180,7 +180,6 @@ pub async fn build_damaged_journal_entry(
 
 pub fn to_dto(
     d: DamagedItem,
-    reference: Option<String>,
     currency_code: String,
     fx_rate: Decimal,
     cost_impact_base: Decimal,
@@ -197,7 +196,7 @@ pub fn to_dto(
         currency_code: Some(currency_code),
         fx_rate: Some(fx_rate.to_string()),
         notes: d.notes,
-        reference,
+        reference: d.reference,
         created_at: d.created_at.to_rfc3339(),
     }
 }

@@ -40,7 +40,7 @@ export function DamagedTable({
         id: "id",
         header: "الرقم",
         label: "الرقم",
-        accessor: (i, idx) => i.reference ? formatNumber(parseInt(i.reference) || 0) : (idx + 1).toString(),
+        accessor: (i) => i.reference ? formatNumber(parseInt(i.reference) || 0) : "—",
         className: "font-black text-slate-900 text-center"
       },
       {

@@ -27,8 +27,9 @@ export function AdjustmentForm({ onClose, products, onSave, saving, initialValue
   const currencyField = useCurrencyField({
     initialCurrency: initialValues?.currency_code || undefined,
     initialFxRate: initialValues?.fx_rate || undefined,
-    disableAutoFx: isEditMode,
   });
+
+  const { currencies, baseCurrencyCode, getDefaultCurrency, setCurrency: setCurrencyFn, convertBetween } = currencyField;
 
   const [form, setForm] = useState<Partial<CreateStockAdjustmentRequest>>({
     adjustment_date: new Date().toISOString(),
@@ -42,10 +43,20 @@ export function AdjustmentForm({ onClose, products, onSave, saving, initialValue
 
   const formRef = useRef(form);
   formRef.current = form;
+
+  // Source-of-truth for the auto-computed cost, expressed in the material's
+  // purchase currency. Displayed cost is always converted to the selected
+  // currency. `manualRef` tracks whether the user hand-edited the amount, in
+  // which case we stop recomputing it.
   const baseCostRef = useRef(0);
   const materialCurrencyRef = useRef("");
+  const manualRef = useRef(false);
 
-  const { currencies, baseCurrencyCode, getDefaultCurrency, setCurrency: setCurrencyFn, convertBetween } = currencyField;
+  const getDefaultCurrencyFor = useCallback((mat?: MaterialDto): string => {
+    const preferred = mat?.default_purchase_currency;
+    const preferredActive = preferred && currencies.some(c => c.is_active && c.code === preferred);
+    return preferredActive ? preferred : baseCurrencyCode || getDefaultCurrency();
+  }, [currencies, baseCurrencyCode, getDefaultCurrency]);
 
   const fetchBalance = useCallback(async (materialId: string, actualQuantity?: number) => {
     setLoadingBalance(true);
@@ -58,23 +69,23 @@ export function AdjustmentForm({ onClose, products, onSave, saving, initialValue
       setUnitCostPerUnit(unitCost);
       const matCurrency = mat?.default_purchase_currency || baseCurrencyCode;
       materialCurrencyRef.current = matCurrency;
-      const preferred = mat?.default_purchase_currency;
-      const preferredActive = preferred && currencies.some(c => c.is_active && c.code === preferred);
-      setCurrencyFn(preferredActive ? preferred : baseCurrencyCode || getDefaultCurrency());
+      const selectedCurrency = getDefaultCurrencyFor(mat);
+      setCurrencyFn(selectedCurrency);
       const actual = actualQuantity ?? formRef.current.actual_quantity ?? 0;
       const diff = Math.abs(balNum - actual);
       const baseCost = diff * unitCost;
       baseCostRef.current = baseCost;
-      const converted = currencyField.currency === matCurrency
+      manualRef.current = false;
+      const converted = selectedCurrency === matCurrency
         ? baseCost
-        : convertBetween(baseCost, matCurrency, currencyField.currency);
+        : convertBetween(baseCost, matCurrency, selectedCurrency);
       setForm(p => ({ ...p, unit_cost: converted }));
     } catch {
       toast.error("فشل تحميل رصيد المخزون");
     } finally {
       setLoadingBalance(false);
     }
-  }, [products, currencies, baseCurrencyCode, getDefaultCurrency, setCurrencyFn, convertBetween, currencyField.currency]);
+  }, [products, baseCurrencyCode, getDefaultCurrencyFor, setCurrencyFn, convertBetween]);
 
   const fetchBalanceRef = useRef(fetchBalance);
   fetchBalanceRef.current = fetchBalance;
@@ -85,14 +96,18 @@ export function AdjustmentForm({ onClose, products, onSave, saving, initialValue
       setSystemQuantity(sys);
       const perUnit = parseFloat(initialValues.unit_cost || "0");
       setUnitCostPerUnit(perUnit);
-      const savedCurrency = initialValues.currency_code || currencyField.baseCurrencyCode;
-      const savedFxRate = parseFloat(initialValues.fx_rate || "1");
+      const savedCurrency = initialValues.currency_code || baseCurrencyCode;
       currencyField.setCurrency(savedCurrency);
-      currencyField.setFxRate(initialValues.fx_rate || "1");
       const totalCost = parseFloat(initialValues.total_cost || "0");
-      const baseCost = totalCost * savedFxRate;
-      baseCostRef.current = baseCost;
-      materialCurrencyRef.current = savedCurrency;
+      // Back-reference the stored cost into the material's purchase currency
+      // so that a currency change keeps a correct value.
+      const mat = products.find(p => p.id === initialValues.material_id);
+      const matCurrency = mat?.default_purchase_currency || baseCurrencyCode;
+      materialCurrencyRef.current = matCurrency;
+      baseCostRef.current = savedCurrency === matCurrency
+        ? totalCost
+        : convertBetween(totalCost, savedCurrency, matCurrency);
+      manualRef.current = true;
       setForm({
         material_id: initialValues.material_id,
         actual_quantity: parseFloat(initialValues.actual_quantity),
@@ -109,7 +124,7 @@ export function AdjustmentForm({ onClose, products, onSave, saving, initialValue
       });
       setSystemQuantity(0);
       setUnitCostPerUnit(0);
-      currencyField.setCurrency(currencyField.getDefaultCurrency());
+      currencyField.setCurrency(getDefaultCurrency());
       currencyField.setFxRate("1");
       if (initialMaterialId) {
         fetchBalanceRef.current(initialMaterialId);
@@ -118,14 +133,15 @@ export function AdjustmentForm({ onClose, products, onSave, saving, initialValue
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialValues, initialMaterialId]);
 
-  // Reconvert cost when currency changes
+  // Recompute the displayed cost when the selected currency changes — but only
+  // while the value is auto-computed (not manually edited).
   useEffect(() => {
-    if (materialCurrencyRef.current && baseCostRef.current > 0) {
-      const converted = currencyField.currency === materialCurrencyRef.current
-        ? baseCostRef.current
-        : convertBetween(baseCostRef.current, materialCurrencyRef.current, currencyField.currency);
-      setForm(p => ({ ...p, unit_cost: converted }));
-    }
+    if (!materialCurrencyRef.current) return;
+    if (baseCostRef.current <= 0) return;
+    const converted = currencyField.currency === materialCurrencyRef.current
+      ? baseCostRef.current
+      : convertBetween(baseCostRef.current, materialCurrencyRef.current, currencyField.currency);
+    setForm(p => ({ ...p, unit_cost: converted }));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currencyField.currency]);
 
@@ -140,11 +156,14 @@ export function AdjustmentForm({ onClose, products, onSave, saving, initialValue
     const actual = isNaN(val) ? 0 : val;
     setForm(p => ({ ...p, actual_quantity: actual }));
     const diff = Math.abs(systemQuantity - actual);
+    const matCurrency = materialCurrencyRef.current || baseCurrencyCode;
+    materialCurrencyRef.current = matCurrency;
     const baseCost = diff * unitCostPerUnit;
     baseCostRef.current = baseCost;
-    const converted = materialCurrencyRef.current && materialCurrencyRef.current !== currencyField.currency
-      ? convertBetween(baseCost, materialCurrencyRef.current, currencyField.currency)
-      : baseCost;
+    manualRef.current = false;
+    const converted = matCurrency === currencyField.currency
+      ? baseCost
+      : convertBetween(baseCost, matCurrency, currencyField.currency);
     setForm(p => ({ ...p, unit_cost: converted }));
   };
 
@@ -206,7 +225,17 @@ export function AdjustmentForm({ onClose, products, onSave, saving, initialValue
             currency={currencyField.currency}
             onCurrencyChange={currencyField.setCurrency}
             amount={form.unit_cost ?? ""}
-            onAmountChange={(val) => setForm(p => ({ ...p, unit_cost: parseFloat(val) || 0 }))}
+            onAmountChange={(val) => {
+              manualRef.current = true;
+              const newAmount = parseFloat(val) || 0;
+              const matCurrency = materialCurrencyRef.current;
+              if (currencyField.currency === matCurrency) {
+                baseCostRef.current = newAmount;
+              } else {
+                baseCostRef.current = convertBetween(newAmount, currencyField.currency, matCurrency);
+              }
+              setForm(p => ({ ...p, unit_cost: newAmount }));
+            }}
             symbol={currencyField.symbol}
             showCurrency={currencyField.hasMultipleCurrencies}
             currencies={currencyField.currencies}

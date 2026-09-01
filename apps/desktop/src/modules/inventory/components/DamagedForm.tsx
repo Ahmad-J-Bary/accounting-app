@@ -25,19 +25,27 @@ export function DamagedForm({ onClose, products, onSave, saving, initialMaterial
   const currencyField = useCurrencyField({
     initialCurrency: initialValues?.currency_code || undefined,
     initialFxRate: initialValues?.fx_rate ? String(initialValues.fx_rate) : undefined,
-    disableAutoFx: isEditMode,
   });
 
+  const { convertBetween, baseCurrencyCode, currencies, getDefaultCurrency } = currencyField;
+
+  // Source-of-truth for the auto-computed cost, expressed in the material's
+  // purchase currency. Displayed cost is always converted to the selected
+  // currency. `manualRef` tracks whether the user has hand-edited the amount,
+  // in which case we stop recomputing it.
   const baseCostRef = useRef(0);
   const materialCurrencyRef = useRef("");
-  const { convertBetween } = currencyField;
+  const manualRef = useRef(false);
 
-  const getDefaultCurrency = useCallback((mat?: MaterialDto): string => {
-    const baseCode = currencyField.baseCurrencyCode;
+  const getDefaultCurrencyFor = useCallback((mat?: MaterialDto): string => {
     const preferred = mat?.default_purchase_currency;
-    const preferredActive = preferred && currencyField.currencies.some(c => c.is_active && c.code === preferred);
-    return preferredActive ? preferred : baseCode || currencyField.getDefaultCurrency();
-  }, [currencyField]);
+    const preferredActive = preferred && currencies.some(c => c.is_active && c.code === preferred);
+    return preferredActive ? preferred : baseCurrencyCode || getDefaultCurrency();
+  }, [currencies, baseCurrencyCode, getDefaultCurrency]);
+
+  const unitCostInMaterialCurrency = useCallback((mat?: MaterialDto): number => {
+    return mat ? parseFloat(mat.last_purchase_price || "0") : 0;
+  }, []);
 
   const [form, setForm] = useState<Partial<CreateDamagedItemRequest>>(() => {
     if (initialValues) {
@@ -56,29 +64,37 @@ export function DamagedForm({ onClose, products, onSave, saving, initialMaterial
   useEffect(() => {
     if (initialValues) {
       setForm({ ...initialValues });
-      const savedCurrency = initialValues.currency_code || currencyField.baseCurrencyCode;
-      const savedFxRate = parseFloat(String(initialValues.fx_rate || "1"));
+      const savedCurrency = initialValues.currency_code || baseCurrencyCode;
       currencyField.setCurrency(savedCurrency);
-      currencyField.setFxRate(String(initialValues.fx_rate || "1"));
+      // Back-reference the stored cost into the material's purchase currency
+      // so that a currency change keeps a correct value. Use the stored
+      // (historical) fx_rate instead of current live rates so the stored
+      // amount is preserved exactly (1 base = fx_rate foreign).
       const costImpact = parseFloat(String(initialValues.cost_impact || "0"));
-      baseCostRef.current = costImpact * savedFxRate;
-      materialCurrencyRef.current = savedCurrency;
+      const prod = products.find(p => p.id === initialValues.material_id);
+      const matCurrency = prod?.default_purchase_currency || baseCurrencyCode;
+      materialCurrencyRef.current = matCurrency;
+      if (savedCurrency === matCurrency) {
+        baseCostRef.current = costImpact;
+      } else {
+        baseCostRef.current = convertBetween(costImpact, savedCurrency, matCurrency);
+      }
+      manualRef.current = true;
     } else {
       const prod = products.find(p => p.id === initialMaterialId);
-      const cost = prod ? parseFloat(prod.last_purchase_price || "0") : 0;
-      const matCurrency = prod?.default_purchase_currency || currencyField.baseCurrencyCode;
+      const unitCost = unitCostInMaterialCurrency(prod);
+      const matCurrency = prod?.default_purchase_currency || baseCurrencyCode;
+      const qty = 0;
       materialCurrencyRef.current = matCurrency;
-      baseCostRef.current = cost;
-      const selectedCurrency = getDefaultCurrency(prod);
+      baseCostRef.current = unitCost * qty;
+      manualRef.current = false;
+      const selectedCurrency = getDefaultCurrencyFor(prod);
       currencyField.setCurrency(selectedCurrency);
       currencyField.setFxRate("1");
-      const converted = selectedCurrency === matCurrency
-        ? cost
-        : convertBetween(cost, matCurrency, selectedCurrency);
       setForm({
         damage_date: new Date().toISOString(),
-        quantity: 0,
-        cost_impact: converted,
+        quantity: qty,
+        cost_impact: 0,
         reason: "",
         material_id: initialMaterialId ?? "",
       });
@@ -86,21 +102,65 @@ export function DamagedForm({ onClose, products, onSave, saving, initialMaterial
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialMaterialId, initialValues, products]);
 
-  // Reconvert cost when currency changes
+  // Recompute the displayed cost when the selected currency changes — but only
+  // while the value is auto-computed (not manually edited).
   useEffect(() => {
-    if (materialCurrencyRef.current && baseCostRef.current > 0) {
-      const converted = currencyField.currency === materialCurrencyRef.current
-        ? baseCostRef.current
-        : convertBetween(baseCostRef.current, materialCurrencyRef.current, currencyField.currency);
-      setForm(p => ({ ...p, cost_impact: converted }));
-    }
+    if (!materialCurrencyRef.current) return;
+    if (baseCostRef.current <= 0) return;
+    const converted = currencyField.currency === materialCurrencyRef.current
+      ? baseCostRef.current
+      : convertBetween(baseCostRef.current, materialCurrencyRef.current, currencyField.currency);
+    setForm(p => ({ ...p, cost_impact: converted }));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currencyField.currency]);
+
+  const handleMaterialChange = (val: string) => {
+    const prod = products.find((p) => p.id === val);
+    const qty = (form.quantity as number) || 1;
+    const matCurrency = prod?.default_purchase_currency || baseCurrencyCode;
+    materialCurrencyRef.current = matCurrency;
+    const unitCost = unitCostInMaterialCurrency(prod);
+    baseCostRef.current = unitCost * qty;
+    manualRef.current = false;
+    const selectedCurrency = getDefaultCurrencyFor(prod);
+    currencyField.setCurrency(selectedCurrency);
+    const converted = selectedCurrency === matCurrency
+      ? baseCostRef.current
+      : convertBetween(baseCostRef.current, matCurrency, selectedCurrency);
+    setForm((p) => ({
+      ...p,
+      material_id: val,
+      cost_impact: converted,
+    }));
+  };
+
+  const handleQuantityChange = (val: string) => {
+    const qty = parseFloat(val) || 0;
+    const prod = products.find((p) => p.id === form.material_id);
+    const unitCost = unitCostInMaterialCurrency(prod);
+    const matCurrency = materialCurrencyRef.current || prod?.default_purchase_currency || baseCurrencyCode;
+    materialCurrencyRef.current = matCurrency;
+    baseCostRef.current = unitCost * qty;
+    manualRef.current = false;
+    const converted = matCurrency === currencyField.currency
+      ? baseCostRef.current
+      : convertBetween(baseCostRef.current, matCurrency, currencyField.currency);
+    setForm((p) => ({
+      ...p,
+      quantity: qty,
+      cost_impact: converted,
+    }));
+  };
 
   const handleSave = async () => {
     if (!form.material_id || !form.quantity) return;
     await onSave({
-      ...form,
+      material_id: form.material_id,
+      quantity: form.quantity,
+      reason: form.reason || undefined,
+      damage_date: form.damage_date || new Date().toISOString(),
+      cost_impact: form.cost_impact ?? 0,
+      notes: form.notes,
       currency_code: currencyField.currency || undefined,
       fx_rate: parseFloat(currencyField.fxRate) || 1,
     } as CreateDamagedItemRequest);
@@ -120,28 +180,7 @@ export function DamagedForm({ onClose, products, onSave, saving, initialMaterial
         <div className="space-y-4 text-right">
           <div className="space-y-2">
             <FieldLabel required>المادة</FieldLabel>
-            <Select
-              value={form.material_id ?? ""}
-              onValueChange={(val) => {
-                const mid = val;
-                const prod = products.find((p) => p.id === mid);
-                const qty = (form.quantity as number) || 1;
-                const baseCost = prod ? parseFloat(prod.last_purchase_price || "0") * qty : 0;
-                const matCurrency = prod?.default_purchase_currency || currencyField.baseCurrencyCode;
-                baseCostRef.current = baseCost;
-                materialCurrencyRef.current = matCurrency;
-                const selectedCurrency = getDefaultCurrency(prod);
-                currencyField.setCurrency(selectedCurrency);
-                const converted = selectedCurrency === matCurrency
-                  ? baseCost
-                  : convertBetween(baseCost, matCurrency, selectedCurrency);
-                setForm((p) => ({
-                  ...p,
-                  material_id: mid,
-                  cost_impact: converted,
-                }));
-              }}
-            >
+            <Select value={form.material_id ?? ""} onValueChange={handleMaterialChange}>
               <SelectTrigger className="w-full bg-white border-slate-200">
                 <SelectValue placeholder="اختر المادة..." />
               </SelectTrigger>
@@ -162,20 +201,7 @@ export function DamagedForm({ onClose, products, onSave, saving, initialMaterial
               min="1"
               step="1"
               value={form.quantity || ""}
-              onChange={(e) => {
-                const qty = parseFloat(e.target.value) || 0;
-                const prod = products.find((p) => p.id === form.material_id);
-                const baseCost = prod ? parseFloat(prod.last_purchase_price || "0") * qty : 0;
-                baseCostRef.current = baseCost;
-                const converted = materialCurrencyRef.current && materialCurrencyRef.current !== currencyField.currency
-                  ? convertBetween(baseCost, materialCurrencyRef.current, currencyField.currency)
-                  : baseCost;
-                setForm((p) => ({
-                  ...p,
-                  quantity: qty,
-                  cost_impact: converted,
-                }));
-              }}
+              onChange={(e) => handleQuantityChange(e.target.value)}
               className="bg-white border-slate-200 h-9 text-xs tabular-nums"
               placeholder="أدخل الكمية..."
             />
@@ -186,7 +212,17 @@ export function DamagedForm({ onClose, products, onSave, saving, initialMaterial
             currency={currencyField.currency}
             onCurrencyChange={currencyField.setCurrency}
             amount={form.cost_impact || ""}
-            onAmountChange={(val) => setForm((p) => ({ ...p, cost_impact: parseFloat(val) || 0 }))}
+            onAmountChange={(val) => {
+              manualRef.current = true;
+              const newAmount = parseFloat(val) || 0;
+              const matCurrency = materialCurrencyRef.current;
+              if (currencyField.currency === matCurrency) {
+                baseCostRef.current = newAmount;
+              } else {
+                baseCostRef.current = convertBetween(newAmount, currencyField.currency, matCurrency);
+              }
+              setForm((p) => ({ ...p, cost_impact: newAmount }));
+            }}
             symbol={currencyField.symbol}
             showCurrency={currencyField.hasMultipleCurrencies}
             currencies={currencyField.currencies}

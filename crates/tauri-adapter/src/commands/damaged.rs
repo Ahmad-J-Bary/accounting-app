@@ -43,7 +43,6 @@ pub async fn update_damaged_item(
     UpdateDamagedItemUseCase::new(
         state.damaged_repo.clone(),
         state.material_repo.clone(),
-        state.stock_movement_repo.clone(),
         state.account_repo.clone(),
         state.journal_entry_repo.clone(),
     )
