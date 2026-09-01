@@ -201,15 +201,23 @@ export function DamagedForm({ onClose, products, onSave, saving, initialMaterial
           </div>
 
           <CurrencyField
-            label="تأثير التكلفة (محسوب تلقائيًا)"
+            label="تأثير التكلفة"
             currency={currencyField.currency}
             onCurrencyChange={currencyField.setCurrency}
             amount={form.cost_impact || ""}
-            onAmountChange={() => {}}
+            onAmountChange={(val) => {
+              const newAmount = parseFloat(val) || 0;
+              const matCurrency = materialCurrencyRef.current;
+              if (currencyField.currency === matCurrency) {
+                baseCostRef.current = newAmount;
+              } else {
+                baseCostRef.current = convertBetween(newAmount, currencyField.currency, matCurrency);
+              }
+              setForm((p) => ({ ...p, cost_impact: newAmount }));
+            }}
             symbol={currencyField.symbol}
             showCurrency={currencyField.hasMultipleCurrencies}
             currencies={currencyField.currencies}
-            disabled={true}
           />
 
           <div className="space-y-2">

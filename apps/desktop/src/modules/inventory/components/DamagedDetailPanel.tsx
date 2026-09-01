@@ -29,14 +29,9 @@ export function DamagedDetailPanel({
   const { currencies, baseCurrency, formatAmount } = useCurrencyContext();
 
   const itemCurrency = currencies.find((c) => c.code === item.currency_code) || null;
-  const costOriginal = parseFloat(item.cost_impact || "0");
-  const costBase = parseFloat(item.cost_impact_base || "0");
   const lossOriginal = parseFloat(item.loss || item.cost_impact || "0");
   const lossBase = parseFloat(item.loss_base || item.cost_impact_base || "0");
-  const displayCost = `${formatWithLocale(costOriginal, itemCurrency?.decimals ?? 2)} ${itemCurrency?.symbol || item.currency_code || ""}`.trim();
   const displayLoss = `${formatWithLocale(lossOriginal, itemCurrency?.decimals ?? 2)} ${itemCurrency?.symbol || item.currency_code || ""}`.trim();
-  const baseCostLabel = `تأثير التكلفة (${baseCurrency?.symbol || baseCurrency?.code || ""})`;
-  const baseLossLabel = `الخسارة (${baseCurrency?.symbol || baseCurrency?.code || ""})`;
 
   const actionItems: SidebarAction[] = [
     {
@@ -71,42 +66,14 @@ export function DamagedDetailPanel({
             ]}
           />
           <div className="p-4 border border-rose-100 rounded-2xl bg-rose-50/40">
-            <div className="grid grid-cols-2 gap-3">
-              <div className="p-3 bg-white rounded-xl border border-rose-100">
-                <div className="text-[10px] text-slate-400 font-bold uppercase mb-1">
-                  تأثير التكلفة (الأصلية)
-                </div>
-                <div className="text-base font-black text-rose-600 tabular-nums">
-                  {displayCost}
-                </div>
+            <div className="p-3 bg-white rounded-xl border border-rose-100">
+              <div className="text-[10px] text-slate-400 font-bold uppercase mb-1">
+                الخسارة
               </div>
-              <div className="p-3 bg-white rounded-xl border border-rose-100">
-                <div className="text-[10px] text-slate-400 font-bold uppercase mb-1">
-                  {baseCostLabel}
-                </div>
-                <div className="text-base font-black text-rose-600 tabular-nums">
-                  {costBase > 0
-                    ? formatAmount(costBase, { currencyCode: baseCurrency?.code || "" })
-                    : "—"}
-                </div>
-              </div>
-              <div className="p-3 bg-white rounded-xl border border-rose-100">
-                <div className="text-[10px] text-slate-400 font-bold uppercase mb-1">
-                  الخسارة (الأصلية)
-                </div>
-                <div className="text-base font-black text-rose-600 tabular-nums">
-                  {displayLoss}
-                </div>
-              </div>
-              <div className="p-3 bg-white rounded-xl border border-rose-100">
-                <div className="text-[10px] text-slate-400 font-bold uppercase mb-1">
-                  {baseLossLabel}
-                </div>
-                <div className="text-base font-black text-rose-600 tabular-nums">
-                  {lossBase > 0
-                    ? formatAmount(lossBase, { currencyCode: baseCurrency?.code || "" })
-                    : "—"}
-                </div>
+              <div className="text-base font-black text-rose-600 tabular-nums">
+                {lossBase > 0
+                  ? formatAmount(lossBase, { currencyCode: baseCurrency?.code || "" })
+                  : displayLoss}
               </div>
             </div>
             <div className="mt-3 text-[11px] text-rose-400 font-bold">
@@ -114,10 +81,8 @@ export function DamagedDetailPanel({
             </div>
           </div>
           <SidebarDetailGrid
-            columns={2}
             fields={[
               { label: "سبب التلف", value: item.reason || "—" },
-              { label: "تاريخ التلف", value: formatDateTime(item.damage_date) },
             ]}
           />
           <SidebarDetailGrid
@@ -125,7 +90,6 @@ export function DamagedDetailPanel({
             fields={[
               { label: "المرجع", value: item.reference ? formatNumber(parseInt(item.reference) || 0) : "—" },
               ...(item.notes ? [{ label: "ملاحظات", value: item.notes }] : []),
-              { label: "تاريخ الإنشاء", value: formatDateTime(item.created_at) },
             ]}
           />
         </div>
