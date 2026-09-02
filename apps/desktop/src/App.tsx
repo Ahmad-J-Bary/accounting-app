@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Toaster } from '@shared/ui/sonner';
 import { TooltipProvider } from '@shared/ui/tooltip';
 import { QueryClientProvider } from '@tanstack/react-query';
@@ -18,6 +18,12 @@ import SetupWizard from '@modules/core/setup/pages/setupWizard';
 import UpdateRequiredScreen from '@modules/core/setup/pages/UpdateRequiredScreen';
 import { backupService, type StartupBlockInfo } from '@modules/core/api/backupService';
 import { queryClient } from '@shared/hooks/queryClient';
+import { LocalizationProvider } from '@app/providers/LocalizationProvider';
+import { WindowProvider } from '@app/providers/WindowProvider';
+import { CommandProvider } from '@app/providers/CommandProvider';
+import { GlobalSearchProvider } from '@app/providers/GlobalSearchProvider';
+import { VoiceProvider } from '@app/providers/VoiceProvider';
+import { BarcodeScannerProvider } from '@app/providers/BarcodeScannerProvider';
 
 const App = () => {
   const [block, setBlock] = useState<StartupBlockInfo | null>(null);
@@ -56,34 +62,46 @@ const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <AppearanceProvider>
-        <TooltipProvider>
-          <Toaster />
-          <BrowserRouter>
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/auth/callback" element={<AuthCallback />} />
-              <Route path="/auth/error" element={<AuthError />} />
-              <Route path="/setup" element={<SetupWizard />} />
+        <LocalizationProvider>
+          <TooltipProvider>
+            <Toaster />
+            <BrowserRouter>
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/auth/callback" element={<AuthCallback />} />
+                <Route path="/auth/error" element={<AuthError />} />
+                <Route path="/setup" element={<SetupWizard />} />
 
-              {/* ERP Routes with AppLayout */}
-              <Route path="/*" element={
-                <CurrencyProvider>
-                  <TableSettingsProvider>
-                    <SidePanelSettingsProvider>
-                      <NavSidebarSettingsProvider>
-                        <SidebarLayoutProvider>
-                          <TabProvider>
-                            <AppLayout />
-                          </TabProvider>
-                        </SidebarLayoutProvider>
-                      </NavSidebarSettingsProvider>
-                    </SidePanelSettingsProvider>
-                  </TableSettingsProvider>
-                </CurrencyProvider>
-              } />
-            </Routes>
-          </BrowserRouter>
-        </TooltipProvider>
+                {/* ERP Routes with AppLayout */}
+                <Route path="/*" element={
+                  <CurrencyProvider>
+                    <TableSettingsProvider>
+                      <SidePanelSettingsProvider>
+                        <NavSidebarSettingsProvider>
+                          <SidebarLayoutProvider>
+                            <TabProvider>
+                              <WindowProvider>
+                                <CommandProvider>
+                                  <GlobalSearchProvider>
+                                    <VoiceProvider>
+                                      <BarcodeScannerProvider>
+                                        <AppLayout />
+                                      </BarcodeScannerProvider>
+                                    </VoiceProvider>
+                                  </GlobalSearchProvider>
+                                </CommandProvider>
+                              </WindowProvider>
+                            </TabProvider>
+                          </SidebarLayoutProvider>
+                        </NavSidebarSettingsProvider>
+                      </SidePanelSettingsProvider>
+                    </TableSettingsProvider>
+                  </CurrencyProvider>
+                } />
+              </Routes>
+            </BrowserRouter>
+          </TooltipProvider>
+        </LocalizationProvider>
       </AppearanceProvider>
     </QueryClientProvider>
   );

@@ -31,6 +31,8 @@ export type ColorMode = 'light' | 'dark' | 'system';
 
 // ── Density ──────────────────────────────────────────────────
 export type DensityMode = 'compact' | 'comfortable' | 'spacious';
+export type TabStyleMode = 'default' | 'browser' | 'vscode';
+export type MotionMode = 'full' | 'reduced';
 
 // ── Primary Color ────────────────────────────────────────────
 export interface PrimaryColorPreset {
@@ -96,6 +98,8 @@ export interface AppearanceSettings {
   mode: ColorMode;
   primaryColor: string;
   density: DensityMode;
+  tabStyle: TabStyleMode;
+  motion: MotionMode;
   show: VisibilitySettings;
   // Compound layout builder state
   navMenuType: NavMenuType;
@@ -125,6 +129,8 @@ export const DEFAULT_APPEARANCE: AppearanceSettings = {
   mode: 'light',
   primaryColor: 'blue',
   density: 'comfortable',
+  tabStyle: 'default',
+  motion: 'full',
   navMenuType: 'sidenav',
   sidenavShape: 'default',
   topnavShape: 'default',

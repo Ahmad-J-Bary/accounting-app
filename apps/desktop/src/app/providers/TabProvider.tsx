@@ -1,15 +1,62 @@
-import { useState, useCallback, useRef, ReactNode, useEffect } from 'react';
+import { useState, useCallback, useRef, ReactNode, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-
-import { Tab } from '@shared/types/tabs';
-
+import type { WorkspaceItem } from '@shared/types/navigation';
+import type { Tab } from '@shared/types/tabs';
 import { TabContext } from './TabContext';
+import { findRouteByPath } from '@app/shell/routeRegistry';
+
+const TAB_STORAGE_KEY = "erp.workspace.tabs";
+const ACTIVE_TAB_STORAGE_KEY = "erp.workspace.activeTabId";
+
+const DEFAULT_DASHBOARD_TAB: Tab = {
+  id: 'main-tab',
+  title: 'لوحة التحكم',
+  path: '/dashboard',
+  active: true,
+  closable: false,
+  module: 'dashboard',
+  presentationMode: 'default',
+};
+
+function toWorkspaceItem(tab: Tab): WorkspaceItem {
+  return {
+    id: tab.id,
+    route: tab.path,
+    title: tab.title,
+    module: tab.module || findRouteByPath(tab.path)?.groupId || "general",
+    icon: tab.icon,
+    entity: tab.entity,
+    entityId: tab.entityId,
+    closable: tab.closable,
+    dirty: tab.dirty,
+    context: tab.context,
+    permissions: tab.permissions,
+    presentationMode: tab.presentationMode,
+    active: tab.active,
+    restoreKey: tab.restoreKey,
+  };
+}
+
+function restoreTabs(): Tab[] {
+  if (typeof window === "undefined") return [DEFAULT_DASHBOARD_TAB];
+  try {
+    const raw = window.localStorage.getItem(TAB_STORAGE_KEY);
+    if (!raw) return [DEFAULT_DASHBOARD_TAB];
+    const parsed = JSON.parse(raw) as Tab[];
+    if (!Array.isArray(parsed) || parsed.length === 0) return [DEFAULT_DASHBOARD_TAB];
+    const hasMainTab = parsed.some((tab) => tab.id === DEFAULT_DASHBOARD_TAB.id);
+    return hasMainTab ? parsed : [DEFAULT_DASHBOARD_TAB, ...parsed];
+  } catch {
+    return [DEFAULT_DASHBOARD_TAB];
+  }
+}
 
 export const TabProvider = ({ children }: { children: ReactNode }) => {
-  const [tabs, setTabs] = useState<Tab[]>([
-    { id: 'main-tab', title: 'لوحة التحكم', path: '/dashboard', active: true, closable: false }
-  ]);
-  const [activeTabId, setActiveTabId] = useState('main-tab');
+  const [tabs, setTabs] = useState<Tab[]>(restoreTabs);
+  const [activeTabId, setActiveTabId] = useState(() => {
+    if (typeof window === "undefined") return DEFAULT_DASHBOARD_TAB.id;
+    return window.localStorage.getItem(ACTIVE_TAB_STORAGE_KEY) || DEFAULT_DASHBOARD_TAB.id;
+  });
   const navigate = useNavigate();
   const location = useLocation();
   const activeTabIdRef = useRef(activeTabId);
@@ -17,22 +64,45 @@ export const TabProvider = ({ children }: { children: ReactNode }) => {
   const tabsRef = useRef(tabs);
   tabsRef.current = tabs;
 
-  const switchTab = useCallback((id: string) => {
-    const tab = tabsRef.current.find(t => t.id === id);
+  useEffect(() => {
+    window.localStorage.setItem(TAB_STORAGE_KEY, JSON.stringify(tabs));
+  }, [tabs]);
+
+  useEffect(() => {
+    window.localStorage.setItem(ACTIVE_TAB_STORAGE_KEY, activeTabId);
+  }, [activeTabId]);
+
+  const activateTab = useCallback((id: string, path?: string, replace = false) => {
+    const tab = tabsRef.current.find((item) => item.id === id);
     if (!tab) return;
-    setTabs(prev => prev.map(t => ({ ...t, active: t.id === id })));
+    setTabs((prev) => prev.map((item) => ({ ...item, active: item.id === id })));
     setActiveTabId(id);
-    navigate(tab.path);
+    navigate(path ?? tab.path, replace ? { replace: true } : undefined);
   }, [navigate]);
+
+  const switchTab = useCallback((id: string) => {
+    activateTab(id);
+  }, [activateTab]);
 
   const updateMainTab = useCallback((newTab: { title: string; path: string }) => {
     setTabs(prev => prev.map(t => 
       t.id === 'main-tab' 
-        ? { ...t, title: newTab.title, path: newTab.path, active: true }
+        ? { ...t, title: newTab.title, path: newTab.path, active: true, module: findRouteByPath(newTab.path)?.groupId || "general" }
         : { ...t, active: false }
     ));
     setActiveTabId('main-tab');
     navigate(newTab.path);
+  }, [navigate]);
+
+  const openDashboardTab = useCallback(() => {
+    const current = tabsRef.current;
+    const uniqueId = `dashboard-${Date.now()}`;
+    setTabs([
+      ...current.map((tab) => ({ ...tab, active: false })),
+      { ...DEFAULT_DASHBOARD_TAB, id: uniqueId, closable: true, active: true },
+    ]);
+    setActiveTabId(uniqueId);
+    navigate(DEFAULT_DASHBOARD_TAB.path);
   }, [navigate]);
 
   const nextTab = useCallback(() => {
@@ -57,18 +127,31 @@ export const TabProvider = ({ children }: { children: ReactNode }) => {
     navigate(target.path);
   }, [navigate]);
 
-  const openTab = useCallback((newTab: { id: string; title: string; path: string; closable?: boolean }) => {
+  const openTab = useCallback((newTab: {
+    id: string;
+    title: string;
+    path: string;
+    closable?: boolean;
+    icon?: string;
+    module?: string;
+    entity?: string;
+    entityId?: string;
+    dirty?: boolean;
+    context?: Record<string, unknown>;
+    permissions?: string[];
+    presentationMode?: "default" | "browser" | "vscode";
+  }) => {
     const current = tabsRef.current;
 
     const exists = current.find(t => t.id === newTab.id);
     if (exists) {
-      setTabs(prev => prev.map(t => ({ ...t, active: t.id === newTab.id })));
+      setTabs(prev => prev.map(t => ({ ...t, ...newTab, active: t.id === newTab.id })));
       setActiveTabId(newTab.id);
       navigate(newTab.path, { replace: true });
       return;
     }
 
-    const existingByPath = current.find(t => t.path === newTab.path);
+    const existingByPath = current.find(t => t.path === newTab.path && t.entityId === newTab.entityId);
     if (existingByPath) {
       setTabs(prev => prev.map(t => ({ ...t, active: t.id === existingByPath.id })));
       setActiveTabId(existingByPath.id);
@@ -76,15 +159,33 @@ export const TabProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
 
-    setTabs(prev => [...prev.map(t => ({ ...t, active: false })), { ...newTab, active: true, closable: newTab.closable ?? true }]);
+    const resolvedRoute = findRouteByPath(newTab.path);
+    setTabs(prev => [
+      ...prev.map(t => ({ ...t, active: false })),
+      {
+        ...newTab,
+        active: true,
+        closable: newTab.closable ?? true,
+        module: newTab.module || resolvedRoute?.groupId || "general",
+        presentationMode: newTab.presentationMode || "default",
+      },
+    ]);
     setActiveTabId(newTab.id);
     navigate(newTab.path);
   }, [navigate]);
+
+  const markDirty = useCallback((id: string, dirty: boolean) => {
+    setTabs((prev) => prev.map((tab) => (tab.id === id ? { ...tab, dirty } : tab)));
+  }, []);
 
   const closeTab = useCallback((id: string) => {
     const current = tabsRef.current;
     const tabToClose = current.find(t => t.id === id);
     if (!tabToClose || !tabToClose.closable) return;
+
+    if (tabToClose.dirty && !window.confirm(`لديك تغييرات غير محفوظة في «${tabToClose.title}». هل تريد الإغلاق؟`)) {
+      return;
+    }
 
     const wasActive = tabToClose.active;
     const remainingTabs = current.filter(t => t.id !== id);
@@ -133,9 +234,16 @@ export const TabProvider = ({ children }: { children: ReactNode }) => {
 
         if (isDocumentPath) {
           const id = `nav-${Date.now()}`;
-          const title = currentFullPath.split('/').pop() || 'صفحة';
+          const resolvedRoute = findRouteByPath(currentFullPath);
+          const title = resolvedRoute?.label || currentFullPath.split('/').pop() || 'صفحة';
           setTabs(prev => [...prev.map(t => ({ ...t, active: false })), {
-            id, title, path: currentFullPath, active: true, closable: true
+            id,
+            title,
+            path: currentFullPath,
+            active: true,
+            closable: true,
+            module: resolvedRoute?.groupId || "general",
+            presentationMode: "default",
           }]);
           setActiveTabId(id);
         } else {
@@ -167,6 +275,12 @@ export const TabProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [location.pathname, location.search]);
 
+  useEffect(() => {
+    if (!tabs.some((tab) => tab.active)) {
+      setTabs((prev) => prev.map((tab, index) => ({ ...tab, active: index === 0 })));
+    }
+  }, [tabs]);
+
   // Keyboard Shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -174,6 +288,10 @@ export const TabProvider = ({ children }: { children: ReactNode }) => {
         if (e.code === 'KeyW' || e.key.toLowerCase() === 'w') {
           e.preventDefault();
           closeTab(activeTabIdRef.current);
+        }
+        else if (e.code === 'KeyT' || e.key.toLowerCase() === 't') {
+          e.preventDefault();
+          openDashboardTab();
         }
         else if (e.code === 'Tab' || e.key === 'Tab' || e.code === 'PageDown' || e.key === 'PageDown') {
           e.preventDefault();
@@ -192,10 +310,26 @@ export const TabProvider = ({ children }: { children: ReactNode }) => {
 
     window.addEventListener('keydown', handleKeyDown, true);
     return () => window.removeEventListener('keydown', handleKeyDown, true);
-  }, [closeTab, nextTab, prevTab]);
+  }, [closeTab, nextTab, openDashboardTab, prevTab]);
+
+  const workspaceItems = useMemo(() => tabs.map(toWorkspaceItem), [tabs]);
 
   return (
-    <TabContext.Provider value={{ tabs, activeTabId, openTab, updateMainTab, closeTab, switchTab, nextTab, prevTab }}>
+    <TabContext.Provider
+      value={{
+        tabs,
+        activeTabId,
+        workspaceItems,
+        openTab,
+        updateMainTab,
+        closeTab,
+        switchTab,
+        nextTab,
+        prevTab,
+        markDirty,
+        openDashboardTab,
+      }}
+    >
       {children}
     </TabContext.Provider>
   );

@@ -1,11 +1,13 @@
 import { useTabs } from '@app/providers/TabContext';
-import { X, ChevronLeft, ChevronRight } from "lucide-react";
+import { X, ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { cn } from '@shared/lib/utils';
 import { Button } from "@shared/ui/button";
 import { useRef } from "react";
+import { useAppearance } from '@shared/hooks/useAppearance';
 
 export function TabBar() {
-  const { tabs, switchTab, closeTab } = useTabs();
+  const { tabs, switchTab, closeTab, openDashboardTab } = useTabs();
+  const { settings } = useAppearance();
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const scroll = (direction: "left" | "right") => {
@@ -22,8 +24,31 @@ export function TabBar() {
 
   if (visibleTabs.length === 0) return null;
 
+  const getTabClassName = (active: boolean) => {
+    if (settings.tabStyle === "browser") {
+      return active
+        ? "bg-white border-slate-300 text-slate-900 shadow-sm rounded-t-xl rounded-b-none"
+        : "bg-slate-100 border-slate-200 text-slate-500 hover:bg-slate-200 rounded-t-xl rounded-b-none";
+    }
+
+    if (settings.tabStyle === "vscode") {
+      return active
+        ? "bg-slate-800 text-white border-slate-700 rounded-none"
+        : "bg-slate-900/90 text-slate-300 hover:bg-slate-800 rounded-none";
+    }
+
+    return active
+      ? "bg-slate-50 border-blue-600 text-blue-700 shadow-[0_-1px_3px_rgba(0,0,0,0.05)] rounded-t-md"
+      : "text-slate-500 hover:bg-slate-100 hover:text-slate-700 rounded-t-md";
+  };
+
   return (
-    <div className="flex items-center bg-white border-b border-slate-200 px-2 h-10 gap-1 overflow-hidden group">
+    <div
+      className={cn(
+        "flex items-center border-b px-2 h-10 gap-1 overflow-hidden group",
+        settings.tabStyle === "vscode" ? "bg-slate-900 border-slate-700" : "bg-white border-slate-200",
+      )}
+    >
       <Button 
         variant="ghost" 
         size="icon" 
@@ -31,6 +56,16 @@ export function TabBar() {
         onClick={() => scroll("right")}
       >
         <ChevronRight className="w-4 h-4" />
+      </Button>
+
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-7 w-7 shrink-0"
+        onClick={openDashboardTab}
+        title="تبويب جديد"
+      >
+        <Plus className="w-4 h-4" />
       </Button>
 
       <div 
@@ -42,12 +77,11 @@ export function TabBar() {
             key={tab.id}
             onClick={() => switchTab(tab.id)}
             className={cn(
-              "group/tab relative flex items-center h-[34px] px-4 min-w-[120px] max-w-[200px] text-xs font-medium cursor-pointer transition-all border-t-2 border-transparent rounded-t-md",
-              tab.active 
-                ? "bg-slate-50 border-blue-600 text-blue-700 shadow-[0_-1px_3px_rgba(0,0,0,0.05)]" 
-                : "text-slate-500 hover:bg-slate-100 hover:text-slate-700"
+              "group/tab relative flex items-center h-[34px] px-4 min-w-[120px] max-w-[220px] text-xs font-medium cursor-pointer transition-all border-t-2 border-transparent",
+              getTabClassName(tab.active)
             )}
           >
+            {tab.dirty && <span className="ml-2 h-2 w-2 shrink-0 rounded-full bg-amber-500" />}
             <span className="truncate flex-1 text-right">{tab.title}</span>
             {tab.closable && (
               <button
@@ -65,7 +99,7 @@ export function TabBar() {
             )}
             
             {/* Divider for non-active tabs */}
-            {!tab.active && (
+            {!tab.active && settings.tabStyle === "default" && (
               <div className="absolute left-0 top-1/4 bottom-1/4 w-[1px] bg-slate-200" />
             )}
           </div>

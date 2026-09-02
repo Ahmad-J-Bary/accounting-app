@@ -11,13 +11,14 @@ import { SidebarSection } from "@widgets/sidebar-shell/SidebarSection";
 import { FieldLabel } from "@widgets/sidebar-shell/FieldLabel";
 import { toast } from "sonner";
 import { cn } from "@shared/lib/utils";
-import { Plus, Edit, Hash, Barcode, Package, Layers, Shuffle, Check, Scale, Package2, FileText, Globe, Image as ImageIcon, DollarSign, Tag, TrendingUp, Search, ChevronDown, Warehouse } from "lucide-react";
+import { Plus, Edit, Hash, Barcode, Package, Layers, Shuffle, Check, Scale, Package2, FileText, Globe, Image as ImageIcon, DollarSign, Tag, TrendingUp, Search, ChevronDown, Warehouse, ScanLine } from "lucide-react";
 import type { MaterialDto, CategoryDto, CreateMaterialRequest, UpdateMaterialRequest } from "@erp/shared-types";
 import { materialCodeService } from "@modules/inventory/api/materialCodeService";
 import { categoryService } from "@modules/inventory/api/categoryService";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { UnitCard } from './UnitCard';
 import { AddUnitForm } from './AddUnitForm';
+import { useBarcodeScanner } from "@app/providers/BarcodeScannerProvider";
 
 const DEFAULT_CATEGORY_NAME = "غير مصنف";
 
@@ -86,6 +87,7 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
   const [editingUnitData, setEditingUnitData] = useState<{ name: string; conversion_factor: string; barcode: string } | null>(null);
 
   const { currencies, baseCurrency, rateMap } = useCurrencyContext();
+  const { beginScan } = useBarcodeScanner();
   const activeCurrencies = useMemo(() => currencies.filter(c => c.is_active), [currencies]);
   const uncategorizedCat = useMemo(() => categories.find(c => c.name === DEFAULT_CATEGORY_NAME && !c.parent_id), [categories]);
   const mainCategories = useMemo(() => categories.filter(c => !c.parent_id && c.name !== DEFAULT_CATEGORY_NAME && !c.is_hybrid), [categories]);
@@ -656,13 +658,31 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
                 </div>
                 <div className="space-y-1.5">
                   <FieldLabel className="flex items-center gap-1.5"><Barcode className="w-3.5 h-3.5 text-slate-400" /> الباركود العام</FieldLabel>
-                  <Input 
-                    value={formData.barcode} 
-                    onChange={e => setFormData({ ...formData, barcode: e.target.value })} 
-                    className="font-mono text-xs bg-white border-slate-200 h-9" 
-                    placeholder="الباركود" 
-                    dir="ltr" 
-                  />
+                  <div className="flex gap-2">
+                    <Input
+                      value={formData.barcode}
+                      onChange={e => setFormData({ ...formData, barcode: e.target.value })}
+                      className="font-mono text-xs bg-white border-slate-200 h-9"
+                      placeholder="الباركود"
+                      dir="ltr"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="h-9 shrink-0 gap-1.5"
+                      onClick={() =>
+                        beginScan({
+                          targetId: "material-barcode",
+                          label: "الباركود العام",
+                          source: "manual",
+                          onDetected: (value) => setFormData((prev) => ({ ...prev, barcode: value })),
+                        })
+                      }
+                    >
+                      <ScanLine className="h-3.5 w-3.5" />
+                      مسح
+                    </Button>
+                  </div>
                 </div>
               </div>
               

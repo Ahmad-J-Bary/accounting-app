@@ -1,4 +1,4 @@
-﻿import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { ErpRoutes } from '@app/router/ErpRoutes';
 import { useTabs } from '@app/providers/TabContext';
 import { ErrorBoundary } from '@shared/ui/ErrorBoundary';
@@ -14,6 +14,12 @@ import { TopNavLayout } from './layouts/TopNavLayout';
 import { HorizontalLayout } from './layouts/HorizontalLayout';
 import { ComboLayout } from './layouts/ComboLayout';
 import { UpdateProvider } from '@modules/core/update/context/UpdateContext';
+import { useGlobalSearch } from '@app/providers/GlobalSearchProvider';
+import { useCommands } from '@app/providers/CommandProvider';
+import { GlobalSearch } from './GlobalSearch';
+import { VoiceAssistantOverlay } from './VoiceAssistantOverlay';
+import { BarcodeScanDialog } from '@shared/ui/BarcodeScanDialog';
+import { useLocalization } from '@app/providers/LocalizationProvider';
 
 interface AppLayoutProps {
   title?: string;
@@ -22,9 +28,12 @@ interface AppLayoutProps {
 
 export function AppLayout({ title, subtitle }: AppLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const { tabs, openTab } = useTabs();
-  const { activeLayout } = useAppearance();
+  const { tabs } = useTabs();
+  const { activeLayout, settings } = useAppearance();
   const { hasMultipleCurrencies } = useCurrencyContext();
+  const { openSearch } = useGlobalSearch();
+  const { executeCommand } = useCommands();
+  const { direction } = useLocalization();
 
   useEffect(() => {
     warehouseService.ensureDefaultWarehouse().catch(() => {});
@@ -45,44 +54,12 @@ export function AppLayout({ title, subtitle }: AppLayoutProps) {
   };
 
   const shortcuts = useMemo(() => [
-    { key: 'k', ctrlKey: true, action: () => console.log('Open search'), description: 'فتح البحث' },
-    { key: 'n', ctrlKey: true, action: () => {
-        const id = `/sales-invoices/new-${Date.now()}`;
-        openTab({ 
-          id, 
-          title: 'فاتورة مبيعات جديدة', 
-          path: id,
-          closable: true
-        });
-      }, description: 'فاتورة مبيعات جديدة' },
-    { key: 'b', ctrlKey: true, action: () => {
-        const id = `/purchase-invoices/new-${Date.now()}`;
-        openTab({ 
-          id, 
-          title: 'فاتورة مشتريات جديدة', 
-          path: id,
-          closable: true
-        });
-      }, description: 'فاتورة مشتريات جديدة' },
-    { key: 'r', ctrlKey: true, action: () => {
-        const id = `/opening-balance/new-${Date.now()}`;
-        openTab({ 
-          id, 
-          title: 'فاتورة أول المدة جديدة', 
-          path: id,
-          closable: true
-        });
-      }, description: 'فاتورة أول المدة جديدة' },
-    { key: 'j', ctrlKey: true, action: () => {
-        const id = `/journal/new-${Date.now()}`;
-        openTab({ 
-          id, 
-          title: 'قيد يومية جديد', 
-          path: id,
-          closable: true
-        });
-      }, description: 'قيد يومية جديد' },
-  ], [openTab]);
+    { key: 'k', ctrlKey: true, action: () => openSearch(), description: 'فتح البحث' },
+    { key: 'n', ctrlKey: true, action: () => executeCommand('new-sales-invoice'), description: 'فاتورة مبيعات جديدة' },
+    { key: 'b', ctrlKey: true, action: () => executeCommand('new-purchase-invoice'), description: 'فاتورة مشتريات جديدة' },
+    { key: 'r', ctrlKey: true, action: () => executeCommand('new-opening-balance'), description: 'فاتورة أول المدة جديدة' },
+    { key: 'j', ctrlKey: true, action: () => executeCommand('new-journal-entry'), description: 'قيد يومية جديد' },
+  ], [executeCommand, openSearch]);
 
   useKeyboardShortcuts(shortcuts);
 
@@ -115,6 +92,9 @@ export function AppLayout({ title, subtitle }: AppLayoutProps) {
         ))}
         {hasMultipleCurrencies && <FloatingExchangeRateWidget isVisible={isExchangeVisible} onClose={() => toggleExchange()} />}
       </main>
+      <GlobalSearch />
+      <VoiceAssistantOverlay />
+      <BarcodeScanDialog />
     </>
   ), [tabs, isExchangeVisible, title, subtitle, hasMultipleCurrencies]);
 
@@ -124,7 +104,7 @@ export function AppLayout({ title, subtitle }: AppLayoutProps) {
     switch (activeLayout.shellVariant) {
       case 'topnav':
         return (
-          <div className="min-h-screen bg-gray-50 overflow-hidden" dir="rtl">
+          <div className="min-h-screen bg-gray-50 overflow-hidden" dir={direction} data-tab-style={settings.tabStyle}>
             <TopNavLayout isExchangeVisible={isExchangeVisible} onToggleExchange={toggleExchange}>
               {content}
             </TopNavLayout>
@@ -132,7 +112,7 @@ export function AppLayout({ title, subtitle }: AppLayoutProps) {
         );
       case 'horizontal':
         return (
-          <div className="min-h-screen bg-gray-50 overflow-hidden" dir="rtl">
+          <div className="min-h-screen bg-gray-50 overflow-hidden" dir={direction} data-tab-style={settings.tabStyle}>
             <HorizontalLayout isExchangeVisible={isExchangeVisible} onToggleExchange={toggleExchange}>
               {content}
             </HorizontalLayout>
@@ -140,7 +120,7 @@ export function AppLayout({ title, subtitle }: AppLayoutProps) {
         );
       case 'combo':
         return (
-          <div className="min-h-screen bg-gray-50 overflow-hidden" dir="rtl">
+          <div className="min-h-screen bg-gray-50 overflow-hidden" dir={direction} data-tab-style={settings.tabStyle}>
             <ComboLayout sidebarOpen={sidebarOpen} onToggleSidebar={handleToggleSidebar} isExchangeVisible={isExchangeVisible} onToggleExchange={toggleExchange}>
               {content}
             </ComboLayout>
@@ -149,7 +129,7 @@ export function AppLayout({ title, subtitle }: AppLayoutProps) {
       case 'vertical':
       default:
         return (
-          <div className="min-h-screen bg-gray-50 overflow-hidden" dir="rtl">
+          <div className="min-h-screen bg-gray-50 overflow-hidden" dir={direction} data-tab-style={settings.tabStyle}>
             <VerticalLayout sidebarOpen={sidebarOpen} onToggleSidebar={handleToggleSidebar} isExchangeVisible={isExchangeVisible} onToggleExchange={toggleExchange}>
               {content}
             </VerticalLayout>

@@ -95,12 +95,15 @@ const sidePanelValue = {
 const tabValue = {
   tabs: [],
   activeTabId: "",
+  workspaceItems: [],
   openTab: vi.fn(),
   updateMainTab: vi.fn(),
   closeTab: vi.fn(),
   switchTab: vi.fn(),
   nextTab: vi.fn(),
   prevTab: vi.fn(),
+  markDirty: vi.fn(),
+  openDashboardTab: vi.fn(),
 };
 
 function renderPage() {

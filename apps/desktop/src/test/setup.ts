@@ -19,3 +19,19 @@ if (typeof Element.prototype.hasPointerCapture !== "function") {
   (Element.prototype as unknown as { setPointerCapture: () => void }).setPointerCapture = () => {};
   (Element.prototype as unknown as { releasePointerCapture: () => void }).releasePointerCapture = () => {};
 }
+
+if (!("matchMedia" in window)) {
+  Object.defineProperty(window, "matchMedia", {
+    writable: true,
+    value: (query: string) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      addListener: () => {},
+      removeListener: () => {},
+      dispatchEvent: () => false,
+    }),
+  });
+}

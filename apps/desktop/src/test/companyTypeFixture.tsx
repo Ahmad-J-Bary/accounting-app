@@ -38,12 +38,15 @@ export const currencyValue: CurrencyContextValue = {
 export const tabValue: TabContextType = {
   tabs: [],
   activeTabId: "",
+  workspaceItems: [],
   openTab: vi.fn(),
   updateMainTab: vi.fn(),
   closeTab: vi.fn(),
   switchTab: vi.fn(),
   nextTab: vi.fn(),
   prevTab: vi.fn(),
+  markDirty: vi.fn(),
+  openDashboardTab: vi.fn(),
 };
 
 export const sidePanelValue = {

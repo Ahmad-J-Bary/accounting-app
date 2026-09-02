@@ -122,6 +122,14 @@ export function findRouteByTo(to: string): SystemRouteEntry | undefined {
   return ALL_SYSTEM_ROUTES.find(r => r.to === to);
 }
 
+export function findRouteByPath(path: string): SystemRouteEntry | undefined {
+  const normalizedPath = path.split("?")[0];
+  return (
+    ALL_SYSTEM_ROUTES.find((route) => route.to === normalizedPath) ||
+    ALL_SYSTEM_ROUTES.find((route) => normalizedPath.startsWith(route.to) && route.to.length > 1)
+  );
+}
+
 export function findRouteById(id: string): SystemRouteEntry | undefined {
   return ALL_SYSTEM_ROUTES.find(r => r.id === id);
 }

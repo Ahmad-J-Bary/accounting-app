@@ -1,9 +1,27 @@
 import { parseSafeNumber } from "@shared/lib/parseSafeNumber";
 
 let _numberingSystem: "arab" | "latn" = "latn";
+let _locale = "ar-SY";
+let _direction: "rtl" | "ltr" = "rtl";
 
 export function getNumberingSystem(): "arab" | "latn" {
   return _numberingSystem;
+}
+
+export function getLocale(): string {
+  return _locale;
+}
+
+export function getDirection(): "rtl" | "ltr" {
+  return _direction;
+}
+
+export function setLocale(locale: string) {
+  _locale = locale || "ar-SY";
+}
+
+export function setDirection(direction: "rtl" | "ltr") {
+  _direction = direction;
 }
 
 export function setNumberingSystem(system: string) {
@@ -15,7 +33,7 @@ export const formatCurrency = (
   currency?: string | null,
   options?: { minimumFractionDigits?: number; maximumFractionDigits?: number }
 ): string => {
-  const formatted = new Intl.NumberFormat("ar-SY", {
+  const formatted = new Intl.NumberFormat(_locale, {
     numberingSystem: _numberingSystem,
     minimumFractionDigits: options?.minimumFractionDigits ?? 0,
     maximumFractionDigits: options?.maximumFractionDigits ?? 2,
@@ -24,14 +42,14 @@ export const formatCurrency = (
 };
 
 export const formatNumber = (n: number): string => {
-  return new Intl.NumberFormat("ar-SY", {
+  return new Intl.NumberFormat(_locale, {
     numberingSystem: _numberingSystem,
   }).format(n);
 };
 
 export const formatDate = (date: string | Date): string => {
   const d = typeof date === "string" ? new Date(date) : date;
-  return new Intl.DateTimeFormat("ar-SY", {
+  return new Intl.DateTimeFormat(_locale, {
     numberingSystem: _numberingSystem,
     year: "numeric",
     month: "2-digit",
@@ -41,7 +59,7 @@ export const formatDate = (date: string | Date): string => {
 
 export const formatDateTime = (date: string | Date): string => {
   const d = typeof date === "string" ? new Date(date) : date;
-  let formatted = new Intl.DateTimeFormat("ar-SY", {
+  let formatted = new Intl.DateTimeFormat(_locale, {
     numberingSystem: _numberingSystem,
     year: "numeric",
     month: "2-digit",
@@ -50,14 +68,14 @@ export const formatDateTime = (date: string | Date): string => {
     minute: "2-digit",
     hour12: true,
   }).format(d);
-  if (_numberingSystem === "latn") {
+  if (_numberingSystem === "latn" && _locale.startsWith("ar")) {
     formatted = formatted.replace(/\s*ص/, " AM").replace(/\s*م/, " PM");
   }
   return formatted;
 };
 
 export function toLocalString(n: number): string {
-  return new Intl.NumberFormat("ar-SY", {
+  return new Intl.NumberFormat(_locale, {
     numberingSystem: _numberingSystem,
   }).format(n);
 }
@@ -110,7 +128,7 @@ export function localDateToIso(dateStr: string): string {
 }
 
 export function toFixed(n: number, digits: number): string {
-  return new Intl.NumberFormat("ar-SY", {
+  return new Intl.NumberFormat(_locale, {
     numberingSystem: _numberingSystem,
     minimumFractionDigits: digits,
     maximumFractionDigits: digits,
@@ -124,7 +142,7 @@ export function toFixed(n: number, digits: number): string {
  */
 export function fmtMoney(value: string | number | null | undefined, digits = 2): string {
   const parsed = parseSafeNumber(value);
-  return new Intl.NumberFormat("ar-SY", {
+  return new Intl.NumberFormat(_locale, {
     numberingSystem: _numberingSystem,
     minimumFractionDigits: digits,
     maximumFractionDigits: digits,

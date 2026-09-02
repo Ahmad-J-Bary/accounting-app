@@ -1,6 +1,6 @@
-﻿import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
-import { Bell, Search, Plus, Building2, LogOut, Settings as SettingsIcon, DollarSign, ChevronDown } from "lucide-react";
+import { Bell, Search, Plus, Building2, LogOut, Settings as SettingsIcon, DollarSign, ChevronDown, Mic } from "lucide-react";
 import { useAppearance } from '@shared/hooks/useAppearance';
 import { useSidebarLayout } from '@shared/hooks';
 import { cn } from '@shared/lib/utils';
@@ -15,7 +15,6 @@ import {
 } from "@shared/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@shared/ui/avatar";
 import { NotificationsPanel } from '@app/shell/NotificationsPanel';
-import { GlobalSearch } from '@app/shell/GlobalSearch';
 import { useTabs } from '@app/providers/TabContext';
 import { ICON_MAP } from './sidebarConfig';
 import type { SidebarGroupConfig, SidebarItemConfig } from '@shared/types/sidebar-config';
@@ -23,6 +22,10 @@ import { UpdateBanner } from '@modules/core/update/components/UpdateBanner';
 import { useCurrencyContext } from '@app/providers/CurrencyContext';
 import { settingsService } from '@modules/core/api/settingsService';
 import type { CompanySettings } from "@erp/shared-types";
+import { useGlobalSearch } from '@app/providers/GlobalSearchProvider';
+import { useVoice } from '@app/providers/VoiceProvider';
+import { useLocalization } from '@app/providers/LocalizationProvider';
+import { useCommands } from '@app/providers/CommandProvider';
 
 interface TopBarProps {
   onToggleSidebar?: () => void;
@@ -40,11 +43,14 @@ export function TopBar({
   mergedSlim = false,
 }: TopBarProps) {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
-  const [searchOpen, setSearchOpen] = useState(false);
   const [settings, setSettings] = useState<CompanySettings | null>(null);
   const { openTab, updateMainTab, activeTabId } = useTabs();
   const { hasMultipleCurrencies } = useCurrencyContext();
   const { settings: appearance } = useAppearance();
+  const { openSearch } = useGlobalSearch();
+  const voice = useVoice();
+  const { language, setLanguage } = useLocalization();
+  const { executeCommand } = useCommands();
   const showSearch = appearance.show.search;
   const showNotifications = appearance.show.notifications;
   const isHorizontalDark = appearance.horizontalNavbarAppearance === 'dark';
@@ -66,26 +72,6 @@ export function TopBar({
   const { layout } = useSidebarLayout();
   const location = useLocation();
   const visibleNavGroups = layout.groups.filter(g => g.visible).sort((a, b) => a.order - b.order);
-
-  const handleNewInvoice = () => {
-    const id = `/sales-invoices/new-${Date.now()}`;
-    openTab({ 
-      id, 
-      title: "فاتورة مبيعات جديدة", 
-      path: id,
-      closable: true
-    });
-  };
-
-  const handleNewPurchaseInvoice = () => {
-    const id = `/purchase-invoices/new-${Date.now()}`;
-    openTab({ 
-      id, 
-      title: "فاتورة مشتريات جديدة", 
-      path: id,
-      closable: true
-    });
-  };
 
   const handleNewCustomer = () => {
     openTab({ 
@@ -252,11 +238,11 @@ export function TopBar({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-52 text-right">
-          <DropdownMenuItem onClick={handleNewInvoice} className="cursor-pointer">فاتورة مبيعات جديدة</DropdownMenuItem>
-          <DropdownMenuItem onClick={handleNewPurchaseInvoice} className="cursor-pointer">فاتورة مشتريات جديدة</DropdownMenuItem>
+          <DropdownMenuItem onClick={() => executeCommand("new-sales-invoice")} className="cursor-pointer">فاتورة مبيعات جديدة</DropdownMenuItem>
+          <DropdownMenuItem onClick={() => executeCommand("new-purchase-invoice")} className="cursor-pointer">فاتورة مشتريات جديدة</DropdownMenuItem>
           <DropdownMenuItem>سند قبض جديد</DropdownMenuItem>
           <DropdownMenuItem>سند صرف جديد</DropdownMenuItem>
-          <DropdownMenuItem>قيد يومية جديد</DropdownMenuItem>
+          <DropdownMenuItem onClick={() => executeCommand("new-journal-entry")}>قيد يومية جديد</DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={handleNewCustomer} className="cursor-pointer">عميل جديد</DropdownMenuItem>
           <DropdownMenuItem onClick={handleNewSupplier} className="cursor-pointer">مورد جديد</DropdownMenuItem>
@@ -277,10 +263,14 @@ export function TopBar({
       )}
 
       {merged && showSearch && (
-        <Button variant="ghost" size="icon" onClick={() => setSearchOpen(true)} title="بحث شامل">
+        <Button variant="ghost" size="icon" onClick={openSearch} title="بحث شامل">
           <Search className="w-5 h-5" />
         </Button>
       )}
+
+      <Button variant="ghost" size="icon" onClick={voice.open} title="المساعد الصوتي">
+        <Mic className="w-5 h-5" />
+      </Button>
 
       {showNotifications && (
         <Button variant="ghost" size="icon" className="relative" onClick={() => setNotificationsOpen(true)}>
@@ -312,6 +302,11 @@ export function TopBar({
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => openTab({ id: '/settings', title: 'الإعدادات', path: '/settings', closable: true })}>
             <SettingsIcon className="w-4 h-4 ml-2" />الإعدادات
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={() => setLanguage(language === "ar" ? "en" : "ar")}>
+            <SettingsIcon className="w-4 h-4 ml-2" />
+            {language === "ar" ? "Switch to English" : "التحويل إلى العربية"}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem className="text-red-600"><LogOut className="w-4 h-4 ml-2" />تسجيل الخروج</DropdownMenuItem>
@@ -355,7 +350,7 @@ export function TopBar({
               <Button
                 variant="outline"
                 className="w-full max-w-md justify-start text-muted-foreground hover:shadow-sm active:scale-[0.98] transition-all"
-                onClick={() => setSearchOpen(true)}
+                onClick={openSearch}
               >
                 <Search className="w-4 h-4 ml-2" />
                 بحث شامل في النظام...
@@ -373,10 +368,6 @@ export function TopBar({
       <NotificationsPanel
         isOpen={notificationsOpen}
         onClose={() => setNotificationsOpen(false)}
-      />
-      <GlobalSearch
-        isOpen={searchOpen}
-        onClose={() => setSearchOpen(false)}
       />
     </>
   );

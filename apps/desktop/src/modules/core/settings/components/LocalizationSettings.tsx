@@ -9,6 +9,7 @@ import { setNumberingSystem } from "@shared/lib/format";
 import { formatNumber } from "@shared/lib/format";
 import { settingsService } from "@modules/core/api/settingsService";
 import { toast } from "sonner";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 interface LocalizationSettingsProps {
   settings: CompanySettingsType;
@@ -26,6 +27,7 @@ const numeralSystems = [
 
 export function LocalizationSettings({ settings, onChange }: LocalizationSettingsProps) {
   const current = settings.numeral_system || "western";
+  const { language, setLanguage } = useLocalization();
 
   const handleChange = (value: string) => {
     onChange("numeral_system", value);
@@ -64,6 +66,32 @@ export function LocalizationSettings({ settings, onChange }: LocalizationSetting
   return (
     <SettingsSection title="اللغة والمنطقة" description="تحديد نظام الأرقام المعروض في جميع أنحاء التطبيق.">
       <div className="space-y-6">
+        <div className="space-y-3">
+          <Label className="font-black text-slate-700 flex items-center gap-2">
+            <Languages className="w-4 h-4 text-blue-600" /> لغة الواجهة
+          </Label>
+          <div className="flex gap-3">
+            {[
+              { id: "ar", label: "العربية" },
+              { id: "en", label: "English" },
+            ].map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                onClick={() => setLanguage(option.id as "ar" | "en")}
+                className={cn(
+                  "rounded-xl border px-4 py-3 text-sm font-bold transition-all",
+                  language === option.id
+                    ? "border-blue-500 bg-blue-50 text-blue-700 shadow-sm"
+                    : "border-slate-200 bg-white text-slate-600 hover:border-slate-300",
+                )}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <div className="space-y-3">
           <Label className="font-black text-slate-700 flex items-center gap-2">
             <Hash className="w-4 h-4 text-emerald-600" /> نظام الأرقام

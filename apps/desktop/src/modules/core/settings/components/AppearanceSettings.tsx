@@ -3,7 +3,16 @@ import { useNavSidebarSettings } from '@shared/hooks/useNavSidebarSettings';
 import { THEME_LIST } from '@shared/config/themeRegistry';
 import { PRIMARY_COLORS } from '@shared/config/primaryColors';
 import { computeLayoutType } from '@shared/config/computeLayoutType';
-import type { ColorMode, DensityMode, NavMenuType, SidenavShape, TopnavShape, NavbarAppearance } from '@shared/types/appearance';
+import type {
+  ColorMode,
+  DensityMode,
+  MotionMode,
+  NavMenuType,
+  NavbarAppearance,
+  SidenavShape,
+  TabStyleMode,
+  TopnavShape,
+} from '@shared/types/appearance';
 import { SettingsSection } from '@widgets/templates/SettingsLayout';
 import { Switch } from '@shared/ui/switch';
 import { cn } from '@shared/lib/utils';
@@ -193,6 +202,57 @@ export function AppearanceSettings() {
               </div>
             </button>
           ))}
+        </div>
+      </SettingsSection>
+
+      <SettingsSection title="أسلوب التبويبات والحركة" description="اختر طريقة عرض التبويبات ومستوى الحركة المرئية">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div>
+            <span className="font-semibold text-[11px] text-slate-700 block mb-1.5">أسلوب التبويبات</span>
+            <div className="flex gap-1.5">
+              {([
+                { id: 'default' as TabStyleMode, label: 'افتراضي' },
+                { id: 'browser' as TabStyleMode, label: 'متصفح' },
+                { id: 'vscode' as TabStyleMode, label: 'VS Code' },
+              ]).map(({ id, label }) => (
+                <button
+                  key={id}
+                  onClick={() => updateSettings({ tabStyle: id })}
+                  className={cn(
+                    "flex-1 rounded-lg border px-3 py-2 text-[10px] font-bold transition-all",
+                    settings.tabStyle === id
+                      ? "border-primary bg-primary/5 text-primary"
+                      : "border-slate-200 text-slate-600 hover:border-slate-300",
+                  )}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <span className="font-semibold text-[11px] text-slate-700 block mb-1.5">الحركة المرئية</span>
+            <div className="flex gap-1.5">
+              {([
+                { id: 'full' as MotionMode, label: 'كاملة' },
+                { id: 'reduced' as MotionMode, label: 'مخففة' },
+              ]).map(({ id, label }) => (
+                <button
+                  key={id}
+                  onClick={() => updateSettings({ motion: id })}
+                  className={cn(
+                    "flex-1 rounded-lg border px-3 py-2 text-[10px] font-bold transition-all",
+                    settings.motion === id
+                      ? "border-primary bg-primary/5 text-primary"
+                      : "border-slate-200 text-slate-600 hover:border-slate-300",
+                  )}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       </SettingsSection>
 

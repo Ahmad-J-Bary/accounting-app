@@ -98,6 +98,12 @@ export const AppearanceProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     root.setAttribute('data-density', settings.density);
   }, [settings.density]);
 
+  useEffect(() => {
+    const root = document.documentElement;
+    root.setAttribute('data-tab-style', settings.tabStyle);
+    root.setAttribute('data-motion', settings.motion);
+  }, [settings.motion, settings.tabStyle]);
+
   // ── Apply layout data attribute + dispatch event for NavSidebarSettings sync ──
   useEffect(() => {
     const root = document.documentElement;

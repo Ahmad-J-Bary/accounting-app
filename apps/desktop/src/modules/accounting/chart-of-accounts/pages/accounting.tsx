@@ -54,6 +54,7 @@ export default function Accounting() {
   const [createParent, setCreateParent] = useState<AccountTreeNode | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [entitySaving, setEntitySaving] = useState(false);
+  const [treePresentation, setTreePresentation] = useState<"default" | "explorer">("default");
   const hasLoadedOnceRef = useRef(false);
 
   const { data, isLoading } = useChartOfAccountsTree();
@@ -489,6 +490,8 @@ export default function Accounting() {
   return (
     <HierarchicalTreeTemplate
       title="دليل الحسابات"
+      treePresentation={treePresentation}
+      treeHeaderTitle={treePresentation === "explorer" ? "Explorer: دليل الحسابات" : "شجرة دليل الحسابات"}
       toolbar={
         <>
           {actionDescriptors.map((action) => {
@@ -516,6 +519,22 @@ export default function Accounting() {
       }
       treeHeaderActions={
         <>
+          <div className="ml-2 flex items-center gap-1 rounded-lg border border-slate-200 bg-white p-1">
+            <button
+              type="button"
+              onClick={() => setTreePresentation("default")}
+              className={`rounded-md px-2 py-1 text-[11px] font-bold transition-colors ${treePresentation === "default" ? "bg-blue-600 text-white" : "text-slate-500 hover:bg-slate-100"}`}
+            >
+              عادي
+            </button>
+            <button
+              type="button"
+              onClick={() => setTreePresentation("explorer")}
+              className={`rounded-md px-2 py-1 text-[11px] font-bold transition-colors ${treePresentation === "explorer" ? "bg-slate-900 text-white" : "text-slate-500 hover:bg-slate-100"}`}
+            >
+              Explorer
+            </button>
+          </div>
           <button
             onClick={expandAll}
             className="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-bold text-slate-500 hover:text-slate-800 hover:bg-slate-200/70 transition-colors"
@@ -531,10 +550,10 @@ export default function Accounting() {
         </>
       }
       treeContent={
-        <div className="space-y-1">
+        <div className={`space-y-1 ${treePresentation === "explorer" ? "[&_*]:border-slate-800 [&_*]:text-slate-100" : ""}`}>
           {isLoadingNow ? (
              Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="h-10 bg-slate-50 animate-pulse rounded-lg mb-2" />
+              <div key={i} className={`h-10 animate-pulse rounded-lg mb-2 ${treePresentation === "explorer" ? "bg-slate-900" : "bg-slate-50"}`} />
             ))
           ) : (
             <AccountTreeNodeItem
