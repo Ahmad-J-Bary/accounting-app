@@ -575,8 +575,8 @@ async fn date_opening_uses_cutover_not_creation_timestamp() {
     .unwrap();
     assert!(entry_date.starts_with("2026-01-01"), "entry_date = accounting date: {entry_date}");
     assert!(
-        created_at.starts_with("2026-08"),
-        "created_at is the actual creation moment (now): {created_at}"
+        !created_at.starts_with("2026-01"),
+        "created_at must be the actual creation moment, not the cutover date: {created_at}"
     );
     assert!(created_at > entry_date, "created_at must follow the backdated entry_date");
 }

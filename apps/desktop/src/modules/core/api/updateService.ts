@@ -21,6 +21,10 @@ function parseSemver(version: string): [number, number, number] {
   ];
 }
 
+function ensureVPrefix(version: string): string {
+  return version.startsWith("v") ? version : `v${version}`;
+}
+
 function compareVersions(current: string, latest: string): boolean {
   const [cmaj, cmin, cpat] = parseSemver(current);
   const [lmaj, lmin, lpat] = parseSemver(latest);
@@ -51,14 +55,15 @@ export const updateService = {
       const isMac = ua.includes("mac");
 
       // Construct standard release asset download URL
+      const tag = ensureVPrefix(latestVersion);
       let downloadUrl = "";
       if (isWindows) {
         // e.g. Almowakeb_0.9.2_x64-setup.exe
-        downloadUrl = `https://github.com/${OWNER}/${REPO}/releases/download/${latestVersion}/Almowakeb_${pkgJson.version}_x64-setup.exe`;
+        downloadUrl = `https://github.com/${OWNER}/${REPO}/releases/download/${tag}/Almowakeb_${pkgJson.version}_x64-setup.exe`;
       } else if (isMac) {
-        downloadUrl = `https://github.com/${OWNER}/${REPO}/releases/download/${latestVersion}/Almowakeb_${pkgJson.version}_universal.dmg`;
+        downloadUrl = `https://github.com/${OWNER}/${REPO}/releases/download/${tag}/Almowakeb_${pkgJson.version}_universal.dmg`;
       } else {
-        downloadUrl = `https://github.com/${OWNER}/${REPO}/releases/download/${latestVersion}/Almowakeb_${pkgJson.version}_universal.AppImage`;
+        downloadUrl = `https://github.com/${OWNER}/${REPO}/releases/download/${tag}/Almowakeb_${pkgJson.version}_universal.AppImage`;
       }
 
       return {
@@ -69,7 +74,7 @@ export const updateService = {
         release_body: hasUpdate
           ? "يتوفر تحديث جديد للتطبيق. يمكنك تنزيل التحديث الآن أو الاطلاع على التفاصيل على موقع GitHub."
           : "التطبيق محدّث بالفعل.",
-        release_url: `https://github.com/${OWNER}/${REPO}/releases/tag/${latestVersion}`,
+        release_url: `https://github.com/${OWNER}/${REPO}/releases/tag/${tag}`,
         download_url: downloadUrl,
       };
     } catch (e) {
