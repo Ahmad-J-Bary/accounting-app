@@ -1,8 +1,8 @@
-use std::sync::Arc;
-use domain::shared::ids::SupplierId;
-use crate::ports::supplier_repository::SupplierRepository;
 use crate::dto::supplier_dto::SupplierDto;
 use crate::errors::AppError;
+use crate::ports::supplier_repository::SupplierRepository;
+use domain::shared::ids::SupplierId;
+use std::sync::Arc;
 
 pub struct SupplierQueries {
     repo: Arc<dyn SupplierRepository>,
@@ -19,8 +19,13 @@ impl SupplierQueries {
     }
 
     pub async fn get_by_id(&self, id: String) -> Result<SupplierDto, AppError> {
-        let sid = id.parse::<SupplierId>().map_err(|_| AppError::NotFound("معرف المورد غير صالح".into()))?;
-        let supplier = self.repo.find_by_id(&sid).await?
+        let sid = id
+            .parse::<SupplierId>()
+            .map_err(|_| AppError::NotFound("معرف المورد غير صالح".into()))?;
+        let supplier = self
+            .repo
+            .find_by_id(&sid)
+            .await?
             .ok_or_else(|| AppError::NotFound("المورد غير موجود".into()))?;
 
         Ok(SupplierDto::from(supplier))

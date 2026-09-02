@@ -1,5 +1,5 @@
 use crate::shared::errors::DomainError;
-use crate::shared::ids::{SalesReturnId, MaterialId, CustomerId};
+use crate::shared::ids::{CustomerId, MaterialId, SalesReturnId};
 use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
@@ -27,7 +27,9 @@ impl SalesReturnLine {
         invoice_line_id: Option<String>,
     ) -> Result<Self, DomainError> {
         if quantity <= Decimal::ZERO {
-            return Err(DomainError::Invalid("الكمية يجب أن تكون أكبر من صفر".into()));
+            return Err(DomainError::Invalid(
+                "الكمية يجب أن تكون أكبر من صفر".into(),
+            ));
         }
         if unit_price < Decimal::ZERO {
             return Err(DomainError::Invalid("السعر لا يمكن أن يكون سالباً".into()));
@@ -66,7 +68,9 @@ impl SalesReturn {
         notes: Option<String>,
     ) -> Result<Self, DomainError> {
         if return_number.trim().is_empty() {
-            return Err(DomainError::Invalid("رقم المرتجع لا يمكن أن يكون فارغاً".into()));
+            return Err(DomainError::Invalid(
+                "رقم المرتجع لا يمكن أن يكون فارغاً".into(),
+            ));
         }
         Ok(Self {
             id: SalesReturnId::new(),

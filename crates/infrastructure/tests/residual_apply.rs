@@ -1,6 +1,13 @@
 use std::str::FromStr;
 use std::sync::Arc;
 
+use application::ports::journal_entry_repository::JournalEntryRepository;
+use application::ports::opening_migration_repository::OpeningMigrationRepository;
+use application::ports::opening_posting_repository::OpeningPostingRepository;
+use application::use_cases::opening_balance::{
+    ApplyResidualToLedgerUseCase, SetResidualClassificationCommand,
+    SetResidualClassificationUseCase,
+};
 use chrono::Utc;
 use domain::accounting::journal_entry::{JournalEntry, JournalLine, JournalType};
 use domain::accounting::opening_balance::{OpeningBalanceLine, OpeningBalanceMigration};
@@ -9,13 +16,6 @@ use domain::shared::currency::Currency;
 use domain::shared::monetary_amount::MonetaryAmount;
 use domain::shared::money::Money;
 use domain::shared::AccountId;
-use application::ports::journal_entry_repository::JournalEntryRepository;
-use application::ports::opening_migration_repository::OpeningMigrationRepository;
-use application::ports::opening_posting_repository::OpeningPostingRepository;
-use application::use_cases::opening_balance::{
-    ApplyResidualToLedgerUseCase, SetResidualClassificationCommand,
-    SetResidualClassificationUseCase,
-};
 use infrastructure::db::pool::run_migrations;
 use infrastructure::repositories::{
     SqliteAccountRepository, SqliteJournalEntryRepository, SqliteOpeningMigrationRepository,
@@ -31,7 +31,10 @@ fn test_currency() -> Currency {
 
 async fn build_pool() -> Arc<sqlx::SqlitePool> {
     let mut path = std::env::temp_dir();
-    path.push(format!("acc_obresidual_test_{}.sqlite", uuid::Uuid::new_v4()));
+    path.push(format!(
+        "acc_obresidual_test_{}.sqlite",
+        uuid::Uuid::new_v4()
+    ));
     let options = SqliteConnectOptions::from_str(path.to_str().unwrap())
         .unwrap()
         .create_if_missing(true);
@@ -124,15 +127,31 @@ async fn apply_residual_creates_balanced_journal_and_marks_migration() {
     let cutover = Utc::now();
     let migration_id = uuid::Uuid::new_v4().to_string();
 
-let mut migration = OpeningBalanceMigration::new(
+    let mut migration = OpeningBalanceMigration::new(
         migration_id.clone(),
         cutover,
         None,
         vec![
-            OpeningBalanceLine { account_id: asset, amount: dec!(150), description: None },
-            OpeningBalanceLine { account_id: liability, amount: dec!(50), description: None },
-            OpeningBalanceLine { account_id: capital, amount: dec!(70), description: None },
-            OpeningBalanceLine { account_id: obe, amount: dec!(30), description: None },
+            OpeningBalanceLine {
+                account_id: asset,
+                amount: dec!(150),
+                description: None,
+            },
+            OpeningBalanceLine {
+                account_id: liability,
+                amount: dec!(50),
+                description: None,
+            },
+            OpeningBalanceLine {
+                account_id: capital,
+                amount: dec!(70),
+                description: None,
+            },
+            OpeningBalanceLine {
+                account_id: obe,
+                amount: dec!(30),
+                description: None,
+            },
         ],
     )
     .unwrap();
@@ -204,8 +223,14 @@ let mut migration = OpeningBalanceMigration::new(
     .unwrap();
     assert_eq!(rows.len(), 2, "residual journal has exactly two legs");
 
-    let d: Decimal = rows.iter().map(|(_, d, _)| Decimal::from_str(d).unwrap()).sum();
-    let c: Decimal = rows.iter().map(|(_, _, c)| Decimal::from_str(c).unwrap()).sum();
+    let d: Decimal = rows
+        .iter()
+        .map(|(_, d, _)| Decimal::from_str(d).unwrap())
+        .sum();
+    let c: Decimal = rows
+        .iter()
+        .map(|(_, _, c)| Decimal::from_str(c).unwrap())
+        .sum();
     assert_eq!(d, dec!(30), "residual journal debit side is the residual");
     assert_eq!(c, dec!(30), "residual journal must be balanced");
 
@@ -214,7 +239,11 @@ let mut migration = OpeningBalanceMigration::new(
     assert!(involved.contains(&obe.0.to_string()));
     assert!(involved.contains(&retained.0.to_string()));
 
-    let reloaded = migration_repo.find_by_id(&migration_id).await.unwrap().unwrap();
+    let reloaded = migration_repo
+        .find_by_id(&migration_id)
+        .await
+        .unwrap()
+        .unwrap();
     assert!(reloaded.residual_applied_at.is_some());
     assert_eq!(reloaded.status, MigrationStatus::Posted);
 }
@@ -239,8 +268,16 @@ async fn apply_residual_rejects_unclassified_or_draft_migration() {
         Utc::now(),
         None,
         vec![
-            OpeningBalanceLine { account_id: asset, amount: dec!(100), description: None },
-            OpeningBalanceLine { account_id: liability, amount: dec!(100), description: None },
+            OpeningBalanceLine {
+                account_id: asset,
+                amount: dec!(100),
+                description: None,
+            },
+            OpeningBalanceLine {
+                account_id: liability,
+                amount: dec!(100),
+                description: None,
+            },
         ],
     )
     .unwrap();
@@ -255,7 +292,11 @@ async fn apply_residual_rejects_unclassified_or_draft_migration() {
 
     // Draft → rejected
     let err = use_case.execute(migration_id.clone()).await.unwrap_err();
-    assert!(err.to_string().contains("مرحَّل") || err.to_string().contains("أولاً") || !err.to_string().is_empty());
+    assert!(
+        err.to_string().contains("مرحَّل")
+            || err.to_string().contains("أولاً")
+            || !err.to_string().is_empty()
+    );
 
     // Post it without any classification → rejected because classification missing.
     let mut migration = migration;
@@ -303,10 +344,26 @@ async fn apply_residual_is_idempotent_and_clears_obe_53() {
         cutover,
         None,
         vec![
-            OpeningBalanceLine { account_id: asset, amount: dec!(150), description: None },
-            OpeningBalanceLine { account_id: liability, amount: dec!(50), description: None },
-            OpeningBalanceLine { account_id: capital, amount: dec!(70), description: None },
-            OpeningBalanceLine { account_id: obe, amount: dec!(30), description: None },
+            OpeningBalanceLine {
+                account_id: asset,
+                amount: dec!(150),
+                description: None,
+            },
+            OpeningBalanceLine {
+                account_id: liability,
+                amount: dec!(50),
+                description: None,
+            },
+            OpeningBalanceLine {
+                account_id: capital,
+                amount: dec!(70),
+                description: None,
+            },
+            OpeningBalanceLine {
+                account_id: obe,
+                amount: dec!(30),
+                description: None,
+            },
         ],
     )
     .unwrap();
@@ -345,15 +402,17 @@ async fn apply_residual_is_idempotent_and_clears_obe_53() {
     // First apply succeeds → exactly one reclassification journal.
     apply.execute(migration_id.clone()).await.unwrap();
     let residual_journals = || async {
-        sqlx::query_scalar::<_, i64>(
-            "SELECT COUNT(*) FROM journal_entries WHERE source_id = ?",
-        )
-        .bind(format!("residual_classification:{migration_id}"))
-        .fetch_one(pool.as_ref())
-        .await
-        .unwrap()
+        sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM journal_entries WHERE source_id = ?")
+            .bind(format!("residual_classification:{migration_id}"))
+            .fetch_one(pool.as_ref())
+            .await
+            .unwrap()
     };
-    assert_eq!(residual_journals().await, 1, "exactly one residual journal after first apply");
+    assert_eq!(
+        residual_journals().await,
+        1,
+        "exactly one residual journal after first apply"
+    );
 
     // Second apply is rejected with the Arabic Conflict message and creates
     // nothing: still exactly one reclassification journal.
@@ -363,7 +422,11 @@ async fn apply_residual_is_idempotent_and_clears_obe_53() {
         "double apply must be rejected as already applied: {}",
         err
     );
-    assert_eq!(residual_journals().await, 1, "no second journal on double apply");
+    assert_eq!(
+        residual_journals().await,
+        1,
+        "no second journal on double apply"
+    );
 
     // OBE (53) nets to zero across posting + reclassification journals.
     let obe_nets: f64 = sqlx::query_scalar(
@@ -375,7 +438,10 @@ async fn apply_residual_is_idempotent_and_clears_obe_53() {
     .fetch_one(pool.as_ref())
     .await
     .unwrap();
-    assert_eq!(obe_nets, 0.0, "OBE 53 must net to zero after reclassification");
+    assert_eq!(
+        obe_nets, 0.0,
+        "OBE 53 must net to zero after reclassification"
+    );
 
     // Retained earnings holds the residual exactly once.
     let retained_credited: f64 = sqlx::query_scalar(
@@ -388,5 +454,8 @@ async fn apply_residual_is_idempotent_and_clears_obe_53() {
     .fetch_one(pool.as_ref())
     .await
     .unwrap();
-    assert_eq!(retained_credited, 30.0, "retained earnings credited exactly the residual");
+    assert_eq!(
+        retained_credited, 30.0,
+        "retained earnings credited exactly the residual"
+    );
 }

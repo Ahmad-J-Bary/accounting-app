@@ -1,13 +1,16 @@
-use sqlx::SqlitePool;
+use super::mappers::{row_to_line, row_to_migration};
+use super::models::{MigrationLineRow, MigrationRow};
 use application::errors::AppError;
 use domain::accounting::OpeningBalanceMigration;
-use super::models::{MigrationRow, MigrationLineRow};
-use super::mappers::{row_to_migration, row_to_line};
+use sqlx::SqlitePool;
 
 const MIGRATION_COLUMNS: &str = "id, company_id, cutover_date, source_system, source_reference, residual_classification, residual_account_id, residual_applied_at, status, notes, validated_by, validated_at, approved_by, approved_at, posted_at, locked_at, created_at, updated_at";
 
 pub async fn create(pool: &SqlitePool, m: &OpeningBalanceMigration) -> Result<(), AppError> {
-    let mut tx = pool.begin().await.map_err(|e| AppError::Infrastructure(e.to_string()))?;
+    let mut tx = pool
+        .begin()
+        .await
+        .map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
     sqlx::query(
         "INSERT INTO opening_balance_migrations (id, company_id, cutover_date, source_system, source_reference, residual_classification, residual_account_id, residual_applied_at, status, notes, validated_by, validated_at, approved_by, approved_at, posted_at, locked_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
@@ -35,11 +38,16 @@ pub async fn create(pool: &SqlitePool, m: &OpeningBalanceMigration) -> Result<()
 
     insert_lines(&mut tx, &m.id, &m.lines).await?;
 
-    tx.commit().await.map_err(|e| AppError::Infrastructure(e.to_string()))
+    tx.commit()
+        .await
+        .map_err(|e| AppError::Infrastructure(e.to_string()))
 }
 
 pub async fn update(pool: &SqlitePool, m: &OpeningBalanceMigration) -> Result<(), AppError> {
-    let mut tx = pool.begin().await.map_err(|e| AppError::Infrastructure(e.to_string()))?;
+    let mut tx = pool
+        .begin()
+        .await
+        .map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
     sqlx::query(
         "UPDATE opening_balance_migrations SET cutover_date = ?, source_system = ?, source_reference = ?, residual_classification = ?, residual_account_id = ?, residual_applied_at = ?, status = ?, notes = ?, validated_by = ?, validated_at = ?, approved_by = ?, approved_at = ?, posted_at = ?, locked_at = ?, updated_at = ? WHERE id = ?"
@@ -64,12 +72,16 @@ pub async fn update(pool: &SqlitePool, m: &OpeningBalanceMigration) -> Result<()
     .map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
     sqlx::query("DELETE FROM opening_balance_lines WHERE migration_id = ?")
-        .bind(&m.id).execute(&mut *tx).await
+        .bind(&m.id)
+        .execute(&mut *tx)
+        .await
         .map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
     insert_lines(&mut tx, &m.id, &m.lines).await?;
 
-    tx.commit().await.map_err(|e| AppError::Infrastructure(e.to_string()))
+    tx.commit()
+        .await
+        .map_err(|e| AppError::Infrastructure(e.to_string()))
 }
 
 async fn insert_lines<'a>(
@@ -93,10 +105,15 @@ async fn insert_lines<'a>(
     Ok(())
 }
 
-pub async fn find_by_id(pool: &SqlitePool, id: &str) -> Result<Option<OpeningBalanceMigration>, AppError> {
+pub async fn find_by_id(
+    pool: &SqlitePool,
+    id: &str,
+) -> Result<Option<OpeningBalanceMigration>, AppError> {
     let sql = format!("SELECT {MIGRATION_COLUMNS} FROM opening_balance_migrations WHERE id = ?");
     let row = sqlx::query_as::<_, MigrationRow>(&sql)
-        .bind(id).fetch_optional(pool).await
+        .bind(id)
+        .fetch_optional(pool)
+        .await
         .map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
     let Some(row) = row else { return Ok(None) };
@@ -105,10 +122,15 @@ pub async fn find_by_id(pool: &SqlitePool, id: &str) -> Result<Option<OpeningBal
     Ok(Some(row_to_migration(row, lines)?))
 }
 
-pub async fn find_by_cutover_date(pool: &SqlitePool, cutover_date: &str) -> Result<Vec<OpeningBalanceMigration>, AppError> {
+pub async fn find_by_cutover_date(
+    pool: &SqlitePool,
+    cutover_date: &str,
+) -> Result<Vec<OpeningBalanceMigration>, AppError> {
     let sql = format!("SELECT {MIGRATION_COLUMNS} FROM opening_balance_migrations WHERE date(cutover_date) = date(?) ORDER BY created_at DESC");
     let rows = sqlx::query_as::<_, MigrationRow>(&sql)
-        .bind(cutover_date).fetch_all(pool).await
+        .bind(cutover_date)
+        .fetch_all(pool)
+        .await
         .map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
     let mut out = Vec::with_capacity(rows.len());
@@ -119,7 +141,10 @@ pub async fn find_by_cutover_date(pool: &SqlitePool, cutover_date: &str) -> Resu
     Ok(out)
 }
 
-async fn load_lines(pool: &SqlitePool, migration_id: &str) -> Result<Vec<domain::accounting::OpeningBalanceLine>, AppError> {
+async fn load_lines(
+    pool: &SqlitePool,
+    migration_id: &str,
+) -> Result<Vec<domain::accounting::OpeningBalanceLine>, AppError> {
     let line_rows = sqlx::query_as::<_, MigrationLineRow>(
         "SELECT id, migration_id, account_id, amount, description FROM opening_balance_lines WHERE migration_id = ? ORDER BY created_at"
     )
@@ -129,9 +154,12 @@ async fn load_lines(pool: &SqlitePool, migration_id: &str) -> Result<Vec<domain:
 }
 
 pub async fn list(pool: &SqlitePool) -> Result<Vec<OpeningBalanceMigration>, AppError> {
-    let sql = format!("SELECT {MIGRATION_COLUMNS} FROM opening_balance_migrations ORDER BY created_at DESC");
+    let sql = format!(
+        "SELECT {MIGRATION_COLUMNS} FROM opening_balance_migrations ORDER BY created_at DESC"
+    );
     let rows = sqlx::query_as::<_, MigrationRow>(&sql)
-        .fetch_all(pool).await
+        .fetch_all(pool)
+        .await
         .map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
     let mut out = Vec::with_capacity(rows.len());
@@ -143,12 +171,21 @@ pub async fn list(pool: &SqlitePool) -> Result<Vec<OpeningBalanceMigration>, App
 }
 
 pub async fn delete(pool: &SqlitePool, id: &str) -> Result<(), AppError> {
-    let mut tx = pool.begin().await.map_err(|e| AppError::Infrastructure(e.to_string()))?;
+    let mut tx = pool
+        .begin()
+        .await
+        .map_err(|e| AppError::Infrastructure(e.to_string()))?;
     sqlx::query("DELETE FROM opening_balance_lines WHERE migration_id = ?")
-        .bind(id).execute(&mut *tx).await
+        .bind(id)
+        .execute(&mut *tx)
+        .await
         .map_err(|e| AppError::Infrastructure(e.to_string()))?;
     sqlx::query("DELETE FROM opening_balance_migrations WHERE id = ?")
-        .bind(id).execute(&mut *tx).await
+        .bind(id)
+        .execute(&mut *tx)
+        .await
         .map_err(|e| AppError::Infrastructure(e.to_string()))?;
-    tx.commit().await.map_err(|e| AppError::Infrastructure(e.to_string()))
+    tx.commit()
+        .await
+        .map_err(|e| AppError::Infrastructure(e.to_string()))
 }

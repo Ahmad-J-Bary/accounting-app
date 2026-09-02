@@ -1,5 +1,5 @@
 use crate::shared::errors::DomainError;
-use crate::shared::ids::{PurchaseInvoiceId, SupplierId, MaterialId, AccountId};
+use crate::shared::ids::{AccountId, MaterialId, PurchaseInvoiceId, SupplierId};
 use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
@@ -38,7 +38,9 @@ impl PurchaseInvoiceItem {
             return Err(DomainError::Invalid("الكمية يجب أن تكون موجبة".into()));
         }
         if unit_price < Decimal::ZERO {
-            return Err(DomainError::Invalid("سعر الوحدة يجب أن يكون غير سالب".into()));
+            return Err(DomainError::Invalid(
+                "سعر الوحدة يجب أن يكون غير سالب".into(),
+            ));
         }
         Ok(Self {
             id: Uuid::new_v4().to_string(),
@@ -94,7 +96,9 @@ impl PurchaseInvoice {
         notes: Option<String>,
     ) -> Result<Self, DomainError> {
         if invoice_number.trim().is_empty() {
-            return Err(DomainError::Invalid("رقم الفاتورة لا يمكن أن يكون فارغًا".into()));
+            return Err(DomainError::Invalid(
+                "رقم الفاتورة لا يمكن أن يكون فارغًا".into(),
+            ));
         }
         let now = Utc::now();
         Ok(Self {
@@ -146,7 +150,9 @@ impl PurchaseInvoice {
 
     pub fn set_tax(&mut self, tax_amount: Decimal) -> Result<(), DomainError> {
         if tax_amount < Decimal::ZERO {
-            return Err(DomainError::Invalid("مبلغ الضريبة لا يمكن أن يكون سالبًا".into()));
+            return Err(DomainError::Invalid(
+                "مبلغ الضريبة لا يمكن أن يكون سالبًا".into(),
+            ));
         }
         self.tax_amount = tax_amount;
         self.recalculate_totals();
@@ -155,7 +161,9 @@ impl PurchaseInvoice {
 
     pub fn set_discount(&mut self, discount_amount: Decimal) -> Result<(), DomainError> {
         if discount_amount < Decimal::ZERO {
-            return Err(DomainError::Invalid("مبلغ الخصم لا يمكن أن يكون سالبًا".into()));
+            return Err(DomainError::Invalid(
+                "مبلغ الخصم لا يمكن أن يكون سالبًا".into(),
+            ));
         }
         self.discount_amount = discount_amount;
         self.recalculate_totals();

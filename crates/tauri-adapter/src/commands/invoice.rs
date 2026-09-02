@@ -1,8 +1,8 @@
-use tauri::State;
 use crate::bootstrap::container::AppState;
-use application::{CreateInvoiceUseCase, ListInvoicesUseCase, PostInvoiceUseCase};
 use application::dto::invoice_dto::{CreateInvoiceRequest, InvoiceDto};
 use application::errors::AppError;
+use application::{CreateInvoiceUseCase, ListInvoicesUseCase, PostInvoiceUseCase};
+use tauri::State;
 
 #[tauri::command]
 pub async fn create_invoice(
@@ -34,10 +34,7 @@ pub async fn list_invoices(
 }
 
 #[tauri::command]
-pub async fn post_invoice(
-    state: State<'_, AppState>,
-    id: String,
-) -> Result<InvoiceDto, String> {
+pub async fn post_invoice(state: State<'_, AppState>, id: String) -> Result<InvoiceDto, String> {
     let use_case = PostInvoiceUseCase::new(
         state.invoice_repo.clone(),
         state.customer_repo.clone(),

@@ -14,7 +14,10 @@ impl CreateFiscalPeriodUseCase {
         Self { period_repo }
     }
 
-    pub async fn execute(&self, cmd: CreateFiscalPeriodCommand) -> Result<FiscalPeriodDto, AppError> {
+    pub async fn execute(
+        &self,
+        cmd: CreateFiscalPeriodCommand,
+    ) -> Result<FiscalPeriodDto, AppError> {
         let start = parse_date(&cmd.start_date)?;
         let end = parse_date(&cmd.end_date)?;
 
@@ -66,9 +69,9 @@ pub(crate) fn to_dto(p: &FiscalPeriod) -> FiscalPeriodDto {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::Arc;
     use crate::mocks::MockFiscalPeriodRepository;
     use chrono::Duration;
+    use std::sync::Arc;
 
     fn cmd(start: &str, end: &str) -> CreateFiscalPeriodCommand {
         CreateFiscalPeriodCommand {

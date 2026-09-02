@@ -1,18 +1,17 @@
-﻿#![allow(clippy::invisible_characters)]
-pub mod shared;
+#![allow(clippy::invisible_characters)]
 pub mod accounting;
-pub mod sales;
-pub mod inventory;
-pub mod customers;
-pub mod suppliers;
-pub mod purchases;
-pub mod payments;
-pub mod auth;
-pub mod settings;
-pub mod audit;
 pub mod assets;
+pub mod audit;
+pub mod auth;
+pub mod customers;
+pub mod inventory;
+pub mod payments;
+pub mod purchases;
 pub mod returns;
+pub mod sales;
+pub mod settings;
+pub mod shared;
+pub mod suppliers;
 
 #[cfg(test)]
 mod tests;
-

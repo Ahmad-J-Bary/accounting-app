@@ -1,12 +1,12 @@
-use std::sync::Arc;
-use domain::accounting::journal_entry::{JournalLine, JournalType};
-use domain::payments::{Payment, PaymentType};
-use domain::shared::ids::AccountId;
-use domain::shared::MonetaryAmount;
 use crate::errors::AppError;
 use crate::ports::account_repository::AccountRepository;
 use crate::ports::customer_repository::CustomerRepository;
 use crate::ports::supplier_repository::SupplierRepository;
+use domain::accounting::journal_entry::{JournalLine, JournalType};
+use domain::payments::{Payment, PaymentType};
+use domain::shared::ids::AccountId;
+use domain::shared::MonetaryAmount;
+use std::sync::Arc;
 
 /// Maps a PaymentType to the corresponding JournalType.
 pub fn payment_type_to_journal_type(payment_type: &PaymentType) -> JournalType {
@@ -66,70 +66,158 @@ pub async fn build_journal_lines(
     match payment.payment_type {
         PaymentType::Receipt => {
             if let Some(cid) = &payment.customer_id {
-                let customer = customer_repo.find_by_id(cid).await?
+                let customer = customer_repo
+                    .find_by_id(cid)
+                    .await?
                     .ok_or_else(|| AppError::NotFound("العميل غير موجود".into()))?;
-                let p_acc_id = customer.account_id
+                let p_acc_id = customer
+                    .account_id
                     .ok_or_else(|| AppError::Invalid("العميل لا يملك حساباً محاسبياً".into()))?;
                 let debit_cash = payment.debit_account_id.unwrap_or(cash_account_id);
                 payment.debit_account_id = Some(debit_cash);
                 payment.credit_account_id = Some(p_acc_id);
-                lines.push(JournalLine::new(debit_cash, amount_ma.clone(), zero_ma.clone(), format!("قبض من العميل: {}", customer.name)));
-                lines.push(JournalLine::new(p_acc_id, zero_ma, amount_ma, format!("دفعة من العميل: {}", customer.name)).with_partner(cid.0));
+                lines.push(JournalLine::new(
+                    debit_cash,
+                    amount_ma.clone(),
+                    zero_ma.clone(),
+                    format!("قبض من العميل: {}", customer.name),
+                ));
+                lines.push(
+                    JournalLine::new(
+                        p_acc_id,
+                        zero_ma,
+                        amount_ma,
+                        format!("دفعة من العميل: {}", customer.name),
+                    )
+                    .with_partner(cid.0),
+                );
             }
         }
         PaymentType::SupplierPayment => {
             if let Some(sid) = &payment.supplier_id {
-                let supplier = supplier_repo.find_by_id(sid).await?
+                let supplier = supplier_repo
+                    .find_by_id(sid)
+                    .await?
                     .ok_or_else(|| AppError::NotFound("المورد غير موجود".into()))?;
-                let p_acc_id = supplier.account_id
+                let p_acc_id = supplier
+                    .account_id
                     .ok_or_else(|| AppError::Invalid("المورد لا يملك حساباً محاسبياً".into()))?;
                 let credit_cash = payment.credit_account_id.unwrap_or(cash_account_id);
                 payment.debit_account_id = Some(p_acc_id);
                 payment.credit_account_id = Some(credit_cash);
-                lines.push(JournalLine::new(p_acc_id, amount_ma.clone(), zero_ma.clone(), "دفعة على الحساب".to_string()).with_partner(sid.0));
-                lines.push(JournalLine::new(credit_cash, zero_ma, amount_ma, "دفعة على الحساب".to_string()));
+                lines.push(
+                    JournalLine::new(
+                        p_acc_id,
+                        amount_ma.clone(),
+                        zero_ma.clone(),
+                        "دفعة على الحساب".to_string(),
+                    )
+                    .with_partner(sid.0),
+                );
+                lines.push(JournalLine::new(
+                    credit_cash,
+                    zero_ma,
+                    amount_ma,
+                    "دفعة على الحساب".to_string(),
+                ));
             }
         }
         PaymentType::ExpenseVoucher => {
-            let debit_expense = payment.debit_account_id
+            let debit_expense = payment
+                .debit_account_id
                 .ok_or_else(|| AppError::Invalid("يجب اختيار حساب المصروف لسند المصاريف".into()))?;
             let credit_cash = payment.credit_account_id.unwrap_or(cash_account_id);
             payment.credit_account_id = Some(credit_cash);
-            lines.push(JournalLine::new(debit_expense, amount_ma.clone(), zero_ma.clone(), "سند مصاريف".to_string()));
-            lines.push(JournalLine::new(credit_cash, zero_ma, amount_ma, "صرف من الصندوق لسند مصاريف".to_string()));
+            lines.push(JournalLine::new(
+                debit_expense,
+                amount_ma.clone(),
+                zero_ma.clone(),
+                "سند مصاريف".to_string(),
+            ));
+            lines.push(JournalLine::new(
+                credit_cash,
+                zero_ma,
+                amount_ma,
+                "صرف من الصندوق لسند مصاريف".to_string(),
+            ));
         }
         PaymentType::DrawingsVoucher => {
-            let debit_drawings = payment.debit_account_id
-                .ok_or_else(|| AppError::Invalid("حساب المدين (المسحوبات) مفقود — تأكد من ربط الشريك بحساب مسحوبات صحيح".into()))?;
+            let debit_drawings = payment.debit_account_id.ok_or_else(|| {
+                AppError::Invalid(
+                    "حساب المدين (المسحوبات) مفقود — تأكد من ربط الشريك بحساب مسحوبات صحيح".into(),
+                )
+            })?;
             let credit_cash = payment.credit_account_id.unwrap_or(cash_account_id);
             payment.credit_account_id = Some(credit_cash);
-            lines.push(JournalLine::new(debit_drawings, amount_ma.clone(), zero_ma.clone(), "سند مسحوبات".to_string()));
-            lines.push(JournalLine::new(credit_cash, zero_ma, amount_ma, "صرف من الصندوق لسند مسحوبات".to_string()));
+            lines.push(JournalLine::new(
+                debit_drawings,
+                amount_ma.clone(),
+                zero_ma.clone(),
+                "سند مسحوبات".to_string(),
+            ));
+            lines.push(JournalLine::new(
+                credit_cash,
+                zero_ma,
+                amount_ma,
+                "صرف من الصندوق لسند مسحوبات".to_string(),
+            ));
         }
         PaymentType::CustomerPayment => {
             if let Some(cid) = &payment.customer_id {
-                let customer = customer_repo.find_by_id(cid).await?
+                let customer = customer_repo
+                    .find_by_id(cid)
+                    .await?
                     .ok_or_else(|| AppError::NotFound("العميل غير موجود".into()))?;
-                let p_acc_id = customer.account_id
+                let p_acc_id = customer
+                    .account_id
                     .ok_or_else(|| AppError::Invalid("العميل لا يملك حساباً محاسبياً".into()))?;
                 let credit_cash = payment.credit_account_id.unwrap_or(cash_account_id);
                 payment.debit_account_id = Some(p_acc_id);
                 payment.credit_account_id = Some(credit_cash);
-                lines.push(JournalLine::new(p_acc_id, amount_ma.clone(), zero_ma.clone(), format!("دفع للعميل: {}", customer.name)).with_partner(cid.0));
-                lines.push(JournalLine::new(credit_cash, zero_ma, amount_ma, format!("دفعة للعميل: {}", customer.name)));
+                lines.push(
+                    JournalLine::new(
+                        p_acc_id,
+                        amount_ma.clone(),
+                        zero_ma.clone(),
+                        format!("دفع للعميل: {}", customer.name),
+                    )
+                    .with_partner(cid.0),
+                );
+                lines.push(JournalLine::new(
+                    credit_cash,
+                    zero_ma,
+                    amount_ma,
+                    format!("دفعة للعميل: {}", customer.name),
+                ));
             }
         }
         PaymentType::SupplierReceipt => {
             if let Some(sid) = &payment.supplier_id {
-                let supplier = supplier_repo.find_by_id(sid).await?
+                let supplier = supplier_repo
+                    .find_by_id(sid)
+                    .await?
                     .ok_or_else(|| AppError::NotFound("المورد غير موجود".into()))?;
-                let p_acc_id = supplier.account_id
+                let p_acc_id = supplier
+                    .account_id
                     .ok_or_else(|| AppError::Invalid("المورد لا يملك حساباً محاسبياً".into()))?;
                 let debit_cash = payment.debit_account_id.unwrap_or(cash_account_id);
                 payment.debit_account_id = Some(debit_cash);
                 payment.credit_account_id = Some(p_acc_id);
-                lines.push(JournalLine::new(debit_cash, amount_ma.clone(), zero_ma.clone(), format!("قبض من المورد: {}", supplier.name)));
-                lines.push(JournalLine::new(p_acc_id, zero_ma, amount_ma, format!("مقبوضات من مورد: {}", supplier.name)).with_partner(sid.0));
+                lines.push(JournalLine::new(
+                    debit_cash,
+                    amount_ma.clone(),
+                    zero_ma.clone(),
+                    format!("قبض من المورد: {}", supplier.name),
+                ));
+                lines.push(
+                    JournalLine::new(
+                        p_acc_id,
+                        zero_ma,
+                        amount_ma,
+                        format!("مقبوضات من مورد: {}", supplier.name),
+                    )
+                    .with_partner(sid.0),
+                );
             }
         }
         _ => {}

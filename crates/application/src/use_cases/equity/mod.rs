@@ -1,3 +1,5 @@
 pub mod statement;
 
-pub use statement::{GetPartnerEquityStatementUseCase, PartnerEquityRow, PartnerEquityStatementDto};
+pub use statement::{
+    GetPartnerEquityStatementUseCase, PartnerEquityRow, PartnerEquityStatementDto,
+};

@@ -1,10 +1,10 @@
-use sqlx::SqlitePool;
 use application::errors::AppError;
 use domain::customers::Customer;
-use domain::shared::{CustomerId, AccountId};
+use domain::shared::{AccountId, CustomerId};
+use sqlx::SqlitePool;
 
-use super::models::CustomerRow;
 use super::mappers::row_to_customer;
+use super::models::CustomerRow;
 
 pub async fn find_by_id(pool: &SqlitePool, id: &CustomerId) -> Result<Option<Customer>, AppError> {
     let row = sqlx::query_as::<_, CustomerRow>(
@@ -30,7 +30,10 @@ pub async fn find_by_id(pool: &SqlitePool, id: &CustomerId) -> Result<Option<Cus
     row.map(row_to_customer).transpose()
 }
 
-pub async fn find_by_account_id(pool: &SqlitePool, account_id: &AccountId) -> Result<Option<Customer>, AppError> {
+pub async fn find_by_account_id(
+    pool: &SqlitePool,
+    account_id: &AccountId,
+) -> Result<Option<Customer>, AppError> {
     let row = sqlx::query_as::<_, CustomerRow>(
         "SELECT id, code, name, phone, address, account_id, debit, credit, opening_balance, balance, currency, notes, is_active, created_at, updated_at 
          FROM customers WHERE account_id = ?

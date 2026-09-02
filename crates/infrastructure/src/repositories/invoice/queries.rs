@@ -1,30 +1,40 @@
-use sqlx::SqlitePool;
-use std::collections::HashMap;
+use super::mappers::{item_row_to_line, row_to_invoice};
+use super::models::{InvoiceItemRow, InvoiceRow};
 use application::errors::AppError;
 use domain::sales::{Invoice, InvoiceLine};
-use domain::shared::ids::{InvoiceId, CustomerId};
 use domain::shared::currency::Currency;
-use super::models::{InvoiceRow, InvoiceItemRow};
-use super::mappers::{row_to_invoice, item_row_to_line};
+use domain::shared::ids::{CustomerId, InvoiceId};
+use sqlx::SqlitePool;
+use std::collections::HashMap;
 
 pub async fn get_base_currency_from_db(pool: &SqlitePool) -> Result<Currency, AppError> {
-    let code: Option<String> = sqlx::query_scalar(
-        "SELECT code FROM currencies WHERE is_base = 1 LIMIT 1"
-    )
-    .fetch_optional(pool)
-    .await
-    .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+    let code: Option<String> =
+        sqlx::query_scalar("SELECT code FROM currencies WHERE is_base = 1 LIMIT 1")
+            .fetch_optional(pool)
+            .await
+            .map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
     let code = code.unwrap_or_default();
     let info = application::world_currencies::find_world_currency(&code);
     if let Some(info) = info {
-        Ok(Currency::new(&info.code, &info.name_ar, &info.name_en, &info.symbol, info.decimals, true))
+        Ok(Currency::new(
+            &info.code,
+            &info.name_ar,
+            &info.name_en,
+            &info.symbol,
+            info.decimals,
+            true,
+        ))
     } else {
         Ok(Currency::new(&code, &code, &code, &code, 2, true))
     }
 }
 
-pub async fn get_lines_for_invoice(pool: &SqlitePool, id: &InvoiceId, base_currency: &Currency) -> Result<Vec<InvoiceLine>, AppError> {
+pub async fn get_lines_for_invoice(
+    pool: &SqlitePool,
+    id: &InvoiceId,
+    base_currency: &Currency,
+) -> Result<Vec<InvoiceLine>, AppError> {
     let rows = sqlx::query_as::<_, InvoiceItemRow>(
         "SELECT id, sales_invoice_id, material_id, quantity, unit_price, line_total FROM sales_invoice_items WHERE sales_invoice_id = ?"
     )
@@ -87,12 +97,16 @@ pub async fn find_by_id(pool: &SqlitePool, id: &InvoiceId) -> Result<Option<Invo
     }
 }
 
-pub async fn list_for_customer(pool: &SqlitePool, customer_id: CustomerId) -> Result<Vec<Invoice>, AppError> {
-    let rows = sqlx::query_as::<_, InvoiceRow>("SELECT * FROM sales_invoices WHERE customer_id = ?")
-        .bind(customer_id.to_string())
-        .fetch_all(pool)
-        .await
-        .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+pub async fn list_for_customer(
+    pool: &SqlitePool,
+    customer_id: CustomerId,
+) -> Result<Vec<Invoice>, AppError> {
+    let rows =
+        sqlx::query_as::<_, InvoiceRow>("SELECT * FROM sales_invoices WHERE customer_id = ?")
+            .bind(customer_id.to_string())
+            .fetch_all(pool)
+            .await
+            .map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
     if rows.is_empty() {
         return Ok(vec![]);
@@ -115,10 +129,11 @@ pub async fn list_for_customer(pool: &SqlitePool, customer_id: CustomerId) -> Re
 }
 
 pub async fn list_all(pool: &SqlitePool) -> Result<Vec<Invoice>, AppError> {
-    let rows = sqlx::query_as::<_, InvoiceRow>("SELECT * FROM sales_invoices ORDER BY invoice_date DESC")
-        .fetch_all(pool)
-        .await
-        .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+    let rows =
+        sqlx::query_as::<_, InvoiceRow>("SELECT * FROM sales_invoices ORDER BY invoice_date DESC")
+            .fetch_all(pool)
+            .await
+            .map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
     if rows.is_empty() {
         return Ok(vec![]);

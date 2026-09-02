@@ -1,12 +1,12 @@
 use std::str::FromStr;
 use std::sync::Arc;
 
-use chrono::Utc;
-use domain::shared::AccountId;
 use application::ports::account_repository::AccountRepository;
 use application::ports::settings_repository::SettingsRepository;
 use application::use_cases::opening_balance::types::OpeningLineInput;
 use application::use_cases::opening_balance::CreateOpeningBalanceUseCase;
+use chrono::Utc;
+use domain::shared::AccountId;
 use infrastructure::db::pool::run_migrations;
 use infrastructure::repositories::{
     SqliteAccountRepository, SqliteOpeningMigrationRepository, SqliteSettingsRepository,
@@ -38,21 +38,22 @@ async fn account_id_by_code(pool: &sqlx::SqlitePool, code: &str) -> AccountId {
     AccountId(uuid::Uuid::parse_str(&id).unwrap())
 }
 
-async fn make_case(
-    pool: Arc<sqlx::SqlitePool>,
-) -> CreateOpeningBalanceUseCase {
+async fn make_case(pool: Arc<sqlx::SqlitePool>) -> CreateOpeningBalanceUseCase {
     let repo = Arc::new(SqliteOpeningMigrationRepository::new(pool.clone()));
     let account_repo: Arc<dyn AccountRepository> =
         Arc::new(SqliteAccountRepository::new(pool.clone()));
     // A migration only exists in ExistingCompanyMigration mode.
     let settings_repo = Arc::new(SqliteSettingsRepository::new(pool.clone()));
     let mut settings = settings_repo.get().await.unwrap();
-    settings.accounting_start_mode = application::use_cases::opening_balance::create::START_MODE_EXISTING.into();
+    settings.accounting_start_mode =
+        application::use_cases::opening_balance::create::START_MODE_EXISTING.into();
     settings_repo.save(&settings).await.unwrap();
     CreateOpeningBalanceUseCase::new(repo, account_repo, settings_repo)
 }
 
-fn cmd(lines: Vec<(String, String)>) -> application::use_cases::opening_balance::types::CreateOpeningBalanceMigrationCommand {
+fn cmd(
+    lines: Vec<(String, String)>,
+) -> application::use_cases::opening_balance::types::CreateOpeningBalanceMigrationCommand {
     application::use_cases::opening_balance::types::CreateOpeningBalanceMigrationCommand {
         cutover_date: Utc::now().to_rfc3339(),
         notes: None,
@@ -84,7 +85,10 @@ async fn create_opening_rejects_revenue_accounts() {
         ]))
         .await
         .unwrap_err();
-    assert!(err.to_string().contains("قائمة الدخل"), "unexpected err: {err}");
+    assert!(
+        err.to_string().contains("قائمة الدخل"),
+        "unexpected err: {err}"
+    );
 }
 
 #[tokio::test]
@@ -102,7 +106,10 @@ async fn create_opening_rejects_expense_accounts() {
         ]))
         .await
         .unwrap_err();
-    assert!(err.to_string().contains("قائمة الدخل"), "unexpected err: {err}");
+    assert!(
+        err.to_string().contains("قائمة الدخل"),
+        "unexpected err: {err}"
+    );
 }
 
 #[tokio::test]

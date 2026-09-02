@@ -1,8 +1,8 @@
-use std::sync::Arc;
-use domain::inventory::category::{DEFAULT_CATEGORY_NAME};
-use crate::ports::category_repository::CategoryRepository;
-use crate::dto::category_dto::{CategoryDto};
+use crate::dto::category_dto::CategoryDto;
 use crate::errors::AppError;
+use crate::ports::category_repository::CategoryRepository;
+use domain::inventory::category::DEFAULT_CATEGORY_NAME;
+use std::sync::Arc;
 
 pub struct CategoryQueries {
     repo: Arc<dyn CategoryRepository>,
@@ -18,7 +18,9 @@ impl CategoryQueries {
         let mut dtos = vec![];
         for cat in categories {
             let mut dto = CategoryDto::from(cat);
-            if dto.name == DEFAULT_CATEGORY_NAME && (dto.code_prefix.is_none() || dto.code_prefix.as_ref().unwrap().is_empty()) {
+            if dto.name == DEFAULT_CATEGORY_NAME
+                && (dto.code_prefix.is_none() || dto.code_prefix.as_ref().unwrap().is_empty())
+            {
                 dto.code_prefix = Some("غ".to_string());
             }
             let count = self

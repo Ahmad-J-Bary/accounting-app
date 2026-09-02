@@ -16,8 +16,8 @@ use crate::use_cases::opening_balance::obe::{
     obe_control_net, opening_source_id, OPENING_EQUITY_ACCOUNT_CODE,
 };
 use crate::use_cases::opening_balance::types::{
-    KIND_AR, KIND_AP, KIND_FIXED_ASSET, KIND_INVENTORY, KIND_BANK, KIND_LOAN, OpeningItemInput,
-    OpeningReconciliationDto, ReconciliationRow,
+    OpeningItemInput, OpeningReconciliationDto, ReconciliationRow, KIND_AP, KIND_AR, KIND_BANK,
+    KIND_FIXED_ASSET, KIND_INVENTORY, KIND_LOAN,
 };
 
 /// The six sub-ledgers supported by the opening-balance reconciliation.
@@ -79,8 +79,12 @@ pub fn gl_bucket_totals(
 ) -> HashMap<SubledgerKind, Decimal> {
     let mut buckets: HashMap<SubledgerKind, Decimal> = HashMap::new();
     for line in &migration.lines {
-        let Some(account) = accounts.get(&line.account_id) else { continue };
-        let Some(kind) = account_subledger_kind(account) else { continue };
+        let Some(account) = accounts.get(&line.account_id) else {
+            continue;
+        };
+        let Some(kind) = account_subledger_kind(account) else {
+            continue;
+        };
         *buckets.entry(kind).or_default() += line.amount;
     }
     buckets
@@ -161,8 +165,14 @@ impl GetOpeningReconciliationUseCase {
         }
     }
 
-    pub async fn execute(&self, migration_id: String) -> Result<OpeningReconciliationDto, AppError> {
-        let migration = self.migration_repo.find_by_id(&migration_id).await?
+    pub async fn execute(
+        &self,
+        migration_id: String,
+    ) -> Result<OpeningReconciliationDto, AppError> {
+        let migration = self
+            .migration_repo
+            .find_by_id(&migration_id)
+            .await?
             .ok_or_else(|| AppError::NotFound("ترحيل الرصيد الافتتاحي غير موجود".into()))?;
         let items = self.detail_repo.load_items(&migration_id).await?;
 
@@ -197,28 +207,30 @@ impl GetOpeningReconciliationUseCase {
         let all_reconciled = rows.iter().all(|r| r.reconciled);
 
         // ---- Debit / Credit + Opening Control
-        let obe_account_id = self.account_repo.find_by_code(OPENING_EQUITY_ACCOUNT_CODE).await?
+        let obe_account_id = self
+            .account_repo
+            .find_by_code(OPENING_EQUITY_ACCOUNT_CODE)
+            .await?
             .map(|a| a.id);
 
         // The Opening Balance Control is the net of account 53 across the
         // posting journal *and* any residual reclassification journal. The
         // residual journal's OBE leg cancels the posting OBE leg, so a
         // reclassified migration nets to zero here.
-        let (debit_total, credit_total, opening_control_balance) =
-            if let Some(entry) = self
-                .journal_repo
-                .find_by_source_id(&opening_source_id(&migration_id))
-                .await?
-            {
-                (
-                    entry.lines.iter().map(|l| l.debit.base_amount).sum(),
-                    entry.lines.iter().map(|l| l.credit.base_amount).sum(),
-                    obe_control_net(&self.journal_repo, obe_account_id, &migration_id).await?,
-                )
-            } else {
-                let (d, c) = drift_totals(&migration, &self.account_repo).await?;
-                (d, c, d - c)
-            };
+        let (debit_total, credit_total, opening_control_balance) = if let Some(entry) = self
+            .journal_repo
+            .find_by_source_id(&opening_source_id(&migration_id))
+            .await?
+        {
+            (
+                entry.lines.iter().map(|l| l.debit.base_amount).sum(),
+                entry.lines.iter().map(|l| l.credit.base_amount).sum(),
+                obe_control_net(&self.journal_repo, obe_account_id, &migration_id).await?,
+            )
+        } else {
+            let (d, c) = drift_totals(&migration, &self.account_repo).await?;
+            (d, c, d - c)
+        };
 
         Ok(OpeningReconciliationDto {
             rows,
@@ -240,7 +252,9 @@ async fn drift_totals(
     let mut d = Decimal::ZERO;
     let mut c_ = Decimal::ZERO;
     for line in &migration.lines {
-        let account = account_repo.find_by_id(&line.account_id).await?
+        let account = account_repo
+            .find_by_id(&line.account_id)
+            .await?
             .ok_or_else(|| AppError::NotFound(format!("الحساب غير موجود: {}", line.account_id)))?;
         if matches!(
             account.normal_balance(),
@@ -299,18 +313,55 @@ mod tests {
 
     #[test]
     fn account_subledger_kind_maps_codes() {
-        assert_eq!(account_subledger_kind(&account("1203", AccountType::Assets)), Some(SubledgerKind::Ar));
-        assert_eq!(account_subledger_kind(&account("120301", AccountType::Assets)), Some(SubledgerKind::Ar));
-        assert_eq!(account_subledger_kind(&account("2203", AccountType::Liabilities)), Some(SubledgerKind::Ap));
-        assert_eq!(account_subledger_kind(&account("220301", AccountType::Liabilities)), Some(SubledgerKind::Ap));
-        assert_eq!(account_subledger_kind(&account("1204", AccountType::Assets)), Some(SubledgerKind::Inventory));
-        assert_eq!(account_subledger_kind(&account("120401", AccountType::Assets)), Some(SubledgerKind::Inventory));
-        assert_eq!(account_subledger_kind(&account("1101", AccountType::Assets)), Some(SubledgerKind::FixedAssets));
-        assert_eq!(account_subledger_kind(&account("1102", AccountType::Assets)), Some(SubledgerKind::FixedAssets));
-        assert_eq!(account_subledger_kind(&account("125", AccountType::Assets)), Some(SubledgerKind::Bank));
-        assert_eq!(account_subledger_kind(&account("224", AccountType::Liabilities)), Some(SubledgerKind::Loan));
-        assert_eq!(account_subledger_kind(&account("1001", AccountType::Assets)), None, "cash is not a sub-ledger");
-        assert_eq!(account_subledger_kind(&account("51", AccountType::Equity)), None);
+        assert_eq!(
+            account_subledger_kind(&account("1203", AccountType::Assets)),
+            Some(SubledgerKind::Ar)
+        );
+        assert_eq!(
+            account_subledger_kind(&account("120301", AccountType::Assets)),
+            Some(SubledgerKind::Ar)
+        );
+        assert_eq!(
+            account_subledger_kind(&account("2203", AccountType::Liabilities)),
+            Some(SubledgerKind::Ap)
+        );
+        assert_eq!(
+            account_subledger_kind(&account("220301", AccountType::Liabilities)),
+            Some(SubledgerKind::Ap)
+        );
+        assert_eq!(
+            account_subledger_kind(&account("1204", AccountType::Assets)),
+            Some(SubledgerKind::Inventory)
+        );
+        assert_eq!(
+            account_subledger_kind(&account("120401", AccountType::Assets)),
+            Some(SubledgerKind::Inventory)
+        );
+        assert_eq!(
+            account_subledger_kind(&account("1101", AccountType::Assets)),
+            Some(SubledgerKind::FixedAssets)
+        );
+        assert_eq!(
+            account_subledger_kind(&account("1102", AccountType::Assets)),
+            Some(SubledgerKind::FixedAssets)
+        );
+        assert_eq!(
+            account_subledger_kind(&account("125", AccountType::Assets)),
+            Some(SubledgerKind::Bank)
+        );
+        assert_eq!(
+            account_subledger_kind(&account("224", AccountType::Liabilities)),
+            Some(SubledgerKind::Loan)
+        );
+        assert_eq!(
+            account_subledger_kind(&account("1001", AccountType::Assets)),
+            None,
+            "cash is not a sub-ledger"
+        );
+        assert_eq!(
+            account_subledger_kind(&account("51", AccountType::Equity)),
+            None
+        );
     }
 
     #[test]
@@ -344,28 +395,113 @@ mod tests {
             opening_control_balance: dec!(40),
             ..ok.clone()
         };
-        assert!(readiness_blockers(&control_nonzero, false).is_empty(), "posting may carry classified residual");
-        assert_eq!(readiness_blockers(&control_nonzero, true).len(), 1, "locking requires control == 0");
+        assert!(
+            readiness_blockers(&control_nonzero, false).is_empty(),
+            "posting may carry classified residual"
+        );
+        assert_eq!(
+            readiness_blockers(&control_nonzero, true).len(),
+            1,
+            "locking requires control == 0"
+        );
     }
 
     #[test]
     fn detail_totals_from_real_entity_links() {
         let items = vec![
-            OpeningItemInput { kind: KIND_AR.into(), entity_id: "a".into(), reference: None, amount: "100.00".into(), qty: "1".into() },
-            OpeningItemInput { kind: KIND_AR.into(), entity_id: "b".into(), reference: None, amount: "50.00".into(), qty: "1".into() },
-            OpeningItemInput { kind: KIND_AP.into(), entity_id: "c".into(), reference: None, amount: "30.00".into(), qty: "1".into() },
-            OpeningItemInput { kind: KIND_INVENTORY.into(), entity_id: "m1".into(), reference: None, amount: "200.00".into(), qty: "10".into() },
-            OpeningItemInput { kind: KIND_FIXED_ASSET.into(), entity_id: "f1".into(), reference: None, amount: "900.00".into(), qty: "1".into() },
-            OpeningItemInput { kind: KIND_BANK.into(), entity_id: "b1".into(), reference: None, amount: "40.00".into(), qty: "1".into() },
-            OpeningItemInput { kind: KIND_LOAN.into(), entity_id: "l1".into(), reference: None, amount: "50.00".into(), qty: "1".into() },
-            OpeningItemInput { kind: "Unknown".into(), entity_id: "x".into(), reference: None, amount: "999.00".into(), qty: "1".into() },
+            OpeningItemInput {
+                kind: KIND_AR.into(),
+                entity_id: "a".into(),
+                reference: None,
+                amount: "100.00".into(),
+                qty: "1".into(),
+            },
+            OpeningItemInput {
+                kind: KIND_AR.into(),
+                entity_id: "b".into(),
+                reference: None,
+                amount: "50.00".into(),
+                qty: "1".into(),
+            },
+            OpeningItemInput {
+                kind: KIND_AP.into(),
+                entity_id: "c".into(),
+                reference: None,
+                amount: "30.00".into(),
+                qty: "1".into(),
+            },
+            OpeningItemInput {
+                kind: KIND_INVENTORY.into(),
+                entity_id: "m1".into(),
+                reference: None,
+                amount: "200.00".into(),
+                qty: "10".into(),
+            },
+            OpeningItemInput {
+                kind: KIND_FIXED_ASSET.into(),
+                entity_id: "f1".into(),
+                reference: None,
+                amount: "900.00".into(),
+                qty: "1".into(),
+            },
+            OpeningItemInput {
+                kind: KIND_BANK.into(),
+                entity_id: "b1".into(),
+                reference: None,
+                amount: "40.00".into(),
+                qty: "1".into(),
+            },
+            OpeningItemInput {
+                kind: KIND_LOAN.into(),
+                entity_id: "l1".into(),
+                reference: None,
+                amount: "50.00".into(),
+                qty: "1".into(),
+            },
+            OpeningItemInput {
+                kind: "Unknown".into(),
+                entity_id: "x".into(),
+                reference: None,
+                amount: "999.00".into(),
+                qty: "1".into(),
+            },
         ];
         let totals = detail_subledger_totals(&items);
-        assert_eq!(totals.get(&SubledgerKind::Ar).copied().unwrap_or_default(), Decimal::new(15000, 2));
-        assert_eq!(totals.get(&SubledgerKind::Ap).copied().unwrap_or_default(), Decimal::new(3000, 2));
-        assert_eq!(totals.get(&SubledgerKind::Inventory).copied().unwrap_or_default(), Decimal::new(20000, 2));
-        assert_eq!(totals.get(&SubledgerKind::FixedAssets).copied().unwrap_or_default(), Decimal::new(90000, 2));
-        assert_eq!(totals.get(&SubledgerKind::Bank).copied().unwrap_or_default(), Decimal::new(4000, 2));
-        assert_eq!(totals.get(&SubledgerKind::Loan).copied().unwrap_or_default(), Decimal::new(5000, 2));
+        assert_eq!(
+            totals.get(&SubledgerKind::Ar).copied().unwrap_or_default(),
+            Decimal::new(15000, 2)
+        );
+        assert_eq!(
+            totals.get(&SubledgerKind::Ap).copied().unwrap_or_default(),
+            Decimal::new(3000, 2)
+        );
+        assert_eq!(
+            totals
+                .get(&SubledgerKind::Inventory)
+                .copied()
+                .unwrap_or_default(),
+            Decimal::new(20000, 2)
+        );
+        assert_eq!(
+            totals
+                .get(&SubledgerKind::FixedAssets)
+                .copied()
+                .unwrap_or_default(),
+            Decimal::new(90000, 2)
+        );
+        assert_eq!(
+            totals
+                .get(&SubledgerKind::Bank)
+                .copied()
+                .unwrap_or_default(),
+            Decimal::new(4000, 2)
+        );
+        assert_eq!(
+            totals
+                .get(&SubledgerKind::Loan)
+                .copied()
+                .unwrap_or_default(),
+            Decimal::new(5000, 2)
+        );
     }
 }

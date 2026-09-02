@@ -27,9 +27,7 @@ use application::ports::material_repository::MaterialRepository;
 use application::ports::opening_migration_repository::OpeningMigrationRepository;
 use application::ports::settings_repository::SettingsRepository;
 use application::ports::supplier_repository::SupplierRepository;
-use application::use_cases::customer::{
-    CreateCustomerUseCase, UpdateCustomerUseCase,
-};
+use application::use_cases::customer::{CreateCustomerUseCase, UpdateCustomerUseCase};
 use application::use_cases::opening_balance::create::START_MODE_EXISTING;
 use application::use_cases::opening_balance::types::{
     CreateOpeningBalanceMigrationCommand, OpeningItemInput, OpeningLineInput,
@@ -37,8 +35,8 @@ use application::use_cases::opening_balance::types::{
 };
 use application::use_cases::opening_balance::{
     ApproveOpeningBalanceUseCase, CreateOpeningBalanceUseCase, GetOpeningReconciliationUseCase,
-    KIND_INVENTORY, LockOpeningBalanceUseCase, PostOpeningBalanceUseCase, SaveOpeningItemsUseCase,
-    ValidateOpeningBalanceUseCase,
+    LockOpeningBalanceUseCase, PostOpeningBalanceUseCase, SaveOpeningItemsUseCase,
+    ValidateOpeningBalanceUseCase, KIND_INVENTORY,
 };
 use application::use_cases::supplier::CreateSupplierUseCase;
 use application::use_cases::unified_invoice::{
@@ -62,7 +60,10 @@ use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 
 async fn build_pool() -> Arc<sqlx::SqlitePool> {
     let mut path = std::env::temp_dir();
-    path.push(format!("acc_opening_window_deferral_{}.sqlite", uuid::Uuid::new_v4()));
+    path.push(format!(
+        "acc_opening_window_deferral_{}.sqlite",
+        uuid::Uuid::new_v4()
+    ));
     let options = SqliteConnectOptions::from_str(path.to_str().unwrap())
         .unwrap()
         .create_if_missing(true);
@@ -120,7 +121,10 @@ async fn save_account(
     .unwrap()
     .with_purpose(purpose);
     let id = account.id;
-    SqliteAccountRepository::new(pool.clone()).save(&account).await.unwrap();
+    SqliteAccountRepository::new(pool.clone())
+        .save(&account)
+        .await
+        .unwrap();
     id
 }
 
@@ -140,8 +144,16 @@ async fn open_window(pool: &Arc<sqlx::SqlitePool>) -> String {
         source_system: None,
         source_reference: None,
         lines: vec![
-            OpeningLineInput { account_id: cash.to_string(), amount: "1000".into(), description: None },
-            OpeningLineInput { account_id: equity.to_string(), amount: "1000".into(), description: None },
+            OpeningLineInput {
+                account_id: cash.to_string(),
+                amount: "1000".into(),
+                description: None,
+            },
+            OpeningLineInput {
+                account_id: equity.to_string(),
+                amount: "1000".into(),
+                description: None,
+            },
         ],
     })
     .await
@@ -213,8 +225,16 @@ async fn customer_update_defers_adjustment_while_window_open() {
     .expect("create customer during window");
 
     let account_id = create.account_id.clone().expect("customer linked account");
-    let account = account_repo.find_by_id(&AccountId::from_str(&account_id).unwrap()).await.unwrap().unwrap();
-    assert_eq!(account.balance, Decimal::ZERO, "account is static zero during the window");
+    let account = account_repo
+        .find_by_id(&AccountId::from_str(&account_id).unwrap())
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(
+        account.balance,
+        Decimal::ZERO,
+        "account is static zero during the window"
+    );
 
     // Update the balance + opening balance DURING the window.
     let updated = UpdateCustomerUseCase::new(
@@ -241,7 +261,10 @@ async fn customer_update_defers_adjustment_while_window_open() {
     .await
     .expect("update customer during window");
 
-    assert_eq!(updated.opening_balance, "800", "entity opening balance carries the edit");
+    assert_eq!(
+        updated.opening_balance, "800",
+        "entity opening balance carries the edit"
+    );
     assert_eq!(
         stored_account_balance(&pool, &AccountId::from_str(&account_id).unwrap()).await,
         Decimal::ZERO,
@@ -322,7 +345,10 @@ async fn supplier_update_defers_adjustment_while_window_open() {
     .await
     .expect("update supplier during window");
 
-    assert_eq!(stored_account_balance(&pool, &account_id_typed).await, Decimal::ZERO);
+    assert_eq!(
+        stored_account_balance(&pool, &account_id_typed).await,
+        Decimal::ZERO
+    );
     assert_eq!(journal_line_count(&pool, &account_id_typed).await, 0);
 }
 
@@ -373,8 +399,15 @@ async fn customer_update_posts_adjustment_outside_window() {
 
     let account_id = created.account_id.clone().expect("linked account");
     let account_id_typed = AccountId::from_str(&account_id).unwrap();
-    assert_eq!(stored_account_balance(&pool, &account_id_typed).await, Decimal::ZERO);
-    assert_eq!(journal_line_count(&pool, &account_id_typed).await, 0, "no opening journal for a zero balance");
+    assert_eq!(
+        stored_account_balance(&pool, &account_id_typed).await,
+        Decimal::ZERO
+    );
+    assert_eq!(
+        journal_line_count(&pool, &account_id_typed).await,
+        0,
+        "no opening journal for a zero balance"
+    );
 
     application::use_cases::customer::UpdateCustomerUseCase::new(
         customer_repo.clone(),
@@ -400,7 +433,10 @@ async fn customer_update_posts_adjustment_outside_window() {
     .await
     .expect("update customer outside window");
 
-    assert_eq!(stored_account_balance(&pool, &account_id_typed).await, Decimal::from(900));
+    assert_eq!(
+        stored_account_balance(&pool, &account_id_typed).await,
+        Decimal::from(900)
+    );
     let adjustment_journals: i64 = sqlx::query_scalar(
         "SELECT COUNT(*) FROM journal_entries WHERE source_id = ? AND journal_type = 'AccountOpeningBalance'",
     )
@@ -408,7 +444,10 @@ async fn customer_update_posts_adjustment_outside_window() {
     .fetch_one(&*pool)
     .await
     .unwrap();
-    assert_eq!(adjustment_journals, 1, "the update adjustment is a real posted journal");
+    assert_eq!(
+        adjustment_journals, 1,
+        "the update adjustment is a real posted journal"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -422,7 +461,13 @@ async fn inventory_opening_in_statement_posts_once_and_reconciles() {
     let pool = build_pool().await;
     set_start_mode(&pool, START_MODE_EXISTING).await;
 
-    let inventory = save_account(&pool, "1905", AccountPurpose::Inventory, AccountType::Assets).await;
+    let inventory = save_account(
+        &pool,
+        "1905",
+        AccountPurpose::Inventory,
+        AccountType::Assets,
+    )
+    .await;
     let equity = save_account(&pool, "1906", AccountPurpose::General, AccountType::Equity).await;
 
     let material = Material::new(
@@ -434,7 +479,10 @@ async fn inventory_opening_in_statement_posts_once_and_reconciles() {
         vec![],
     )
     .unwrap();
-    SqliteMaterialRepository::new(pool.clone()).save(&material).await.unwrap();
+    SqliteMaterialRepository::new(pool.clone())
+        .save(&material)
+        .await
+        .unwrap();
 
     let migration_repo: Arc<dyn OpeningMigrationRepository> =
         Arc::new(SqliteOpeningMigrationRepository::new(pool.clone()));
@@ -458,8 +506,16 @@ async fn inventory_opening_in_statement_posts_once_and_reconciles() {
         source_system: None,
         source_reference: None,
         lines: vec![
-            OpeningLineInput { account_id: inventory.to_string(), amount: "500".into(), description: None },
-            OpeningLineInput { account_id: equity.to_string(), amount: "500".into(), description: None },
+            OpeningLineInput {
+                account_id: inventory.to_string(),
+                amount: "500".into(),
+                description: None,
+            },
+            OpeningLineInput {
+                account_id: equity.to_string(),
+                amount: "500".into(),
+                description: None,
+            },
         ],
     })
     .await
@@ -498,8 +554,15 @@ async fn inventory_opening_in_statement_posts_once_and_reconciles() {
     .execute(migration_id.clone())
     .await
     .expect("reconciliation computes");
-    assert!(recon.all_reconciled, "inventory sub-ledger = GL must reconcile");
-    let inv_row = recon.rows.iter().find(|r| r.key == "Inventory").expect("inventory row");
+    assert!(
+        recon.all_reconciled,
+        "inventory sub-ledger = GL must reconcile"
+    );
+    let inv_row = recon
+        .rows
+        .iter()
+        .find(|r| r.key == "Inventory")
+        .expect("inventory row");
     assert_eq!(inv_row.subledger, dec!(500));
     assert_eq!(inv_row.general_ledger, dec!(500));
 
@@ -508,19 +571,36 @@ async fn inventory_opening_in_statement_posts_once_and_reconciles() {
     post_opening_invoice(&pool, &material, migration_repo.clone()).await;
 
     let movements: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM stock_movements")
-        .fetch_one(&*pool).await.unwrap();
-    assert_eq!(movements, 1, "movement is created even though the journal is deferred");
+        .fetch_one(&*pool)
+        .await
+        .unwrap();
+    assert_eq!(
+        movements, 1,
+        "movement is created even though the journal is deferred"
+    );
     let movement_type: String = sqlx::query_scalar("SELECT movement_type FROM stock_movements")
-        .fetch_one(&*pool).await.unwrap();
+        .fetch_one(&*pool)
+        .await
+        .unwrap();
     assert_eq!(movement_type, "OpeningBalance");
     let lots: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM inventory_lots")
-        .fetch_one(&*pool).await.unwrap();
-    assert_eq!(lots, 1, "lot is created through the existing inventory module");
+        .fetch_one(&*pool)
+        .await
+        .unwrap();
+    assert_eq!(
+        lots, 1,
+        "lot is created through the existing inventory module"
+    );
     let deferred: i64 = sqlx::query_scalar(
         "SELECT COUNT(*) FROM journal_entries WHERE journal_type = 'MaterialOpeningBalance'",
     )
-    .fetch_one(&*pool).await.unwrap();
-    assert_eq!(deferred, 0, "MaterialOpeningBalance journal is deferred to the migration (R1)");
+    .fetch_one(&*pool)
+    .await
+    .unwrap();
+    assert_eq!(
+        deferred, 0,
+        "MaterialOpeningBalance journal is deferred to the migration (R1)"
+    );
 
     // 4) Validate → Approve → Post: the migration journal carries the stock once.
     ValidateOpeningBalanceUseCase::new(
@@ -550,17 +630,23 @@ async fn inventory_opening_in_statement_posts_once_and_reconciles() {
     .expect("approved inventory migration must post");
     assert_eq!(posted.debit_total, posted.credit_total);
 
-    let migration_journals: i64 = sqlx::query_scalar(
-        "SELECT COUNT(*) FROM journal_entries WHERE source_id = ?",
-    )
-    .bind(format!("opening_balance:{migration_id}"))
-    .fetch_one(&*pool).await.unwrap();
+    let migration_journals: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM journal_entries WHERE source_id = ?")
+            .bind(format!("opening_balance:{migration_id}"))
+            .fetch_one(&*pool)
+            .await
+            .unwrap();
     assert_eq!(migration_journals, 1, "exactly one migration journal");
     let material_journals: i64 = sqlx::query_scalar(
         "SELECT COUNT(*) FROM journal_entries WHERE journal_type = 'MaterialOpeningBalance'",
     )
-    .fetch_one(&*pool).await.unwrap();
-    assert_eq!(material_journals, 0, "never a second MaterialOpeningBalance posting");
+    .fetch_one(&*pool)
+    .await
+    .unwrap();
+    assert_eq!(
+        material_journals, 0,
+        "never a second MaterialOpeningBalance posting"
+    );
 
     // Live ledger: stock landed exactly once (Dr +500) via the migration journal.
     let stock_balance: f64 = sqlx::query_scalar::<_, f64>(
@@ -568,20 +654,21 @@ async fn inventory_opening_in_statement_posts_once_and_reconciles() {
          FROM journal_lines WHERE account_id = ?",
     )
     .bind(inventory.0.to_string())
-    .fetch_one(&*pool).await.unwrap();
-    assert!((stock_balance - 500.0).abs() < 0.01, "stock ledger = migration journal line only (got {stock_balance})");
+    .fetch_one(&*pool)
+    .await
+    .unwrap();
+    assert!(
+        (stock_balance - 500.0).abs() < 0.01,
+        "stock ledger = migration journal line only (got {stock_balance})"
+    );
 
     // 5) Lock closes cleanly (no stray 53 balance — the invoice journal was
     //    never posted, the migration carries the whole statement).
-    let locked = LockOpeningBalanceUseCase::new(
-        migration_repo,
-        item_repo,
-        account_repo,
-        journal_repo,
-    )
-    .execute(migration_id.clone())
-    .await
-    .expect("posted inventory migration must lock");
+    let locked =
+        LockOpeningBalanceUseCase::new(migration_repo, item_repo, account_repo, journal_repo)
+            .execute(migration_id.clone())
+            .await
+            .expect("posted inventory migration must lock");
     assert_eq!(locked.0.status, domain::accounting::MigrationStatus::Locked);
 }
 

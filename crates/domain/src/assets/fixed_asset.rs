@@ -1,10 +1,10 @@
-﻿#![allow(clippy::too_many_arguments)]
-use uuid::Uuid;
-use chrono::{DateTime, Utc};
-use serde::{Deserialize, Serialize};
+#![allow(clippy::too_many_arguments)]
+use super::depreciation::{calculate_depreciation, DepreciationMethod};
 use crate::shared::Money;
+use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
-use super::depreciation::{DepreciationMethod, calculate_depreciation};
+use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FixedAssetId(pub Uuid);
@@ -129,7 +129,10 @@ mod tests {
 
     #[test]
     fn test_calculate_depreciation() {
-        let cost = Money::new(Decimal::from(1200), Currency::new("XUS", "TestDollar", "TestDollar", "X$", 2, false));
+        let cost = Money::new(
+            Decimal::from(1200),
+            Currency::new("XUS", "TestDollar", "TestDollar", "X$", 2, false),
+        );
         let mut asset = FixedAsset::new(
             "CODE".to_string(),
             "NAME".to_string(),

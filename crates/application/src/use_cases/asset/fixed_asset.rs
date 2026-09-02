@@ -5,12 +5,13 @@ use crate::ports::journal_entry_repository::JournalEntryRepository;
 use crate::ports::opening_migration_repository::OpeningMigrationRepository;
 use crate::ports::settings_repository::SettingsRepository;
 use chrono::Utc;
-use domain::accounting::{JournalEntry, JournalLine, MigrationStatus};
 use domain::accounting::account::AccountPurpose;
-use domain::settings::START_MODE_EXISTING;
+use domain::accounting::{JournalEntry, JournalLine, MigrationStatus};
 use domain::assets::{
-    AssetCategory, AssetMovement, AssetMovementType, AssetType, DepreciationMethod, FixedAsset, FixedAssetId,
+    AssetCategory, AssetMovement, AssetMovementType, AssetType, DepreciationMethod, FixedAsset,
+    FixedAssetId,
 };
+use domain::settings::START_MODE_EXISTING;
 use domain::shared::{AccountId, MonetaryAmount, Money};
 use rust_decimal::Decimal;
 use std::sync::Arc;
@@ -142,7 +143,9 @@ impl FixedAssetUseCases {
         }
         if let Some(ref method) = req.depreciation_method {
             match method.as_str() {
-                "DecliningBalance" => asset.depreciation_method = DepreciationMethod::DecliningBalance,
+                "DecliningBalance" => {
+                    asset.depreciation_method = DepreciationMethod::DecliningBalance
+                }
                 _ => asset.depreciation_method = DepreciationMethod::StraightLine,
             }
         }
@@ -172,9 +175,14 @@ impl FixedAssetUseCases {
 
         // Ensure the GL accounts linked to this asset have purpose=FixedAsset
         // so the reconciliation classifies them correctly (migration 148/164/166).
-        self.ensure_account_fixed_asset_purpose(&AccountId(req.asset_account_id)).await?;
-        self.ensure_account_fixed_asset_purpose(&AccountId(req.depreciation_account_id)).await?;
-        self.ensure_account_fixed_asset_purpose(&AccountId(req.accumulated_depreciation_account_id)).await?;
+        self.ensure_account_fixed_asset_purpose(&AccountId(req.asset_account_id))
+            .await?;
+        self.ensure_account_fixed_asset_purpose(&AccountId(req.depreciation_account_id))
+            .await?;
+        self.ensure_account_fixed_asset_purpose(&AccountId(
+            req.accumulated_depreciation_account_id,
+        ))
+        .await?;
 
         // Opening-preparation window: while the company is preparing
         // its opening migration, fixed-asset records are SUBLEDGER data only —
@@ -232,20 +240,34 @@ impl FixedAssetUseCases {
         // --- Update account balances (computed in memory, persisted below) ---
         let base_amount = req.purchase_cost.to_base(req.fx_rate);
         let mut accounts = Vec::new();
-        if let Some(mut asset_account) = self.account_repo.find_by_id(&AccountId(req.asset_account_id)).await? {
-            asset_account.debit(base_amount).map_err(|e| AppError::Invalid(e.to_string()))?;
+        if let Some(mut asset_account) = self
+            .account_repo
+            .find_by_id(&AccountId(req.asset_account_id))
+            .await?
+        {
+            asset_account
+                .debit(base_amount)
+                .map_err(|e| AppError::Invalid(e.to_string()))?;
             asset_account.debit += base_amount;
             accounts.push(asset_account);
         }
-        if let Some(mut payment_account) = self.account_repo.find_by_id(&AccountId(req.payment_account_id)).await? {
-            payment_account.credit(base_amount).map_err(|e| AppError::Invalid(e.to_string()))?;
+        if let Some(mut payment_account) = self
+            .account_repo
+            .find_by_id(&AccountId(req.payment_account_id))
+            .await?
+        {
+            payment_account
+                .credit(base_amount)
+                .map_err(|e| AppError::Invalid(e.to_string()))?;
             payment_account.credit += base_amount;
             accounts.push(payment_account);
         }
 
         // Commit asset + movement + journal + account balances in ONE
         // transaction (Sec 9 atomicity).
-        self.repo.save_asset_with_accounting(&asset, &[movement], &[entry], &accounts).await?;
+        self.repo
+            .save_asset_with_accounting(&asset, &[movement], &[entry], &accounts)
+            .await?;
 
         Ok(asset.id)
     }
@@ -322,7 +344,11 @@ impl FixedAssetUseCases {
             ),
             // Each month's depreciation is its own idempotent event; the
             // acquisition journal already owns `asset.id` as its source.
-            Some(format!("asset:{}:depreciation:{}", asset.id.0, date.format("%Y-%m"))),
+            Some(format!(
+                "asset:{}:depreciation:{}",
+                asset.id.0,
+                date.format("%Y-%m")
+            )),
         )
         .map_err(|e| AppError::Invalid(e.to_string()))?;
 
@@ -332,7 +358,9 @@ impl FixedAssetUseCases {
 
         // Commit updated asset + movement + journal in ONE transaction
         // (Sec 9 atomicity).
-        self.repo.save_asset_with_accounting(&asset, &[movement], &[entry], &[]).await?;
+        self.repo
+            .save_asset_with_accounting(&asset, &[movement], &[entry], &[])
+            .await?;
 
         Ok(())
     }
@@ -368,7 +396,9 @@ impl FixedAssetUseCases {
         asset.accumulated_depreciation_account_id = req.accumulated_depreciation_account_id;
         if let Some(ref method) = req.depreciation_method {
             match method.as_str() {
-                "DecliningBalance" => asset.depreciation_method = DepreciationMethod::DecliningBalance,
+                "DecliningBalance" => {
+                    asset.depreciation_method = DepreciationMethod::DecliningBalance
+                }
                 _ => asset.depreciation_method = DepreciationMethod::StraightLine,
             }
         }
@@ -376,9 +406,14 @@ impl FixedAssetUseCases {
 
         // Ensure the GL accounts linked to this asset have purpose=FixedAsset
         // so the reconciliation classifies them correctly (migration 148/164/166).
-        self.ensure_account_fixed_asset_purpose(&AccountId(req.asset_account_id)).await?;
-        self.ensure_account_fixed_asset_purpose(&AccountId(req.depreciation_account_id)).await?;
-        self.ensure_account_fixed_asset_purpose(&AccountId(req.accumulated_depreciation_account_id)).await?;
+        self.ensure_account_fixed_asset_purpose(&AccountId(req.asset_account_id))
+            .await?;
+        self.ensure_account_fixed_asset_purpose(&AccountId(req.depreciation_account_id))
+            .await?;
+        self.ensure_account_fixed_asset_purpose(&AccountId(
+            req.accumulated_depreciation_account_id,
+        ))
+        .await?;
 
         // Collect the acquisition movement and journal updates; all persisted
         // atomically below (Sec 9 atomicity).
@@ -387,7 +422,10 @@ impl FixedAssetUseCases {
 
         // Also update the acquisition movement
         let asset_movements = self.repo.list_movements_by_asset(&id.0).await?;
-        if let Some(mut acq_mov) = asset_movements.into_iter().find(|m| m.movement_type == domain::assets::AssetMovementType::Acquisition) {
+        if let Some(mut acq_mov) = asset_movements
+            .into_iter()
+            .find(|m| m.movement_type == domain::assets::AssetMovementType::Acquisition)
+        {
             acq_mov.date = req.purchase_date;
             acq_mov.amount = req.purchase_cost.clone();
             acq_mov.description = match req.addition_type.as_str() {
@@ -399,9 +437,15 @@ impl FixedAssetUseCases {
 
         // Also update the acquisition journal entry if it exists.
         // Only draft entries are editable; posted ones are immutable.
-        let all_entries = self.journal_repo.find_all_by_source_id(&id.0.to_string()).await?;
+        let all_entries = self
+            .journal_repo
+            .find_all_by_source_id(&id.0.to_string())
+            .await?;
         crate::use_cases::journal::guards::ensure_deletable(&all_entries)?;
-        if let Some(mut entry) = all_entries.into_iter().find(|e| e.journal_type != domain::accounting::JournalType::GeneralJournal || !e.description.contains("إهلاك")) {
+        if let Some(mut entry) = all_entries.into_iter().find(|e| {
+            e.journal_type != domain::accounting::JournalType::GeneralJournal
+                || !e.description.contains("إهلاك")
+        }) {
             entry.description = match req.addition_type.as_str() {
                 "existing" => format!("إضافة أصل سابق (أول المدة): {}", req.name),
                 _ => format!("شراء أصل ثابت: {}", req.name),
@@ -435,7 +479,9 @@ impl FixedAssetUseCases {
         }
 
         // Commit asset + movement + journal in ONE transaction.
-        self.repo.save_asset_with_accounting(&asset, &movements, &entries, &[]).await?;
+        self.repo
+            .save_asset_with_accounting(&asset, &movements, &entries, &[])
+            .await?;
 
         Ok(())
     }
@@ -443,12 +489,17 @@ impl FixedAssetUseCases {
     pub async fn delete_asset(&self, id: FixedAssetId) -> Result<(), AppError> {
         // Find all journal entries for this source. Only drafts may be deleted;
         // posted entries are immutable and must go through a reversal.
-        let entries = self.journal_repo.find_all_by_source_id(&id.0.to_string()).await?;
+        let entries = self
+            .journal_repo
+            .find_all_by_source_id(&id.0.to_string())
+            .await?;
         crate::use_cases::journal::guards::ensure_deletable(&entries)?;
         let entry_ids: Vec<_> = entries.into_iter().map(|e| e.id).collect();
         // Delete journal entries + movements + asset in ONE transaction
         // (Sec 9 atomicity).
-        self.repo.delete_asset_with_accounting(&id, &entry_ids).await?;
+        self.repo
+            .delete_asset_with_accounting(&id, &entry_ids)
+            .await?;
         Ok(())
     }
 
@@ -503,14 +554,14 @@ impl FixedAssetUseCases {
                 domain::accounting::JournalType::GeneralJournal,
                 lines,
                 date,
-                format!(
-                    "إهلاك سنوي: {} للفترة {}",
-                    asset.name,
-                    date.format("%Y")
-                ),
+                format!("إهلاك سنوي: {} للفترة {}", asset.name, date.format("%Y")),
                 // Yearly depreciation is its own idempotent event per year
                 // (acquisition owns `asset.id` as its source).
-                Some(format!("asset:{}:depreciation:year:{}", asset.id.0, date.format("%Y"))),
+                Some(format!(
+                    "asset:{}:depreciation:year:{}",
+                    asset.id.0,
+                    date.format("%Y")
+                )),
             )
             .map_err(|e| AppError::Invalid(e.to_string()))?;
 
@@ -521,14 +572,30 @@ impl FixedAssetUseCases {
 
             // Commit updated asset + movement + journal in ONE transaction
             // (Sec 9 atomicity).
-            self.repo.save_asset_with_accounting(&asset, &[movement], &[entry], &[]).await?;
+            self.repo
+                .save_asset_with_accounting(&asset, &[movement], &[entry], &[])
+                .await?;
 
             results.push(RotationResult {
                 asset_id: asset.id.0.to_string(),
                 asset_name: asset.name.clone(),
-                depreciation_amount: depreciation_amount.amount().to_string().parse().unwrap_or(0.0),
-                accumulated_depreciation: asset.accumulated_depreciation.amount().to_string().parse().unwrap_or(0.0),
-                net_book_value: asset.net_book_value().amount().to_string().parse().unwrap_or(0.0),
+                depreciation_amount: depreciation_amount
+                    .amount()
+                    .to_string()
+                    .parse()
+                    .unwrap_or(0.0),
+                accumulated_depreciation: asset
+                    .accumulated_depreciation
+                    .amount()
+                    .to_string()
+                    .parse()
+                    .unwrap_or(0.0),
+                net_book_value: asset
+                    .net_book_value()
+                    .amount()
+                    .to_string()
+                    .parse()
+                    .unwrap_or(0.0),
             });
         }
 

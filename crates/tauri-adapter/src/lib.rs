@@ -92,10 +92,14 @@ async fn run_startup_backup(app: tauri::AppHandle, state: AppState) {
         .await
         .map(|v| v.map(|s| s == "true").unwrap_or(true))
         .unwrap_or(true);
-    let custom_path = b::get_config(&pool, "backup_custom_path").await.unwrap_or(None);
+    let custom_path = b::get_config(&pool, "backup_custom_path")
+        .await
+        .unwrap_or(None);
     let backup_dir = b::resolve_backup_dir(&db_path, use_same_location, custom_path.as_deref());
 
-    let last_auto = b::get_config(&pool, "backup_last_auto").await.unwrap_or(None);
+    let last_auto = b::get_config(&pool, "backup_last_auto")
+        .await
+        .unwrap_or(None);
     let today = chrono::Local::now().format("%Y%m%d").to_string();
     if last_auto.as_deref() == Some(&today) {
         // Still trim per policy even when today's backup already exists.
@@ -159,14 +163,25 @@ async fn apply_retention(app: &tauri::AppHandle, state: &AppState) {
         .await
         .map(|v| v.map(|s| s == "true").unwrap_or(true))
         .unwrap_or(true);
-    let custom_path = b::get_config(&state.pool, "backup_custom_path").await.unwrap_or(None);
+    let custom_path = b::get_config(&state.pool, "backup_custom_path")
+        .await
+        .unwrap_or(None);
     let backup_dir = b::resolve_backup_dir(&db_path, use_same_location, custom_path.as_deref());
 
     let policy = RetentionPolicy {
         daily: retention_value(state, "backup_keep_daily", RetentionPolicy::default().daily).await,
-        weekly: retention_value(state, "backup_keep_weekly", RetentionPolicy::default().weekly).await,
-        monthly: retention_value(state, "backup_keep_monthly", RetentionPolicy::default().monthly)
-            .await,
+        weekly: retention_value(
+            state,
+            "backup_keep_weekly",
+            RetentionPolicy::default().weekly,
+        )
+        .await,
+        monthly: retention_value(
+            state,
+            "backup_keep_monthly",
+            RetentionPolicy::default().monthly,
+        )
+        .await,
     };
     match b::list_backup_files(&backup_dir) {
         Ok(files) => {
@@ -336,6 +351,15 @@ pub fn run() -> tauri::Builder<tauri::Wry> {
             commands::currency::get_world_currencies,
             commands::currency::is_setup_complete,
             commands::currency::setup_currencies,
+            // Search / barcode / voice / platform foundation
+            commands::search::search_global,
+            commands::barcode::resolve_barcode,
+            commands::voice::preview_voice_intent,
+            commands::voice::execute_voice_command,
+            commands::platform::get_edition_profile,
+            commands::platform::save_edition_profile,
+            commands::platform::get_publishing_profiles,
+            commands::platform::save_publishing_profiles,
             // Update commands
             commands::update::download_and_install_update,
             commands::update::download_and_prepare_update,
@@ -383,9 +407,9 @@ pub fn run() -> tauri::Builder<tauri::Wry> {
             commands::backup::pending_restore_status,
             commands::backup::cancel_pending_restore,
             commands::backup::delete_backup_file,
-commands::backup::copy_backup_file,
-commands::backup::open_backup_location,
-commands::backup::get_database_info,
+            commands::backup::copy_backup_file,
+            commands::backup::open_backup_location,
+            commands::backup::get_database_info,
             commands::backup::request_app_restart,
             commands::backup::get_database_health,
             commands::startup::get_startup_block,
@@ -431,14 +455,20 @@ commands::backup::get_database_info,
                 // Try to find legacy data directory based on old identifier
                 if let Some(old_data_dir) = find_legacy_data_dir() {
                     if old_data_dir.exists() && old_data_dir.join("erp.db").exists() {
-                        eprintln!("🔄 Legacy app data directory detected: {}", old_data_dir.display());
+                        eprintln!(
+                            "🔄 Legacy app data directory detected: {}",
+                            old_data_dir.display()
+                        );
                         // Ensure new data dir exists
                         let _ = std::fs::create_dir_all(&app_data_dir);
                         // Copy all files from old to new
                         if let Err(e) = copy_dir_contents(&old_data_dir, &app_data_dir) {
                             eprintln!("⚠️ Failed to migrate legacy app data: {e}");
                         } else {
-                            eprintln!("✅ Legacy app data migrated from {}", old_data_dir.display());
+                            eprintln!(
+                                "✅ Legacy app data migrated from {}",
+                                old_data_dir.display()
+                            );
                         }
                     }
                 }
@@ -538,10 +568,8 @@ commands::backup::get_database_info,
                     }
                 }
             } else {
-                tauri::async_runtime::block_on(bootstrap::container::build_app_state(
-                    &database_url,
-                ))
-                .expect("Failed to create app state")
+                tauri::async_runtime::block_on(bootstrap::container::build_app_state(&database_url))
+                    .expect("Failed to create app state")
             };
 
             if restore_applied {
@@ -549,9 +577,8 @@ commands::backup::get_database_info,
                 // Post-swap accounting safety: the imported DB may have passed
                 // pre-import validation but a mismatch here reverts it. The
                 // pending marker is removed only after this succeeds.
-                let valid = tauri::async_runtime::block_on(validate_applied_restore(
-                    &app_state.pool,
-                ));
+                let valid =
+                    tauri::async_runtime::block_on(validate_applied_restore(&app_state.pool));
                 match valid {
                     Ok(()) => {
                         let _ = std::fs::remove_file(db_path.with_extension("sqlite.pre_restore"));
@@ -611,8 +638,7 @@ fn find_legacy_data_dir() -> Option<std::path::PathBuf> {
         }
         _ => {
             // Linux/other: ~/.local/share/com.almowakeb.erp
-            std::env::home_dir()
-                .map(|home| home.join(".local/share").join(legacy_id))
+            std::env::home_dir().map(|home| home.join(".local/share").join(legacy_id))
         }
     }
 }
@@ -622,12 +648,18 @@ fn copy_dir_contents(src: &std::path::Path, dst: &std::path::Path) -> Result<(),
     let _ = std::fs::create_dir_all(dst);
     for entry in std::fs::read_dir(src).map_err(|e| format!("Failed to read legacy dir: {e}"))? {
         let entry = entry.map_err(|e| format!("Failed to read entry: {e}"))?;
-        let file_type = entry.file_type().map_err(|e| format!("Failed to get type: {e}"))?;
+        let file_type = entry
+            .file_type()
+            .map_err(|e| format!("Failed to get type: {e}"))?;
         if file_type.is_file() {
             let dest = dst.join(entry.file_name());
             if !dest.exists() {
-                std::fs::copy(entry.path(), &dest)
-                    .map_err(|e| format!("Failed to copy {}: {e}", entry.file_name().to_string_lossy()))?;
+                std::fs::copy(entry.path(), &dest).map_err(|e| {
+                    format!(
+                        "Failed to copy {}: {e}",
+                        entry.file_name().to_string_lossy()
+                    )
+                })?;
             }
         }
     }
@@ -636,11 +668,7 @@ fn copy_dir_contents(src: &std::path::Path, dst: &std::path::Path) -> Result<(),
 
 /// Swap the rejected import back to the previous DB and rebuild the app state
 /// bound to that previous DB. Only safe BEFORE the app manages any state.
-fn rollback_and_rebuild(
-    database_url: &str,
-    db_path: &std::path::Path,
-    app: &tauri::App,
-) {
+fn rollback_and_rebuild(database_url: &str, db_path: &std::path::Path, app: &tauri::App) {
     use infrastructure::db::backup as b;
     if let Err(e) = b::rollback_restore(db_path) {
         eprintln!("⚠️ Rollback failed: {e}");

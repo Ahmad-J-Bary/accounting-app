@@ -56,3 +56,4 @@ define_id!(SalesReturnId);
 define_id!(PurchaseReturnId);
 define_id!(WarehouseId);
 define_id!(FiscalPeriodId);
+define_id!(FiscalYearId);

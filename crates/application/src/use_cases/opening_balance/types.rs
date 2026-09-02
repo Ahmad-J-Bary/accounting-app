@@ -134,10 +134,10 @@ pub const KIND_LOAN: &str = "Loan";
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct OpeningItemInput {
-    pub kind: String,          // KIND_AR | KIND_AP | KIND_INVENTORY | KIND_FIXED_ASSET | KIND_BANK | KIND_LOAN
-    pub entity_id: String,     // real customer/supplier/material/asset id or ledger AccountId for bank/loan
+    pub kind: String, // KIND_AR | KIND_AP | KIND_INVENTORY | KIND_FIXED_ASSET | KIND_BANK | KIND_LOAN
+    pub entity_id: String, // real customer/supplier/material/asset id or ledger AccountId for bank/loan
     pub reference: Option<String>,
-    pub amount: String,        // AR/AP net balance, inventory total cost, FA net book value, bank/loan balance
+    pub amount: String, // AR/AP net balance, inventory total cost, FA net book value, bank/loan balance
     pub qty: String,
 }
 

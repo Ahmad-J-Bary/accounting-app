@@ -12,7 +12,7 @@ use crate::errors::AppError;
 use crate::ports::account_repository::AccountRepository;
 use crate::ports::journal_entry_repository::{JournalEntryRepository, ReversalScope};
 use crate::ports::opening_migration_repository::OpeningMigrationRepository;
-use crate::use_cases::opening_balance::types::{ComputedNetProfitDto, ComputeNetProfitCommand};
+use crate::use_cases::opening_balance::types::{ComputeNetProfitCommand, ComputedNetProfitDto};
 
 /// Computes the net profit figure for the cutover from the *posted* journal
 /// ledger up to (and including) the migration's cutover date. This is the
@@ -46,8 +46,14 @@ impl ComputeNetProfitUseCase {
         }
     }
 
-    pub async fn execute(&self, cmd: ComputeNetProfitCommand) -> Result<ComputedNetProfitDto, AppError> {
-        let migration = self.migration_repo.find_by_id(&cmd.migration_id).await?
+    pub async fn execute(
+        &self,
+        cmd: ComputeNetProfitCommand,
+    ) -> Result<ComputedNetProfitDto, AppError> {
+        let migration = self
+            .migration_repo
+            .find_by_id(&cmd.migration_id)
+            .await?
             .ok_or_else(|| AppError::NotFound("ترحيل الرصيد الافتتاحي غير موجود".into()))?;
 
         // An explicit period window wins over the migration's cutover date, so
@@ -59,7 +65,8 @@ impl ComputeNetProfitUseCase {
         // The POSTED-LEDGER policy (see `ReversalScope`): only Posted entries
         // with no reversal relationship feed profit — a reversal contra journal
         // must never move net profit.
-        let entries = self.journal_repo
+        let entries = self
+            .journal_repo
             .list_with_filters(
                 from,
                 to,
@@ -90,10 +97,15 @@ type PeriodBounds = (Option<DateTime<Utc>>, Option<DateTime<Utc>>);
 /// Both must be present and ISO-8601 parseable; otherwise `None` is returned so
 /// the caller falls back to the cutover window.
 fn parse_period(start: Option<&str>, end: Option<&str>) -> Option<PeriodBounds> {
-    let (Some(start), Some(end)) = (start, end) else { return None };
+    let (Some(start), Some(end)) = (start, end) else {
+        return None;
+    };
     let start_dt = DateTime::parse_from_rfc3339(start).ok()?;
     let end_dt = DateTime::parse_from_rfc3339(end).ok()?;
-    Some((Some(start_dt.with_timezone(&Utc)), Some(end_dt.with_timezone(&Utc))))
+    Some((
+        Some(start_dt.with_timezone(&Utc)),
+        Some(end_dt.with_timezone(&Utc)),
+    ))
 }
 
 /// Inclusive end-of-day bound so posted entries dated on the cutover day itself
@@ -179,11 +191,7 @@ mod tests {
         .unwrap()
     }
 
-    fn posted_entry(
-        account_id: AccountId,
-        debit: i64,
-        credit: i64,
-    ) -> JournalEntry {
+    fn posted_entry(account_id: AccountId, debit: i64, credit: i64) -> JournalEntry {
         let cur = Currency::new("SAR", "SAR", "ريال", "ر.س", 2, false);
         let mut entry = JournalEntry::new(
             format!("JE-{}-{debit}-{credit}", uuid_gen()),
@@ -211,10 +219,10 @@ mod tests {
     fn revenue_and_expenses_are_separated() {
         let rev = account("4001", AccountType::Revenue);
         let exp = account("5001", AccountType::Expenses);
-        let totals = compute_ledger_totals(&[rev.clone(), exp.clone()], &[
-            posted_entry(rev.id, 0, 1000),
-            posted_entry(exp.id, 300, 0),
-        ]);
+        let totals = compute_ledger_totals(
+            &[rev.clone(), exp.clone()],
+            &[posted_entry(rev.id, 0, 1000), posted_entry(exp.id, 300, 0)],
+        );
         assert_eq!(totals.revenue, dec!(1000));
         assert_eq!(totals.expenses, dec!(300));
         assert_eq!(totals.net, dec!(700));
@@ -253,10 +261,13 @@ mod tests {
         let rev = account("4001", AccountType::Revenue);
         // After migration 143 the partner drawings account (44X) is Equity.
         let drawings = account("4401", AccountType::Equity);
-        let totals = compute_ledger_totals(&[rev.clone(), drawings.clone()], &[
-            posted_entry(rev.id, 0, 1000),
-            posted_entry(drawings.id, 250, 0),
-        ]);
+        let totals = compute_ledger_totals(
+            &[rev.clone(), drawings.clone()],
+            &[
+                posted_entry(rev.id, 0, 1000),
+                posted_entry(drawings.id, 250, 0),
+            ],
+        );
         assert_eq!(totals.expenses, Decimal::ZERO);
         assert_eq!(totals.net, dec!(1000));
     }
@@ -284,30 +295,41 @@ mod tests {
         )
         .unwrap()
         .with_purpose(domain::accounting::account::AccountPurpose::PartnerDrawings);
-        let totals = compute_ledger_totals(&[rev.clone(), drawings.clone()], &[
-            posted_entry(rev.id, 0, 1000),
-            posted_entry(drawings.id, 250, 0),
-        ]);
+        let totals = compute_ledger_totals(
+            &[rev.clone(), drawings.clone()],
+            &[
+                posted_entry(rev.id, 0, 1000),
+                posted_entry(drawings.id, 250, 0),
+            ],
+        );
         assert_eq!(totals.net, dec!(1000));
     }
 
     #[test]
     fn explicit_period_wins_over_cutover() {
-        let window = parse_period(
-            Some("2026-01-01T00:00:00Z"),
-            Some("2026-12-31T23:59:59Z"),
+        let window = parse_period(Some("2026-01-01T00:00:00Z"), Some("2026-12-31T23:59:59Z"));
+        assert_eq!(
+            window,
+            Some((
+                Some(expected_utc("2026-01-01T00:00:00Z")),
+                Some(expected_utc("2026-12-31T23:59:59Z"))
+            ))
         );
-        assert_eq!(window, Some((Some(expected_utc("2026-01-01T00:00:00Z")), Some(expected_utc("2026-12-31T23:59:59Z")))));
     }
 
     #[test]
     fn missing_period_falls_back_to_cutover() {
         assert_eq!(parse_period(None, None), None);
-        assert_eq!(parse_period(Some("not-a-date"), Some("2026-12-31T23:59:59Z")), None);
+        assert_eq!(
+            parse_period(Some("not-a-date"), Some("2026-12-31T23:59:59Z")),
+            None
+        );
         assert_eq!(parse_period(Some("2026-01-01T00:00:00Z"), None), None);
     }
 
     fn expected_utc(rfc3339: &str) -> chrono::DateTime<Utc> {
-        chrono::DateTime::parse_from_rfc3339(rfc3339).unwrap().with_timezone(&Utc)
+        chrono::DateTime::parse_from_rfc3339(rfc3339)
+            .unwrap()
+            .with_timezone(&Utc)
     }
 }

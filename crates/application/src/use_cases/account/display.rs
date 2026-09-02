@@ -26,10 +26,7 @@ pub fn derive_journal_type_display(
 
     let names = [opposite_account_name, view_account_name];
     let asset_type = if names.iter().any(|s| {
-        s.contains("أبنية")
-            || s.contains("أراضي")
-            || s.contains("المباني")
-            || s.contains("الأراضي")
+        s.contains("أبنية") || s.contains("أراضي") || s.contains("المباني") || s.contains("الأراضي")
     }) {
         "أبنية وأراضي"
     } else if names.iter().any(|s| {
@@ -41,15 +38,13 @@ pub fn derive_journal_type_display(
     }) {
         "آليات ومركبات"
     } else if names.iter().any(|s| {
-        s.contains("معدات")
-            || s.contains("تجهيزات")
-            || s.contains("الآلات")
-            || s.contains("المعدات")
+        s.contains("معدات") || s.contains("تجهيزات") || s.contains("الآلات") || s.contains("المعدات")
     }) {
         "معدات وتجهيزات"
-    } else if names.iter().any(|s| {
-        s.contains("أثاث") || s.contains("مفروشات") || s.contains("المفروشات")
-    }) {
+    } else if names
+        .iter()
+        .any(|s| s.contains("أثاث") || s.contains("مفروشات") || s.contains("المفروشات"))
+    {
         "أثاث ومفروشات"
     } else {
         "أصول ثابتة"
@@ -100,7 +95,10 @@ mod tests {
             JournalType::GeneralJournal,
             "إثبات رصيد افتتاحي للمورد"
         ));
-        assert!(is_opening_line(JournalType::GeneralJournal, "مواد أول المدة"));
+        assert!(is_opening_line(
+            JournalType::GeneralJournal,
+            "مواد أول المدة"
+        ));
         assert!(!is_opening_line(JournalType::GeneralJournal, "فاتورة بيع"));
         assert!(!is_opening_line(JournalType::CashReceipt, "سند قبض عادي"));
     }

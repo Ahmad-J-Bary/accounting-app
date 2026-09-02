@@ -74,7 +74,10 @@ pub async fn resolve_designated_account(
     if let Some(a) = active.iter().find(|a| a.is_default) {
         return Ok(Some((*a).clone()));
     }
-    if let Some(a) = active.iter().find(|a| a.category == AccountCategory::Detail) {
+    if let Some(a) = active
+        .iter()
+        .find(|a| a.category == AccountCategory::Detail)
+    {
         return Ok(Some((*a).clone()));
     }
     if let Some(code) = designated_code(classification) {
@@ -109,14 +112,13 @@ impl GetResidualClassificationSpecUseCase {
                 .account_purpose()
                 .map(|p| vec![p.to_str().to_string()])
                 .unwrap_or_default();
-            let designated_account =
-                resolve_designated_account(&self.account_repo, classification)
-                    .await?
-                    .map(|a| ResidualDesignatedAccountDto {
-                        id: a.id.0.to_string(),
-                        code: a.code,
-                        name_ar: a.name_ar,
-                    });
+            let designated_account = resolve_designated_account(&self.account_repo, classification)
+                .await?
+                .map(|a| ResidualDesignatedAccountDto {
+                    id: a.id.0.to_string(),
+                    code: a.code,
+                    name_ar: a.name_ar,
+                });
             specs.push(ResidualClassificationSpec {
                 key: classification.as_str().to_string(),
                 label_ar: classification.label_ar().to_string(),
@@ -134,9 +136,7 @@ impl GetResidualClassificationSpecUseCase {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use domain::accounting::account::{
-        Account, AccountCategory, AccountPurpose, AccountType,
-    };
+    use domain::accounting::account::{Account, AccountCategory, AccountPurpose, AccountType};
     use domain::shared::currency::Currency;
     use rust_decimal::Decimal;
 
@@ -184,7 +184,11 @@ mod tests {
             ResidualClassification::OtherEquity,
         ] {
             let a = resolve_designated_account(&repo, c).await.unwrap();
-            assert_eq!(a.map(|a| a.code), designated_code(c).map(String::from), "{c:?}");
+            assert_eq!(
+                a.map(|a| a.code),
+                designated_code(c).map(String::from),
+                "{c:?}"
+            );
         }
     }
 
@@ -233,10 +237,16 @@ mod tests {
         assert!(!retained.requires_confirmation);
         assert_eq!(retained.designated_account.as_ref().unwrap().code, "52");
 
-        let prior = specs.iter().find(|s| s.key == "PriorPeriodAdjustment").unwrap();
+        let prior = specs
+            .iter()
+            .find(|s| s.key == "PriorPeriodAdjustment")
+            .unwrap();
         assert!(prior.requires_confirmation);
 
-        let unresolved = specs.iter().find(|s| s.key == "UnresolvedDifference").unwrap();
+        let unresolved = specs
+            .iter()
+            .find(|s| s.key == "UnresolvedDifference")
+            .unwrap();
         assert!(!unresolved.allows_posting);
         assert!(unresolved.allowed_purposes.is_empty());
         assert!(unresolved.designated_account.is_none());

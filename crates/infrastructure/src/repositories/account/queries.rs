@@ -1,9 +1,9 @@
-use sqlx::SqlitePool;
-use application::errors::AppError;
-use domain::accounting::account::{Account};
-use domain::shared::ids::{AccountId};
-use super::models::AccountRow;
 use super::mappers::row_to_account;
+use super::models::AccountRow;
+use application::errors::AppError;
+use domain::accounting::account::Account;
+use domain::shared::ids::AccountId;
+use sqlx::SqlitePool;
 
 pub async fn find_by_id(pool: &SqlitePool, id: &AccountId) -> Result<Option<Account>, AppError> {
     let row = sqlx::query_as::<_, AccountRow>("SELECT * FROM accounts WHERE id = ?")
@@ -41,12 +41,13 @@ pub async fn list_all(pool: &SqlitePool) -> Result<Vec<Account>, AppError> {
 pub async fn get_next_child_code(pool: &SqlitePool, parent_code: &str) -> Result<String, AppError> {
     // نعتبر أن الأبناء لهم أكواد تبدأ بكود الأب
     // نبحث عن أكبر كود حالي تحت هذا الأب
-    let row: (Option<String>,) = sqlx::query_as("SELECT MAX(code) FROM accounts WHERE code LIKE ? AND length(code) > ?")
-        .bind(format!("{}%", parent_code))
-        .bind(parent_code.len() as i32)
-        .fetch_one(pool)
-        .await
-        .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+    let row: (Option<String>,) =
+        sqlx::query_as("SELECT MAX(code) FROM accounts WHERE code LIKE ? AND length(code) > ?")
+            .bind(format!("{}%", parent_code))
+            .bind(parent_code.len() as i32)
+            .fetch_one(pool)
+            .await
+            .map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
     if let Some(max_code) = row.0 {
         // إذا وجدنا كود، نقوم بزيادة الجزء الأخير

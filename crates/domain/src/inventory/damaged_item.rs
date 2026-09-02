@@ -1,6 +1,6 @@
 use crate::shared::errors::DomainError;
 use crate::shared::ids::{DamagedItemId, MaterialId};
-use crate::shared::{Currency, Money, MonetaryAmount};
+use crate::shared::{Currency, MonetaryAmount, Money};
 use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
@@ -23,23 +23,32 @@ impl DamageFinancialSnapshot {
     ) -> Result<Self, DomainError> {
         let currency_code = amount.currency().code.clone();
         if currency_code.trim().is_empty() {
-            return Err(DomainError::Invalid("عملة التالف لا يمكن أن تكون فارغة".into()));
+            return Err(DomainError::Invalid(
+                "عملة التالف لا يمكن أن تكون فارغة".into(),
+            ));
         }
         if amount.fx_rate <= Decimal::ZERO {
-            return Err(DomainError::Invalid("سعر الصرف يجب أن يكون أكبر من صفر".into()));
+            return Err(DomainError::Invalid(
+                "سعر الصرف يجب أن يكون أكبر من صفر".into(),
+            ));
         }
         if amount.amount() < Decimal::ZERO || amount.base_amount < Decimal::ZERO {
-            return Err(DomainError::Invalid("مبالغ التالف لا يمكن أن تكون سالبة".into()));
+            return Err(DomainError::Invalid(
+                "مبالغ التالف لا يمكن أن تكون سالبة".into(),
+            ));
         }
         let _ = MonetaryAmount::new(
-            Money::new(amount.amount(), Currency::new(
-                &currency_code,
-                &currency_code,
-                &currency_code,
-                &currency_code,
-                base_currency.decimals,
-                currency_code == base_currency.code,
-            )),
+            Money::new(
+                amount.amount(),
+                Currency::new(
+                    &currency_code,
+                    &currency_code,
+                    &currency_code,
+                    &currency_code,
+                    base_currency.decimals,
+                    currency_code == base_currency.code,
+                ),
+            ),
             amount.fx_rate,
         );
         Ok(Self {
@@ -83,7 +92,9 @@ impl DamagedItem {
             || financials.loss < Decimal::ZERO
             || financials.loss_base < Decimal::ZERO
         {
-            return Err(DomainError::Invalid("قيمة التكلفة لا يمكن أن تكون سالبة".into()));
+            return Err(DomainError::Invalid(
+                "قيمة التكلفة لا يمكن أن تكون سالبة".into(),
+            ));
         }
         Ok(Self {
             id: DamagedItemId(Uuid::new_v4()),

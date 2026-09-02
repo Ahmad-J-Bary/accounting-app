@@ -16,8 +16,8 @@ use chrono::{DateTime, Utc};
 use domain::accounting::fiscal_period::FiscalPeriodStatus;
 use domain::accounting::journal_entry::{JournalEntry, JournalLine, JournalType};
 use domain::shared::currency::Currency;
-use domain::shared::money::Money;
 use domain::shared::monetary_amount::MonetaryAmount;
+use domain::shared::money::Money;
 use domain::shared::AccountId;
 use infrastructure::db::pool::run_migrations;
 use infrastructure::repositories::{SqliteFiscalPeriodRepository, SqliteJournalEntryRepository};
@@ -26,7 +26,10 @@ use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 
 async fn build_pool() -> Arc<sqlx::SqlitePool> {
     let mut path = std::env::temp_dir();
-    path.push(format!("acc_period_auto_open_{}.sqlite", uuid::Uuid::new_v4()));
+    path.push(format!(
+        "acc_period_auto_open_{}.sqlite",
+        uuid::Uuid::new_v4()
+    ));
     let options = SqliteConnectOptions::from_str(path.to_str().unwrap())
         .unwrap()
         .create_if_missing(true);
@@ -45,7 +48,9 @@ fn test_currency() -> Currency {
 }
 
 fn utc(rfc3339: &str) -> DateTime<Utc> {
-    DateTime::parse_from_rfc3339(rfc3339).unwrap().with_timezone(&Utc)
+    DateTime::parse_from_rfc3339(rfc3339)
+        .unwrap()
+        .with_timezone(&Utc)
 }
 
 async fn real_accounts(pool: &sqlx::SqlitePool) -> (AccountId, AccountId) {
@@ -116,14 +121,26 @@ async fn posting_after_last_period_auto_opens_covering_period() {
     // Recording a payment dated inside 2026 (after every period) succeeds and
     // auto-opens a fresh Open period that covers the entry date.
     let res = post_dated(&journal_repo, &pool, utc("2026-08-30T10:00:00Z")).await;
-    assert!(res.is_ok(), "posting after the last period must auto-open: {:?}", res);
+    assert!(
+        res.is_ok(),
+        "posting after the last period must auto-open: {:?}",
+        res
+    );
 
     let periods = period_repo.list().await.unwrap();
-    let opened = periods.iter().find(|p| p.status.can_post() && p.contains(utc("2026-08-30T10:00:00Z")));
-    assert!(opened.is_some(), "an Open period covering the entry date must exist");
+    let opened = periods
+        .iter()
+        .find(|p| p.status.can_post() && p.contains(utc("2026-08-30T10:00:00Z")));
+    assert!(
+        opened.is_some(),
+        "an Open period covering the entry date must exist"
+    );
     let opened = opened.unwrap();
     assert_eq!(opened.status, FiscalPeriodStatus::Open);
-    assert!(opened.start_date > utc("2025-12-31T23:59:59Z"), "must not overlap the 2025 period");
+    assert!(
+        opened.start_date > utc("2025-12-31T23:59:59Z"),
+        "must not overlap the 2025 period"
+    );
 
     // The rolled-forward period is reused: a second posting in 2026 keeps
     // working WITHOUT creating a duplicate period.
@@ -158,13 +175,27 @@ async fn rolls_forward_from_latest_period_without_overlap() {
         .unwrap();
 
     let res = post_dated(&journal_repo, &pool, utc("2026-08-30T10:00:00Z")).await;
-    assert!(res.is_ok(), "must roll forward after mid-year period end: {:?}", res);
+    assert!(
+        res.is_ok(),
+        "must roll forward after mid-year period end: {:?}",
+        res
+    );
 
     let periods = period_repo.list().await.unwrap();
-    let covering: Vec<_> = periods.iter().filter(|p| p.contains(utc("2026-08-30T10:00:00Z"))).collect();
-    assert_eq!(covering.len(), 1, "exactly one period covers the entry date");
+    let covering: Vec<_> = periods
+        .iter()
+        .filter(|p| p.contains(utc("2026-08-30T10:00:00Z")))
+        .collect();
+    assert_eq!(
+        covering.len(),
+        1,
+        "exactly one period covers the entry date"
+    );
     assert!(covering[0].status.can_post());
-    assert!(covering[0].start_date > utc("2026-03-31T23:59:59Z"), "new period starts after the previous end");
+    assert!(
+        covering[0].start_date > utc("2026-03-31T23:59:59Z"),
+        "new period starts after the previous end"
+    );
 }
 
 /// Backdated entries stay blocked: auto-open only ever moves forward, and past
@@ -188,6 +219,14 @@ async fn backdated_entry_before_earliest_period_still_rejected() {
         .unwrap();
 
     let res = post_dated(&journal_repo, &pool, utc("2025-11-30T08:00:00Z")).await;
-    assert!(matches!(res, Err(AppError::Forbidden(_))), "backdated entry must stay blocked: {:?}", res);
-    assert_eq!(period_repo.list().await.unwrap().len(), 1, "no period may be auto-created for past dates");
+    assert!(
+        matches!(res, Err(AppError::Forbidden(_))),
+        "backdated entry must stay blocked: {:?}",
+        res
+    );
+    assert_eq!(
+        period_repo.list().await.unwrap().len(),
+        1,
+        "no period may be auto-created for past dates"
+    );
 }

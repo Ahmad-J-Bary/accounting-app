@@ -1,11 +1,11 @@
 use std::str::FromStr;
 use std::sync::Arc;
 
+use application::ports::partner_repository::PartnerRepository;
 use domain::accounting::account::{Account, AccountCategory, AccountType};
 use domain::accounting::partner::{Partner, ProfitSharingType};
 use domain::shared::currency::Currency;
 use domain::shared::ids::AccountId;
-use application::ports::partner_repository::PartnerRepository;
 use infrastructure::db::pool::run_migrations;
 use infrastructure::repositories::SqlitePartnerRepository;
 use rust_decimal::Decimal;
@@ -103,7 +103,11 @@ async fn save_with_accounts_persists_partner_and_accounts_atomically() {
         .await
         .unwrap();
 
-    let stored = repo.find_by_id(&partner.id).await.unwrap().expect("partner persisted");
+    let stored = repo
+        .find_by_id(&partner.id)
+        .await
+        .unwrap()
+        .expect("partner persisted");
     assert_eq!(stored.name, "One");
     let cap_rows: i64 = sqlx::query_scalar("SELECT count(*) FROM accounts WHERE id = ?")
         .bind(capital.id.to_string())
@@ -151,7 +155,9 @@ async fn save_with_accounts_rolls_back_everything_when_account_code_duplicates()
     partner.link_account(capital.id);
     partner.link_drawings_account(drawings.id);
 
-    let err = repo.save_with_accounts(&partner, &capital, &drawings, None).await;
+    let err = repo
+        .save_with_accounts(&partner, &capital, &drawings, None)
+        .await;
     assert!(err.is_err(), "المعاملة يجب أن تفشل عند تضارب كود الحساب");
 
     let partner_rows: i64 = sqlx::query_scalar("SELECT count(*) FROM partners WHERE id = ?")

@@ -118,11 +118,22 @@ async fn register_partner_with_capital(pool: &Arc<sqlx::SqlitePool>) -> (String,
         Arc::new(SqliteOpeningMigrationRepository::new(pool.clone())),
     );
     contribution
-        .execute(id.clone(), cash.to_string(), Decimal::from(1000), false, Some("cap-evt-1".into()))
+        .execute(
+            id.clone(),
+            cash.to_string(),
+            Decimal::from(1000),
+            false,
+            Some("cap-evt-1".into()),
+        )
         .await
         .expect("contribution posts");
 
-    (id, partner.linked_account_id.expect("partner has capital account"))
+    (
+        id,
+        partner
+            .linked_account_id
+            .expect("partner has capital account"),
+    )
 }
 
 // ---------------------------------------------------------------------------
@@ -143,21 +154,31 @@ async fn capitalization_posts_balanced_auditable_journal_and_is_idempotent() {
         Arc::new(SqliteAccountRepository::new(pool.clone()));
     let partner_repo: Arc<dyn PartnerRepository> =
         Arc::new(SqlitePartnerRepository::new(pool.clone()));
-    let uc = CapitalizeRetainedEarningsUseCase::new(
-        partner_repo,
-        account_repo,
-        journal_repo.clone(),
-    );
+    let uc =
+        CapitalizeRetainedEarningsUseCase::new(partner_repo, account_repo, journal_repo.clone());
 
     let first = uc
-        .execute(partner_id.clone(), Decimal::from(500), None, Some("capitalization-1".into()))
+        .execute(
+            partner_id.clone(),
+            Decimal::from(500),
+            None,
+            Some("capitalization-1".into()),
+        )
         .await
         .expect("capitalization posts");
     let replay = uc
-        .execute(partner_id, Decimal::from(500), None, Some("capitalization-1".into()))
+        .execute(
+            partner_id,
+            Decimal::from(500),
+            None,
+            Some("capitalization-1".into()),
+        )
         .await
         .expect("replay resolves to the same journal");
-    assert_eq!(first, replay, "re-submitting the same event id must not double-post");
+    assert_eq!(
+        first, replay,
+        "re-submitting the same event id must not double-post"
+    );
 
     // Exactly one Capitalization journal with the canonical source id.
     let (count, source): (i64, Option<String>) = sqlx::query_as(
@@ -177,7 +198,10 @@ async fn capitalization_posts_balanced_auditable_journal_and_is_idempotent() {
         close_enough(retained_bal, 500.0),
         "retained earnings (52) debited 500 (reducing it), got {retained_bal}"
     );
-    assert!(close_enough(cap_bal, -1500.0), "partner capital credited 500 more (−1500 total), got {cap_bal}");
+    assert!(
+        close_enough(cap_bal, -1500.0),
+        "partner capital credited 500 more (−1500 total), got {cap_bal}"
+    );
     assert!(close_enough(cash_bal, 1000.0));
 
     // The whole ledger stays balanced.
@@ -188,5 +212,8 @@ async fn capitalization_posts_balanced_auditable_journal_and_is_idempotent() {
     .fetch_one(&*pool)
     .await
     .unwrap();
-    assert!(close_enough(d, c), "full ledger must balance (debit {d} vs credit {c})");
+    assert!(
+        close_enough(d, c),
+        "full ledger must balance (debit {d} vs credit {c})"
+    );
 }

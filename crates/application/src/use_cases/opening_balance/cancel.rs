@@ -1,6 +1,6 @@
-use std::sync::Arc;
 use domain::accounting::journal_entry::{JournalEntry, JournalLine};
 use domain::accounting::MigrationStatus;
+use std::sync::Arc;
 
 use crate::errors::AppError;
 use crate::ports::journal_entry_repository::JournalEntryRepository;
@@ -24,7 +24,11 @@ impl CancelOpeningBalanceUseCase {
         journal_repo: Arc<dyn JournalEntryRepository>,
         posting_repo: Arc<dyn OpeningPostingRepository>,
     ) -> Self {
-        Self { migration_repo, journal_repo, posting_repo }
+        Self {
+            migration_repo,
+            journal_repo,
+            posting_repo,
+        }
     }
 
     pub async fn execute(&self, id: String) -> Result<OpeningMigrationDto, AppError> {
@@ -36,7 +40,10 @@ impl CancelOpeningBalanceUseCase {
             ));
         }
 
-        let mut migration = self.migration_repo.find_by_id(&id).await?
+        let mut migration = self
+            .migration_repo
+            .find_by_id(&id)
+            .await?
             .ok_or_else(|| AppError::NotFound("ترحيل الرصيد الافتتاحي غير موجود".into()))?;
 
         match migration.status {
@@ -59,7 +66,10 @@ impl CancelOpeningBalanceUseCase {
 
         // Locate the originally-posted opening journal used to derive the contra entry.
         let source_id = format!("opening_balance:{}", migration.id);
-        let posted = self.journal_repo.find_by_source_id(&source_id).await?
+        let posted = self
+            .journal_repo
+            .find_by_source_id(&source_id)
+            .await?
             .ok_or_else(|| AppError::NotFound("قيد ترحيل الرصيد الافتتاحي غير موجود".into()))?;
 
         if posted.status != domain::accounting::JournalEntryStatus::Posted {
@@ -93,17 +103,24 @@ impl CancelOpeningBalanceUseCase {
             migration.cutover_date,
             "عكس ترحيل رصيد الافتتاح (إلغاء)".to_string(),
             Some(format!("ob_reversal:{}", migration.id)),
-        ).map_err(|e| AppError::Invalid(e.to_string()))?
+        )
+        .map_err(|e| AppError::Invalid(e.to_string()))?
         .with_source_type("opening_balance_reversal".to_string());
 
         reversal.reversal_of_entry_id = Some(posted.id);
-        reversal.post().map_err(|e| AppError::Invalid(e.to_string()))?;
+        reversal
+            .post()
+            .map_err(|e| AppError::Invalid(e.to_string()))?;
 
         let mut posted = posted;
-        posted.reverse().map_err(|e| AppError::Invalid(e.to_string()))?;
+        posted
+            .reverse()
+            .map_err(|e| AppError::Invalid(e.to_string()))?;
 
         migration.un_post().map_err(AppError::Domain)?;
-        self.posting_repo.cancel(&migration, &reversal, &posted).await?;
+        self.posting_repo
+            .cancel(&migration, &reversal, &posted)
+            .await?;
 
         Ok(OpeningMigrationDto(migration))
     }

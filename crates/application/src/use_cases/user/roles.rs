@@ -1,8 +1,8 @@
-use std::sync::Arc;
-use domain::auth::{Role};
-use crate::ports::user_repository::UserRepository;
 use crate::dto::user_dto::{CreateRoleRequest, RoleDto};
 use crate::errors::AppError;
+use crate::ports::user_repository::UserRepository;
+use domain::auth::Role;
+use std::sync::Arc;
 
 pub struct CreateRoleUseCase {
     repo: Arc<dyn UserRepository>,
@@ -14,7 +14,9 @@ impl CreateRoleUseCase {
     }
 
     pub async fn execute(&self, req: CreateRoleRequest) -> Result<RoleDto, AppError> {
-        let permissions = req.permissions.into_iter()
+        let permissions = req
+            .permissions
+            .into_iter()
             .filter_map(|p| match p.as_str() {
                 "ViewAccounts" => Some(domain::auth::Permission::ViewAccounts),
                 "CreateAccount" => Some(domain::auth::Permission::CreateAccount),
@@ -50,7 +52,13 @@ impl RoleQueries {
     }
 
     pub async fn list_all(&self) -> Result<Vec<RoleDto>, AppError> {
-        Ok(self.repo.list_roles().await?.into_iter().map(role_to_dto).collect())
+        Ok(self
+            .repo
+            .list_roles()
+            .await?
+            .into_iter()
+            .map(role_to_dto)
+            .collect())
     }
 }
 
@@ -59,7 +67,11 @@ fn role_to_dto(r: Role) -> RoleDto {
         id: r.id.to_string(),
         name: r.name,
         description: r.description,
-        permissions: r.permissions.into_iter().map(|p| format!("{:?}", p)).collect(),
+        permissions: r
+            .permissions
+            .into_iter()
+            .map(|p| format!("{:?}", p))
+            .collect(),
         is_system_role: r.is_system_role,
         created_at: r.created_at.to_rfc3339(),
     }

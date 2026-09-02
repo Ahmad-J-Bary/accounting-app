@@ -1,15 +1,17 @@
-use async_trait::async_trait;
-use sqlx::SqlitePool;
 use application::errors::AppError;
 use application::ports::asset_repository::AssetRepository;
-use domain::assets::{FixedAsset, FixedAssetId, AssetCategory, AssetType, AssetMovement, DepreciationSchedule};
+use async_trait::async_trait;
+use domain::assets::{
+    AssetCategory, AssetMovement, AssetType, DepreciationSchedule, FixedAsset, FixedAssetId,
+};
+use sqlx::SqlitePool;
 use std::sync::Arc;
 use uuid::Uuid;
 
-mod models;
-mod mappers;
-mod queries;
 mod commands;
+mod mappers;
+mod models;
+mod queries;
 
 pub struct SqliteAssetRepository {
     pool: Arc<SqlitePool>,
@@ -47,7 +49,10 @@ impl AssetRepository for SqliteAssetRepository {
         commands::save_movement(&self.pool, movement).await
     }
 
-    async fn list_movements_by_asset(&self, asset_id: &Uuid) -> Result<Vec<AssetMovement>, AppError> {
+    async fn list_movements_by_asset(
+        &self,
+        asset_id: &Uuid,
+    ) -> Result<Vec<AssetMovement>, AppError> {
         queries::list_movements_by_asset(&self.pool, asset_id).await
     }
 
@@ -55,11 +60,17 @@ impl AssetRepository for SqliteAssetRepository {
         queries::list_all_movements(&self.pool).await
     }
 
-    async fn save_depreciation_schedule(&self, schedule: &DepreciationSchedule) -> Result<(), AppError> {
+    async fn save_depreciation_schedule(
+        &self,
+        schedule: &DepreciationSchedule,
+    ) -> Result<(), AppError> {
         commands::save_depreciation_schedule(&self.pool, schedule).await
     }
 
-    async fn get_depreciation_schedule(&self, asset_id: &Uuid) -> Result<Vec<DepreciationSchedule>, AppError> {
+    async fn get_depreciation_schedule(
+        &self,
+        asset_id: &Uuid,
+    ) -> Result<Vec<DepreciationSchedule>, AppError> {
         queries::get_depreciation_schedule(&self.pool, asset_id).await
     }
 

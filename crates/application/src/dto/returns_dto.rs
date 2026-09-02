@@ -1,6 +1,6 @@
-use domain::returns::{SalesReturn, PurchaseReturn};
-use domain::returns::sales_return::SalesReturnLine;
 use domain::returns::purchase_return::PurchaseReturnLine;
+use domain::returns::sales_return::SalesReturnLine;
+use domain::returns::{PurchaseReturn, SalesReturn};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

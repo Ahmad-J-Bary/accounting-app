@@ -14,8 +14,8 @@
 use std::str::FromStr;
 use std::sync::Arc;
 
-use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use infrastructure::db::pool::run_migrations;
+use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 
 const MIG_162: &str = include_str!("../src/db/migrations/162_normalize_reversal_semantics.sql");
 
@@ -72,10 +72,8 @@ async fn seed_row(
 async fn migration_162_normalizes_reversal_semantics_idempotently() {
     let pool = build_pool().await;
 
-    let original_linked =
-        "11111111-1111-1111-1111-111111111111";
-    let contra_linked =
-        "22222222-2222-2222-2222-222222222222";
+    let original_linked = "11111111-1111-1111-1111-111111111111";
+    let contra_linked = "22222222-2222-2222-2222-222222222222";
 
     // A posted original + its contra. The contra was written under the OLD model
     // as journal_type 'Reversal' with a correct reversal_of_entry_id link.
@@ -105,10 +103,8 @@ async fn migration_162_normalizes_reversal_semantics_idempotently() {
     // A legacy opening-balance cancel: an `ob_reversal:` row with NO link and the
     // legacy type, cancelling an AccountOpeningBalance aggregate.
     let migration_id = "9f1a3e6d-0000-4000-8000-000000000000";
-    let original_ob =
-        "33333333-3333-3333-3333-333333333333";
-    let contra_ob =
-        "44444444-4444-4444-4444-444444444444";
+    let original_ob = "33333333-3333-3333-3333-333333333333";
+    let contra_ob = "44444444-4444-4444-4444-444444444444";
     seed_row(
         pool.as_ref(),
         original_ob,
@@ -143,7 +139,10 @@ async fn migration_162_normalizes_reversal_semantics_idempotently() {
     .fetch_one(pool.as_ref())
     .await
     .unwrap();
-    assert_eq!(linked_type, "PurchaseJournal", "linked contra inherits PurchaseJournal");
+    assert_eq!(
+        linked_type, "PurchaseJournal",
+        "linked contra inherits PurchaseJournal"
+    );
     assert_eq!(linked_link.as_deref(), Some(original_linked));
 
     // 2) The ob_reversal row gets its link back-filled and inherits
@@ -155,17 +154,23 @@ async fn migration_162_normalizes_reversal_semantics_idempotently() {
     .fetch_one(pool.as_ref())
     .await
     .unwrap();
-    assert_eq!(ob_type, "AccountOpeningBalance", "ob_reversal row inherits AccountOpeningBalance");
-    assert_eq!(ob_link.as_deref(), Some(original_ob), "ob_reversal link back-filled via source suffix");
+    assert_eq!(
+        ob_type, "AccountOpeningBalance",
+        "ob_reversal row inherits AccountOpeningBalance"
+    );
+    assert_eq!(
+        ob_link.as_deref(),
+        Some(original_ob),
+        "ob_reversal link back-filled via source suffix"
+    );
 
     // 3) The paired original is marked Reversed (with a stamp).
-    let (ob_status, ob_reversed_at): (String, Option<String>) = sqlx::query_as(
-        "SELECT status, reversed_at FROM journal_entries WHERE id = ?",
-    )
-    .bind(original_ob)
-    .fetch_one(pool.as_ref())
-    .await
-    .unwrap();
+    let (ob_status, ob_reversed_at): (String, Option<String>) =
+        sqlx::query_as("SELECT status, reversed_at FROM journal_entries WHERE id = ?")
+            .bind(original_ob)
+            .fetch_one(pool.as_ref())
+            .await
+            .unwrap();
     assert_eq!(ob_status, "Reversed", "paired original is marked Reversed");
     assert!(ob_reversed_at.is_some(), "reversed_at is stamped");
 
@@ -180,17 +185,15 @@ async fn migration_162_normalizes_reversal_semantics_idempotently() {
     assert_eq!(legacy, 0, "no legacy reversal journal_type may survive");
 
     // Idempotent re-run: same row counts, same values.
-    let total_before: i64 =
-        sqlx::query_scalar("SELECT COUNT(*) FROM journal_entries")
-            .fetch_one(pool.as_ref())
-            .await
-            .unwrap();
+    let total_before: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM journal_entries")
+        .fetch_one(pool.as_ref())
+        .await
+        .unwrap();
     sqlx::query(MIG_162).execute(pool.as_ref()).await.unwrap();
-    let total_after: i64 =
-        sqlx::query_scalar("SELECT COUNT(*) FROM journal_entries")
-            .fetch_one(pool.as_ref())
-            .await
-            .unwrap();
+    let total_after: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM journal_entries")
+        .fetch_one(pool.as_ref())
+        .await
+        .unwrap();
     assert_eq!(total_before, total_after, "162 re-run must be a no-op");
 
     let (linked_type2, ob_link2, ob_status2, legacy2): (String, Option<String>, String, i64) =

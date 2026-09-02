@@ -1,8 +1,8 @@
+use super::models::SettingsRow;
+use chrono::{DateTime, Utc};
 use domain::settings::CompanySettings;
 use rust_decimal::Decimal;
 use std::str::FromStr;
-use chrono::{DateTime, Utc};
-use super::models::SettingsRow;
 
 pub fn row_to_settings(row: SettingsRow) -> CompanySettings {
     CompanySettings {

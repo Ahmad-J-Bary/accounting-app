@@ -1,6 +1,6 @@
+use crate::errors::AppError;
 use async_trait::async_trait;
 use domain::shared::Currency;
-use crate::errors::AppError;
 
 #[async_trait]
 pub trait CurrencyRepository: Send + Sync {

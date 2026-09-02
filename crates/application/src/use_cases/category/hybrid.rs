@@ -1,10 +1,10 @@
-use std::sync::Arc;
-use chrono::Utc;
-use domain::inventory::category::{MaterialCategory};
-use domain::shared::ids::MaterialCategoryId;
-use crate::ports::category_repository::CategoryRepository;
-use crate::dto::category_dto::{CategoryDto};
+use crate::dto::category_dto::CategoryDto;
 use crate::errors::AppError;
+use crate::ports::category_repository::CategoryRepository;
+use chrono::Utc;
+use domain::inventory::category::MaterialCategory;
+use domain::shared::ids::MaterialCategoryId;
+use std::sync::Arc;
 
 pub struct HybridCategoryUseCase {
     repo: Arc<dyn CategoryRepository>,
@@ -26,7 +26,10 @@ impl HybridCategoryUseCase {
         let hybrid_name = format!("هجين ({})", hybrid_prefix);
 
         let all = self.repo.list_all().await?;
-        if let Some(existing) = all.iter().find(|c| c.is_hybrid && c.code_prefix == Some(hybrid_prefix.clone())) {
+        if let Some(existing) = all
+            .iter()
+            .find(|c| c.is_hybrid && c.code_prefix == Some(hybrid_prefix.clone()))
+        {
             return Ok(CategoryDto::from(existing.clone()));
         }
 

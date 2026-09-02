@@ -179,7 +179,10 @@ async fn bank_account_deposit_and_payment_reconcile_to_ledger() {
     post_journal(
         &journal_repo,
         JournalType::CashReceipt,
-        vec![line(bank_id, dec!(3000), dec!(0)), line(cash, dec!(0), dec!(3000))],
+        vec![
+            line(bank_id, dec!(3000), dec!(0)),
+            line(cash, dec!(0), dec!(3000)),
+        ],
         "إيداع بنكي",
     )
     .await;
@@ -188,15 +191,27 @@ async fn bank_account_deposit_and_payment_reconcile_to_ledger() {
     post_journal(
         &journal_repo,
         JournalType::CashPayment,
-        vec![line(rent, dec!(500), dec!(0)), line(bank_id, dec!(0), dec!(500))],
+        vec![
+            line(rent, dec!(500), dec!(0)),
+            line(bank_id, dec!(0), dec!(500)),
+        ],
         "دفع إيجار من البنك",
     )
     .await;
 
     // Bank ledger = 3000 − 500 = 2500; cash = −3000; rent = +500.
-    assert!(close_enough(ledger_balance(&pool, &bank_id).await, 2500.0), "bank ledger must be 2500");
-    assert!(close_enough(ledger_balance(&pool, &cash).await, -3000.0), "cash −3000 (transfer to bank)");
-    assert!(close_enough(ledger_balance(&pool, &rent).await, 500.0), "rent expense +500 (bank payment)");
+    assert!(
+        close_enough(ledger_balance(&pool, &bank_id).await, 2500.0),
+        "bank ledger must be 2500"
+    );
+    assert!(
+        close_enough(ledger_balance(&pool, &cash).await, -3000.0),
+        "cash −3000 (transfer to bank)"
+    );
+    assert!(
+        close_enough(ledger_balance(&pool, &rent).await, 500.0),
+        "rent expense +500 (bank payment)"
+    );
 
     // Every journal is balanced.
     let unbalanced: i64 = sqlx::query_scalar(
@@ -216,17 +231,21 @@ async fn bank_account_deposit_and_payment_reconcile_to_ledger() {
     // The two cash/journals exist exactly once each (deposit = CashReceipt,
     // payment = CashPayment).
     assert_eq!(
-        sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM journal_entries WHERE journal_type = 'CashReceipt'")
-            .fetch_one(&*pool)
-            .await
-            .unwrap(),
+        sqlx::query_scalar::<_, i64>(
+            "SELECT COUNT(*) FROM journal_entries WHERE journal_type = 'CashReceipt'"
+        )
+        .fetch_one(&*pool)
+        .await
+        .unwrap(),
         1
     );
     assert_eq!(
-        sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM journal_entries WHERE journal_type = 'CashPayment'")
-            .fetch_one(&*pool)
-            .await
-            .unwrap(),
+        sqlx::query_scalar::<_, i64>(
+            "SELECT COUNT(*) FROM journal_entries WHERE journal_type = 'CashPayment'"
+        )
+        .fetch_one(&*pool)
+        .await
+        .unwrap(),
         1
     );
 }

@@ -1,14 +1,14 @@
-use async_trait::async_trait;
-use sqlx::SqlitePool;
 use application::errors::AppError;
 use application::ports::consumable_repository::ConsumableRepository;
-use domain::assets::{Consumable, ConsumableId, AssetMovement};
+use async_trait::async_trait;
+use domain::assets::{AssetMovement, Consumable, ConsumableId};
+use sqlx::SqlitePool;
 use std::sync::Arc;
 
-mod models;
-mod mappers;
-mod queries;
 mod commands;
+mod mappers;
+mod models;
+mod queries;
 
 pub struct SqliteConsumableRepository {
     pool: Arc<SqlitePool>,

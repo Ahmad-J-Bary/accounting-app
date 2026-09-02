@@ -28,11 +28,11 @@
 use std::path::{Path, PathBuf};
 use std::str::FromStr as _;
 
-use chrono::Datelike;
 use crate::sqlx;
-use sqlx::SqlitePool;
-use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+use chrono::Datelike;
 use sha2::{Digest, Sha256};
+use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+use sqlx::SqlitePool;
 
 /// Canonical backup file name prefix, e.g. `almowakeb_backup_20260819_093000.sqlite`.
 pub const BACKUP_PREFIX: &str = "almowakeb_backup_";
@@ -186,16 +186,20 @@ pub async fn integrity_check(pool: &SqlitePool) -> Result<(), String> {
     if bad.is_empty() {
         Ok(())
     } else {
-        Err(format!("Database integrity check failed: {}", bad.join(" | ")))
+        Err(format!(
+            "Database integrity check failed: {}",
+            bad.join(" | ")
+        ))
     }
 }
 
 /// Names of tables from `required` that are absent from the database.
 pub async fn missing_tables(pool: &SqlitePool, required: &[&str]) -> Result<Vec<String>, String> {
-    let tables: Vec<String> = sqlx::query_scalar("SELECT name FROM sqlite_master WHERE type = 'table'")
-        .fetch_all(pool)
-        .await
-        .map_err(|e| format!("Failed to read schema: {e}"))?;
+    let tables: Vec<String> =
+        sqlx::query_scalar("SELECT name FROM sqlite_master WHERE type = 'table'")
+            .fetch_all(pool)
+            .await
+            .map_err(|e| format!("Failed to read schema: {e}"))?;
     Ok(required
         .iter()
         .filter(|t| !tables.iter().any(|n| n == *t))
@@ -253,11 +257,13 @@ pub async fn get_schema_version(pool: &SqlitePool) -> u32 {
 
 /// Company scope for backup metadata (best effort, from the settings table).
 pub async fn company_scope(pool: &SqlitePool) -> Option<String> {
-    sqlx::query_scalar("SELECT company_name FROM settings WHERE id = (SELECT id FROM settings LIMIT 1)")
-        .fetch_optional(pool)
-        .await
-        .ok()
-        .flatten()
+    sqlx::query_scalar(
+        "SELECT company_name FROM settings WHERE id = (SELECT id FROM settings LIMIT 1)",
+    )
+    .fetch_optional(pool)
+    .await
+    .ok()
+    .flatten()
 }
 
 // ─── Directory resolution ──────────────────────────────────────────────────
@@ -367,8 +373,8 @@ pub fn sidecar_path(dir: &Path, name: &str) -> PathBuf {
 /// Streamed SHA-256 of a file.
 pub fn file_sha256(path: &Path) -> Result<String, String> {
     use std::io::Read;
-    let mut file = std::fs::File::open(path)
-        .map_err(|e| format!("Failed to open file for hashing: {e}"))?;
+    let mut file =
+        std::fs::File::open(path).map_err(|e| format!("Failed to open file for hashing: {e}"))?;
     let mut hasher = Sha256::new();
     let mut buf = [0u8; 64 * 1024];
     loop {
@@ -478,7 +484,8 @@ pub async fn verify_backup(path: &Path, full: bool) -> Result<Verification, Stri
         .unwrap_or(0)
         .max(0) as u64;
 
-    let posted_balance_ok = unbalanced_posted_entries(&pool).await
+    let posted_balance_ok = unbalanced_posted_entries(&pool)
+        .await
         .map(|v| v.is_empty())
         .unwrap_or(true);
     let balance_deviation = if full {
@@ -522,7 +529,11 @@ pub async fn build_meta(
         timestamp_secs,
         size_bytes,
         backup_type: backup_type.as_str().to_string(),
-        status: if verification.full_ok() { "ok".into() } else { "error".into() },
+        status: if verification.full_ok() {
+            "ok".into()
+        } else {
+            "error".into()
+        },
         sha256: verification.sha256.clone(),
         schema_version: get_schema_version(pool).await,
         app_version: env!("CARGO_PKG_VERSION").to_string(),
@@ -561,7 +572,11 @@ pub fn list_backup_files(dir: &Path) -> Result<Vec<BackupFileInfo>, String> {
         if !path.is_file() {
             continue;
         }
-        let Some(name) = path.file_name().and_then(|n| n.to_str()).map(str::to_string) else {
+        let Some(name) = path
+            .file_name()
+            .and_then(|n| n.to_str())
+            .map(str::to_string)
+        else {
             continue;
         };
         if !is_backup_name(&name) {
@@ -593,9 +608,15 @@ pub fn list_backup_files(dir: &Path) -> Result<Vec<BackupFileInfo>, String> {
             size,
             timestamp: ts,
             backup_type,
-            sha256: meta.as_ref().map(|m| m.sha256.clone()).filter(|s| !s.is_empty()),
+            sha256: meta
+                .as_ref()
+                .map(|m| m.sha256.clone())
+                .filter(|s| !s.is_empty()),
             schema_version: meta.as_ref().map(|m| m.schema_version),
-            app_version: meta.as_ref().map(|m| m.app_version.clone()).filter(|s| !s.is_empty()),
+            app_version: meta
+                .as_ref()
+                .map(|m| m.app_version.clone())
+                .filter(|s| !s.is_empty()),
             company_scope: meta.as_ref().and_then(|m| m.company_scope.clone()),
             status: meta.as_ref().map(|m| m.status.clone()),
             verified,
@@ -622,7 +643,11 @@ pub struct RetentionPolicy {
 
 impl Default for RetentionPolicy {
     fn default() -> Self {
-        RetentionPolicy { daily: 7, weekly: 4, monthly: 12 }
+        RetentionPolicy {
+            daily: 7,
+            weekly: 4,
+            monthly: 12,
+        }
     }
 }
 
@@ -654,10 +679,7 @@ fn bucket_key(ts: i64, kind: &str) -> (i64, String) {
 /// Only `auto` backups are eligible for trimming; `manual` and `pre_import`
 /// backups are always kept. For each bucket kind, keeps the newest backup of
 /// each of the N newest buckets.
-pub fn retention_keep_set(
-    backups: &[BackupFileInfo],
-    policy: RetentionPolicy,
-) -> Vec<String> {
+pub fn retention_keep_set(backups: &[BackupFileInfo], policy: RetentionPolicy) -> Vec<String> {
     if policy.disabled() {
         return backups
             .iter()
@@ -666,10 +688,7 @@ pub fn retention_keep_set(
             .collect();
     }
 
-    let auto: Vec<&BackupFileInfo> = backups
-        .iter()
-        .filter(|b| b.backup_type == "auto")
-        .collect();
+    let auto: Vec<&BackupFileInfo> = backups.iter().filter(|b| b.backup_type == "auto").collect();
 
     let mut keep: Vec<String> = Vec::new();
     for (kind, count) in [
@@ -763,7 +782,11 @@ pub struct ValidationReport {
 
 impl ValidationReport {
     fn new() -> Self {
-        ValidationReport { ok: true, errors: Vec::new(), warnings: Vec::new() }
+        ValidationReport {
+            ok: true,
+            errors: Vec::new(),
+            warnings: Vec::new(),
+        }
     }
 }
 
@@ -819,18 +842,25 @@ pub async fn inspect_database_file(path: &Path) -> Result<DatabaseInspection, St
     }
     let metadata = std::fs::metadata(path).map_err(|e| format!("فشل قراءة معلومات الملف: {e}"))?;
     let size_bytes = metadata.len();
-    let created_at = metadata.created().ok().and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok()).map(|d| d.as_secs() as i64);
-    let modified_at = metadata.modified().ok().and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok()).map(|d| d.as_secs() as i64);
+    let created_at = metadata
+        .created()
+        .ok()
+        .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+        .map(|d| d.as_secs() as i64);
+    let modified_at = metadata
+        .modified()
+        .ok()
+        .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+        .map(|d| d.as_secs() as i64);
 
     let pool = open_readonly(path).await?;
 
-    let schema_version = sqlx::query_scalar::<_, i64>(
-        "SELECT COALESCE(MAX(version), 0) FROM _sqlx_migrations",
-    )
-    .fetch_one(&pool)
-    .await
-    .map(|v| v.max(0) as u32)
-    .unwrap_or(0);
+    let schema_version =
+        sqlx::query_scalar::<_, i64>("SELECT COALESCE(MAX(version), 0) FROM _sqlx_migrations")
+            .fetch_one(&pool)
+            .await
+            .map(|v| v.max(0) as u32)
+            .unwrap_or(0);
 
     let supported_version = crate::db::pool::latest_schema_version();
 
@@ -893,9 +923,7 @@ async fn foreign_key_violations(pool: &SqlitePool) -> Result<Vec<String>, String
     // INTEGER PRIMARY KEY, so use the parent name + rowid only when meaningful.
     Ok(rows
         .iter()
-        .map(|(child, rowid, parent, fkid)| {
-            format!("{child}(rowid {rowid}) → {parent}[fk {fkid}]")
-        })
+        .map(|(child, rowid, parent, fkid)| format!("{child}(rowid {rowid}) → {parent}[fk {fkid}]"))
         .collect())
 }
 
@@ -1006,7 +1034,9 @@ pub async fn validate_import_candidate(path: &Path) -> Result<ValidationReport, 
     }
 
     if let Err(e) = crate::db::pool::run_migrations(&pool).await {
-        report.errors.push(format!("فشل تطبيق ترقيات قاعدة البيانات: {e}"));
+        report
+            .errors
+            .push(format!("فشل تطبيق ترقيات قاعدة البيانات: {e}"));
         report.ok = false;
     }
 
@@ -1030,7 +1060,9 @@ pub async fn validate_import_candidate(path: &Path) -> Result<ValidationReport, 
     match integrity_check(&pool).await {
         Ok(()) => {}
         Err(e) => {
-            report.errors.push(format!("فشل فحص سلامة قاعدة البيانات: {e}"));
+            report
+                .errors
+                .push(format!("فشل فحص سلامة قاعدة البيانات: {e}"));
             report.ok = false;
         }
     }
@@ -1192,8 +1224,7 @@ pub fn read_pending_marker(data_dir: &Path) -> Result<Option<PendingRestore>, St
 pub fn remove_pending_marker(data_dir: &Path) -> Result<(), String> {
     let path = pending_marker_path(data_dir);
     if path.exists() {
-        std::fs::remove_file(&path)
-            .map_err(|e| format!("Failed to remove restore marker: {e}"))?;
+        std::fs::remove_file(&path).map_err(|e| format!("Failed to remove restore marker: {e}"))?;
     }
     Ok(())
 }
@@ -1217,7 +1248,10 @@ pub struct ReconcileResult {
 /// that state into either a restore that must be validated (roll forward /
 /// complete), a recovery of the previous database (roll back), or a clean no-op
 /// with stale temp files removed. The marker is intentionally NOT deleted here.
-pub fn reconcile_pending_restore(data_dir: &Path, db_path: &Path) -> Result<ReconcileResult, String> {
+pub fn reconcile_pending_restore(
+    data_dir: &Path,
+    db_path: &Path,
+) -> Result<ReconcileResult, String> {
     let marker = read_pending_marker(data_dir)?;
     let staged = data_dir.join("almowakeb.pending.sqlite");
     let rest = db_path.with_extension("db.restore");
@@ -1332,7 +1366,14 @@ mod tests {
             info("a_pre", D2, "pre_import"),
             info("a_auto", D3, "auto"),
         ];
-        let keep = retention_keep_set(&backups, RetentionPolicy { daily: 0, weekly: 0, monthly: 0 });
+        let keep = retention_keep_set(
+            &backups,
+            RetentionPolicy {
+                daily: 0,
+                weekly: 0,
+                monthly: 0,
+            },
+        );
         assert!(keep.contains(&"a_auto".to_string()));
         // disabled policy keeps the auto backup too
         assert_eq!(keep.len(), 1);
@@ -1347,7 +1388,11 @@ mod tests {
             info("day2", D2, "auto"),
             info("day3", D3, "auto"),
         ];
-        let policy = RetentionPolicy { daily: 3, weekly: 1, monthly: 1 };
+        let policy = RetentionPolicy {
+            daily: 3,
+            weekly: 1,
+            monthly: 1,
+        };
         let keep = retention_keep_set(&backups, policy);
         assert!(keep.contains(&"day1_new".to_string()));
         assert!(!keep.contains(&"day1_old".to_string()));
@@ -1364,10 +1409,8 @@ mod tests {
     }
 
     fn tmp_data_dir(tag: &str) -> PathBuf {
-        let base = std::env::temp_dir().join(format!(
-            "aa_backup_reconcile_{tag}_{}",
-            std::process::id()
-        ));
+        let base =
+            std::env::temp_dir().join(format!("aa_backup_reconcile_{tag}_{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&base);
         std::fs::create_dir_all(&base).unwrap();
         base
@@ -1480,7 +1523,10 @@ mod tests {
         assert_eq!(infer_type(name), "pre_import");
         assert_eq!(label_from_name(name), "20260820_093000");
         // Generic prefixes stay `auto` by name.
-        assert_eq!(infer_type("almowakeb_backup_20260820_093000.sqlite"), "auto");
+        assert_eq!(
+            infer_type("almowakeb_backup_20260820_093000.sqlite"),
+            "auto"
+        );
         assert_eq!(infer_type("erp_backup_20260820_093000.sqlite"), "auto");
     }
 
@@ -1494,9 +1540,16 @@ mod tests {
         assert_eq!(backups.len(), 1);
         assert_eq!(backups[0].backup_type, "pre_import");
         // An active policy must not touch it even with no metadata to rely on.
-        let policy = RetentionPolicy { daily: 1, weekly: 0, monthly: 0 };
+        let policy = RetentionPolicy {
+            daily: 1,
+            weekly: 0,
+            monthly: 0,
+        };
         let removed = apply_retention(&dir, policy, &backups).unwrap();
-        assert!(removed.is_empty(), "pre_import snapshot must never be trimmed");
+        assert!(
+            removed.is_empty(),
+            "pre_import snapshot must never be trimmed"
+        );
         assert!(dir.join(name).exists());
     }
 }

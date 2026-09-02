@@ -1,9 +1,9 @@
-use uuid::Uuid;
-use chrono::{DateTime, Utc};
-use serde::{Deserialize, Serialize};
 use crate::shared::Money;
+use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
+use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum DepreciationStatus {
@@ -61,7 +61,10 @@ impl DepreciationStrategy for StraightLineStrategy {
             return Money::new(Decimal::ZERO, cost.currency().clone());
         }
         let c = cost.amount();
-        let s = salvage.as_ref().map(|m| m.amount()).unwrap_or(Decimal::ZERO);
+        let s = salvage
+            .as_ref()
+            .map(|m| m.amount())
+            .unwrap_or(Decimal::ZERO);
         let depreciable = c - s;
         let monthly = depreciable / Decimal::from(useful_life_months);
         Money::new(monthly.round_dp(2), cost.currency().clone())
@@ -87,7 +90,10 @@ impl DepreciationStrategy for DecliningBalanceStrategy {
         }
 
         let nbv = cost.amount() - accumulated.amount();
-        let salvage_amount = salvage.as_ref().map(|m| m.amount()).unwrap_or(Decimal::ZERO);
+        let salvage_amount = salvage
+            .as_ref()
+            .map(|m| m.amount())
+            .unwrap_or(Decimal::ZERO);
 
         if nbv <= salvage_amount {
             return zero;
@@ -95,7 +101,11 @@ impl DepreciationStrategy for DecliningBalanceStrategy {
 
         let depreciation = nbv * dec!(0.10);
         let max_depreciable = nbv - salvage_amount;
-        let actual = if depreciation > max_depreciable { max_depreciable } else { depreciation };
+        let actual = if depreciation > max_depreciable {
+            max_depreciable
+        } else {
+            depreciation
+        };
 
         if actual <= Decimal::ZERO {
             zero
@@ -116,11 +126,19 @@ pub fn calculate_depreciation(
     accumulated: &Money,
 ) -> Money {
     match method {
-        DepreciationMethod::StraightLine => {
-            StraightLineStrategy.calculate(cost, salvage, useful_life_months, current_period, accumulated)
-        }
-        DepreciationMethod::DecliningBalance => {
-            DecliningBalanceStrategy.calculate(cost, salvage, useful_life_months, current_period, accumulated)
-        }
+        DepreciationMethod::StraightLine => StraightLineStrategy.calculate(
+            cost,
+            salvage,
+            useful_life_months,
+            current_period,
+            accumulated,
+        ),
+        DepreciationMethod::DecliningBalance => DecliningBalanceStrategy.calculate(
+            cost,
+            salvage,
+            useful_life_months,
+            current_period,
+            accumulated,
+        ),
     }
 }

@@ -1,7 +1,7 @@
-﻿use sqlx::SqlitePool;
 use application::errors::AppError;
-use domain::assets::{Consumable, ConsumableId, AssetMovement};
 use domain::accounting::journal_entry::JournalEntry;
+use domain::assets::{AssetMovement, Consumable, ConsumableId};
+use sqlx::SqlitePool;
 
 pub async fn save(pool: &SqlitePool, consumable: &Consumable) -> Result<(), AppError> {
     sqlx::query(
@@ -66,7 +66,10 @@ pub async fn save_with_accounting(
     movements: &[AssetMovement],
     entries: &[JournalEntry],
 ) -> Result<(), AppError> {
-    let mut tx = pool.begin().await.map_err(|e| AppError::Infrastructure(e.to_string()))?;
+    let mut tx = pool
+        .begin()
+        .await
+        .map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
     save_tx(&mut tx, consumable).await?;
     for movement in movements {
@@ -76,7 +79,9 @@ pub async fn save_with_accounting(
         crate::repositories::journal_entry::insert_entry(&mut tx, entry).await?;
     }
 
-    tx.commit().await.map_err(|e| AppError::Infrastructure(e.to_string()))?;
+    tx.commit()
+        .await
+        .map_err(|e| AppError::Infrastructure(e.to_string()))?;
     Ok(())
 }
 

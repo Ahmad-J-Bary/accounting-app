@@ -1,14 +1,14 @@
-use std::sync::Arc;
-use chrono::Utc;
-use rust_decimal::Decimal;
-use domain::accounting::account::{Account, AccountCategory, AccountType};
-use domain::accounting::journal_entry::{JournalEntry, JournalLine, JournalType};
-use domain::shared::ids::{AccountId, CustomerId, SupplierId};
-use domain::shared::{Currency, MonetaryAmount, Money};
 use crate::errors::AppError;
 use crate::ports::account_repository::AccountRepository;
 use crate::ports::currency_repository::CurrencyRepository;
 use crate::ports::journal_entry_repository::JournalEntryRepository;
+use chrono::Utc;
+use domain::accounting::account::{Account, AccountCategory, AccountType};
+use domain::accounting::journal_entry::{JournalEntry, JournalLine, JournalType};
+use domain::shared::ids::{AccountId, CustomerId, SupplierId};
+use domain::shared::{Currency, MonetaryAmount, Money};
+use rust_decimal::Decimal;
+use std::sync::Arc;
 
 /// Determines the debit/credit balance sign convention for a partner type.
 /// For customers: balance = debit − credit (receivable).
@@ -61,7 +61,8 @@ pub async fn build_partner_account(
     params: PartnerAccountParams<'_>,
     account_repo: &Arc<dyn AccountRepository>,
 ) -> Result<(Account, AccountId), AppError> {
-    let parent_id = params.parent_account_id
+    let parent_id = params
+        .parent_account_id
         .parse::<AccountId>()
         .map_err(|_| AppError::Invalid("معرف حساب الأب غير صالح".into()))?;
 
@@ -69,25 +70,23 @@ pub async fn build_partner_account(
         .find_by_id(&parent_id)
         .await
         .map_err(|e| AppError::Infrastructure(e.to_string()))?
-        .ok_or_else(|| AppError::NotFound(
-            format!("حساب {} الرئيسي غير موجود في النظام", params.kind.label())
-        ))?;
+        .ok_or_else(|| {
+            AppError::NotFound(format!(
+                "حساب {} الرئيسي غير موجود في النظام",
+                params.kind.label()
+            ))
+        })?;
 
     let account_code = format!("{}{}", parent.code, params.code_for_account);
     let new_account_id = AccountId::new();
-    let partner_uuid = params.partner_id_str
+    let partner_uuid = params
+        .partner_id_str
         .parse::<uuid::Uuid>()
         .map_err(|_| AppError::Invalid("معرف الشريك غير صالح".into()))?;
 
     let (linked_customer_id, linked_supplier_id) = match params.kind {
-        PartnerKind::Customer => (
-            Some(CustomerId(partner_uuid)),
-            None,
-        ),
-        PartnerKind::Supplier => (
-            None,
-            Some(SupplierId(partner_uuid)),
-        ),
+        PartnerKind::Customer => (Some(CustomerId(partner_uuid)), None),
+        PartnerKind::Supplier => (None, Some(SupplierId(partner_uuid))),
     };
 
     let purpose = match params.kind {
@@ -137,7 +136,7 @@ pub async fn build_opening_balance_entry(
     account_id: AccountId,
     partner_name: &str,
     partner_entity_id: &str,
-    net_balance: Decimal,     // debit − credit for customer; credit − debit for supplier
+    net_balance: Decimal, // debit − credit for customer; credit − debit for supplier
     currency: Currency,
     fx_rate: Decimal,
     equity_account_code: &str,
@@ -152,14 +151,13 @@ pub async fn build_opening_balance_entry(
     let equity_account = account_repo
         .find_by_code(equity_account_code)
         .await?
-        .ok_or_else(|| AppError::NotFound(
-            format!("حساب الرصيد الافتتاحي غير موجود: {equity_account_code}")
-        ))?;
+        .ok_or_else(|| {
+            AppError::NotFound(format!(
+                "حساب الرصيد الافتتاحي غير موجود: {equity_account_code}"
+            ))
+        })?;
 
-    let amount_ma = MonetaryAmount::new(
-        Money::new(net_balance.abs(), currency.clone()),
-        fx_rate,
-    );
+    let amount_ma = MonetaryAmount::new(Money::new(net_balance.abs(), currency.clone()), fx_rate);
     let zero_ma = MonetaryAmount::zero(currency);
 
     let label = kind.label();
@@ -234,7 +232,9 @@ pub async fn build_balance_adjustment_entry(
         .await?
         .ok_or_else(|| AppError::NotFound("حساب الرصيد الافتتاحي غير موجود: 53".into()))?;
 
-    let base_currency = currency_repo.get_base_currency().await?
+    let base_currency = currency_repo
+        .get_base_currency()
+        .await?
         .ok_or_else(|| AppError::Invalid("لم يتم تعيين العملة الأساسية".into()))?;
     let amount = MonetaryAmount::from_base(balance_change.abs(), base_currency.clone());
     let zero = MonetaryAmount::zero(base_currency);

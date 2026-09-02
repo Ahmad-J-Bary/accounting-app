@@ -1,17 +1,17 @@
-use async_trait::async_trait;
-use sqlx::SqlitePool;
 use application::errors::AppError;
 use application::ports::customer_repository::CustomerRepository;
+use async_trait::async_trait;
 use domain::accounting::account::Account;
 use domain::accounting::journal_entry::JournalEntry;
 use domain::customers::Customer;
-use domain::shared::{CustomerId, AccountId, JournalEntryId};
+use domain::shared::{AccountId, CustomerId, JournalEntryId};
+use sqlx::SqlitePool;
 use std::sync::Arc;
 
-mod models;
-mod mappers;
-mod queries;
 mod commands;
+mod mappers;
+mod models;
+mod queries;
 
 pub struct SqliteCustomerRepository {
     pool: Arc<SqlitePool>,
@@ -33,7 +33,10 @@ impl CustomerRepository for SqliteCustomerRepository {
         queries::find_by_id(&self.pool, id).await
     }
 
-    async fn find_by_account_id(&self, account_id: &AccountId) -> Result<Option<Customer>, AppError> {
+    async fn find_by_account_id(
+        &self,
+        account_id: &AccountId,
+    ) -> Result<Option<Customer>, AppError> {
         queries::find_by_account_id(&self.pool, account_id).await
     }
 

@@ -1,7 +1,7 @@
-use sqlx::SqlitePool;
 use application::errors::AppError;
 use domain::accounting::account::{Account, AccountCategory};
 use domain::shared::ids::AccountId;
+use sqlx::SqlitePool;
 
 pub fn purpose_to_str(purpose: domain::accounting::account::AccountPurpose) -> &'static str {
     purpose.to_str()

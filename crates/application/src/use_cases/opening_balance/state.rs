@@ -5,7 +5,9 @@ use crate::ports::account_repository::AccountRepository;
 use crate::ports::journal_entry_repository::JournalEntryRepository;
 use crate::ports::opening_item_repository::OpeningItemRepository;
 use crate::ports::opening_migration_repository::OpeningMigrationRepository;
-use crate::use_cases::opening_balance::reconcile::{readiness_blockers, GetOpeningReconciliationUseCase};
+use crate::use_cases::opening_balance::reconcile::{
+    readiness_blockers, GetOpeningReconciliationUseCase,
+};
 use crate::use_cases::opening_balance::types::OpeningMigrationDto;
 use domain::accounting::MigrationStatus;
 
@@ -37,7 +39,10 @@ impl ValidateOpeningBalanceUseCase {
     }
 
     pub async fn execute(&self, id: String, by: String) -> Result<OpeningMigrationDto, AppError> {
-        let mut migration = self.repo.find_by_id(&id).await?
+        let mut migration = self
+            .repo
+            .find_by_id(&id)
+            .await?
             .ok_or_else(|| AppError::NotFound("ترحيل الرصيد الافتتاحي غير موجود".into()))?;
 
         // Enforcement gate (same as posting): the opening lines must be in
@@ -74,7 +79,10 @@ impl ApproveOpeningBalanceUseCase {
     }
 
     pub async fn execute(&self, id: String, by: String) -> Result<OpeningMigrationDto, AppError> {
-        let mut migration = self.repo.find_by_id(&id).await?
+        let mut migration = self
+            .repo
+            .find_by_id(&id)
+            .await?
             .ok_or_else(|| AppError::NotFound("ترحيل الرصيد الافتتاحي غير موجود".into()))?;
         migration.approve(&by).map_err(AppError::Domain)?;
         self.repo.update(&migration).await?;
@@ -108,12 +116,13 @@ impl LockOpeningBalanceUseCase {
     }
 
     pub async fn execute(&self, id: String) -> Result<OpeningMigrationDto, AppError> {
-        let mut migration = self.repo.find_by_id(&id).await?
+        let mut migration = self
+            .repo
+            .find_by_id(&id)
+            .await?
             .ok_or_else(|| AppError::NotFound("ترحيل الرصيد الافتتاحي غير موجود".into()))?;
         if migration.status != MigrationStatus::Posted {
-            return Err(AppError::Forbidden(
-                "لا يمكن قفل إلا الترحيل المرحل".into(),
-            ));
+            return Err(AppError::Forbidden("لا يمكن قفل إلا الترحيل المرحل".into()));
         }
 
         // Guard: an UNRESOLVED residual must never be locked — the
@@ -126,7 +135,8 @@ impl LockOpeningBalanceUseCase {
             .unwrap_or(false)
         {
             return Err(AppError::Forbidden(
-                "الفرق غير محلول: لا يمكن قفل الترحيل حتى يُحل الرصيد المتبقي (صنّفه أو عالج الفرق)".into(),
+                "الفرق غير محلول: لا يمكن قفل الترحيل حتى يُحل الرصيد المتبقي (صنّفه أو عالج الفرق)"
+                    .into(),
             ));
         }
 

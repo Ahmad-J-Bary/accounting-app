@@ -32,7 +32,10 @@ fn test_currency() -> domain::shared::currency::Currency {
 
 async fn build_pool() -> Arc<sqlx::SqlitePool> {
     let mut path = std::env::temp_dir();
-    path.push(format!("acc_full_example_test_{}.sqlite", uuid::Uuid::new_v4()));
+    path.push(format!(
+        "acc_full_example_test_{}.sqlite",
+        uuid::Uuid::new_v4()
+    ));
     let options = SqliteConnectOptions::from_str(path.to_str().unwrap())
         .unwrap()
         .create_if_missing(true);
@@ -82,21 +85,61 @@ fn position_use_case(
         migration_repo,
         account_repo,
         Arc::new(SqlitePartnerRepository::new(pool.clone())),
-        Arc::new(infrastructure::repositories::opening_balance::SqliteOpeningItemRepository::new(pool.clone())),
-        Arc::new(infrastructure::repositories::journal_entry::SqliteJournalEntryRepository::new(pool.clone())),
+        Arc::new(
+            infrastructure::repositories::opening_balance::SqliteOpeningItemRepository::new(
+                pool.clone(),
+            ),
+        ),
+        Arc::new(
+            infrastructure::repositories::journal_entry::SqliteJournalEntryRepository::new(
+                pool.clone(),
+            ),
+        ),
     )
 }
 
 fn full_example_lines(accounts: &FullAccounts) -> Vec<OpeningBalanceLine> {
     vec![
-        OpeningBalanceLine { account_id: accounts.cash.id, amount: dec!(25000), description: None },
-        OpeningBalanceLine { account_id: accounts.bank.id, amount: dec!(40000), description: None },
-        OpeningBalanceLine { account_id: accounts.receivable.id, amount: dec!(80000), description: None },
-        OpeningBalanceLine { account_id: accounts.inventory.id, amount: dec!(120000), description: None },
-        OpeningBalanceLine { account_id: accounts.fixed.id, amount: dec!(200000), description: None },
-        OpeningBalanceLine { account_id: accounts.payable.id, amount: dec!(70000), description: None },
-        OpeningBalanceLine { account_id: accounts.loan.id, amount: dec!(50000), description: None },
-        OpeningBalanceLine { account_id: accounts.capital.id, amount: dec!(300000), description: None },
+        OpeningBalanceLine {
+            account_id: accounts.cash.id,
+            amount: dec!(25000),
+            description: None,
+        },
+        OpeningBalanceLine {
+            account_id: accounts.bank.id,
+            amount: dec!(40000),
+            description: None,
+        },
+        OpeningBalanceLine {
+            account_id: accounts.receivable.id,
+            amount: dec!(80000),
+            description: None,
+        },
+        OpeningBalanceLine {
+            account_id: accounts.inventory.id,
+            amount: dec!(120000),
+            description: None,
+        },
+        OpeningBalanceLine {
+            account_id: accounts.fixed.id,
+            amount: dec!(200000),
+            description: None,
+        },
+        OpeningBalanceLine {
+            account_id: accounts.payable.id,
+            amount: dec!(70000),
+            description: None,
+        },
+        OpeningBalanceLine {
+            account_id: accounts.loan.id,
+            amount: dec!(50000),
+            description: None,
+        },
+        OpeningBalanceLine {
+            account_id: accounts.capital.id,
+            amount: dec!(300000),
+            description: None,
+        },
     ]
 }
 
@@ -123,7 +166,14 @@ async fn seed_full_example_accounts(account_repo: &dyn AccountRepository) -> Ful
         capital: account("3101", AccountType::Equity, AccountPurpose::PartnerCapital),
     };
     for acc in [
-        &a.cash, &a.bank, &a.receivable, &a.inventory, &a.fixed, &a.payable, &a.loan, &a.capital,
+        &a.cash,
+        &a.bank,
+        &a.receivable,
+        &a.inventory,
+        &a.fixed,
+        &a.payable,
+        &a.loan,
+        &a.capital,
     ] {
         account_repo.save(acc).await.unwrap();
     }
@@ -157,12 +207,27 @@ async fn full_example_shows_exact_difference_read_only() {
         .expect("position computed");
 
     assert_eq!(dto.total_assets, dec!(465000), "Total Assets = 465,000");
-    assert_eq!(dto.total_liabilities, dec!(120000), "Total Liabilities = 120,000");
+    assert_eq!(
+        dto.total_liabilities,
+        dec!(120000),
+        "Total Liabilities = 120,000"
+    );
     assert_eq!(dto.net_assets, dec!(345000), "Net Assets = 345,000");
-    assert_eq!(dto.partner_capital, dec!(300000), "Partner Capital = 300,000");
-    assert_eq!(dto.total_equity, dec!(300000), "Recognized Equity = 300,000");
+    assert_eq!(
+        dto.partner_capital,
+        dec!(300000),
+        "Partner Capital = 300,000"
+    );
+    assert_eq!(
+        dto.total_equity,
+        dec!(300000),
+        "Recognized Equity = 300,000"
+    );
     assert_eq!(dto.equity_difference, dec!(45000), "Residual = 45,000");
-    assert!(!dto.is_balanced, "before classification the position must not be balanced");
+    assert!(
+        !dto.is_balanced,
+        "before classification the position must not be balanced"
+    );
     assert!(
         dto.difference_message.is_some(),
         "the exact difference must be surfaced, never silently plugged",
@@ -185,8 +250,16 @@ async fn full_example_explicit_classification_balances_and_never_forces_profit()
 
     let account_repo = Arc::new(SqliteAccountRepository::new(pool.clone()));
     let a = seed_full_example_accounts(account_repo.as_ref()).await;
-    let obe = account("3102", AccountType::Equity, AccountPurpose::OpeningBalanceEquity);
-    let retained = account("3103", AccountType::Equity, AccountPurpose::RetainedEarnings);
+    let obe = account(
+        "3102",
+        AccountType::Equity,
+        AccountPurpose::OpeningBalanceEquity,
+    );
+    let retained = account(
+        "3103",
+        AccountType::Equity,
+        AccountPurpose::RetainedEarnings,
+    );
     for acc in [&obe, &retained] {
         account_repo.save(acc).await.unwrap();
     }
@@ -194,7 +267,11 @@ async fn full_example_explicit_classification_balances_and_never_forces_profit()
     // The same full example PLUS the explicitly classified residual plug on the
     // Opening Balance Equity (53) control — the accountant's declared decision.
     let mut lines = full_example_lines(&a);
-    lines.push(OpeningBalanceLine { account_id: obe.id, amount: dec!(45000), description: None });
+    lines.push(OpeningBalanceLine {
+        account_id: obe.id,
+        amount: dec!(45000),
+        description: None,
+    });
 
     let migration = OpeningBalanceMigration::new(
         "mig-full-example-classified".into(),
@@ -213,10 +290,25 @@ async fn full_example_explicit_classification_balances_and_never_forces_profit()
         .expect("position computed");
 
     assert_eq!(dto.net_assets, dec!(345000));
-    assert_eq!(dto.opening_equity_adjustment, dec!(45000), "the 53 plug carries the residual");
-    assert_eq!(dto.total_equity, dec!(345000), "classified equity = 300,000 + 45,000");
-    assert_eq!(dto.equity_difference, dec!(0), "Difference = 0 after explicit classification");
-    assert!(dto.is_balanced, "classified residual must balance the position");
+    assert_eq!(
+        dto.opening_equity_adjustment,
+        dec!(45000),
+        "the 53 plug carries the residual"
+    );
+    assert_eq!(
+        dto.total_equity,
+        dec!(345000),
+        "classified equity = 300,000 + 45,000"
+    );
+    assert_eq!(
+        dto.equity_difference,
+        dec!(0),
+        "Difference = 0 after explicit classification"
+    );
+    assert!(
+        dto.is_balanced,
+        "classified residual must balance the position"
+    );
     assert!(dto.difference_message.is_none());
 
     // Record an explicit classification on the migration and verify it persists
@@ -249,6 +341,9 @@ async fn full_example_explicit_classification_balances_and_never_forces_profit()
         .execute(migration.id.clone())
         .await
         .unwrap();
-    assert_eq!(classified_dto.classification.as_deref(), Some("RetainedEarnings"));
+    assert_eq!(
+        classified_dto.classification.as_deref(),
+        Some("RetainedEarnings")
+    );
     assert_eq!(classified_dto.equity_difference, dec!(0));
 }

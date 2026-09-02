@@ -1,8 +1,8 @@
-use sqlx::SqlitePool;
+use super::mappers::row_to_settings;
+use super::models::SettingsRow;
 use application::errors::AppError;
 use domain::settings::CompanySettings;
-use super::models::SettingsRow;
-use super::mappers::row_to_settings;
+use sqlx::SqlitePool;
 
 pub async fn get(pool: &SqlitePool) -> Result<CompanySettings, AppError> {
     let row = sqlx::query_as::<_, SettingsRow>(

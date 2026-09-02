@@ -1,9 +1,9 @@
-use std::sync::Arc;
-use async_trait::async_trait;
-use sqlx::SqlitePool;
 use application::errors::AppError;
 use application::ports::opening_item_repository::OpeningItemRepository;
 use application::use_cases::opening_balance::types::OpeningItemInput;
+use async_trait::async_trait;
+use sqlx::SqlitePool;
+use std::sync::Arc;
 
 pub struct SqliteOpeningItemRepository {
     pool: Arc<SqlitePool>,
@@ -17,11 +17,21 @@ impl SqliteOpeningItemRepository {
 
 #[async_trait]
 impl OpeningItemRepository for SqliteOpeningItemRepository {
-    async fn replace_items(&self, migration_id: &str, items: &[OpeningItemInput]) -> Result<(), AppError> {
-        let mut tx = self.pool.begin().await.map_err(|e| AppError::Infrastructure(e.to_string()))?;
+    async fn replace_items(
+        &self,
+        migration_id: &str,
+        items: &[OpeningItemInput],
+    ) -> Result<(), AppError> {
+        let mut tx = self
+            .pool
+            .begin()
+            .await
+            .map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
         sqlx::query("DELETE FROM opening_migration_items WHERE migration_id = ?")
-            .bind(migration_id).execute(&mut *tx).await
+            .bind(migration_id)
+            .execute(&mut *tx)
+            .await
             .map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
         for it in items {
@@ -36,7 +46,9 @@ impl OpeningItemRepository for SqliteOpeningItemRepository {
             .map_err(|e| AppError::Infrastructure(e.to_string()))?;
         }
 
-        tx.commit().await.map_err(|e| AppError::Infrastructure(e.to_string()))
+        tx.commit()
+            .await
+            .map_err(|e| AppError::Infrastructure(e.to_string()))
     }
 
     async fn load_items(&self, migration_id: &str) -> Result<Vec<OpeningItemInput>, AppError> {
@@ -55,12 +67,15 @@ impl OpeningItemRepository for SqliteOpeningItemRepository {
         .bind(migration_id).fetch_all(&*self.pool).await
         .map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
-        Ok(rows.into_iter().map(|r| OpeningItemInput {
-            kind: r.kind,
-            entity_id: r.entity_id,
-            reference: r.reference,
-            amount: r.amount,
-            qty: r.qty,
-        }).collect())
+        Ok(rows
+            .into_iter()
+            .map(|r| OpeningItemInput {
+                kind: r.kind,
+                entity_id: r.entity_id,
+                reference: r.reference,
+                amount: r.amount,
+                qty: r.qty,
+            })
+            .collect())
     }
 }

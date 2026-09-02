@@ -1,6 +1,6 @@
+use super::display::{derive_journal_type_display, is_opening_line};
 use super::error::AccountUseCaseError;
 use super::types::{AccountLedger, LedgerLine};
-use super::display::{derive_journal_type_display, is_opening_line};
 use crate::dto::account_dto::AccountDto;
 use crate::ports::account_repository::AccountRepository;
 use crate::ports::journal_entry_repository::JournalEntryRepository;
@@ -149,7 +149,12 @@ impl AccountQueries {
 
         let static_opening: Decimal = account_ids
             .iter()
-            .map(|id| opening_balance_map.get(id).copied().unwrap_or(Decimal::ZERO))
+            .map(|id| {
+                opening_balance_map
+                    .get(id)
+                    .copied()
+                    .unwrap_or(Decimal::ZERO)
+            })
             .sum();
 
         // The opening balance field is METADATA (subledger seed / registered
@@ -199,23 +204,29 @@ impl AccountQueries {
                     .unwrap_or_else(|| "-".to_string())
             } else if opposite_lines.is_empty() {
                 "-".to_string()
-            } else if let Some(partner_line) = opposite_lines.iter().find(|l| l.partner_id.is_some()) {
-                    account_info_map
-                        .get(&partner_line.account_id)
-                        .map(|(_, name)| name.clone())
-                        .unwrap_or_else(|| "-".to_string())
+            } else if let Some(partner_line) =
+                opposite_lines.iter().find(|l| l.partner_id.is_some())
+            {
+                account_info_map
+                    .get(&partner_line.account_id)
+                    .map(|(_, name)| name.clone())
+                    .unwrap_or_else(|| "-".to_string())
             } else {
                 "حسابات متعددة".to_string()
             };
 
-            let effective_type = if entry.journal_type == domain::accounting::JournalType::GeneralJournal {
+            let effective_type = if entry.journal_type
+                == domain::accounting::JournalType::GeneralJournal
+            {
                 let is_discount_granted = entry.lines.iter().any(|l| {
-                    account_info_map.get(&l.account_id)
+                    account_info_map
+                        .get(&l.account_id)
                         .map(|(code, name)| code.as_str() == "47" || name.contains("خصوم ممنوحة"))
                         .unwrap_or(false)
                 });
                 let is_discount_earned = entry.lines.iter().any(|l| {
-                    account_info_map.get(&l.account_id)
+                    account_info_map
+                        .get(&l.account_id)
                         .map(|(code, name)| code.as_str() == "332" || name.contains("خصوم مكتسبة"))
                         .unwrap_or(false)
                 });

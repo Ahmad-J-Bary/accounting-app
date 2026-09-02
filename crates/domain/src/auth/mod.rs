@@ -1,4 +1,4 @@
-pub mod user;
 pub mod role;
+pub mod user;
+pub use role::{Permission, Role};
 pub use user::User;
-pub use role::{Role, Permission};

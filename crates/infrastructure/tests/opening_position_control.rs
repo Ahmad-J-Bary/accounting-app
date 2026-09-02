@@ -20,7 +20,10 @@ fn test_currency() -> domain::shared::currency::Currency {
 
 async fn build_pool() -> Arc<sqlx::SqlitePool> {
     let mut path = std::env::temp_dir();
-    path.push(format!("acc_oposition_test_{}.sqlite", uuid::Uuid::new_v4()));
+    path.push(format!(
+        "acc_oposition_test_{}.sqlite",
+        uuid::Uuid::new_v4()
+    ));
     let options = SqliteConnectOptions::from_str(path.to_str().unwrap())
         .unwrap()
         .create_if_missing(true);
@@ -110,8 +113,16 @@ async fn position_is_balanced_and_read_only() {
         migration_repo.clone(),
         account_repo.clone(),
         partner_repo.clone(),
-        Arc::new(infrastructure::repositories::opening_balance::SqliteOpeningItemRepository::new(pool.clone())),
-        Arc::new(infrastructure::repositories::journal_entry::SqliteJournalEntryRepository::new(pool.clone())),
+        Arc::new(
+            infrastructure::repositories::opening_balance::SqliteOpeningItemRepository::new(
+                pool.clone(),
+            ),
+        ),
+        Arc::new(
+            infrastructure::repositories::journal_entry::SqliteJournalEntryRepository::new(
+                pool.clone(),
+            ),
+        ),
     )
     .execute(migration.id.clone())
     .await
@@ -127,10 +138,17 @@ async fn position_is_balanced_and_read_only() {
     assert!(dto.difference_message.is_none());
 
     // The liability and asset lines are classified by purpose semantics.
-    assert!(dto.liability_detail.iter().any(|l| l.group_key == "Payable"));
+    assert!(dto
+        .liability_detail
+        .iter()
+        .any(|l| l.group_key == "Payable"));
 
     // READ-ONLY invariant: the report never writes journal entries.
-    assert_eq!(journal_counts(&pool).await, before, "position view must not create journal entries");
+    assert_eq!(
+        journal_counts(&pool).await,
+        before,
+        "position view must not create journal entries"
+    );
 }
 
 /// An unbalanced migration reports the exact difference and never fabricates a
@@ -143,7 +161,11 @@ async fn position_reports_unbalanced_difference_read_only() {
     let cash = account("1902", AccountType::Assets, AccountPurpose::General);
     let suppliers = account("2902", AccountType::Liabilities, AccountPurpose::Payable);
     let capital = account("3102", AccountType::Equity, AccountPurpose::PartnerCapital);
-    let retained = account("3103", AccountType::Equity, AccountPurpose::RetainedEarnings);
+    let retained = account(
+        "3103",
+        AccountType::Equity,
+        AccountPurpose::RetainedEarnings,
+    );
     for a in [&cash, &suppliers, &capital, &retained] {
         account_repo.save(a).await.unwrap();
     }
@@ -187,8 +209,16 @@ async fn position_reports_unbalanced_difference_read_only() {
         migration_repo.clone(),
         account_repo.clone(),
         partner_repo.clone(),
-        Arc::new(infrastructure::repositories::opening_balance::SqliteOpeningItemRepository::new(pool.clone())),
-        Arc::new(infrastructure::repositories::journal_entry::SqliteJournalEntryRepository::new(pool.clone())),
+        Arc::new(
+            infrastructure::repositories::opening_balance::SqliteOpeningItemRepository::new(
+                pool.clone(),
+            ),
+        ),
+        Arc::new(
+            infrastructure::repositories::journal_entry::SqliteJournalEntryRepository::new(
+                pool.clone(),
+            ),
+        ),
     )
     .execute(migration.id)
     .await
@@ -198,7 +228,14 @@ async fn position_reports_unbalanced_difference_read_only() {
     assert_eq!(dto.total_equity, dec!(55000));
     assert_eq!(dto.equity_difference, dec!(5000));
     assert!(!dto.is_balanced);
-    assert!(dto.difference_message.is_some(), "difference must be surfaced, never hidden");
+    assert!(
+        dto.difference_message.is_some(),
+        "difference must be surfaced, never hidden"
+    );
 
-    assert_eq!(journal_counts(&pool).await, before, "reporting must not create journal entries");
+    assert_eq!(
+        journal_counts(&pool).await,
+        before,
+        "reporting must not create journal entries"
+    );
 }

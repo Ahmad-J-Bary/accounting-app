@@ -1,11 +1,11 @@
+use crate::errors::AppError;
 use async_trait::async_trait;
 use domain::accounting::account::Account;
 use domain::accounting::journal_entry::JournalEntry;
 use domain::customers::Customer;
 use domain::payments::Payment;
-use domain::shared::ids::{PaymentId, CustomerId, SupplierId, JournalEntryId};
+use domain::shared::ids::{CustomerId, JournalEntryId, PaymentId, SupplierId};
 use domain::suppliers::Supplier;
-use crate::errors::AppError;
 
 #[async_trait]
 pub trait PaymentRepository: Send + Sync {

@@ -1,13 +1,13 @@
-use async_trait::async_trait;
-use sqlx::SqlitePool;
 use application::errors::AppError;
 use application::ports::code_prefix_repository::CodePrefixRepository;
+use async_trait::async_trait;
+use sqlx::SqlitePool;
 use std::sync::Arc;
 
-mod models;
-mod mappers;
-mod queries;
 mod commands;
+mod mappers;
+mod models;
+mod queries;
 
 pub struct SqliteCodePrefixRepository {
     pool: Arc<SqlitePool>,

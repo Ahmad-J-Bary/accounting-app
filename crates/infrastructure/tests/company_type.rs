@@ -93,12 +93,11 @@ async fn r1_flips_only_the_pristine_row() {
     .await
     .unwrap();
     let _ = sqlx::query(R1).execute(&*pool).await.unwrap();
-    let row: String = sqlx::query_scalar(
-        "SELECT accounting_start_mode FROM settings WHERE id = 'default'",
-    )
-    .fetch_one(&*pool)
-    .await
-    .unwrap();
+    let row: String =
+        sqlx::query_scalar("SELECT accounting_start_mode FROM settings WHERE id = 'default'")
+            .fetch_one(&*pool)
+            .await
+            .unwrap();
     assert_eq!(row, START_MODE_EXISTING, "pristine row must be converted");
 
     // Scenario B — a configured company (renamed away from the sentinel) that
@@ -110,12 +109,11 @@ async fn r1_flips_only_the_pristine_row() {
     .await
     .unwrap();
     let _ = sqlx::query(R1).execute(&*pool).await.unwrap();
-    let row2: String = sqlx::query_scalar(
-        "SELECT accounting_start_mode FROM settings WHERE id = 'default'",
-    )
-    .fetch_one(&*pool)
-    .await
-    .unwrap();
+    let row2: String =
+        sqlx::query_scalar("SELECT accounting_start_mode FROM settings WHERE id = 'default'")
+            .fetch_one(&*pool)
+            .await
+            .unwrap();
     assert_eq!(
         row2, START_MODE_NEW,
         "configured company must keep its recorded type (no data loss)"
@@ -154,11 +152,17 @@ async fn update_use_case_whitelists_company_type() {
     // A bogus value is rejected at the boundary.
     let bad = base_update_request(Some("RandomMode".into()), "ALPHA");
     let err = uc.execute(bad).await.unwrap_err();
-    assert!(matches!(err, application::errors::AppError::Invalid(_)), "{err:?}");
+    assert!(
+        matches!(err, application::errors::AppError::Invalid(_)),
+        "{err:?}"
+    );
 
     // Both allowed values persist.
     let ok_existing = uc
-        .execute(base_update_request(Some(START_MODE_EXISTING.into()), "ALPHA"))
+        .execute(base_update_request(
+            Some(START_MODE_EXISTING.into()),
+            "ALPHA",
+        ))
         .await
         .unwrap();
     assert_eq!(ok_existing.accounting_start_mode, START_MODE_EXISTING);

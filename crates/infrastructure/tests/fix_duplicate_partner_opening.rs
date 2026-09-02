@@ -26,11 +26,12 @@ use application::use_cases::customer::CreateCustomerUseCase;
 use application::use_cases::journal::ReverseJournalEntryUseCase;
 use application::use_cases::opening_balance::create::START_MODE_EXISTING;
 use application::use_cases::opening_balance::types::{
-    CreateOpeningBalanceMigrationCommand, OpeningItemInput, OpeningLineInput, SaveOpeningItemsCommand,
+    CreateOpeningBalanceMigrationCommand, OpeningItemInput, OpeningLineInput,
+    SaveOpeningItemsCommand,
 };
 use application::use_cases::opening_balance::{
-    ApproveOpeningBalanceUseCase, CreateOpeningBalanceUseCase, KIND_AR, PostOpeningBalanceUseCase,
-    SaveOpeningItemsUseCase, ValidateOpeningBalanceUseCase,
+    ApproveOpeningBalanceUseCase, CreateOpeningBalanceUseCase, PostOpeningBalanceUseCase,
+    SaveOpeningItemsUseCase, ValidateOpeningBalanceUseCase, KIND_AR,
 };
 use domain::shared::ids::AccountId;
 use infrastructure::db::pool::run_migrations;
@@ -45,7 +46,10 @@ use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 
 async fn build_pool() -> Arc<sqlx::SqlitePool> {
     let mut path = std::env::temp_dir();
-    path.push(format!("acc_fix_dup_partner_opening_{}.sqlite", uuid::Uuid::new_v4()));
+    path.push(format!(
+        "acc_fix_dup_partner_opening_{}.sqlite",
+        uuid::Uuid::new_v4()
+    ));
     let options = SqliteConnectOptions::from_str(path.to_str().unwrap())
         .unwrap()
         .create_if_missing(true);
@@ -154,7 +158,10 @@ async fn migration_posting_auto_reverses_standalone_per_entity_opening_journal()
             .fetch_one(&*pool)
             .await
             .unwrap();
-    assert_eq!(per_entity, 1, "a standalone opening journal was posted (legacy)");
+    assert_eq!(
+        per_entity, 1,
+        "a standalone opening journal was posted (legacy)"
+    );
 
     // 2) Migration includes the SAME AR account (mirrors wizard deriveAr),
     //    balanced against equity so the draft is reconciled and postable.
@@ -170,8 +177,16 @@ async fn migration_posting_auto_reverses_standalone_per_entity_opening_journal()
         source_system: None,
         source_reference: None,
         lines: vec![
-            OpeningLineInput { account_id: ar_account_id.to_string(), amount: "800".into(), description: None },
-            OpeningLineInput { account_id: equity.to_string(), amount: "800".into(), description: None },
+            OpeningLineInput {
+                account_id: ar_account_id.to_string(),
+                amount: "800".into(),
+                description: None,
+            },
+            OpeningLineInput {
+                account_id: equity.to_string(),
+                amount: "800".into(),
+                description: None,
+            },
         ],
     })
     .await
@@ -234,7 +249,10 @@ async fn migration_posting_auto_reverses_standalone_per_entity_opening_journal()
             .fetch_one(&*pool)
             .await
             .unwrap();
-        assert_eq!(status, "Reversed", "standalone original journal is Reversed");
+        assert_eq!(
+            status, "Reversed",
+            "standalone original journal is Reversed"
+        );
         let reversals: i64 = sqlx::query_scalar(
             "SELECT COUNT(*) FROM journal_entries WHERE reversal_of_entry_id = ?",
         )
@@ -242,21 +260,26 @@ async fn migration_posting_auto_reverses_standalone_per_entity_opening_journal()
         .fetch_one(&*pool)
         .await
         .unwrap();
-        assert_eq!(reversals, 1, "a true audit-preserving Reversal journal exists");
+        assert_eq!(
+            reversals, 1,
+            "a true audit-preserving Reversal journal exists"
+        );
     }
 
     // 4) GL nets to exactly ONE opening movement (800): the reversal cancels
     //    the standalone posting, the migration aggregate carries the canonical
     //    position — never 800+800.
     assert_eq!(gl_net(&pool, &ar_account_id).await, Decimal::from(800));
-    let migration_journals: i64 = sqlx::query_scalar(
-        "SELECT COUNT(*) FROM journal_entries WHERE source_id = ?",
-    )
-    .bind(format!("opening_balance:{migration_id}"))
-    .fetch_one(&*pool)
-    .await
-    .unwrap();
-    assert_eq!(migration_journals, 1, "exactly one migration aggregate journal");
+    let migration_journals: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM journal_entries WHERE source_id = ?")
+            .bind(format!("opening_balance:{migration_id}"))
+            .fetch_one(&*pool)
+            .await
+            .unwrap();
+    assert_eq!(
+        migration_journals, 1,
+        "exactly one migration aggregate journal"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -350,8 +373,16 @@ async fn migration_posts_after_reversal_gl_nets_exactly_one_opening() {
         source_system: None,
         source_reference: None,
         lines: vec![
-            OpeningLineInput { account_id: ar_account_id.to_string(), amount: "800".into(), description: None },
-            OpeningLineInput { account_id: equity.to_string(), amount: "800".into(), description: None },
+            OpeningLineInput {
+                account_id: ar_account_id.to_string(),
+                amount: "800".into(),
+                description: None,
+            },
+            OpeningLineInput {
+                account_id: equity.to_string(),
+                amount: "800".into(),
+                description: None,
+            },
         ],
     })
     .await
@@ -409,12 +440,14 @@ async fn migration_posts_after_reversal_gl_nets_exactly_one_opening() {
     // 4) GL nets to exactly ONE opening movement (800): the reversal cancels
     //    the standalone journal, the migration carries the canonical position.
     assert_eq!(gl_net(&pool, &ar_account_id).await, Decimal::from(800));
-    let migration_journals: i64 = sqlx::query_scalar(
-        "SELECT COUNT(*) FROM journal_entries WHERE source_id = ?",
-    )
-    .bind(format!("opening_balance:{migration_id}"))
-    .fetch_one(&*pool)
-    .await
-    .unwrap();
-    assert_eq!(migration_journals, 1, "exactly one migration aggregate journal");
+    let migration_journals: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM journal_entries WHERE source_id = ?")
+            .bind(format!("opening_balance:{migration_id}"))
+            .fetch_one(&*pool)
+            .await
+            .unwrap();
+    assert_eq!(
+        migration_journals, 1,
+        "exactly one migration aggregate journal"
+    );
 }

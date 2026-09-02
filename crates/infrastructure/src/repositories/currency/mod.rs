@@ -1,9 +1,9 @@
-use sqlx::{SqlitePool, Row};
-use std::sync::Arc;
+use application::errors::AppError;
+use application::ports::currency_repository::CurrencyRepository;
 use async_trait::async_trait;
 use domain::shared::currency::Currency;
-use application::ports::currency_repository::CurrencyRepository;
-use application::errors::AppError;
+use sqlx::{Row, SqlitePool};
+use std::sync::Arc;
 
 pub struct SqliteCurrencyRepository {
     pool: Arc<SqlitePool>,
@@ -45,7 +45,11 @@ impl CurrencyRepository for SqliteCurrencyRepository {
     }
 
     async fn set_base_currency(&self, code: &str) -> Result<(), AppError> {
-        let mut tx = self.pool.begin().await.map_err(|e| AppError::Infrastructure(e.to_string()))?;
+        let mut tx = self
+            .pool
+            .begin()
+            .await
+            .map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
         sqlx::query("UPDATE currencies SET is_base = 0")
             .execute(&mut *tx)
@@ -58,7 +62,9 @@ impl CurrencyRepository for SqliteCurrencyRepository {
             .await
             .map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
-        tx.commit().await.map_err(|e| AppError::Infrastructure(e.to_string()))?;
+        tx.commit()
+            .await
+            .map_err(|e| AppError::Infrastructure(e.to_string()))?;
         Ok(())
     }
 

@@ -1,8 +1,8 @@
+use crate::errors::AppError;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use domain::accounting::fiscal_period::FiscalPeriod;
 use domain::shared::ids::FiscalPeriodId;
-use crate::errors::AppError;
 
 #[async_trait]
 pub trait FiscalPeriodRepository: Send + Sync {

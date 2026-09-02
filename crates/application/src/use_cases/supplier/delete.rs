@@ -1,8 +1,8 @@
-use std::sync::Arc;
-use domain::shared::ids::SupplierId;
-use crate::ports::supplier_repository::SupplierRepository;
-use crate::ports::journal_entry_repository::JournalEntryRepository;
 use crate::errors::AppError;
+use crate::ports::journal_entry_repository::JournalEntryRepository;
+use crate::ports::supplier_repository::SupplierRepository;
+use domain::shared::ids::SupplierId;
+use std::sync::Arc;
 
 pub struct DeleteSupplierUseCase {
     supplier_repo: Arc<dyn SupplierRepository>,
@@ -14,11 +14,16 @@ impl DeleteSupplierUseCase {
         supplier_repo: Arc<dyn SupplierRepository>,
         journal_repo: Arc<dyn JournalEntryRepository>,
     ) -> Self {
-        Self { supplier_repo, journal_repo }
+        Self {
+            supplier_repo,
+            journal_repo,
+        }
     }
 
     pub async fn execute(&self, id: String) -> Result<(), AppError> {
-        let sid = id.parse::<SupplierId>().map_err(|_| AppError::NotFound("معرف المورد غير صالح".into()))?;
+        let sid = id
+            .parse::<SupplierId>()
+            .map_err(|_| AppError::NotFound("معرف المورد غير صالح".into()))?;
 
         let supplier = self.supplier_repo.find_by_id(&sid).await?;
 

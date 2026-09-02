@@ -1,7 +1,7 @@
-use sqlx::SqlitePool;
 use application::errors::AppError;
 use domain::inventory::category::MaterialCategory;
 use domain::shared::ids::MaterialCategoryId;
+use sqlx::SqlitePool;
 
 pub async fn save(pool: &SqlitePool, category: &MaterialCategory) -> Result<(), AppError> {
     sqlx::query(
@@ -55,13 +55,12 @@ pub async fn reassign_materials(
     from: &MaterialCategoryId,
     to: &MaterialCategoryId,
 ) -> Result<u64, AppError> {
-    let result = sqlx::query(
-        "UPDATE material_categories SET category_id = ? WHERE category_id = ?",
-    )
-    .bind(to.to_string())
-    .bind(from.to_string())
-    .execute(pool)
-    .await
-    .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+    let result =
+        sqlx::query("UPDATE material_categories SET category_id = ? WHERE category_id = ?")
+            .bind(to.to_string())
+            .bind(from.to_string())
+            .execute(pool)
+            .await
+            .map_err(|e| AppError::Infrastructure(e.to_string()))?;
     Ok(result.rows_affected())
 }

@@ -7,10 +7,7 @@ use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 
 /// Build a fully migrated live DB, insert the given posted entry lines, then
 /// VACUUM INTO a standalone candidate file (exactly how exports are produced).
-async fn build_candidate(
-    name: &str,
-    lines: &[(bool, &str, &str)],
-) -> (PathBuf, sqlx::SqlitePool) {
+async fn build_candidate(name: &str, lines: &[(bool, &str, &str)]) -> (PathBuf, sqlx::SqlitePool) {
     let mut path = std::env::temp_dir();
     path.push(format!("{name}_{}.sqlite", uuid::Uuid::new_v4()));
 
@@ -26,16 +23,14 @@ async fn build_candidate(
 
     // Two accounts: an asset (122 = cash, renamed from 1202 in migration 015)
     // and an equity (51 = capital, ensured at runtime by pool::run_migrations).
-    let cash: String =
-        sqlx::query_scalar("SELECT id FROM accounts WHERE code = '122' LIMIT 1")
-            .fetch_one(&pool)
-            .await
-            .unwrap();
-    let capital: String =
-        sqlx::query_scalar("SELECT id FROM accounts WHERE code = '51' LIMIT 1")
-            .fetch_one(&pool)
-            .await
-            .unwrap();
+    let cash: String = sqlx::query_scalar("SELECT id FROM accounts WHERE code = '122' LIMIT 1")
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    let capital: String = sqlx::query_scalar("SELECT id FROM accounts WHERE code = '51' LIMIT 1")
+        .fetch_one(&pool)
+        .await
+        .unwrap();
     let (debit_account, credit_account) = (cash, capital);
 
     let entry_id = uuid::Uuid::new_v4().to_string();
@@ -50,9 +45,16 @@ async fn build_candidate(
     .unwrap();
 
     for (i, (is_debit, amount, account)) in lines.iter().enumerate() {
-        let account_id = if *account == "debit" { &debit_account } else { &credit_account };
-        let (debit, credit): (&str, &str) =
-            if *is_debit { (*amount, "0.00") } else { ("0.00", *amount) };
+        let account_id = if *account == "debit" {
+            &debit_account
+        } else {
+            &credit_account
+        };
+        let (debit, credit): (&str, &str) = if *is_debit {
+            (*amount, "0.00")
+        } else {
+            ("0.00", *amount)
+        };
         sqlx::query(
             "INSERT INTO journal_lines (id, journal_entry_id, account_id, partner_id, currency, fx_rate, debit, debit_base, credit, credit_base, description, created_at) VALUES (?1, ?2, ?3, NULL, 'S', '1', ?4, ?4, ?5, ?5, 'test', datetime('now'))",
         )
@@ -96,7 +98,11 @@ async fn balanced_import_candidate_passes() {
     pool.close().await;
     let _ = std::fs::remove_file(&candidate);
     assert!(report.ok, "expected OK, got: {:?}", report.errors);
-    assert!(report.errors.is_empty(), "expected no errors, got {:?}", report.errors);
+    assert!(
+        report.errors.is_empty(),
+        "expected no errors, got {:?}",
+        report.errors
+    );
 }
 
 #[tokio::test]
@@ -147,7 +153,10 @@ async fn foreign_key_violation_is_rejected() {
     .execute(&pool)
     .await
     .unwrap();
-    sqlx::query("PRAGMA foreign_keys = ON").execute(&pool).await.unwrap();
+    sqlx::query("PRAGMA foreign_keys = ON")
+        .execute(&pool)
+        .await
+        .unwrap();
 
     let _ = std::fs::remove_file(&candidate);
     sqlx::query(&format!(
@@ -161,7 +170,11 @@ async fn foreign_key_violation_is_rejected() {
     let report = validate_import_candidate(&candidate).await.unwrap();
     pool.close().await;
     let _ = std::fs::remove_file(&candidate);
-    assert!(!report.ok, "FK violation must be rejected, got: {:?}", report.errors);
+    assert!(
+        !report.ok,
+        "FK violation must be rejected, got: {:?}",
+        report.errors
+    );
     assert!(
         report.errors.iter().any(|e| e.contains("Foreign Key")),
         "expected FK error, got: {:?}",

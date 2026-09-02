@@ -1,21 +1,18 @@
 use crate::bootstrap::container::AppState;
 use application::use_cases::opening_balance::{
-    AllocateNetProfitUseCase,
-    ApplyResidualToLedgerUseCase,
-    ApproveOpeningBalanceUseCase, CancelOpeningBalanceUseCase,
-    ClearOpeningDraftUseCase,
-    ComputeNetProfitCommand, ComputeNetProfitUseCase, ComputedNetProfitDto,
-    CreateOpeningBalanceMigrationCommand,
-    CreateOpeningBalanceUseCase, DistributeProfitCommand, GetOpeningDraftUseCase, GetOpeningPositionControlUseCase, GetOpeningReconciliationUseCase,
-    GetResidualClassificationSpecUseCase,
-    ListOpeningMigrationsUseCase,
-    LockOpeningBalanceUseCase, NetProfitAllocationDto, OpeningItemsDto, OpeningMigrationDto,
-    OpeningPositionControlDto, OpeningReconciliationDto, PostOpeningBalanceResult, PostOpeningBalanceUseCase,
-    PreviewProfitDistributionCommand, PreviewProfitDistributionUseCase, ReopenOpeningBalanceUseCase,
-    ResidualClassificationSpec, SaveOpeningDraftUseCase, SaveOpeningItemsCommand, SaveOpeningItemsUseCase,
-    SetResidualClassificationCommand, SetResidualClassificationUseCase,
-    UpdateOpeningMigrationLinesCommand, UpdateOpeningMigrationLinesUseCase,
-    ValidateOpeningBalanceUseCase,
+    AllocateNetProfitUseCase, ApplyResidualToLedgerUseCase, ApproveOpeningBalanceUseCase,
+    CancelOpeningBalanceUseCase, ClearOpeningDraftUseCase, ComputeNetProfitCommand,
+    ComputeNetProfitUseCase, ComputedNetProfitDto, CreateOpeningBalanceMigrationCommand,
+    CreateOpeningBalanceUseCase, DistributeProfitCommand, GetOpeningDraftUseCase,
+    GetOpeningPositionControlUseCase, GetOpeningReconciliationUseCase,
+    GetResidualClassificationSpecUseCase, ListOpeningMigrationsUseCase, LockOpeningBalanceUseCase,
+    NetProfitAllocationDto, OpeningItemsDto, OpeningMigrationDto, OpeningPositionControlDto,
+    OpeningReconciliationDto, PostOpeningBalanceResult, PostOpeningBalanceUseCase,
+    PreviewProfitDistributionCommand, PreviewProfitDistributionUseCase,
+    ReopenOpeningBalanceUseCase, ResidualClassificationSpec, SaveOpeningDraftUseCase,
+    SaveOpeningItemsCommand, SaveOpeningItemsUseCase, SetResidualClassificationCommand,
+    SetResidualClassificationUseCase, UpdateOpeningMigrationLinesCommand,
+    UpdateOpeningMigrationLinesUseCase, ValidateOpeningBalanceUseCase,
 };
 use tauri::State;
 
@@ -29,9 +26,9 @@ pub async fn create_opening_balance_migration(
         state.account_repo.clone(),
         state.settings_repo.clone(),
     )
-        .execute(request)
-        .await
-        .map_err(|e| e.to_string())
+    .execute(request)
+    .await
+    .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -44,9 +41,9 @@ pub async fn update_opening_balance_migration_lines(
         state.account_repo.clone(),
         state.settings_repo.clone(),
     )
-        .execute(request)
-        .await
-        .map_err(|e| e.to_string())
+    .execute(request)
+    .await
+    .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -163,9 +160,9 @@ pub async fn reopen_opening_balance_migration(
     id: String,
 ) -> Result<OpeningMigrationDto, String> {
     ReopenOpeningBalanceUseCase::new(state.opening_migration_repo.clone())
-.execute(id)
-    .await
-    .map_err(|e| e.to_string())
+        .execute(id)
+        .await
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -177,9 +174,9 @@ pub async fn set_opening_balance_residual_classification(
         state.opening_migration_repo.clone(),
         state.account_repo.clone(),
     )
-        .execute(request)
-        .await
-        .map_err(|e| e.to_string())
+    .execute(request)
+    .await
+    .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -220,9 +217,9 @@ pub async fn validate_opening_balance_migration(
         state.account_repo.clone(),
         state.journal_entry_repo.clone(),
     )
-        .execute(id, by)
-        .await
-        .map_err(|e| e.to_string())
+    .execute(id, by)
+    .await
+    .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -314,9 +311,7 @@ pub async fn save_opening_wizard_draft(
 }
 
 #[tauri::command]
-pub async fn clear_opening_wizard_draft(
-    state: State<'_, AppState>,
-) -> Result<(), String> {
+pub async fn clear_opening_wizard_draft(state: State<'_, AppState>) -> Result<(), String> {
     ClearOpeningDraftUseCase::new(state.opening_draft_repo.clone())
         .execute()
         .await

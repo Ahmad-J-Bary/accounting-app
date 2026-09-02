@@ -16,7 +16,10 @@ use super::create::START_MODE_EXISTING;
 /// rule cannot drift between the two.
 pub fn reject_pl_account(account: &Account) -> Result<(), AppError> {
     use domain::accounting::account::AccountType;
-    if matches!(account.account_type, AccountType::Revenue | AccountType::Expenses) {
+    if matches!(
+        account.account_type,
+        AccountType::Revenue | AccountType::Expenses
+    ) {
         return Err(AppError::Invalid(
             "حسابات قائمة الدخل (إيرادات/مصاريف) غير مسموحة في الرصيد الافتتاحي — تُرحَّل النتيجة عبر الأرباح المبقاة"
                 .into(),
@@ -41,10 +44,12 @@ pub async fn opening_window_active(
     repo: &Arc<dyn OpeningMigrationRepository>,
 ) -> Result<bool, AppError> {
     let migrations = repo.list().await?;
-    Ok(migrations.iter().any(|m| !matches!(
-        m.status,
-        MigrationStatus::Cancelled | MigrationStatus::Locked
-    )))
+    Ok(migrations.iter().any(|m| {
+        !matches!(
+            m.status,
+            MigrationStatus::Cancelled | MigrationStatus::Locked
+        )
+    }))
 }
 
 /// True once an EXISTING company's opening lifecycle is sealed — any migration

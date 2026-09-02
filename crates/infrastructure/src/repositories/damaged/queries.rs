@@ -1,16 +1,20 @@
-use sqlx::SqlitePool;
+use super::mappers::row_to_damaged;
+use super::models::DamagedItemRow;
 use application::errors::AppError;
 use domain::inventory::DamagedItem;
-use domain::shared::ids::{DamagedItemId};
-use super::models::DamagedItemRow;
-use super::mappers::row_to_damaged;
+use domain::shared::ids::DamagedItemId;
+use sqlx::SqlitePool;
 
 const COLUMNS: &str = "id, material_id, quantity, reason, damage_date, cost_impact, cost_impact_base, loss, loss_base, currency_code, fx_rate, notes, reference, created_at";
 
-pub async fn find_by_id(pool: &SqlitePool, id: &DamagedItemId) -> Result<Option<DamagedItem>, AppError> {
-    let row = sqlx::query_as::<_, DamagedItemRow>(
-        &format!("SELECT {} FROM damaged_items WHERE id = ?", COLUMNS)
-    )
+pub async fn find_by_id(
+    pool: &SqlitePool,
+    id: &DamagedItemId,
+) -> Result<Option<DamagedItem>, AppError> {
+    let row = sqlx::query_as::<_, DamagedItemRow>(&format!(
+        "SELECT {} FROM damaged_items WHERE id = ?",
+        COLUMNS
+    ))
     .bind(id.0.to_string())
     .fetch_optional(pool)
     .await
@@ -37,9 +41,10 @@ pub async fn get_next_reference(pool: &SqlitePool) -> Result<String, AppError> {
 }
 
 pub async fn list_all(pool: &SqlitePool) -> Result<Vec<DamagedItem>, AppError> {
-    let rows = sqlx::query_as::<_, DamagedItemRow>(
-        &format!("SELECT {} FROM damaged_items ORDER BY damage_date DESC", COLUMNS)
-    )
+    let rows = sqlx::query_as::<_, DamagedItemRow>(&format!(
+        "SELECT {} FROM damaged_items ORDER BY damage_date DESC",
+        COLUMNS
+    ))
     .fetch_all(pool)
     .await
     .map_err(|e| AppError::Infrastructure(e.to_string()))?;

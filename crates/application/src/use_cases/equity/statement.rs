@@ -1,10 +1,10 @@
-use std::sync::Arc;
 use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 
-use domain::accounting::JournalEntryStatus;
 use domain::accounting::partner::ProfitSharingType;
+use domain::accounting::JournalEntryStatus;
 use domain::shared::AccountId;
 
 use crate::errors::AppError;
@@ -77,7 +77,10 @@ impl GetPartnerEquityStatementUseCase {
         partner_repo: Arc<dyn PartnerRepository>,
         journal_repo: Arc<dyn JournalEntryRepository>,
     ) -> Self {
-        Self { partner_repo, journal_repo }
+        Self {
+            partner_repo,
+            journal_repo,
+        }
     }
 
     pub async fn execute(
@@ -121,39 +124,38 @@ impl GetPartnerEquityStatementUseCase {
 
             // Compute capital ratio
             let capital_ratio = if total_capital > Decimal::ZERO {
-                (capital_registered / total_capital * Decimal::new(100, 0))
-                    .round_dp(2)
+                (capital_registered / total_capital * Decimal::new(100, 0)).round_dp(2)
             } else {
                 Decimal::ZERO
             };
 
             // Compute effective profit-sharing ratio
             let original_ratio = if total_original_capital > Decimal::ZERO {
-                (p.amount_original / total_original_capital * Decimal::new(100, 0))
-                    .round_dp(2)
+                (p.amount_original / total_original_capital * Decimal::new(100, 0)).round_dp(2)
             } else {
                 Decimal::ZERO
             };
             let profit_share_ratio = match p.profit_sharing_type {
-                ProfitSharingType::Manual => {
-                    p.profit_sharing_ratio.unwrap_or(Decimal::ZERO)
-                }
+                ProfitSharingType::Manual => p.profit_sharing_ratio.unwrap_or(Decimal::ZERO),
                 ProfitSharingType::BasedOnCapitalLocal => capital_ratio,
                 ProfitSharingType::BasedOnCapitalOriginal => original_ratio,
             };
 
             // Period-specific breakdown when date filters are provided
-            let (accumulated_profit_prior, accumulated_drawings_prior,
-                 period_profit, period_drawings) = if let (Some(from), Some(to)) = (from_date, to_date) {
+            let (
+                accumulated_profit_prior,
+                accumulated_drawings_prior,
+                period_profit,
+                period_drawings,
+            ) = if let (Some(from), Some(to)) = (from_date, to_date) {
                 let current_breakdown = match p.current_account_id {
-                    Some(account_id) => {
-                        self.ledger_breakdown_ranged(&account_id, from, to).await?
-                    }
+                    Some(account_id) => self.ledger_breakdown_ranged(&account_id, from, to).await?,
                     None => (Decimal::ZERO, Decimal::ZERO, Decimal::ZERO),
                 };
                 let drawings_breakdown = match p.drawings_account_id {
                     Some(account_id) => {
-                        self.drawings_breakdown_ranged(&account_id, from, to).await?
+                        self.drawings_breakdown_ranged(&account_id, from, to)
+                            .await?
                     }
                     None => (Decimal::ZERO, Decimal::ZERO),
                 };
@@ -205,7 +207,10 @@ impl GetPartnerEquityStatementUseCase {
 
     /// (net credit−debit balance, debit magnitude) for an account across all
     /// Posted journal lines only, from the ledgers themselves.
-    async fn ledger_breakdown(&self, account_id: &AccountId) -> Result<(Decimal, Decimal), AppError> {
+    async fn ledger_breakdown(
+        &self,
+        account_id: &AccountId,
+    ) -> Result<(Decimal, Decimal), AppError> {
         let entries = self.journal_repo.list_by_account(account_id).await?;
         let mut balance = Decimal::ZERO;
         let mut debits = Decimal::ZERO;

@@ -1,7 +1,9 @@
-use tauri::State;
 use crate::bootstrap::container::AppState;
-use application::use_cases::payment::{CreatePaymentUseCase, ListPaymentsUseCase, DeletePaymentUseCase};
 use application::dto::payment_dto::{CreatePaymentRequest, PaymentDto};
+use application::use_cases::payment::{
+    CreatePaymentUseCase, DeletePaymentUseCase, ListPaymentsUseCase,
+};
+use tauri::State;
 
 #[tauri::command]
 pub async fn create_payment(
@@ -37,10 +39,7 @@ pub async fn list_payments(
 }
 
 #[tauri::command]
-pub async fn delete_payment(
-    id: String,
-    state: State<'_, AppState>,
-) -> Result<(), String> {
+pub async fn delete_payment(id: String, state: State<'_, AppState>) -> Result<(), String> {
     DeletePaymentUseCase::new(
         state.payment_repo.clone(),
         state.customer_repo.clone(),
@@ -48,9 +47,9 @@ pub async fn delete_payment(
         state.account_repo.clone(),
         state.journal_entry_repo.clone(),
     )
-        .execute(id)
-        .await
-        .map_err(|e| e.to_string())
+    .execute(id)
+    .await
+    .map_err(|e| e.to_string())
 }
 
 #[tauri::command]

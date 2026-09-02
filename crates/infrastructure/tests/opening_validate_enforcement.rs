@@ -18,10 +18,11 @@ use application::ports::opening_migration_repository::OpeningMigrationRepository
 use application::ports::settings_repository::SettingsRepository;
 use application::use_cases::opening_balance::create::START_MODE_EXISTING;
 use application::use_cases::opening_balance::types::{
-    CreateOpeningBalanceMigrationCommand, OpeningItemInput, OpeningLineInput, SaveOpeningItemsCommand,
+    CreateOpeningBalanceMigrationCommand, OpeningItemInput, OpeningLineInput,
+    SaveOpeningItemsCommand,
 };
 use application::use_cases::opening_balance::{
-    CreateOpeningBalanceUseCase, KIND_AR, SaveOpeningItemsUseCase, ValidateOpeningBalanceUseCase,
+    CreateOpeningBalanceUseCase, SaveOpeningItemsUseCase, ValidateOpeningBalanceUseCase, KIND_AR,
 };
 use domain::accounting::MigrationStatus;
 use domain::customers::Customer;
@@ -37,7 +38,10 @@ use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 
 async fn build_pool() -> Arc<sqlx::SqlitePool> {
     let mut path = std::env::temp_dir();
-    path.push(format!("acc_opening_validate_{}.sqlite", uuid::Uuid::new_v4()));
+    path.push(format!(
+        "acc_opening_validate_{}.sqlite",
+        uuid::Uuid::new_v4()
+    ));
     let options = SqliteConnectOptions::from_str(path.to_str().unwrap())
         .unwrap()
         .create_if_missing(true);
@@ -129,8 +133,13 @@ async fn validate_rejects_draft_whose_debit_credit_are_unequal() {
         .await
         .expect("create unbalanced draft");
 
-    let err = validator(&pool).execute(draft.0.id.clone(), "system".into()).await;
-    assert!(err.is_err(), "unbalanced draft must be rejected at validation");
+    let err = validator(&pool)
+        .execute(draft.0.id.clone(), "system".into())
+        .await;
+    assert!(
+        err.is_err(),
+        "unbalanced draft must be rejected at validation"
+    );
     assert_eq!(
         migration_status(&pool, &draft.0.id).await,
         MigrationStatus::Draft,
@@ -184,9 +193,15 @@ async fn validate_rejects_draft_whose_subledger_does_not_reconcile() {
     let item_repo = Arc::new(SqliteOpeningItemRepository::new(pool.clone()));
     let customer_repo: Arc<dyn CustomerRepository> =
         Arc::new(SqliteCustomerRepository::new(pool.clone()));
-    let supplier_repo = Arc::new(infrastructure::repositories::SqliteSupplierRepository::new(pool.clone()));
-    let material_repo = Arc::new(infrastructure::repositories::SqliteMaterialRepository::new(pool.clone()));
-    let asset_repo = Arc::new(infrastructure::repositories::SqliteAssetRepository::new(pool.clone()));
+    let supplier_repo = Arc::new(infrastructure::repositories::SqliteSupplierRepository::new(
+        pool.clone(),
+    ));
+    let material_repo = Arc::new(infrastructure::repositories::SqliteMaterialRepository::new(
+        pool.clone(),
+    ));
+    let asset_repo = Arc::new(infrastructure::repositories::SqliteAssetRepository::new(
+        pool.clone(),
+    ));
     let migration_repo: Arc<dyn OpeningMigrationRepository> =
         Arc::new(SqliteOpeningMigrationRepository::new(pool.clone()));
 
@@ -197,7 +212,9 @@ async fn validate_rejects_draft_whose_subledger_does_not_reconcile() {
         supplier_repo,
         material_repo,
         asset_repo,
-        Arc::new(infrastructure::repositories::SqliteAccountRepository::new(pool.clone())),
+        Arc::new(infrastructure::repositories::SqliteAccountRepository::new(
+            pool.clone(),
+        )),
     )
     .execute(SaveOpeningItemsCommand {
         migration_id: draft.0.id.clone(),
@@ -212,8 +229,13 @@ async fn validate_rejects_draft_whose_subledger_does_not_reconcile() {
     .await
     .expect("save AR sub-ledger item");
 
-    let err = validator(&pool).execute(draft.0.id.clone(), "system".into()).await;
-    assert!(err.is_err(), "non-reconciled sub-ledger must block validation");
+    let err = validator(&pool)
+        .execute(draft.0.id.clone(), "system".into())
+        .await;
+    assert!(
+        err.is_err(),
+        "non-reconciled sub-ledger must block validation"
+    );
     assert_eq!(
         migration_status(&pool, &draft.0.id).await,
         MigrationStatus::Draft,

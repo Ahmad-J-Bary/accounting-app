@@ -1,9 +1,9 @@
-use sqlx::SqlitePool;
 use application::errors::AppError;
 use domain::accounting::journal_entry::JournalEntry;
 use domain::inventory::stock_movement::StockMovement;
 use domain::purchases::PurchaseInvoice;
 use domain::shared::ids::PurchaseInvoiceId;
+use sqlx::SqlitePool;
 
 /// Atomically posts a purchase invoice: stock movements, purchase journal (+
 /// additional-cost journals) and the invoice status change all commit in ONE
@@ -14,7 +14,10 @@ pub async fn post_with_accounting(
     movements: &[StockMovement],
     entries: &[JournalEntry],
 ) -> Result<(), AppError> {
-    let mut tx = pool.begin().await.map_err(|e| AppError::Infrastructure(e.to_string()))?;
+    let mut tx = pool
+        .begin()
+        .await
+        .map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
     for movement in movements {
         crate::repositories::stock_movement::insert_movement_tx(&mut tx, movement).await?;
@@ -41,12 +44,17 @@ pub async fn post_with_accounting(
     .await
     .map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
-    tx.commit().await.map_err(|e| AppError::Infrastructure(e.to_string()))?;
+    tx.commit()
+        .await
+        .map_err(|e| AppError::Infrastructure(e.to_string()))?;
     Ok(())
 }
 
 pub async fn save(pool: &SqlitePool, invoice: &PurchaseInvoice) -> Result<(), AppError> {
-    let mut tx = pool.begin().await.map_err(|e| AppError::Infrastructure(e.to_string()))?;
+    let mut tx = pool
+        .begin()
+        .await
+        .map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
     sqlx::query(
         "INSERT INTO purchase_invoices (id, invoice_number, supplier_id, subtotal, tax_amount, discount_amount, total, amount_paid, status, invoice_date, due_date, currency_code, exchange_rate, notes, created_at, updated_at)
@@ -104,7 +112,9 @@ pub async fn save(pool: &SqlitePool, invoice: &PurchaseInvoice) -> Result<(), Ap
         .map_err(|e| AppError::Infrastructure(e.to_string()))?;
     }
 
-    tx.commit().await.map_err(|e| AppError::Infrastructure(e.to_string()))?;
+    tx.commit()
+        .await
+        .map_err(|e| AppError::Infrastructure(e.to_string()))?;
     Ok(())
 }
 

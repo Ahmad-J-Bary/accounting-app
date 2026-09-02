@@ -1,9 +1,9 @@
-﻿use sqlx::Row;
-use domain::shared::{Money, Currency};
+use chrono::{DateTime, Utc};
+use domain::shared::{Currency, Money};
 use rust_decimal::Decimal;
+use sqlx::Row;
 use std::str::FromStr;
 use uuid::Uuid;
-use chrono::{DateTime, Utc};
 
 pub fn map_uuid(row: &sqlx::sqlite::SqliteRow, col: &str) -> Uuid {
     Uuid::parse_str(row.get(col)).unwrap_or_default()

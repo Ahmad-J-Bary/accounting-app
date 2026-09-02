@@ -14,7 +14,9 @@ use crate::ports::journal_entry_repository::JournalEntryRepository;
 use crate::ports::opening_item_repository::OpeningItemRepository;
 use crate::ports::opening_migration_repository::OpeningMigrationRepository;
 use crate::ports::partner_repository::PartnerRepository;
-use crate::use_cases::opening_balance::reconcile::{readiness_blockers, GetOpeningReconciliationUseCase};
+use crate::use_cases::opening_balance::reconcile::{
+    readiness_blockers, GetOpeningReconciliationUseCase,
+};
 
 /// Currency-aware Decimal tolerance for the balance check. A difference at or
 /// below one penny is treated as balanced; f64 is never introduced.
@@ -265,7 +267,9 @@ fn purpose_to_str(purpose: AccountPurpose) -> &'static str {
     }
 }
 
-fn classification_label(classification: Option<domain::accounting::ResidualClassification>) -> Option<String> {
+fn classification_label(
+    classification: Option<domain::accounting::ResidualClassification>,
+) -> Option<String> {
     classification.map(|c| c.as_str().to_string())
 }
 
@@ -292,12 +296,9 @@ pub fn compute_dto(
     } = buckets;
 
     let net_assets = assets - liabilities;
-    let total_equity = partner_capital
-        + partner_current
-        + retained_earnings
-        + opening_equity
-        + other_equity
-        - drawings;
+    let total_equity =
+        partner_capital + partner_current + retained_earnings + opening_equity + other_equity
+            - drawings;
     let equity_difference = net_assets - total_equity;
     let is_balanced = equity_difference.abs() <= balance_tolerance();
 
@@ -305,7 +306,8 @@ pub fn compute_dto(
     // the retained-earnings result itself. Drawn from the same buckets (never
     // re-added); the derived historical result is informational only.
     let explicit_other_equity = partner_current + opening_equity + other_equity - drawings;
-    let opening_historical_result = (net_assets - partner_capital - explicit_other_equity).round_dp(2);
+    let opening_historical_result =
+        (net_assets - partner_capital - explicit_other_equity).round_dp(2);
 
     let difference_message = if is_balanced {
         None
@@ -373,8 +375,14 @@ impl GetOpeningPositionControlUseCase {
         }
     }
 
-    pub async fn execute(&self, migration_id: String) -> Result<OpeningPositionControlDto, AppError> {
-        let migration = self.migration_repo.find_by_id(&migration_id).await?
+    pub async fn execute(
+        &self,
+        migration_id: String,
+    ) -> Result<OpeningPositionControlDto, AppError> {
+        let migration = self
+            .migration_repo
+            .find_by_id(&migration_id)
+            .await?
             .ok_or_else(|| AppError::NotFound("ترحيل الرصيد الافتتاحي غير موجود".into()))?;
 
         // Resolve every account referenced by the migration lines once.
@@ -424,11 +432,13 @@ impl GetOpeningPositionControlUseCase {
     /// line buckets via the partner's linked capital/current/drawings accounts.
     /// Ownership % is relative to THIS migration's contributed capital only
     /// (the decision for v0.9.9), never the partner master's amount_local.
-    async fn partner_rows(&self, buckets: &PositionBuckets) -> Result<Vec<PositionPartnerRow>, AppError> {
+    async fn partner_rows(
+        &self,
+        buckets: &PositionBuckets,
+    ) -> Result<Vec<PositionPartnerRow>, AppError> {
         let partners = self.partner_repo.list_all(false).await?;
 
-        let total_partner_capital: Decimal =
-            buckets.partner_capital_line.values().copied().sum();
+        let total_partner_capital: Decimal = buckets.partner_capital_line.values().copied().sum();
 
         let mut rows = Vec::new();
         for partner in &partners {
@@ -508,13 +518,8 @@ mod tests {
     }
 
     fn migration(lines: Vec<OpeningBalanceLine>) -> OpeningBalanceMigration {
-        OpeningBalanceMigration::new(
-            Uuid::new_v4().to_string(),
-            chrono::Utc::now(),
-            None,
-            lines,
-        )
-        .expect("valid migration")
+        OpeningBalanceMigration::new(Uuid::new_v4().to_string(), chrono::Utc::now(), None, lines)
+            .expect("valid migration")
     }
 
     fn line(account: &Account, amount: Decimal) -> OpeningBalanceLine {
@@ -534,7 +539,11 @@ mod tests {
         let cash = account("1001", AccountType::Assets, AccountPurpose::General);
         let suppliers = account("2203", AccountType::Liabilities, AccountPurpose::Payable);
         let capital = account("5101", AccountType::Equity, AccountPurpose::PartnerCapital);
-        let retained = account("5201", AccountType::Equity, AccountPurpose::RetainedEarnings);
+        let retained = account(
+            "5201",
+            AccountType::Equity,
+            AccountPurpose::RetainedEarnings,
+        );
 
         let m = migration(vec![
             line(&cash, dec!(100000)),
@@ -560,7 +569,11 @@ mod tests {
         let cash = account("1001", AccountType::Assets, AccountPurpose::General);
         let suppliers = account("2203", AccountType::Liabilities, AccountPurpose::Payable);
         let capital = account("5101", AccountType::Equity, AccountPurpose::PartnerCapital);
-        let retained = account("5201", AccountType::Equity, AccountPurpose::RetainedEarnings);
+        let retained = account(
+            "5201",
+            AccountType::Equity,
+            AccountPurpose::RetainedEarnings,
+        );
 
         let m = migration(vec![
             line(&cash, dec!(100000)),
@@ -575,7 +588,10 @@ mod tests {
         assert_eq!(dto.total_equity, dec!(55000));
         assert_eq!(dto.equity_difference, dec!(5000));
         assert!(!dto.is_balanced, "Test 2 must be unbalanced");
-        assert!(dto.difference_message.is_some(), "difference must be surfaced");
+        assert!(
+            dto.difference_message.is_some(),
+            "difference must be surfaced"
+        );
     }
 
     #[test]
@@ -593,8 +609,16 @@ mod tests {
         let dto = compute_dto(&m, buckets);
 
         assert_eq!(dto.drawings, dec!(5000));
-        assert_eq!(dto.total_assets, dec!(100000), "drawings must not become an asset");
-        assert_eq!(dto.total_equity, dec!(95000), "drawings reduce equity (contra)");
+        assert_eq!(
+            dto.total_assets,
+            dec!(100000),
+            "drawings must not become an asset"
+        );
+        assert_eq!(
+            dto.total_equity,
+            dec!(95000),
+            "drawings reduce equity (contra)"
+        );
         // No Revenue/Expenses anywhere: only Asset/Liability/Equity lines exist.
         assert!(dto.asset_detail.iter().all(|l| l.group_key != "Drawings"));
     }
@@ -625,7 +649,11 @@ mod tests {
     fn test5_retained_earnings_not_double_counted() {
         let cash = account("1001", AccountType::Assets, AccountPurpose::General);
         let capital = account("5101", AccountType::Equity, AccountPurpose::PartnerCapital);
-        let retained = account("5201", AccountType::Equity, AccountPurpose::RetainedEarnings);
+        let retained = account(
+            "5201",
+            AccountType::Equity,
+            AccountPurpose::RetainedEarnings,
+        );
 
         let m = migration(vec![
             line(&cash, dec!(150000)),
@@ -647,7 +675,10 @@ mod tests {
         let cash = account("1001", AccountType::Assets, AccountPurpose::General);
         let capital = account("5101", AccountType::Equity, AccountPurpose::PartnerCapital);
 
-        let m = migration(vec![line(&cash, dec!(100000)), line(&capital, dec!(100000))]);
+        let m = migration(vec![
+            line(&cash, dec!(100000)),
+            line(&capital, dec!(100000)),
+        ]);
         let buckets = bucket_position(&m, &accounts_map(&[cash, capital]));
         let dto = compute_dto(&m, buckets);
 
@@ -690,11 +721,18 @@ mod tests {
         let accounts = [cash, customers, inventory, fixed, suppliers, capital];
         let buckets = bucket_position(&m, &accounts_map(&accounts));
 
-        let groups: Vec<&str> = buckets.asset_detail.iter().map(|l| l.group_key.as_str()).collect();
+        let groups: Vec<&str> = buckets
+            .asset_detail
+            .iter()
+            .map(|l| l.group_key.as_str())
+            .collect();
         assert!(groups.contains(&"Other"));
         assert!(groups.contains(&"Receivable"));
         assert!(groups.contains(&"Inventory"));
         assert!(groups.contains(&"FixedAsset"));
-        assert!(buckets.liability_detail.iter().any(|l| l.group_key == "Payable"));
+        assert!(buckets
+            .liability_detail
+            .iter()
+            .any(|l| l.group_key == "Payable"));
     }
 }

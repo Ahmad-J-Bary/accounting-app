@@ -18,10 +18,7 @@ impl ListJournalEntriesUseCase {
         repo: Arc<dyn JournalEntryRepository>,
         account_repo: Arc<dyn AccountRepository>,
     ) -> Self {
-        Self {
-            repo,
-            account_repo,
-        }
+        Self { repo, account_repo }
     }
 
     pub async fn execute(
@@ -50,8 +47,8 @@ impl ListJournalEntriesUseCase {
         //   CashJournal → no SQL filter, then post-filter for cash-related types
         //   All others → SQL filters by exact journal_type
         let repo_journal_type = match journal_type {
-            Some(JournalType::GeneralJournal) 
-            | Some(JournalType::CashJournal) 
+            Some(JournalType::GeneralJournal)
+            | Some(JournalType::CashJournal)
             | Some(JournalType::PurchaseJournal) => None,
             _ => journal_type,
         };
@@ -62,7 +59,15 @@ impl ListJournalEntriesUseCase {
         // pair are fetched and partitioned client-side.
         let entries = self
             .repo
-            .list_with_filters(from, to, repo_journal_type, acc_id, part_id, status_enum, ReversalScope::All)
+            .list_with_filters(
+                from,
+                to,
+                repo_journal_type,
+                acc_id,
+                part_id,
+                status_enum,
+                ReversalScope::All,
+            )
             .await?;
 
         let mut dtos = Vec::new();
@@ -118,7 +123,15 @@ impl ListJournalEntriesUseCase {
 
         let entries = self
             .repo
-            .list_with_filters(from, to, None, acc_id, part_id, Some(JournalEntryStatus::Posted), ReversalScope::PostedLedger)
+            .list_with_filters(
+                from,
+                to,
+                None,
+                acc_id,
+                part_id,
+                Some(JournalEntryStatus::Posted),
+                ReversalScope::PostedLedger,
+            )
             .await?;
 
         let mut dtos = Vec::with_capacity(entries.len());
@@ -162,7 +175,6 @@ impl ListJournalEntriesUseCase {
 
         Ok(dto)
     }
-
 }
 
 fn parse_date_bound(value: &str, end_of_day: bool) -> Option<DateTime<Utc>> {
@@ -225,22 +237,28 @@ mod tests {
         cancelled.status = JournalEntryStatus::Cancelled;
         let mut contra = balanced_entry("5", "contra-journal", account);
         contra.post().unwrap();
-        contra.reversal_of_entry_id =
-            Some(domain::shared::JournalEntryId(Uuid::new_v4()));
+        contra.reversal_of_entry_id = Some(domain::shared::JournalEntryId(Uuid::new_v4()));
 
-        journal_repo
-            .entries
-            .lock()
-            .unwrap()
-            .extend([draft.clone(), posted.clone(), reversed.clone(), cancelled.clone(), contra.clone()]);
+        journal_repo.entries.lock().unwrap().extend([
+            draft.clone(),
+            posted.clone(),
+            reversed.clone(),
+            cancelled.clone(),
+            contra.clone(),
+        ]);
 
         let use_case = ListJournalEntriesUseCase::new(journal_repo.clone(), account_repo.clone());
-        let result = use_case.execute_posted(None, None, None, None).await.unwrap();
+        let result = use_case
+            .execute_posted(None, None, None, None)
+            .await
+            .unwrap();
 
         assert_eq!(result.len(), 1, "only the Posted entry reaches reports");
         assert_eq!(result[0].description, "posted-migration");
-        assert_ne!(result[0].description, "draft-fa-opening",
-            "a Draft FA opening journal must never reach the reports");
+        assert_ne!(
+            result[0].description, "draft-fa-opening",
+            "a Draft FA opening journal must never reach the reports"
+        );
         assert!(
             result.iter().all(|e| e.reversal_of_entry_id.is_none()),
             "a Posted contra journal must never reach the reports feed"

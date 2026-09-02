@@ -1,13 +1,16 @@
+use super::mappers::{cost_row_to_cost, item_row_to_item, row_to_invoice};
+use super::models::{PurchaseInvoiceAdditionalCostRow, PurchaseInvoiceItemRow, PurchaseInvoiceRow};
+use application::errors::AppError;
+use domain::purchases::purchase_invoice::PurchaseAdditionalCost;
+use domain::purchases::{PurchaseInvoice, PurchaseInvoiceItem};
+use domain::shared::ids::{PurchaseInvoiceId, SupplierId};
 use sqlx::SqlitePool;
 use std::collections::HashMap;
-use application::errors::AppError;
-use domain::purchases::{PurchaseInvoice, PurchaseInvoiceItem};
-use domain::purchases::purchase_invoice::PurchaseAdditionalCost;
-use domain::shared::ids::{PurchaseInvoiceId, SupplierId};
-use super::models::{PurchaseInvoiceRow, PurchaseInvoiceItemRow, PurchaseInvoiceAdditionalCostRow};
-use super::mappers::{row_to_invoice, item_row_to_item, cost_row_to_cost};
 
-pub async fn load_items(pool: &SqlitePool, invoice_id: &str) -> Result<Vec<PurchaseInvoiceItem>, AppError> {
+pub async fn load_items(
+    pool: &SqlitePool,
+    invoice_id: &str,
+) -> Result<Vec<PurchaseInvoiceItem>, AppError> {
     let rows = sqlx::query_as::<_, PurchaseInvoiceItemRow>(
         "SELECT id, purchase_invoice_id, material_id, quantity, unit_id, conversion_factor, unit_price, line_total, notes
          FROM purchase_invoice_items WHERE purchase_invoice_id = ?"
@@ -24,10 +27,13 @@ pub async fn load_items(pool: &SqlitePool, invoice_id: &str) -> Result<Vec<Purch
     Ok(items)
 }
 
-pub async fn load_additional_costs(pool: &SqlitePool, invoice_id: &str) -> Result<Vec<PurchaseAdditionalCost>, AppError> {
+pub async fn load_additional_costs(
+    pool: &SqlitePool,
+    invoice_id: &str,
+) -> Result<Vec<PurchaseAdditionalCost>, AppError> {
     let rows = sqlx::query_as::<_, PurchaseInvoiceAdditionalCostRow>(
         "SELECT id, purchase_invoice_id, description, account_id, amount
-         FROM purchase_invoice_additional_costs WHERE purchase_invoice_id = ?"
+         FROM purchase_invoice_additional_costs WHERE purchase_invoice_id = ?",
     )
     .bind(invoice_id)
     .fetch_all(pool)
@@ -67,7 +73,9 @@ pub async fn load_items_for_multiple_invoices(
 
     let mut map: HashMap<String, Vec<PurchaseInvoiceItemRow>> = HashMap::new();
     for r in rows {
-        map.entry(r.purchase_invoice_id.clone()).or_default().push(r);
+        map.entry(r.purchase_invoice_id.clone())
+            .or_default()
+            .push(r);
     }
     Ok(map)
 }
@@ -98,19 +106,23 @@ pub async fn load_costs_for_multiple_invoices(
 
     let mut map: HashMap<String, Vec<PurchaseInvoiceAdditionalCostRow>> = HashMap::new();
     for r in rows {
-        map.entry(r.purchase_invoice_id.clone()).or_default().push(r);
+        map.entry(r.purchase_invoice_id.clone())
+            .or_default()
+            .push(r);
     }
     Ok(map)
 }
 
-pub async fn find_by_id(pool: &SqlitePool, id: &PurchaseInvoiceId) -> Result<Option<PurchaseInvoice>, AppError> {
-    let row = sqlx::query_as::<_, PurchaseInvoiceRow>(
-        "SELECT * FROM purchase_invoices WHERE id = ?"
-    )
-    .bind(id.to_string())
-    .fetch_optional(pool)
-    .await
-    .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+pub async fn find_by_id(
+    pool: &SqlitePool,
+    id: &PurchaseInvoiceId,
+) -> Result<Option<PurchaseInvoice>, AppError> {
+    let row =
+        sqlx::query_as::<_, PurchaseInvoiceRow>("SELECT * FROM purchase_invoices WHERE id = ?")
+            .bind(id.to_string())
+            .fetch_optional(pool)
+            .await
+            .map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
     if let Some(r) = row {
         let items = load_items(pool, &r.id).await?;
@@ -123,7 +135,7 @@ pub async fn find_by_id(pool: &SqlitePool, id: &PurchaseInvoiceId) -> Result<Opt
 
 pub async fn list_all(pool: &SqlitePool) -> Result<Vec<PurchaseInvoice>, AppError> {
     let rows = sqlx::query_as::<_, PurchaseInvoiceRow>(
-        "SELECT * FROM purchase_invoices ORDER BY invoice_date DESC"
+        "SELECT * FROM purchase_invoices ORDER BY invoice_date DESC",
     )
     .fetch_all(pool)
     .await
@@ -157,9 +169,12 @@ pub async fn list_all(pool: &SqlitePool) -> Result<Vec<PurchaseInvoice>, AppErro
     Ok(invoices)
 }
 
-pub async fn list_by_supplier(pool: &SqlitePool, supplier_id: &SupplierId) -> Result<Vec<PurchaseInvoice>, AppError> {
+pub async fn list_by_supplier(
+    pool: &SqlitePool,
+    supplier_id: &SupplierId,
+) -> Result<Vec<PurchaseInvoice>, AppError> {
     let rows = sqlx::query_as::<_, PurchaseInvoiceRow>(
-        "SELECT * FROM purchase_invoices WHERE supplier_id = ? ORDER BY invoice_date DESC"
+        "SELECT * FROM purchase_invoices WHERE supplier_id = ? ORDER BY invoice_date DESC",
     )
     .bind(supplier_id.to_string())
     .fetch_all(pool)

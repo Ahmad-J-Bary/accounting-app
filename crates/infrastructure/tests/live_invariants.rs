@@ -47,7 +47,10 @@ use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 
 async fn build_pool() -> Arc<sqlx::SqlitePool> {
     let mut path = std::env::temp_dir();
-    path.push(format!("acc_live_invariants_{}.sqlite", uuid::Uuid::new_v4()));
+    path.push(format!(
+        "acc_live_invariants_{}.sqlite",
+        uuid::Uuid::new_v4()
+    ));
     let options = SqliteConnectOptions::from_str(path.to_str().unwrap())
         .unwrap()
         .create_if_missing(true);
@@ -188,7 +191,13 @@ async fn live_ledger_satisfies_debit_credit_and_accounting_equation() {
         journal_repo.clone(),
         migration_repo.clone(),
     )
-    .execute(partner_id, cash.to_string(), Decimal::from(1000), false, Some("li-c1".into()))
+    .execute(
+        partner_id,
+        cash.to_string(),
+        Decimal::from(1000),
+        false,
+        Some("li-c1".into()),
+    )
     .await
     .expect("contribution");
 
@@ -246,7 +255,10 @@ async fn live_ledger_satisfies_debit_credit_and_accounting_equation() {
     post_journal(
         &journal_repo,
         JournalType::CashSalesJournal,
-        vec![line(cash, dec!(400), dec!(0)), line(revenue, dec!(0), dec!(400))],
+        vec![
+            line(cash, dec!(400), dec!(0)),
+            line(revenue, dec!(0), dec!(400)),
+        ],
         "بيع نقدي",
     )
     .await;
@@ -255,7 +267,10 @@ async fn live_ledger_satisfies_debit_credit_and_accounting_equation() {
     post_journal(
         &journal_repo,
         JournalType::GeneralJournal,
-        vec![line(rent, dec!(100), dec!(0)), line(cash, dec!(0), dec!(100))],
+        vec![
+            line(rent, dec!(100), dec!(0)),
+            line(cash, dec!(0), dec!(100)),
+        ],
         "إيجار",
     )
     .await;
@@ -273,7 +288,10 @@ async fn live_ledger_satisfies_debit_credit_and_accounting_equation() {
     .fetch_one(&*pool)
     .await
     .unwrap();
-    assert_eq!(unbalanced, 0, "no unbalanced journal may exist (found {unbalanced})");
+    assert_eq!(
+        unbalanced, 0,
+        "no unbalanced journal may exist (found {unbalanced})"
+    );
 
     let (total_d, total_c): (f64, f64) = sqlx::query_as(
         "SELECT COALESCE(SUM(CAST(debit_base AS REAL)),0), COALESCE(SUM(CAST(credit_base AS REAL)),0)
@@ -309,9 +327,18 @@ async fn live_ledger_satisfies_debit_credit_and_accounting_equation() {
         - bucket(&pool, "Revenue").await
         - bucket(&pool, "Expenses").await;
 
-    assert!((assets - 2000.0).abs() < 0.01, "assets expected 2000, got {assets}");
-    assert!((liabilities - 500.0).abs() < 0.01, "liabilities expected 500, got {liabilities}");
-    assert!((equity - 1500.0).abs() < 0.01, "equity expected 1500, got {equity}");
+    assert!(
+        (assets - 2000.0).abs() < 0.01,
+        "assets expected 2000, got {assets}"
+    );
+    assert!(
+        (liabilities - 500.0).abs() < 0.01,
+        "liabilities expected 500, got {liabilities}"
+    );
+    assert!(
+        (equity - 1500.0).abs() < 0.01,
+        "equity expected 1500, got {equity}"
+    );
     assert!(
         (assets - (liabilities + equity)).abs() < 0.01,
         "A == L + E must hold (A {assets}, L {liabilities}, E {equity})"
@@ -320,22 +347,36 @@ async fn live_ledger_satisfies_debit_credit_and_accounting_equation() {
     // ---- Invariant 3: sub-ledgers reconcile to the GL buckets that carry them.
     // The AR customer account (Receivable purpose) reconciles to the 700 AR
     // opening; the AP supplier account (Payable purpose) to the 500 AP opening.
-    assert!((ledger_balance(&pool, &ar_account).await - 700.0).abs() < 0.01, "AR sub-ledger must be 700");
-    assert!((ledger_balance(&pool, &ap_account).await - (-500.0)).abs() < 0.01, "AP sub-ledger must be 500 (credit)");
+    assert!(
+        (ledger_balance(&pool, &ar_account).await - 700.0).abs() < 0.01,
+        "AR sub-ledger must be 700"
+    );
+    assert!(
+        (ledger_balance(&pool, &ap_account).await - (-500.0)).abs() < 0.01,
+        "AP sub-ledger must be 500 (credit)"
+    );
 
     let ar_purpose: String = sqlx::query_scalar("SELECT purpose FROM accounts WHERE id = ?")
         .bind(ar_account.0.to_string())
         .fetch_one(&*pool)
         .await
         .unwrap();
-    assert_eq!(ar_purpose, AccountPurpose::Receivable.to_str(), "AR account purpose is Receivable");
+    assert_eq!(
+        ar_purpose,
+        AccountPurpose::Receivable.to_str(),
+        "AR account purpose is Receivable"
+    );
 
     let ap_purpose: String = sqlx::query_scalar("SELECT purpose FROM accounts WHERE id = ?")
         .bind(ap_account.0.to_string())
         .fetch_one(&*pool)
         .await
         .unwrap();
-    assert_eq!(ap_purpose, AccountPurpose::Payable.to_str(), "AP account purpose is Payable");
+    assert_eq!(
+        ap_purpose,
+        AccountPurpose::Payable.to_str(),
+        "AP account purpose is Payable"
+    );
 
     let ar_type: String = sqlx::query_scalar("SELECT account_type FROM accounts WHERE id = ?")
         .bind(ar_account.0.to_string())
@@ -352,5 +393,8 @@ async fn live_ledger_satisfies_debit_credit_and_accounting_equation() {
     assert_eq!(ap_type, "Liabilities", "AP account is a liability");
 
     // OBE 53 nets to the customer/supplier opening difference (700 − 500 = 200).
-    assert!((ledger_balance(&pool, &obe).await - (-200.0)).abs() < 0.01, "OBE nets to 200 (credit)");
+    assert!(
+        (ledger_balance(&pool, &obe).await - (-200.0)).abs() < 0.01,
+        "OBE nets to 200 (credit)"
+    );
 }

@@ -1,13 +1,15 @@
-use std::sync::Arc;
+use crate::dto::currency_dto::{
+    CreateCurrencyDto, CurrencyDto, ExchangeRateDto, SetExchangeRateDto, UpdateCurrencyDto,
+};
+use crate::errors::AppError;
 use crate::ports::currency_repository::CurrencyRepository;
 use crate::ports::exchange_rate_repository::ExchangeRateRepository;
-use crate::dto::currency_dto::{CreateCurrencyDto, SetExchangeRateDto, ExchangeRateDto, CurrencyDto, UpdateCurrencyDto};
-use crate::errors::AppError;
+use chrono::Utc;
 use domain::shared::currency::Currency;
 use domain::shared::exchange_rate::{ExchangeRate, RateType};
-use chrono::Utc;
 use rust_decimal::Decimal;
 use std::str::FromStr;
+use std::sync::Arc;
 
 pub struct CurrencyCommands {
     currency_repo: Arc<dyn CurrencyRepository>,
@@ -19,19 +21,27 @@ impl CurrencyCommands {
         currency_repo: Arc<dyn CurrencyRepository>,
         rate_repo: Arc<dyn ExchangeRateRepository>,
     ) -> Self {
-        Self { currency_repo, rate_repo }
+        Self {
+            currency_repo,
+            rate_repo,
+        }
     }
 
     pub async fn create_currency(&self, dto: CreateCurrencyDto) -> Result<CurrencyDto, AppError> {
         let normalized_code = dto.code.trim().to_uppercase();
         if normalized_code.len() < 3 {
-            return Err(AppError::Invalid("رمز العملة يجب أن يكون 3 أحرف على الأقل".to_string()));
+            return Err(AppError::Invalid(
+                "رمز العملة يجب أن يكون 3 أحرف على الأقل".to_string(),
+            ));
         }
 
         // If a soft-deleted currency exists, reactivate it
         if let Some(existing) = self.currency_repo.find_by_code(&normalized_code).await? {
             if existing.is_active {
-                return Err(AppError::Invalid(format!("العملة {} موجودة بالفعل", dto.code)));
+                return Err(AppError::Invalid(format!(
+                    "العملة {} موجودة بالفعل",
+                    dto.code
+                )));
             }
             let updated = Currency {
                 code: normalized_code.clone(),
@@ -44,7 +54,9 @@ impl CurrencyCommands {
                 notes: dto.notes.clone(),
             };
             if updated.is_base {
-                self.currency_repo.set_base_currency(&normalized_code).await?;
+                self.currency_repo
+                    .set_base_currency(&normalized_code)
+                    .await?;
             }
             self.currency_repo.save(&updated).await?;
             return self.to_currency_dto(updated);
@@ -62,7 +74,9 @@ impl CurrencyCommands {
         currency.notes = dto.notes.clone();
 
         if dto.is_base {
-            self.currency_repo.set_base_currency(&normalized_code).await?;
+            self.currency_repo
+                .set_base_currency(&normalized_code)
+                .await?;
         }
 
         self.currency_repo.save(&currency).await?;
@@ -110,7 +124,9 @@ impl CurrencyCommands {
             .ok_or_else(|| AppError::NotFound(format!("العملة {} غير موجودة", normalized)))?;
 
         if !currency.is_active {
-            return Err(AppError::Invalid("لا يمكن تعيين عملة غير مفعلة كعملة أساسية".to_string()));
+            return Err(AppError::Invalid(
+                "لا يمكن تعيين عملة غير مفعلة كعملة أساسية".to_string(),
+            ));
         }
 
         self.currency_repo.set_base_currency(&normalized).await?;
@@ -133,30 +149,49 @@ impl CurrencyCommands {
         self.currency_repo.delete(code).await
     }
 
-    pub async fn set_exchange_rate(&self, dto: SetExchangeRateDto) -> Result<ExchangeRateDto, AppError> {
+    pub async fn set_exchange_rate(
+        &self,
+        dto: SetExchangeRateDto,
+    ) -> Result<ExchangeRateDto, AppError> {
         let rate_decimal = Decimal::from_str(&dto.rate)
             .map_err(|_| AppError::Invalid("سعر الصرف غير صالح".to_string()))?;
 
         if rate_decimal <= Decimal::ZERO {
-            return Err(AppError::Invalid("يجب أن يكون سعر الصرف أكبر من صفر".to_string()));
+            return Err(AppError::Invalid(
+                "يجب أن يكون سعر الصرف أكبر من صفر".to_string(),
+            ));
         }
 
         // Validate currencies exist
-        let from = self.currency_repo.find_by_code(&dto.from_currency).await?
-            .ok_or_else(|| AppError::NotFound(format!("العملة {} غير موجودة", dto.from_currency)))?;
-        let to = self.currency_repo.find_by_code(&dto.to_currency).await?
+        let from = self
+            .currency_repo
+            .find_by_code(&dto.from_currency)
+            .await?
+            .ok_or_else(|| {
+                AppError::NotFound(format!("العملة {} غير موجودة", dto.from_currency))
+            })?;
+        let to = self
+            .currency_repo
+            .find_by_code(&dto.to_currency)
+            .await?
             .ok_or_else(|| AppError::NotFound(format!("العملة {} غير موجودة", dto.to_currency)))?;
 
         if !from.is_active || !to.is_active {
-            return Err(AppError::Invalid("يجب أن تكون العملات المختارة مفعلة".to_string()));
+            return Err(AppError::Invalid(
+                "يجب أن تكون العملات المختارة مفعلة".to_string(),
+            ));
         }
 
         if !from.is_base {
-            return Err(AppError::Invalid("يجب إدخال سعر الصرف انطلاقا من العملة الأساسية".to_string()));
+            return Err(AppError::Invalid(
+                "يجب إدخال سعر الصرف انطلاقا من العملة الأساسية".to_string(),
+            ));
         }
 
         if from.code == to.code {
-            return Err(AppError::Invalid("لا يمكن إدخال سعر صرف لنفس العملة".to_string()));
+            return Err(AppError::Invalid(
+                "لا يمكن إدخال سعر صرف لنفس العملة".to_string(),
+            ));
         }
 
         let rate_type = match dto.rate_type.as_str() {

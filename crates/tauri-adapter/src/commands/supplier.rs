@@ -1,9 +1,9 @@
-use tauri::State;
 use crate::bootstrap::container::AppState;
+use application::dto::supplier_dto::{CreateSupplierRequest, SupplierDto, UpdateSupplierRequest};
 use application::use_cases::supplier::{
-    CreateSupplierUseCase, SupplierQueries, UpdateSupplierUseCase, DeleteSupplierUseCase,
+    CreateSupplierUseCase, DeleteSupplierUseCase, SupplierQueries, UpdateSupplierUseCase,
 };
-use application::dto::supplier_dto::{CreateSupplierRequest, UpdateSupplierRequest, SupplierDto};
+use tauri::State;
 
 #[tauri::command]
 pub async fn create_supplier(
@@ -11,7 +11,7 @@ pub async fn create_supplier(
     state: State<'_, AppState>,
 ) -> Result<SupplierDto, String> {
     CreateSupplierUseCase::new(
-        state.supplier_repo.clone(), 
+        state.supplier_repo.clone(),
         state.account_repo.clone(),
         state.journal_entry_repo.clone(),
         state.opening_migration_repo.clone(),
@@ -24,13 +24,17 @@ pub async fn create_supplier(
 #[tauri::command]
 pub async fn list_suppliers(state: State<'_, AppState>) -> Result<Vec<SupplierDto>, String> {
     SupplierQueries::new(state.supplier_repo.clone())
-        .list_all().await.map_err(|e| e.to_string())
+        .list_all()
+        .await
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub async fn get_supplier(id: String, state: State<'_, AppState>) -> Result<SupplierDto, String> {
     SupplierQueries::new(state.supplier_repo.clone())
-        .get_by_id(id).await.map_err(|e| e.to_string())
+        .get_by_id(id)
+        .await
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -45,7 +49,9 @@ pub async fn update_supplier(
         state.journal_entry_repo.clone(),
         state.opening_migration_repo.clone(),
     )
-        .execute(request).await.map_err(|e| e.to_string())
+    .execute(request)
+    .await
+    .map_err(|e| e.to_string())
 }
 
 #[tauri::command]

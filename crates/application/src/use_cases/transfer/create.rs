@@ -1,5 +1,3 @@
-use std::str::FromStr;
-use std::sync::Arc;
 use crate::dto::transfer_dto::{CreateTransferRequest, TransferResponse};
 use crate::errors::AppError;
 use crate::ports::material_repository::MaterialRepository;
@@ -9,6 +7,8 @@ use chrono::{DateTime, Utc};
 use domain::inventory::stock_movement::{MovementType, StockMovement};
 use domain::shared::ids::{MaterialId, WarehouseId};
 use rust_decimal::Decimal;
+use std::str::FromStr;
+use std::sync::Arc;
 
 pub struct CreateTransferUseCase {
     material_repo: Arc<dyn MaterialRepository>,
@@ -22,7 +22,11 @@ impl CreateTransferUseCase {
         movement_repo: Arc<dyn StockMovementRepository>,
         warehouse_repo: Arc<dyn WarehouseRepository>,
     ) -> Self {
-        Self { material_repo, movement_repo, warehouse_repo }
+        Self {
+            material_repo,
+            movement_repo,
+            warehouse_repo,
+        }
     }
 
     pub async fn execute(&self, req: CreateTransferRequest) -> Result<TransferResponse, AppError> {
@@ -30,19 +34,34 @@ impl CreateTransferUseCase {
             return Err(AppError::Invalid("لا يمكن التحويل إلى نفس المستودع".into()));
         }
 
-        let source_wh_id = req.source_warehouse_id.parse::<WarehouseId>()
+        let source_wh_id = req
+            .source_warehouse_id
+            .parse::<WarehouseId>()
             .map_err(|_| AppError::Invalid("معرف المستودع المصدر غير صالح".into()))?;
-        let dest_wh_id = req.dest_warehouse_id.parse::<WarehouseId>()
+        let dest_wh_id = req
+            .dest_warehouse_id
+            .parse::<WarehouseId>()
             .map_err(|_| AppError::Invalid("معرف المستودع الوجهة غير صالح".into()))?;
 
-        let _source_wh = self.warehouse_repo.find_by_id(&source_wh_id).await?
+        let _source_wh = self
+            .warehouse_repo
+            .find_by_id(&source_wh_id)
+            .await?
             .ok_or_else(|| AppError::NotFound("المستودع المصدر غير موجود".into()))?;
-        let _dest_wh = self.warehouse_repo.find_by_id(&dest_wh_id).await?
+        let _dest_wh = self
+            .warehouse_repo
+            .find_by_id(&dest_wh_id)
+            .await?
             .ok_or_else(|| AppError::NotFound("مستودع الوجهة غير موجود".into()))?;
 
-        let material_id = req.material_id.parse::<MaterialId>()
+        let material_id = req
+            .material_id
+            .parse::<MaterialId>()
             .map_err(|_| AppError::Invalid("معرف المادة غير صالح".into()))?;
-        let _material = self.material_repo.find_by_id(&material_id).await?
+        let _material = self
+            .material_repo
+            .find_by_id(&material_id)
+            .await?
             .ok_or_else(|| AppError::NotFound("المادة غير موجودة".into()))?;
 
         let quantity = Decimal::from_str(&req.quantity)
@@ -69,7 +88,8 @@ impl CreateTransferUseCase {
             reference.clone(),
             transfer_notes.clone(),
             transfer_date,
-        ).map_err(|e| AppError::Invalid(e.to_string()))?;
+        )
+        .map_err(|e| AppError::Invalid(e.to_string()))?;
         source_movement.warehouse_id = Some(source_wh_id);
         source_movement.document_number = Some(reference.clone());
 
@@ -82,7 +102,8 @@ impl CreateTransferUseCase {
             reference.clone(),
             transfer_notes,
             transfer_date,
-        ).map_err(|e| AppError::Invalid(e.to_string()))?;
+        )
+        .map_err(|e| AppError::Invalid(e.to_string()))?;
         dest_movement.warehouse_id = Some(dest_wh_id);
         dest_movement.document_number = Some(reference.clone());
 

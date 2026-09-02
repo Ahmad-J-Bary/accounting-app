@@ -1,14 +1,17 @@
-use sqlx::SqlitePool;
 use application::errors::AppError;
-use domain::inventory::material::{Material, MaterialUnit};
-use domain::shared::ids::{MaterialId, MaterialCategoryId};
 use chrono::Utc;
+use domain::inventory::material::{Material, MaterialUnit};
+use domain::shared::ids::{MaterialCategoryId, MaterialId};
+use sqlx::SqlitePool;
 use uuid::Uuid;
 
 use domain::inventory::material::{MaterialPurchasePrice, MaterialSalePrice};
 
 pub async fn save(pool: &SqlitePool, material: &Material) -> Result<(), AppError> {
-    let mut tx = pool.begin().await.map_err(|e| AppError::Infrastructure(e.to_string()))?;
+    let mut tx = pool
+        .begin()
+        .await
+        .map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
     // materials.default_purchase_unit_id / default_sale_unit_id point at
     // material_units rows that are inserted *after* the materials row (the
@@ -49,14 +52,21 @@ pub async fn save(pool: &SqlitePool, material: &Material) -> Result<(), AppError
     save_purchase_prices(&mut tx, &material.id.to_string(), &material.purchase_prices).await?;
     save_sale_prices(&mut tx, &material.id.to_string(), &material.sale_prices).await?;
 
-    tx.commit().await.map_err(|e| AppError::Infrastructure(e.to_string()))?;
+    tx.commit()
+        .await
+        .map_err(|e| AppError::Infrastructure(e.to_string()))?;
     Ok(())
 }
 
 pub async fn update(pool: &SqlitePool, material: &Material) -> Result<(), AppError> {
-    let mut tx = pool.begin().await.map_err(|e| AppError::Infrastructure(e.to_string()))?;
+    let mut tx = pool
+        .begin()
+        .await
+        .map_err(|e| AppError::Infrastructure(e.to_string()))?;
     update_tx(&mut tx, material).await?;
-    tx.commit().await.map_err(|e| AppError::Infrastructure(e.to_string()))?;
+    tx.commit()
+        .await
+        .map_err(|e| AppError::Infrastructure(e.to_string()))?;
     Ok(())
 }
 
@@ -99,7 +109,12 @@ pub(crate) async fn update_tx<'a>(
 
     save_category_links(&mut *tx, &material.id.to_string(), &material.category_ids).await?;
     save_units(&mut *tx, &material.units).await?;
-    save_purchase_prices(&mut *tx, &material.id.to_string(), &material.purchase_prices).await?;
+    save_purchase_prices(
+        &mut *tx,
+        &material.id.to_string(),
+        &material.purchase_prices,
+    )
+    .await?;
     save_sale_prices(&mut *tx, &material.id.to_string(), &material.sale_prices).await?;
 
     Ok(())
@@ -114,7 +129,13 @@ pub async fn delete(pool: &SqlitePool, id: &MaterialId) -> Result<(), AppError> 
     Ok(())
 }
 
-pub async fn add_unit(pool: &SqlitePool, material_id: &MaterialId, name: String, factor: rust_decimal::Decimal, barcode: Option<String>) -> Result<(), AppError> {
+pub async fn add_unit(
+    pool: &SqlitePool,
+    material_id: &MaterialId,
+    name: String,
+    factor: rust_decimal::Decimal,
+    barcode: Option<String>,
+) -> Result<(), AppError> {
     let now = Utc::now().to_rfc3339();
     sqlx::query(
         "INSERT INTO material_units (id, material_id, name, conversion_factor, barcode, is_base, created_at, updated_at) 
@@ -143,7 +164,11 @@ pub async fn delete_unit(pool: &SqlitePool, unit_id: &str) -> Result<(), AppErro
     Ok(())
 }
 
-async fn save_category_links(tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>, material_id: &str, category_ids: &[MaterialCategoryId]) -> Result<(), AppError> {
+async fn save_category_links(
+    tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
+    material_id: &str,
+    category_ids: &[MaterialCategoryId],
+) -> Result<(), AppError> {
     sqlx::query("DELETE FROM material_categories WHERE material_id = ?")
         .bind(material_id)
         .execute(&mut **tx)
@@ -151,23 +176,26 @@ async fn save_category_links(tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>, mater
         .map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
     for cid in category_ids {
-        sqlx::query(
-            "INSERT INTO material_categories (material_id, category_id) VALUES (?, ?)"
-        )
-        .bind(material_id)
-        .bind(cid.to_string())
-        .execute(&mut **tx)
-        .await
-        .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+        sqlx::query("INSERT INTO material_categories (material_id, category_id) VALUES (?, ?)")
+            .bind(material_id)
+            .bind(cid.to_string())
+            .execute(&mut **tx)
+            .await
+            .map_err(|e| AppError::Infrastructure(e.to_string()))?;
     }
     Ok(())
 }
 
-async fn save_units(tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>, units: &[MaterialUnit]) -> Result<(), AppError> {
-    if units.is_empty() { return Ok(()); }
-    
+async fn save_units(
+    tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
+    units: &[MaterialUnit],
+) -> Result<(), AppError> {
+    if units.is_empty() {
+        return Ok(());
+    }
+
     let material_id = units[0].material_id.to_string();
-    
+
     sqlx::query("DELETE FROM material_units WHERE material_id = ?")
         .bind(&material_id)
         .execute(&mut **tx)
@@ -195,7 +223,11 @@ async fn save_units(tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>, units: &[Mater
     Ok(())
 }
 
-async fn save_purchase_prices(tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>, material_id: &str, prices: &[MaterialPurchasePrice]) -> Result<(), AppError> {
+async fn save_purchase_prices(
+    tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
+    material_id: &str,
+    prices: &[MaterialPurchasePrice],
+) -> Result<(), AppError> {
     sqlx::query("DELETE FROM material_purchase_prices WHERE material_id = ?")
         .bind(material_id)
         .execute(&mut **tx)
@@ -222,7 +254,11 @@ async fn save_purchase_prices(tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>, mate
     Ok(())
 }
 
-async fn save_sale_prices(tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>, material_id: &str, prices: &[MaterialSalePrice]) -> Result<(), AppError> {
+async fn save_sale_prices(
+    tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
+    material_id: &str,
+    prices: &[MaterialSalePrice],
+) -> Result<(), AppError> {
     sqlx::query("DELETE FROM material_sale_prices WHERE material_id = ?")
         .bind(material_id)
         .execute(&mut **tx)

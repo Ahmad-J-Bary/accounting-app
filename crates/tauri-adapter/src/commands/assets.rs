@@ -1,10 +1,12 @@
-use tauri::State;
 use crate::bootstrap::container::AppState;
-use application::use_cases::asset::{FixedAssetUseCases, ConsumableUseCases, CreateAssetRequest, CreateConsumableRequest};
-use domain::assets::{FixedAsset, FixedAssetId, Consumable, AssetType, AssetCategory};
+use application::use_cases::asset::{
+    ConsumableUseCases, CreateAssetRequest, CreateConsumableRequest, FixedAssetUseCases,
+};
+use domain::assets::{AssetCategory, AssetType, Consumable, FixedAsset, FixedAssetId};
 use domain::shared::Money;
 use rust_decimal::Decimal;
 use std::str::FromStr;
+use tauri::State;
 use uuid::Uuid;
 
 #[tauri::command]
@@ -30,7 +32,11 @@ pub async fn create_fixed_asset(
     depreciation_method: Option<String>,
     state: State<'_, AppState>,
 ) -> Result<String, String> {
-    let base_curr = state.currency_repo.get_base_currency().await.map_err(|e| e.to_string())?;
+    let base_curr = state
+        .currency_repo
+        .get_base_currency()
+        .await
+        .map_err(|e| e.to_string())?;
     let is_base = base_curr.as_ref().is_some_and(|bc| bc.code == currency);
 
     let category_uuid = Uuid::parse_str(&category_id).map_err(|e| e.to_string())?;
@@ -38,46 +44,58 @@ pub async fn create_fixed_asset(
     let purchase_dt = chrono::DateTime::parse_from_rfc3339(&purchase_date)
         .map(|d| d.with_timezone(&chrono::Utc))
         .map_err(|e| e.to_string())?;
-    
-    let amount = Decimal::from_str(&purchase_cost).map_err(|e: rust_decimal::Error| e.to_string())?;
+
+    let amount =
+        Decimal::from_str(&purchase_cost).map_err(|e: rust_decimal::Error| e.to_string())?;
     let curr = domain::shared::Currency::new(&currency, &currency, &currency, "", 2, is_base);
     let money = Money::new(amount, curr);
     let fx = Decimal::from_str(&fx_rate).map_err(|e: rust_decimal::Error| e.to_string())?;
-    
+
     let asset_acc = Uuid::parse_str(&asset_account_id).map_err(|e| e.to_string())?;
     let dep_acc = Uuid::parse_str(&depreciation_account_id).map_err(|e| e.to_string())?;
-    let acc_dep_acc = Uuid::parse_str(&accumulated_depreciation_account_id).map_err(|e| e.to_string())?;
+    let acc_dep_acc =
+        Uuid::parse_str(&accumulated_depreciation_account_id).map_err(|e| e.to_string())?;
     let pay_acc = Uuid::parse_str(&payment_account_id).map_err(|e| e.to_string())?;
 
     let salvage_money = match salvage_value {
         Some(val) if !val.trim().is_empty() => {
             let sal_amt = Decimal::from_str(&val).map_err(|e| e.to_string())?;
-            let curr = domain::shared::Currency::new(&currency, &currency, &currency, "", 2, is_base);
+            let curr =
+                domain::shared::Currency::new(&currency, &currency, &currency, "", 2, is_base);
             Some(Money::new(sal_amt, curr))
         }
         _ => None,
     };
 
-    let use_case = FixedAssetUseCases::new(state.asset_repo.clone(), state.journal_entry_repo.clone(), state.account_repo.clone(), state.settings_repo.clone(), state.opening_migration_repo.clone());
-    let id = use_case.create_asset(CreateAssetRequest {
-        code,
-        name,
-        category_id: category_uuid,
-        warehouse_id: warehouse_uuid,
-        purchase_date: purchase_dt,
-        purchase_cost: money,
-        fx_rate: fx,
-        useful_life_months,
-        asset_account_id: asset_acc,
-        depreciation_account_id: dep_acc,
-        accumulated_depreciation_account_id: acc_dep_acc,
-        payment_account_id: pay_acc,
-        addition_type,
-        notes,
-        location,
-        salvage_value: salvage_money,
-        depreciation_method,
-    }).await.map_err(|e| e.to_string())?;
+    let use_case = FixedAssetUseCases::new(
+        state.asset_repo.clone(),
+        state.journal_entry_repo.clone(),
+        state.account_repo.clone(),
+        state.settings_repo.clone(),
+        state.opening_migration_repo.clone(),
+    );
+    let id = use_case
+        .create_asset(CreateAssetRequest {
+            code,
+            name,
+            category_id: category_uuid,
+            warehouse_id: warehouse_uuid,
+            purchase_date: purchase_dt,
+            purchase_cost: money,
+            fx_rate: fx,
+            useful_life_months,
+            asset_account_id: asset_acc,
+            depreciation_account_id: dep_acc,
+            accumulated_depreciation_account_id: acc_dep_acc,
+            payment_account_id: pay_acc,
+            addition_type,
+            notes,
+            location,
+            salvage_value: salvage_money,
+            depreciation_method,
+        })
+        .await
+        .map_err(|e| e.to_string())?;
 
     Ok(id.0.to_string())
 }
@@ -106,7 +124,11 @@ pub async fn update_fixed_asset(
     depreciation_method: Option<String>,
     state: State<'_, AppState>,
 ) -> Result<(), String> {
-    let base_curr = state.currency_repo.get_base_currency().await.map_err(|e| e.to_string())?;
+    let base_curr = state
+        .currency_repo
+        .get_base_currency()
+        .await
+        .map_err(|e| e.to_string())?;
     let is_base = base_curr.as_ref().is_some_and(|bc| bc.code == currency);
 
     let asset_id = FixedAssetId(Uuid::parse_str(&id).map_err(|e| e.to_string())?);
@@ -115,44 +137,59 @@ pub async fn update_fixed_asset(
     let purchase_dt = chrono::DateTime::parse_from_rfc3339(&purchase_date)
         .map(|d| d.with_timezone(&chrono::Utc))
         .map_err(|e| e.to_string())?;
-    let amount = Decimal::from_str(&purchase_cost).map_err(|e: rust_decimal::Error| e.to_string())?;
+    let amount =
+        Decimal::from_str(&purchase_cost).map_err(|e: rust_decimal::Error| e.to_string())?;
     let curr = domain::shared::Currency::new(&currency, &currency, &currency, "", 2, is_base);
     let money = Money::new(amount, curr);
     let fx = Decimal::from_str(&fx_rate).map_err(|e: rust_decimal::Error| e.to_string())?;
     let asset_acc = Uuid::parse_str(&asset_account_id).map_err(|e| e.to_string())?;
     let dep_acc = Uuid::parse_str(&depreciation_account_id).map_err(|e| e.to_string())?;
-    let acc_dep_acc = Uuid::parse_str(&accumulated_depreciation_account_id).map_err(|e| e.to_string())?;
+    let acc_dep_acc =
+        Uuid::parse_str(&accumulated_depreciation_account_id).map_err(|e| e.to_string())?;
     let pay_acc = Uuid::parse_str(&payment_account_id).map_err(|e| e.to_string())?;
 
     let salvage_money = match salvage_value {
         Some(val) if !val.trim().is_empty() => {
             let sal_amt = Decimal::from_str(&val).map_err(|e| e.to_string())?;
-            let curr = domain::shared::Currency::new(&currency, &currency, &currency, "", 2, is_base);
+            let curr =
+                domain::shared::Currency::new(&currency, &currency, &currency, "", 2, is_base);
             Some(Money::new(sal_amt, curr))
         }
         _ => None,
     };
 
-    let use_case = FixedAssetUseCases::new(state.asset_repo.clone(), state.journal_entry_repo.clone(), state.account_repo.clone(), state.settings_repo.clone(), state.opening_migration_repo.clone());
-    use_case.update_asset(asset_id, CreateAssetRequest {
-        code,
-        name,
-        category_id: category_uuid,
-        warehouse_id: warehouse_uuid,
-        purchase_date: purchase_dt,
-        purchase_cost: money,
-        fx_rate: fx,
-        useful_life_months,
-        asset_account_id: asset_acc,
-        depreciation_account_id: dep_acc,
-        accumulated_depreciation_account_id: acc_dep_acc,
-        payment_account_id: pay_acc,
-        addition_type,
-        notes,
-        location,
-        salvage_value: salvage_money,
-        depreciation_method,
-    }).await.map_err(|e| e.to_string())?;
+    let use_case = FixedAssetUseCases::new(
+        state.asset_repo.clone(),
+        state.journal_entry_repo.clone(),
+        state.account_repo.clone(),
+        state.settings_repo.clone(),
+        state.opening_migration_repo.clone(),
+    );
+    use_case
+        .update_asset(
+            asset_id,
+            CreateAssetRequest {
+                code,
+                name,
+                category_id: category_uuid,
+                warehouse_id: warehouse_uuid,
+                purchase_date: purchase_dt,
+                purchase_cost: money,
+                fx_rate: fx,
+                useful_life_months,
+                asset_account_id: asset_acc,
+                depreciation_account_id: dep_acc,
+                accumulated_depreciation_account_id: acc_dep_acc,
+                payment_account_id: pay_acc,
+                addition_type,
+                notes,
+                location,
+                salvage_value: salvage_money,
+                depreciation_method,
+            },
+        )
+        .await
+        .map_err(|e| e.to_string())?;
 
     Ok(())
 }
@@ -163,16 +200,26 @@ pub async fn delete_fixed_asset(
     state: State<'_, AppState>,
 ) -> Result<(), String> {
     let id = FixedAssetId(Uuid::parse_str(&asset_id).map_err(|e| e.to_string())?);
-    let use_case = FixedAssetUseCases::new(state.asset_repo.clone(), state.journal_entry_repo.clone(), state.account_repo.clone(), state.settings_repo.clone(), state.opening_migration_repo.clone());
+    let use_case = FixedAssetUseCases::new(
+        state.asset_repo.clone(),
+        state.journal_entry_repo.clone(),
+        state.account_repo.clone(),
+        state.settings_repo.clone(),
+        state.opening_migration_repo.clone(),
+    );
     use_case.delete_asset(id).await.map_err(|e| e.to_string())?;
     Ok(())
 }
 
 #[tauri::command]
-pub async fn list_fixed_assets(
-    state: State<'_, AppState>,
-) -> Result<Vec<FixedAsset>, String> {
-    let use_case = FixedAssetUseCases::new(state.asset_repo.clone(), state.journal_entry_repo.clone(), state.account_repo.clone(), state.settings_repo.clone(), state.opening_migration_repo.clone());
+pub async fn list_fixed_assets(state: State<'_, AppState>) -> Result<Vec<FixedAsset>, String> {
+    let use_case = FixedAssetUseCases::new(
+        state.asset_repo.clone(),
+        state.journal_entry_repo.clone(),
+        state.account_repo.clone(),
+        state.settings_repo.clone(),
+        state.opening_migration_repo.clone(),
+    );
     use_case.list_assets().await.map_err(|e| e.to_string())
 }
 
@@ -189,7 +236,11 @@ pub async fn create_consumable(
     expense_account_id: String,
     state: State<'_, AppState>,
 ) -> Result<String, String> {
-    let base_curr = state.currency_repo.get_base_currency().await.map_err(|e| e.to_string())?;
+    let base_curr = state
+        .currency_repo
+        .get_base_currency()
+        .await
+        .map_err(|e| e.to_string())?;
     let is_base = base_curr.as_ref().is_some_and(|bc| bc.code == currency);
 
     let category_uuid = Uuid::parse_str(&category_id).map_err(|e| e.to_string())?;
@@ -200,26 +251,32 @@ pub async fn create_consumable(
     let asset_acc = Uuid::parse_str(&asset_account_id).map_err(|e| e.to_string())?;
     let exp_acc = Uuid::parse_str(&expense_account_id).map_err(|e| e.to_string())?;
 
-    let use_case = ConsumableUseCases::new(state.consumable_repo.clone(), state.journal_entry_repo.clone());
-    let id = use_case.create_item(CreateConsumableRequest {
-        code,
-        name,
-        category_id: category_uuid,
-        unit_cost: money,
-        fx_rate: fx,
-        asset_account_id: asset_acc,
-        expense_account_id: exp_acc,
-    })
-    .await.map_err(|e| e.to_string())?;
+    let use_case = ConsumableUseCases::new(
+        state.consumable_repo.clone(),
+        state.journal_entry_repo.clone(),
+    );
+    let id = use_case
+        .create_item(CreateConsumableRequest {
+            code,
+            name,
+            category_id: category_uuid,
+            unit_cost: money,
+            fx_rate: fx,
+            asset_account_id: asset_acc,
+            expense_account_id: exp_acc,
+        })
+        .await
+        .map_err(|e| e.to_string())?;
 
     Ok(id.0.to_string())
 }
 
 #[tauri::command]
-pub async fn list_consumables(
-    state: State<'_, AppState>,
-) -> Result<Vec<Consumable>, String> {
-    let use_case = ConsumableUseCases::new(state.consumable_repo.clone(), state.journal_entry_repo.clone());
+pub async fn list_consumables(state: State<'_, AppState>) -> Result<Vec<Consumable>, String> {
+    let use_case = ConsumableUseCases::new(
+        state.consumable_repo.clone(),
+        state.journal_entry_repo.clone(),
+    );
     use_case.list_items().await.map_err(|e| e.to_string())
 }
 
@@ -231,8 +288,14 @@ pub async fn add_consumable_stock(
 ) -> Result<(), String> {
     let uuid = Uuid::parse_str(&id).map_err(|e| e.to_string())?;
     let qty = Decimal::from_str(&quantity).map_err(|e| e.to_string())?;
-    let use_case = ConsumableUseCases::new(state.consumable_repo.clone(), state.journal_entry_repo.clone());
-    use_case.add_stock(uuid, qty).await.map_err(|e| e.to_string())
+    let use_case = ConsumableUseCases::new(
+        state.consumable_repo.clone(),
+        state.journal_entry_repo.clone(),
+    );
+    use_case
+        .add_stock(uuid, qty)
+        .await
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -244,8 +307,14 @@ pub async fn issue_consumable(
 ) -> Result<(), String> {
     let uuid = Uuid::parse_str(&id).map_err(|e| e.to_string())?;
     let qty = Decimal::from_str(&quantity).map_err(|e| e.to_string())?;
-    let use_case = ConsumableUseCases::new(state.consumable_repo.clone(), state.journal_entry_repo.clone());
-    use_case.issue_item(uuid, qty, description).await.map_err(|e| e.to_string())
+    let use_case = ConsumableUseCases::new(
+        state.consumable_repo.clone(),
+        state.journal_entry_repo.clone(),
+    );
+    use_case
+        .issue_item(uuid, qty, description)
+        .await
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -258,8 +327,17 @@ pub async fn create_asset_category(
         "Fixed" => AssetType::Fixed,
         _ => AssetType::Consumable,
     };
-    let use_case = FixedAssetUseCases::new(state.asset_repo.clone(), state.journal_entry_repo.clone(), state.account_repo.clone(), state.settings_repo.clone(), state.opening_migration_repo.clone());
-    let id = use_case.create_category(name, atype).await.map_err(|e| e.to_string())?;
+    let use_case = FixedAssetUseCases::new(
+        state.asset_repo.clone(),
+        state.journal_entry_repo.clone(),
+        state.account_repo.clone(),
+        state.settings_repo.clone(),
+        state.opening_migration_repo.clone(),
+    );
+    let id = use_case
+        .create_category(name, atype)
+        .await
+        .map_err(|e| e.to_string())?;
     Ok(id.to_string())
 }
 
@@ -272,8 +350,17 @@ pub async fn list_asset_categories(
         "Fixed" => AssetType::Fixed,
         _ => AssetType::Consumable,
     };
-    let use_case = FixedAssetUseCases::new(state.asset_repo.clone(), state.journal_entry_repo.clone(), state.account_repo.clone(), state.settings_repo.clone(), state.opening_migration_repo.clone());
-    use_case.list_categories(atype).await.map_err(|e| e.to_string())
+    let use_case = FixedAssetUseCases::new(
+        state.asset_repo.clone(),
+        state.journal_entry_repo.clone(),
+        state.account_repo.clone(),
+        state.settings_repo.clone(),
+        state.opening_migration_repo.clone(),
+    );
+    use_case
+        .list_categories(atype)
+        .await
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -287,8 +374,17 @@ pub async fn post_asset_depreciation(
         .map(|d| d.with_timezone(&chrono::Utc))
         .map_err(|e| e.to_string())?;
 
-    let use_case = FixedAssetUseCases::new(state.asset_repo.clone(), state.journal_entry_repo.clone(), state.account_repo.clone(), state.settings_repo.clone(), state.opening_migration_repo.clone());
-    use_case.post_depreciation(id, dt).await.map_err(|e| e.to_string())
+    let use_case = FixedAssetUseCases::new(
+        state.asset_repo.clone(),
+        state.journal_entry_repo.clone(),
+        state.account_repo.clone(),
+        state.settings_repo.clone(),
+        state.opening_migration_repo.clone(),
+    );
+    use_case
+        .post_depreciation(id, dt)
+        .await
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -297,7 +393,13 @@ pub async fn list_asset_movements(
     state: State<'_, AppState>,
 ) -> Result<Vec<domain::assets::AssetMovement>, String> {
     let id = Uuid::parse_str(&asset_id).map_err(|e| e.to_string())?;
-    let use_case = FixedAssetUseCases::new(state.asset_repo.clone(), state.journal_entry_repo.clone(), state.account_repo.clone(), state.settings_repo.clone(), state.opening_migration_repo.clone());
+    let use_case = FixedAssetUseCases::new(
+        state.asset_repo.clone(),
+        state.journal_entry_repo.clone(),
+        state.account_repo.clone(),
+        state.settings_repo.clone(),
+        state.opening_migration_repo.clone(),
+    );
     use_case.list_movements(id).await.map_err(|e| e.to_string())
 }
 
@@ -305,7 +407,11 @@ pub async fn list_asset_movements(
 pub async fn list_all_asset_movements(
     state: State<'_, AppState>,
 ) -> Result<Vec<domain::assets::AssetMovement>, String> {
-    state.asset_repo.list_all_movements().await.map_err(|e| e.to_string())
+    state
+        .asset_repo
+        .list_all_movements()
+        .await
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -317,6 +423,15 @@ pub async fn run_yearly_rotation(
         .map(|d| d.with_timezone(&chrono::Utc))
         .map_err(|e| e.to_string())?;
 
-    let use_case = FixedAssetUseCases::new(state.asset_repo.clone(), state.journal_entry_repo.clone(), state.account_repo.clone(), state.settings_repo.clone(), state.opening_migration_repo.clone());
-    use_case.run_yearly_rotation(dt).await.map_err(|e| e.to_string())
+    let use_case = FixedAssetUseCases::new(
+        state.asset_repo.clone(),
+        state.journal_entry_repo.clone(),
+        state.account_repo.clone(),
+        state.settings_repo.clone(),
+        state.opening_migration_repo.clone(),
+    );
+    use_case
+        .run_yearly_rotation(dt)
+        .await
+        .map_err(|e| e.to_string())
 }

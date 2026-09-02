@@ -26,7 +26,10 @@ async fn build_pool() -> Arc<sqlx::SqlitePool> {
 
 async fn build_pool_with_base(base_code: &str) -> Arc<sqlx::SqlitePool> {
     let mut path = std::env::temp_dir();
-    path.push(format!("acc_damaged_canonical_{}.sqlite", uuid::Uuid::new_v4()));
+    path.push(format!(
+        "acc_damaged_canonical_{}.sqlite",
+        uuid::Uuid::new_v4()
+    ));
     let options = SqliteConnectOptions::from_str(path.to_str().unwrap())
         .unwrap()
         .create_if_missing(true);
@@ -42,11 +45,25 @@ async fn build_pool_with_base(base_code: &str) -> Arc<sqlx::SqlitePool> {
     let usd_is_base = base_code == "USD";
     let syp_is_base = base_code == "SYP";
     currency_repo
-        .save(&domain::shared::Currency::new("USD", "دولار", "Dollar", "$", 2, usd_is_base))
+        .save(&domain::shared::Currency::new(
+            "USD",
+            "دولار",
+            "Dollar",
+            "$",
+            2,
+            usd_is_base,
+        ))
         .await
         .unwrap();
     currency_repo
-        .save(&domain::shared::Currency::new("SYP", "ليرة", "Pound", "ل.س", 2, syp_is_base))
+        .save(&domain::shared::Currency::new(
+            "SYP",
+            "ليرة",
+            "Pound",
+            "ل.س",
+            2,
+            syp_is_base,
+        ))
         .await
         .unwrap();
     currency_repo.set_base_currency(base_code).await.unwrap();
@@ -191,7 +208,8 @@ async fn damaged_item_uses_carrying_cost_as_canonical_loss_and_cost_impact() {
 async fn damaged_item_preserves_original_usd_and_base_syp_values() {
     let pool = build_pool_with_base("SYP").await;
     let usd_per_syp = Decimal::ONE / Decimal::from(130);
-    let material = create_material_with_stock_costing(&pool, "USD", Decimal::from(5), usd_per_syp).await;
+    let material =
+        create_material_with_stock_costing(&pool, "USD", Decimal::from(5), usd_per_syp).await;
 
     let use_case = CreateDamagedItemUseCase::new(
         Arc::new(SqliteDamagedItemRepository::new(pool.clone())),
@@ -219,10 +237,26 @@ async fn damaged_item_preserves_original_usd_and_base_syp_values() {
         .unwrap();
 
     assert_eq!(dto.currency_code.as_deref(), Some("USD"));
-    assert_eq!(Decimal::from_str(&dto.cost_impact).unwrap(), Decimal::from(40));
-    assert_eq!(Decimal::from_str(dto.cost_impact_base.as_deref().unwrap()).unwrap().round_dp(4), Decimal::from(5200));
-    assert_eq!(Decimal::from_str(dto.loss.as_deref().unwrap()).unwrap(), Decimal::from(40));
-    assert_eq!(Decimal::from_str(dto.loss_base.as_deref().unwrap()).unwrap().round_dp(4), Decimal::from(5200));
+    assert_eq!(
+        Decimal::from_str(&dto.cost_impact).unwrap(),
+        Decimal::from(40)
+    );
+    assert_eq!(
+        Decimal::from_str(dto.cost_impact_base.as_deref().unwrap())
+            .unwrap()
+            .round_dp(4),
+        Decimal::from(5200)
+    );
+    assert_eq!(
+        Decimal::from_str(dto.loss.as_deref().unwrap()).unwrap(),
+        Decimal::from(40)
+    );
+    assert_eq!(
+        Decimal::from_str(dto.loss_base.as_deref().unwrap())
+            .unwrap()
+            .round_dp(4),
+        Decimal::from(5200)
+    );
 
     let (movement_cost, movement_base, movement_currency, movement_fx): (String, String, Option<String>, String) = sqlx::query_as(
         "SELECT total_cost, total_cost_base, original_currency, fx_rate FROM stock_movements WHERE movement_type = 'Damaged' AND document_number = ?",
@@ -231,8 +265,14 @@ async fn damaged_item_preserves_original_usd_and_base_syp_values() {
     .fetch_one(&*pool)
     .await
     .unwrap();
-    assert_eq!(Decimal::from_str(&movement_cost).unwrap(), Decimal::from(40));
-    assert_eq!(Decimal::from_str(&movement_base).unwrap().round_dp(4), Decimal::from(5200));
+    assert_eq!(
+        Decimal::from_str(&movement_cost).unwrap(),
+        Decimal::from(40)
+    );
+    assert_eq!(
+        Decimal::from_str(&movement_base).unwrap().round_dp(4),
+        Decimal::from(5200)
+    );
     assert_eq!(movement_currency.as_deref(), Some("USD"));
     let dto_fx = Decimal::from_str(dto.fx_rate.as_deref().unwrap()).unwrap();
     let movement_fx = Decimal::from_str(&movement_fx).unwrap();
@@ -301,11 +341,10 @@ async fn deleting_a_damaged_item_removes_only_its_own_document_number_movements(
     );
     delete.execute(&second.id).await.unwrap();
 
-    let remaining_damaged_docs: i64 =
-        sqlx::query_scalar("SELECT COUNT(*) FROM damaged_items")
-            .fetch_one(&*pool)
-            .await
-            .unwrap();
+    let remaining_damaged_docs: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM damaged_items")
+        .fetch_one(&*pool)
+        .await
+        .unwrap();
     let remaining_damaged_movements: i64 =
         sqlx::query_scalar("SELECT COUNT(*) FROM stock_movements WHERE movement_type = 'Damaged'")
             .fetch_one(&*pool)

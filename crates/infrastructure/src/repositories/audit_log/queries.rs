@@ -1,9 +1,9 @@
-use sqlx::SqlitePool;
+use super::mappers::row_to_log;
+use super::models::AuditLogRow;
 use application::errors::AppError;
 use domain::audit::AuditLog;
-use domain::shared::ids::{AuditLogId};
-use super::models::AuditLogRow;
-use super::mappers::row_to_log;
+use domain::shared::ids::AuditLogId;
+use sqlx::SqlitePool;
 
 pub async fn find_by_id(pool: &SqlitePool, id: &AuditLogId) -> Result<Option<AuditLog>, AppError> {
     let row = sqlx::query_as::<_, AuditLogRow>(
@@ -30,7 +30,11 @@ pub async fn list_all(pool: &SqlitePool, limit: Option<u32>) -> Result<Vec<Audit
     rows.into_iter().map(row_to_log).collect()
 }
 
-pub async fn list_by_entity(pool: &SqlitePool, entity_type: &str, entity_id: &str) -> Result<Vec<AuditLog>, AppError> {
+pub async fn list_by_entity(
+    pool: &SqlitePool,
+    entity_type: &str,
+    entity_id: &str,
+) -> Result<Vec<AuditLog>, AppError> {
     let rows = sqlx::query_as::<_, AuditLogRow>(
         "SELECT id, user_id, username, action, entity_type, entity_id, changes, ip_address, created_at
          FROM audit_logs WHERE entity_type = ? AND entity_id = ? ORDER BY created_at DESC"

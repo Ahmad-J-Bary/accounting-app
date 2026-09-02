@@ -1,15 +1,17 @@
-use async_trait::async_trait;
-use sqlx::SqlitePool;
+use application::dto::warehouse_dto::{
+    CreateWarehouseRequest, UpdateWarehouseRequest, WarehouseDto,
+};
 use application::errors::AppError;
 use application::ports::warehouse_repository::WarehouseRepository;
-use application::dto::warehouse_dto::{WarehouseDto, CreateWarehouseRequest, UpdateWarehouseRequest};
+use async_trait::async_trait;
 use domain::shared::ids::WarehouseId;
+use sqlx::SqlitePool;
 use std::sync::Arc;
 
-mod models;
-mod mappers;
-mod queries;
 mod commands;
+mod mappers;
+mod models;
+mod queries;
 
 pub struct SqliteWarehouseRepository {
     pool: Arc<SqlitePool>,

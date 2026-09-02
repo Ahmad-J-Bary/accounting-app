@@ -1,10 +1,13 @@
-use sqlx::SqlitePool;
+use super::mappers::row_to_consumable;
+use super::models::ConsumableRow;
 use application::errors::AppError;
 use domain::assets::{Consumable, ConsumableId};
-use super::models::ConsumableRow;
-use super::mappers::row_to_consumable;
+use sqlx::SqlitePool;
 
-pub async fn find_by_id(pool: &SqlitePool, id: &ConsumableId) -> Result<Option<Consumable>, AppError> {
+pub async fn find_by_id(
+    pool: &SqlitePool,
+    id: &ConsumableId,
+) -> Result<Option<Consumable>, AppError> {
     let row = sqlx::query_as::<_, ConsumableRow>("SELECT * FROM consumables WHERE id = ?")
         .bind(id.0.to_string())
         .fetch_optional(pool)

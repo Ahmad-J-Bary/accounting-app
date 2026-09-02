@@ -1,7 +1,7 @@
+use crate::errors::AppError;
 use async_trait::async_trait;
 use domain::accounting::account::Account;
 use domain::shared::AccountId;
-use crate::errors::AppError;
 
 #[async_trait]
 pub trait AccountRepository: Send + Sync {

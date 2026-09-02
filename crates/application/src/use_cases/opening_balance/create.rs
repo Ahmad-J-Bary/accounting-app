@@ -1,15 +1,17 @@
-use std::sync::Arc;
 use chrono::{DateTime, Utc};
+use domain::accounting::{MigrationStatus, OpeningBalanceLine, OpeningBalanceMigration};
+use domain::shared::ids::AccountId;
 use rust_decimal::Decimal;
 use std::str::FromStr;
-use domain::accounting::{MigrationStatus, OpeningBalanceMigration, OpeningBalanceLine};
-use domain::shared::ids::AccountId;
+use std::sync::Arc;
 
 use crate::errors::AppError;
 use crate::ports::account_repository::AccountRepository;
 use crate::ports::opening_migration_repository::OpeningMigrationRepository;
 use crate::ports::settings_repository::SettingsRepository;
-use crate::use_cases::opening_balance::types::{CreateOpeningBalanceMigrationCommand, OpeningMigrationDto};
+use crate::use_cases::opening_balance::types::{
+    CreateOpeningBalanceMigrationCommand, OpeningMigrationDto,
+};
 
 /// Company-startup mode stored in `CompanySettings`. An opening-balance
 /// migration is the ExistingCompany transition; a NewCompany has no migration.
@@ -28,10 +30,17 @@ impl CreateOpeningBalanceUseCase {
         account_repo: Arc<dyn AccountRepository>,
         settings_repo: Arc<dyn SettingsRepository>,
     ) -> Self {
-        Self { repo, account_repo, settings_repo }
+        Self {
+            repo,
+            account_repo,
+            settings_repo,
+        }
     }
 
-    pub async fn execute(&self, cmd: CreateOpeningBalanceMigrationCommand) -> Result<OpeningMigrationDto, AppError> {
+    pub async fn execute(
+        &self,
+        cmd: CreateOpeningBalanceMigrationCommand,
+    ) -> Result<OpeningMigrationDto, AppError> {
         // Lifecycle guard: a migration only exists for an EXISTING company. A
         // NewCompany never has one — it just starts with the normal modules.
         let settings = self.settings_repo.get().await?;
@@ -58,8 +67,13 @@ impl CreateOpeningBalanceUseCase {
 
         // Prevent accidental duplicate migrations for the same cutover date
         // unless every existing one on that date is already cancelled.
-        let existing = self.repo.find_by_cutover_date(&cutover.to_rfc3339()).await?;
-        let has_active = existing.iter().any(|m| m.status != MigrationStatus::Cancelled);
+        let existing = self
+            .repo
+            .find_by_cutover_date(&cutover.to_rfc3339())
+            .await?;
+        let has_active = existing
+            .iter()
+            .any(|m| m.status != MigrationStatus::Cancelled);
         if has_active {
             return Err(AppError::Invalid(
                 "يوجد ترحيل رصيد افتتاحي نشط بالفعل في هذا التاريخ؛ لا يمكن إنشاء ترحيل مكرر".into(),
@@ -74,7 +88,10 @@ impl CreateOpeningBalanceUseCase {
                 .map_err(|_| AppError::Invalid("معرف الحساب غير صالح".into()))?;
 
             // Balance-sheet only: opening entries never carry P&L accounts.
-            let account = self.account_repo.find_by_id(&account_id).await?
+            let account = self
+                .account_repo
+                .find_by_id(&account_id)
+                .await?
                 .ok_or_else(|| AppError::NotFound(format!("الحساب غير موجود: {}", account_id)))?;
             super::guard::reject_pl_account(&account)?;
 

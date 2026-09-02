@@ -2,20 +2,19 @@ use domain::customers::Customer;
 use domain::shared::ids::CustomerId;
 use domain::shared::Currency;
 use rust_decimal::Decimal;
-use std::sync::Arc;
 use std::str::FromStr;
+use std::sync::Arc;
 
+use crate::constants::RECEIVABLES_PARENT_ID;
 use crate::dto::customer_dto::{CreateCustomerRequest, CustomerDto};
 use crate::errors::AppError;
 use crate::ports::account_repository::AccountRepository;
 use crate::ports::customer_repository::CustomerRepository;
 use crate::ports::journal_entry_repository::JournalEntryRepository;
 use crate::ports::opening_migration_repository::OpeningMigrationRepository;
-use crate::constants::RECEIVABLES_PARENT_ID;
 use crate::use_cases::opening_balance::opening_window_active;
 use crate::use_cases::shared::partner_account::{
-    PartnerAccountParams, PartnerKind,
-    build_partner_account, build_opening_balance_entry,
+    build_opening_balance_entry, build_partner_account, PartnerAccountParams, PartnerKind,
 };
 
 pub struct CreateCustomerUseCase {
@@ -32,7 +31,12 @@ impl CreateCustomerUseCase {
         journal_repo: Arc<dyn JournalEntryRepository>,
         opening_migration_repo: Arc<dyn OpeningMigrationRepository>,
     ) -> Self {
-        Self { customer_repo, account_repo, journal_repo, opening_migration_repo }
+        Self {
+            customer_repo,
+            account_repo,
+            journal_repo,
+            opening_migration_repo,
+        }
     }
 
     pub async fn execute(&self, req: CreateCustomerRequest) -> Result<CustomerDto, AppError> {
@@ -44,7 +48,8 @@ impl CreateCustomerUseCase {
 
         let debit = crate::utils::parse_decimal(req.debit.as_deref(), "المدين")?;
         let credit = crate::utils::parse_decimal(req.credit.as_deref(), "الدائن")?;
-        let opening_balance = crate::utils::parse_decimal(req.opening_balance.as_deref(), "رصيد الافتتاح")?;
+        let opening_balance =
+            crate::utils::parse_decimal(req.opening_balance.as_deref(), "رصيد الافتتاح")?;
 
         let currency_code = req.currency.clone().unwrap_or_default();
         let currency = Currency::new(&currency_code, &currency_code, &currency_code, "", 2, false);
@@ -100,7 +105,8 @@ impl CreateCustomerUseCase {
                 kind: PartnerKind::Customer,
             },
             &self.account_repo,
-        ).await?;
+        )
+        .await?;
 
         customer.link_account(new_account_id);
 
@@ -122,7 +128,8 @@ impl CreateCustomerUseCase {
                 PartnerKind::Customer,
                 &self.account_repo,
                 &self.journal_repo,
-            ).await?
+            )
+            .await?
         };
 
         let mut entries = Vec::new();

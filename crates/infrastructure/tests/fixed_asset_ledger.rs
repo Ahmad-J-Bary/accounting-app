@@ -151,8 +151,22 @@ async fn fixed_asset_acquisition_and_depreciation_reconcile_asset_ledger() {
 
     // Depreciation-expense (under 43) and accumulated-depreciation (under 11)
     // leaf accounts created through the real module.
-    let dep_expense = create_leaf_account(&pool, "4391", "مصروف إهلاك الأصول", AccountType::Expenses, other_expenses_root).await;
-    let acc_dep = create_leaf_account(&pool, "1199", "مجمع إهلاك الأصول", AccountType::Assets, fixed_assets_root).await;
+    let dep_expense = create_leaf_account(
+        &pool,
+        "4391",
+        "مصروف إهلاك الأصول",
+        AccountType::Expenses,
+        other_expenses_root,
+    )
+    .await;
+    let acc_dep = create_leaf_account(
+        &pool,
+        "1199",
+        "مجمع إهلاك الأصول",
+        AccountType::Assets,
+        fixed_assets_root,
+    )
+    .await;
 
     let asset_repo: Arc<dyn AssetRepository> = Arc::new(SqliteAssetRepository::new(pool.clone()));
     let journal_repo: Arc<dyn JournalEntryRepository> =
@@ -172,15 +186,19 @@ async fn fixed_asset_acquisition_and_depreciation_reconcile_asset_ledger() {
     );
 
     // The asset category must exist before the asset (FK on asset_categories).
-    let category = domain::assets::AssetCategory::new(
-        "أصول ثابتة".into(),
-        domain::assets::AssetType::Fixed,
-    );
-    asset_repo.save_category(&category).await.expect("save category");
+    let category =
+        domain::assets::AssetCategory::new("أصول ثابتة".into(), domain::assets::AssetType::Fixed);
+    asset_repo
+        .save_category(&category)
+        .await
+        .expect("save category");
 
     // Acquire a 12000 asset with 12-month straight-line life → 1000/month.
     let purchase_date = Utc::now();
-    let cost = Money::new(dec!(12000), Currency::new("S", "عملة أساسية", "Base", "B", 2, true));
+    let cost = Money::new(
+        dec!(12000),
+        Currency::new("S", "عملة أساسية", "Base", "B", 2, true),
+    );
     let asset_id = uc
         .create_asset(CreateAssetRequest {
             code: "FA-100".into(),
@@ -205,8 +223,14 @@ async fn fixed_asset_acquisition_and_depreciation_reconcile_asset_ledger() {
         .expect("create asset");
 
     // Acquisition journal: Dr asset 12000 / Cr cash 12000, balanced.
-    assert!(close_enough(ledger_balance(&pool, &asset_account).await, 12000.0), "asset account +12000");
-    assert!(close_enough(ledger_balance(&pool, &cash).await, -12000.0), "cash −12000");
+    assert!(
+        close_enough(ledger_balance(&pool, &asset_account).await, 12000.0),
+        "asset account +12000"
+    );
+    assert!(
+        close_enough(ledger_balance(&pool, &cash).await, -12000.0),
+        "cash −12000"
+    );
 
     // Exactly one acquisition movement on the real asset.
     let movements: i64 =
@@ -218,17 +242,33 @@ async fn fixed_asset_acquisition_and_depreciation_reconcile_asset_ledger() {
     assert_eq!(movements, 1, "exactly one acquisition movement");
 
     // Post one month of depreciation → 1000.
-    uc.post_depreciation(asset_id.0, Utc::now()).await.expect("post depreciation");
+    uc.post_depreciation(asset_id.0, Utc::now())
+        .await
+        .expect("post depreciation");
 
     // Depreciation journal: Dr depreciation expense 1000 / Cr acc. dep 1000.
-    assert!(close_enough(ledger_balance(&pool, &dep_expense).await, 1000.0), "depreciation expense +1000");
-    assert!(close_enough(ledger_balance(&pool, &acc_dep).await, -1000.0), "accumulated depreciation −1000 (credit)");
+    assert!(
+        close_enough(ledger_balance(&pool, &dep_expense).await, 1000.0),
+        "depreciation expense +1000"
+    );
+    assert!(
+        close_enough(ledger_balance(&pool, &acc_dep).await, -1000.0),
+        "accumulated depreciation −1000 (credit)"
+    );
 
     // Asset sub-ledger reconcile: cost = accumulated + net book value.
-    let asset = asset_repo.find_asset_by_id(&asset_id).await.unwrap().expect("asset exists");
+    let asset = asset_repo
+        .find_asset_by_id(&asset_id)
+        .await
+        .unwrap()
+        .expect("asset exists");
     let acc_dep_amount = asset.accumulated_depreciation.amount();
     let net_book = asset.net_book_value().amount();
-    assert_eq!(acc_dep_amount + net_book, dec!(12000), "asset ledger: accumulated + NBV = cost");
+    assert_eq!(
+        acc_dep_amount + net_book,
+        dec!(12000),
+        "asset ledger: accumulated + NBV = cost"
+    );
 
     // Exactly one acquisition + one depreciation movement.
     let movements: i64 =
@@ -261,5 +301,8 @@ async fn fixed_asset_acquisition_and_depreciation_reconcile_asset_ledger() {
     .fetch_one(&*pool)
     .await
     .unwrap();
-    assert!(close_enough(td, tc), "whole ledger must balance (debit {td} vs credit {tc})");
+    assert!(
+        close_enough(td, tc),
+        "whole ledger must balance (debit {td} vs credit {tc})"
+    );
 }

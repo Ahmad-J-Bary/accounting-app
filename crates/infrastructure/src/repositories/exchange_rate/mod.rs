@@ -1,13 +1,13 @@
-use sqlx::{SqlitePool, Row};
-use sqlx::sqlite::SqliteRow;
-use std::sync::Arc;
-use async_trait::async_trait;
-use domain::shared::exchange_rate::{ExchangeRate, RateType};
-use application::ports::exchange_rate_repository::ExchangeRateRepository;
 use application::errors::AppError;
+use application::ports::exchange_rate_repository::ExchangeRateRepository;
+use async_trait::async_trait;
 use chrono::{DateTime, Duration, Utc};
+use domain::shared::exchange_rate::{ExchangeRate, RateType};
 use rust_decimal::Decimal;
+use sqlx::sqlite::SqliteRow;
+use sqlx::{Row, SqlitePool};
 use std::str::FromStr;
+use std::sync::Arc;
 
 pub struct SqliteExchangeRateRepository {
     pool: Arc<SqlitePool>,
@@ -93,7 +93,7 @@ impl ExchangeRateRepository for SqliteExchangeRateRepository {
             "SELECT id, from_currency, to_currency, rate, rate_type, rate_date, source, created_at
              FROM exchange_rates
              WHERE from_currency = ? AND to_currency = ? AND rate_type = ?
-             ORDER BY rate_date DESC LIMIT 1"
+             ORDER BY rate_date DESC LIMIT 1",
         )
         .bind(from)
         .bind(to)
@@ -112,7 +112,9 @@ impl ExchangeRateRepository for SqliteExchangeRateRepository {
         date: DateTime<Utc>,
         rate_type: RateType,
     ) -> Result<Option<ExchangeRate>, AppError> {
-        let start_of_day = date.date_naive().and_hms_opt(0, 0, 0)
+        let start_of_day = date
+            .date_naive()
+            .and_hms_opt(0, 0, 0)
             .ok_or_else(|| AppError::Infrastructure("Invalid date".to_string()))?
             .and_utc();
         let end_of_day = start_of_day + Duration::days(1);
@@ -124,7 +126,7 @@ impl ExchangeRateRepository for SqliteExchangeRateRepository {
              WHERE from_currency = ? AND to_currency = ?
              AND rate_type = ?
              AND rate_date >= ? AND rate_date < ?
-             ORDER BY created_at DESC LIMIT 1"
+             ORDER BY created_at DESC LIMIT 1",
         )
         .bind(from)
         .bind(to)
@@ -149,7 +151,7 @@ impl ExchangeRateRepository for SqliteExchangeRateRepository {
              FROM exchange_rates
              WHERE from_currency = ? AND to_currency = ?
              ORDER BY rate_date DESC
-             LIMIT ?"
+             LIMIT ?",
         )
         .bind(from)
         .bind(to)

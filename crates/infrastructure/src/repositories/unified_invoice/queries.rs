@@ -1,26 +1,27 @@
-use sqlx::SqlitePool;
+use super::mappers::row_to_invoice;
+use super::models::{InvoiceRow, LineRow};
 use application::errors::AppError;
-use domain::sales::unified_invoice::{UnifiedInvoice, InvoiceType};
 use domain::sales::invoice_line::InvoiceLine;
-use domain::shared::ids::{InvoiceId, MaterialId};
+use domain::sales::unified_invoice::{InvoiceType, UnifiedInvoice};
 use domain::shared::currency::Currency;
+use domain::shared::ids::{InvoiceId, MaterialId};
 use domain::shared::money::Money;
 use domain::shared::MonetaryAmount;
+use rust_decimal::Decimal;
+use sqlx::SqlitePool;
+use std::collections::HashMap;
 use std::str::FromStr;
 use uuid::Uuid;
-use rust_decimal::Decimal;
-use super::models::{InvoiceRow, LineRow};
-use super::mappers::row_to_invoice;
-use std::collections::HashMap;
 
-pub async fn find_by_id(pool: &SqlitePool, id: &InvoiceId) -> Result<Option<UnifiedInvoice>, AppError> {
-    let row = sqlx::query_as::<_, InvoiceRow>(
-        "SELECT * FROM unified_invoices WHERE id = ?"
-    )
-    .bind(id.to_string())
-    .fetch_optional(pool)
-    .await
-    .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+pub async fn find_by_id(
+    pool: &SqlitePool,
+    id: &InvoiceId,
+) -> Result<Option<UnifiedInvoice>, AppError> {
+    let row = sqlx::query_as::<_, InvoiceRow>("SELECT * FROM unified_invoices WHERE id = ?")
+        .bind(id.to_string())
+        .fetch_optional(pool)
+        .await
+        .map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
     if let Some(r) = row {
         let fx_rate = Decimal::from_str(&r.exchange_rate).unwrap_or(Decimal::ONE);
@@ -69,18 +70,35 @@ pub fn map_line_rows_to_invoice_lines(
 ) -> Result<Vec<InvoiceLine>, AppError> {
     let mut lines = vec![];
     for r in rows {
-        let material_id = MaterialId(Uuid::parse_str(&r.material_id).map_err(|e| AppError::Infrastructure(e.to_string()))?);
+        let material_id = MaterialId(
+            Uuid::parse_str(&r.material_id).map_err(|e| AppError::Infrastructure(e.to_string()))?,
+        );
         let quantity = Decimal::from_str(&r.quantity).unwrap_or(Decimal::ZERO);
-        
+
         let to_monetary = |amt_str: String| {
             let amt = Decimal::from_str(&amt_str).unwrap_or(Decimal::ZERO);
-            MonetaryAmount::new(Money::new(amt, Currency::new(currency_code, currency_code, currency_code, "", 2, false)), fx_rate)
+            MonetaryAmount::new(
+                Money::new(
+                    amt,
+                    Currency::new(currency_code, currency_code, currency_code, "", 2, false),
+                ),
+                fx_rate,
+            )
         };
-        
+
         let to_opt_monetary = |s: Option<String>| s.map(to_monetary);
-        
-        let parse_money = |s: Option<String>| s.and_then(|v| Decimal::from_str(&v).ok().map(|amt| Money::new(amt, Currency::new(currency_code, currency_code, currency_code, "", 2, false))));
-        
+
+        let parse_money = |s: Option<String>| {
+            s.and_then(|v| {
+                Decimal::from_str(&v).ok().map(|amt| {
+                    Money::new(
+                        amt,
+                        Currency::new(currency_code, currency_code, currency_code, "", 2, false),
+                    )
+                })
+            })
+        };
+
         let discount_percent = Decimal::from_str(&r.discount_percent).unwrap_or(Decimal::ZERO);
         lines.push(InvoiceLine::new(
             Some(r.id),
@@ -107,12 +125,11 @@ pub fn map_line_rows_to_invoice_lines(
 }
 
 pub async fn list_all(pool: &SqlitePool) -> Result<Vec<UnifiedInvoice>, AppError> {
-    let rows = sqlx::query_as::<_, InvoiceRow>(
-        "SELECT * FROM unified_invoices ORDER BY issued_at DESC"
-    )
-    .fetch_all(pool)
-    .await
-    .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+    let rows =
+        sqlx::query_as::<_, InvoiceRow>("SELECT * FROM unified_invoices ORDER BY issued_at DESC")
+            .fetch_all(pool)
+            .await
+            .map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
     if rows.is_empty() {
         return Ok(vec![]);
@@ -131,7 +148,10 @@ pub async fn list_all(pool: &SqlitePool) -> Result<Vec<UnifiedInvoice>, AppError
     Ok(invoices)
 }
 
-pub async fn list_by_type(pool: &SqlitePool, invoice_type: InvoiceType) -> Result<Vec<UnifiedInvoice>, AppError> {
+pub async fn list_by_type(
+    pool: &SqlitePool,
+    invoice_type: InvoiceType,
+) -> Result<Vec<UnifiedInvoice>, AppError> {
     let itype = match invoice_type {
         InvoiceType::Sales => "Sales",
         InvoiceType::Purchase => "Purchase",
@@ -140,7 +160,7 @@ pub async fn list_by_type(pool: &SqlitePool, invoice_type: InvoiceType) -> Resul
     };
 
     let rows = sqlx::query_as::<_, InvoiceRow>(
-        "SELECT * FROM unified_invoices WHERE invoice_type = ? ORDER BY issued_at DESC"
+        "SELECT * FROM unified_invoices WHERE invoice_type = ? ORDER BY issued_at DESC",
     )
     .bind(itype)
     .fetch_all(pool)
@@ -164,17 +184,26 @@ pub async fn list_by_type(pool: &SqlitePool, invoice_type: InvoiceType) -> Resul
     Ok(invoices)
 }
 
-pub async fn get_lines(pool: &SqlitePool, invoice_id: &str, currency_code: &str, fx_rate: Decimal) -> Result<Vec<InvoiceLine>, AppError> {
-    let rows = sqlx::query_as::<_, LineRow>("SELECT * FROM unified_invoice_lines WHERE invoice_id = ?")
-        .bind(invoice_id)
-        .fetch_all(pool)
-        .await
-        .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+pub async fn get_lines(
+    pool: &SqlitePool,
+    invoice_id: &str,
+    currency_code: &str,
+    fx_rate: Decimal,
+) -> Result<Vec<InvoiceLine>, AppError> {
+    let rows =
+        sqlx::query_as::<_, LineRow>("SELECT * FROM unified_invoice_lines WHERE invoice_id = ?")
+            .bind(invoice_id)
+            .fetch_all(pool)
+            .await
+            .map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
     map_line_rows_to_invoice_lines(rows, currency_code, fx_rate)
 }
 
-pub async fn get_last_original_prices(pool: &SqlitePool, material_id: &str) -> Result<(String, String), AppError> {
+pub async fn get_last_original_prices(
+    pool: &SqlitePool,
+    material_id: &str,
+) -> Result<(String, String), AppError> {
     // Fetch last purchase original price
     let last_purchase: Option<String> = sqlx::query_scalar(
         r#"
@@ -200,7 +229,7 @@ pub async fn get_last_original_prices(pool: &SqlitePool, material_id: &str) -> R
         WHERE l.material_id = ? AND i.invoice_type = 'Sales' AND l.unit_price_original IS NOT NULL
         ORDER BY i.issued_at DESC
         LIMIT 1
-        "#
+        "#,
     )
     .bind(material_id)
     .fetch_optional(pool)
@@ -209,11 +238,14 @@ pub async fn get_last_original_prices(pool: &SqlitePool, material_id: &str) -> R
 
     Ok((
         last_purchase.unwrap_or_else(|| "0".to_string()),
-        last_sale.unwrap_or_else(|| "0".to_string())
+        last_sale.unwrap_or_else(|| "0".to_string()),
     ))
 }
 
-pub async fn get_next_invoice_number(pool: &SqlitePool, invoice_type: &str) -> Result<String, AppError> {
+pub async fn get_next_invoice_number(
+    pool: &SqlitePool,
+    invoice_type: &str,
+) -> Result<String, AppError> {
     let (query, has_param) = match invoice_type {
         "Purchase" | "OpeningBalance" => 
             ("SELECT MAX(CAST(invoice_number AS INTEGER)) FROM unified_invoices WHERE invoice_type IN ('Purchase', 'OpeningBalance')", false),
@@ -221,11 +253,15 @@ pub async fn get_next_invoice_number(pool: &SqlitePool, invoice_type: &str) -> R
     };
 
     let row: (Option<i64>,) = if has_param {
-        sqlx::query_as(query).bind(invoice_type).fetch_one(pool).await
+        sqlx::query_as(query)
+            .bind(invoice_type)
+            .fetch_one(pool)
+            .await
     } else {
         sqlx::query_as(query).fetch_one(pool).await
-    }.map_err(|e| AppError::Infrastructure(e.to_string()))?;
-    
+    }
+    .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+
     let next = match row.0 {
         Some(n) => n + 1,
         None => 1,

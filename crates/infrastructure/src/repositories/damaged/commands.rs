@@ -1,9 +1,9 @@
-use sqlx::SqlitePool;
 use application::errors::AppError;
 use domain::accounting::journal_entry::JournalEntry;
 use domain::inventory::stock_movement::StockMovement;
 use domain::inventory::DamagedItem;
-use domain::shared::ids::{DamagedItemId};
+use domain::shared::ids::DamagedItemId;
+use sqlx::SqlitePool;
 
 pub async fn save(pool: &SqlitePool, item: &DamagedItem) -> Result<(), AppError> {
     sqlx::query(
@@ -55,7 +55,10 @@ pub async fn save_with_accounting(
     delete_movement_reference: Option<&str>,
     delete_entries: &[domain::shared::ids::JournalEntryId],
 ) -> Result<(), AppError> {
-    let mut tx = pool.begin().await.map_err(|e| AppError::Infrastructure(e.to_string()))?;
+    let mut tx = pool
+        .begin()
+        .await
+        .map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
     if let Some(reference) = delete_movement_reference {
         sqlx::query("DELETE FROM stock_movements WHERE movement_type = ? AND (document_number = ? OR (reference = ? AND document_number IS NULL))")
@@ -108,7 +111,9 @@ pub async fn save_with_accounting(
         crate::repositories::journal_entry::insert_entry(&mut tx, entry).await?;
     }
 
-    tx.commit().await.map_err(|e| AppError::Infrastructure(e.to_string()))?;
+    tx.commit()
+        .await
+        .map_err(|e| AppError::Infrastructure(e.to_string()))?;
     Ok(())
 }
 

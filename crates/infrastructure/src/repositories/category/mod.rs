@@ -1,15 +1,15 @@
-use async_trait::async_trait;
-use sqlx::SqlitePool;
 use application::errors::AppError;
 use application::ports::category_repository::CategoryRepository;
+use async_trait::async_trait;
 use domain::inventory::category::MaterialCategory;
 use domain::shared::ids::MaterialCategoryId;
+use sqlx::SqlitePool;
 use std::sync::Arc;
 
-mod models;
-mod mappers;
-mod queries;
 mod commands;
+mod mappers;
+mod models;
+mod queries;
 
 pub struct SqliteCategoryRepository {
     pool: Arc<SqlitePool>,
@@ -27,7 +27,10 @@ impl CategoryRepository for SqliteCategoryRepository {
         commands::save(&self.pool, category).await
     }
 
-    async fn find_by_id(&self, id: &MaterialCategoryId) -> Result<Option<MaterialCategory>, AppError> {
+    async fn find_by_id(
+        &self,
+        id: &MaterialCategoryId,
+    ) -> Result<Option<MaterialCategory>, AppError> {
         queries::find_by_id(&self.pool, id).await
     }
 

@@ -1,12 +1,6 @@
 use std::str::FromStr;
 use std::sync::Arc;
 
-use domain::accounting::account::{Account, AccountCategory, AccountType};
-use domain::accounting::journal_entry::{JournalEntry, JournalLine, JournalType};
-use domain::accounting::partner::{Partner, ProfitSharingType};
-use domain::shared::currency::Currency;
-use domain::shared::ids::{AccountId, PartnerId};
-use domain::shared::monetary_amount::MonetaryAmount;
 use application::ports::account_repository::AccountRepository;
 use application::ports::journal_entry_repository::JournalEntryRepository;
 use application::ports::partner_repository::PartnerRepository;
@@ -14,13 +8,19 @@ use application::use_cases::equity::GetPartnerEquityStatementUseCase;
 use application::use_cases::fiscal_period::GetDistributableProfitUseCase;
 use application::use_cases::journal::ReverseJournalEntryUseCase;
 use application::use_cases::opening_balance::{
-    DistributeProfitCommand, AllocateNetProfitUseCase, ProfitDistributionSource,
-    PreviewProfitDistributionCommand, PreviewProfitDistributionUseCase,
+    AllocateNetProfitUseCase, DistributeProfitCommand, PreviewProfitDistributionCommand,
+    PreviewProfitDistributionUseCase, ProfitDistributionSource,
 };
+use domain::accounting::account::{Account, AccountCategory, AccountType};
+use domain::accounting::journal_entry::{JournalEntry, JournalLine, JournalType};
+use domain::accounting::partner::{Partner, ProfitSharingType};
+use domain::shared::currency::Currency;
+use domain::shared::ids::{AccountId, PartnerId};
+use domain::shared::monetary_amount::MonetaryAmount;
 use infrastructure::db::pool::run_migrations;
 use infrastructure::repositories::{
-    SqliteAccountRepository, SqliteFiscalPeriodRepository, SqliteJournalEntryRepository, SqliteOpeningMigrationRepository,
-    SqlitePartnerRepository,
+    SqliteAccountRepository, SqliteFiscalPeriodRepository, SqliteJournalEntryRepository,
+    SqliteOpeningMigrationRepository, SqlitePartnerRepository,
 };
 use rust_decimal::Decimal;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
@@ -170,7 +170,8 @@ async fn insert_migration_with_status(pool: &sqlx::SqlitePool, id: &str, status:
 /// Posts a balanced journal crediting retained earnings (52) so a subsequent
 /// allocation has available profit to distribute (Sec 7 cap guard).
 async fn seed_retained_credit(pool: &Arc<sqlx::SqlitePool>, amount: Decimal) {
-    let account_repo: Arc<dyn AccountRepository> = Arc::new(SqliteAccountRepository::new(pool.clone()));
+    let account_repo: Arc<dyn AccountRepository> =
+        Arc::new(SqliteAccountRepository::new(pool.clone()));
     let retained = account_repo
         .find_by_code("52")
         .await
@@ -215,9 +216,18 @@ async fn seed_retained_credit(pool: &Arc<sqlx::SqlitePool>, amount: Decimal) {
 /// instead of a partner capital account, so a full distribution + equity
 /// statement can assert that partner capital stays untouched (Sec 10).
 async fn seed_retained_from_obe(pool: &Arc<sqlx::SqlitePool>, amount: Decimal) {
-    let account_repo: Arc<dyn AccountRepository> = Arc::new(SqliteAccountRepository::new(pool.clone()));
-    let retained = account_repo.find_by_code("52").await.unwrap().expect("retained earnings account");
-    let obe = account_repo.find_by_code("53").await.unwrap().expect("opening balance equity account");
+    let account_repo: Arc<dyn AccountRepository> =
+        Arc::new(SqliteAccountRepository::new(pool.clone()));
+    let retained = account_repo
+        .find_by_code("52")
+        .await
+        .unwrap()
+        .expect("retained earnings account");
+    let obe = account_repo
+        .find_by_code("53")
+        .await
+        .unwrap()
+        .expect("opening balance equity account");
 
     let c = test_currency();
     let mut entry = JournalEntry::new(
@@ -356,7 +366,10 @@ async fn opening_distributable(pool: &Arc<sqlx::SqlitePool>) -> (Decimal, Decima
         Arc::new(SqliteJournalEntryRepository::new(pool.clone())),
     );
     let dto = uc
-        .execute("1970-01-01T00:00:00Z".to_string(), format!("{date}T23:59:59Z"))
+        .execute(
+            "1970-01-01T00:00:00Z".to_string(),
+            format!("{date}T23:59:59Z"),
+        )
         .await
         .unwrap();
     (
@@ -367,10 +380,12 @@ async fn opening_distributable(pool: &Arc<sqlx::SqlitePool>) -> (Decimal, Decima
 }
 
 async fn count_distribution_journals(pool: &sqlx::SqlitePool) -> i64 {
-    sqlx::query_scalar("SELECT COUNT(*) FROM journal_entries WHERE source_type = 'profit_distribution'")
-        .fetch_one(pool)
-        .await
-        .unwrap()
+    sqlx::query_scalar(
+        "SELECT COUNT(*) FROM journal_entries WHERE source_type = 'profit_distribution'",
+    )
+    .fetch_one(pool)
+    .await
+    .unwrap()
 }
 
 #[tokio::test]
@@ -383,7 +398,8 @@ async fn allocation_credits_current_account_not_capital() {
     let migration_id = uuid::Uuid::new_v4().to_string();
     insert_posted_migration(pool.as_ref(), &migration_id).await;
 
-    let account_repo: Arc<dyn AccountRepository> = Arc::new(SqliteAccountRepository::new(pool.clone()));
+    let account_repo: Arc<dyn AccountRepository> =
+        Arc::new(SqliteAccountRepository::new(pool.clone()));
     let current = account_repo
         .find_by_code("549999")
         .await
@@ -405,7 +421,9 @@ async fn allocation_credits_current_account_not_capital() {
     let event_key = uuid::Uuid::new_v4().to_string();
     let result = allocate
         .execute(DistributeProfitCommand {
-            source: ProfitDistributionSource::OpeningMigration { migration_id: migration_id.clone() },
+            source: ProfitDistributionSource::OpeningMigration {
+                migration_id: migration_id.clone(),
+            },
             net_profit: "500".to_string(),
             idempotency_key: event_key.clone(),
         })
@@ -425,8 +443,16 @@ async fn allocation_credits_current_account_not_capital() {
 
     for (account_id, debit, credit) in &lines {
         if account_id == &capital.id.0.to_string() {
-            assert_eq!(*debit, Decimal::ZERO, "الربح يجب ألا يذهب إلى حساب رأس المال");
-            assert_eq!(*credit, Decimal::ZERO, "الربح يجب ألا يذهب إلى حساب رأس المال");
+            assert_eq!(
+                *debit,
+                Decimal::ZERO,
+                "الربح يجب ألا يذهب إلى حساب رأس المال"
+            );
+            assert_eq!(
+                *credit,
+                Decimal::ZERO,
+                "الربح يجب ألا يذهب إلى حساب رأس المال"
+            );
         }
         if account_id == &current.id.0.to_string() {
             assert_eq!(*debit, Decimal::ZERO);
@@ -454,11 +480,20 @@ async fn equity_statement_profit_equals_current_balance() {
     let pool = build_pool().await;
     let partner_id = seed_partner_with_current(&pool).await;
 
-    let account_repo: Arc<dyn AccountRepository> = Arc::new(SqliteAccountRepository::new(pool.clone()));
-    let current = account_repo.find_by_code("549999").await.unwrap().expect("current account");
-    let retained = account_repo.find_by_code("52").await.unwrap().expect("retained earnings");
+    let account_repo: Arc<dyn AccountRepository> =
+        Arc::new(SqliteAccountRepository::new(pool.clone()));
+    let current = account_repo
+        .find_by_code("549999")
+        .await
+        .unwrap()
+        .expect("current account");
+    let retained = account_repo
+        .find_by_code("52")
+        .await
+        .unwrap()
+        .expect("retained earnings");
 
-// Feed the current account directly with a distribution-shaped entry.
+    // Feed the current account directly with a distribution-shaped entry.
     let c = test_currency();
     let mut entry = JournalEntry::new(
         "1".to_string(),
@@ -495,7 +530,11 @@ async fn equity_statement_profit_equals_current_balance() {
     .await
     .unwrap();
 
-    let row = dto.rows.iter().find(|r| r.partner_id == partner_id.to_string()).expect("row");
+    let row = dto
+        .rows
+        .iter()
+        .find(|r| r.partner_id == partner_id.to_string())
+        .expect("row");
     assert_eq!(row.current_balance, "300");
     assert_eq!(row.profit_allocated, row.current_balance);
     assert_eq!(row.ledger_balance, "0", "رأس المال غير متأثر بحركة الأرباح");
@@ -584,7 +623,9 @@ async fn allocation_after_lock_is_allowed() {
     let event_key = uuid::Uuid::new_v4().to_string();
     let result = allocate
         .execute(DistributeProfitCommand {
-            source: ProfitDistributionSource::OpeningMigration { migration_id: migration_id.clone() },
+            source: ProfitDistributionSource::OpeningMigration {
+                migration_id: migration_id.clone(),
+            },
             net_profit: "500".to_string(),
             idempotency_key: event_key.clone(),
         })
@@ -629,8 +670,16 @@ async fn full_distribution_of_45_splits_27_and_18_and_touches_only_current() {
         .unwrap();
     assert!(res.posted);
     assert_eq!(res.allocated_total, Decimal::new(45, 0));
-    let a = res.shares.iter().find(|s| s.partner_id == ahmad.to_string()).unwrap();
-    let m = res.shares.iter().find(|s| s.partner_id == mohammad.to_string()).unwrap();
+    let a = res
+        .shares
+        .iter()
+        .find(|s| s.partner_id == ahmad.to_string())
+        .unwrap();
+    let m = res
+        .shares
+        .iter()
+        .find(|s| s.partner_id == mohammad.to_string())
+        .unwrap();
     assert_eq!(a.share, Decimal::new(27, 0), "أحمد 60% من 45 = 27");
     assert_eq!(m.share, Decimal::new(18, 0), "محمد 40% من 45 = 18");
 
@@ -647,12 +696,32 @@ async fn full_distribution_of_45_splits_27_and_18_and_touches_only_current() {
     .execute(None, None)
     .await
     .unwrap();
-    let arow = equity.rows.iter().find(|r| r.partner_id == ahmad.to_string()).unwrap();
-    let mrow = equity.rows.iter().find(|r| r.partner_id == mohammad.to_string()).unwrap();
-    assert_eq!(arow.current_balance, "27.00", "الحساب الجاري لأحمد يرتفع بمقدار نصيبه");
-    assert_eq!(mrow.current_balance, "18.00", "الحساب الجاري لمحمد يرتفع بمقدار نصيبه");
-    assert_eq!(arow.ledger_balance, "0", "رأس مال أحمد لا يتغير بالتوزيع (Sec 10)");
-    assert_eq!(mrow.ledger_balance, "0", "رأس مال محمد لا يتغير بالتوزيع (Sec 10)");
+    let arow = equity
+        .rows
+        .iter()
+        .find(|r| r.partner_id == ahmad.to_string())
+        .unwrap();
+    let mrow = equity
+        .rows
+        .iter()
+        .find(|r| r.partner_id == mohammad.to_string())
+        .unwrap();
+    assert_eq!(
+        arow.current_balance, "27.00",
+        "الحساب الجاري لأحمد يرتفع بمقدار نصيبه"
+    );
+    assert_eq!(
+        mrow.current_balance, "18.00",
+        "الحساب الجاري لمحمد يرتفع بمقدار نصيبه"
+    );
+    assert_eq!(
+        arow.ledger_balance, "0",
+        "رأس مال أحمد لا يتغير بالتوزيع (Sec 10)"
+    );
+    assert_eq!(
+        mrow.ledger_balance, "0",
+        "رأس مال محمد لا يتغير بالتوزيع (Sec 10)"
+    );
 }
 
 #[tokio::test]
@@ -670,27 +739,47 @@ async fn partial_distribution_20_then_remaining_25() {
     // Partial 20 → 12 / 8; remaining must stay visible (Sec 6).
     let first = allocate
         .execute(DistributeProfitCommand {
-            source: ProfitDistributionSource::OpeningMigration { migration_id: migration_id.clone() },
+            source: ProfitDistributionSource::OpeningMigration {
+                migration_id: migration_id.clone(),
+            },
             net_profit: "20".to_string(),
             idempotency_key: uuid::Uuid::new_v4().to_string(),
         })
         .await
         .unwrap();
     assert_eq!(first.allocated_total, Decimal::new(20, 0));
-    let a = first.shares.iter().find(|s| s.partner_name == "أحمد").unwrap();
-    let m = first.shares.iter().find(|s| s.partner_name == "محمد").unwrap();
+    let a = first
+        .shares
+        .iter()
+        .find(|s| s.partner_name == "أحمد")
+        .unwrap();
+    let m = first
+        .shares
+        .iter()
+        .find(|s| s.partner_name == "محمد")
+        .unwrap();
     assert_eq!(a.share, Decimal::new(12, 0));
     assert_eq!(m.share, Decimal::new(8, 0));
 
     let (retained, allocated, remaining) = opening_distributable(&pool).await;
-    assert_eq!(retained, Decimal::new(25, 0), "الرصيد المتبقي من الأرباح المبقاة");
+    assert_eq!(
+        retained,
+        Decimal::new(25, 0),
+        "الرصيد المتبقي من الأرباح المبقاة"
+    );
     assert_eq!(allocated, Decimal::new(20, 0), "الموزع حتى الآن");
-    assert_eq!(remaining, Decimal::new(25, 0), "المتبقي القابل للتوزيع = 45 − 20");
+    assert_eq!(
+        remaining,
+        Decimal::new(25, 0),
+        "المتبقي القابل للتوزيع = 45 − 20"
+    );
 
     // Second partial event (30 > 25 must fail) then the exact remaining 25 posts.
     let over = allocate
         .execute(DistributeProfitCommand {
-            source: ProfitDistributionSource::OpeningMigration { migration_id: migration_id.clone() },
+            source: ProfitDistributionSource::OpeningMigration {
+                migration_id: migration_id.clone(),
+            },
             net_profit: "30".to_string(),
             idempotency_key: uuid::Uuid::new_v4().to_string(),
         })
@@ -707,8 +796,16 @@ async fn partial_distribution_20_then_remaining_25() {
         .await
         .unwrap();
     assert_eq!(second.allocated_total, Decimal::new(25, 0));
-    let a2 = second.shares.iter().find(|s| s.partner_name == "أحمد").unwrap();
-    let m2 = second.shares.iter().find(|s| s.partner_name == "محمد").unwrap();
+    let a2 = second
+        .shares
+        .iter()
+        .find(|s| s.partner_name == "أحمد")
+        .unwrap();
+    let m2 = second
+        .shares
+        .iter()
+        .find(|s| s.partner_name == "محمد")
+        .unwrap();
     assert_eq!(a2.share, Decimal::new(15, 0));
     assert_eq!(m2.share, Decimal::new(10, 0));
 
@@ -738,7 +835,11 @@ async fn zero_distribution_creates_no_journal() {
     assert_eq!(res.entry_number, "", "لا قيد لأي توزيع صفري");
     assert!(!res.posted);
     assert_eq!(res.allocated_total, Decimal::ZERO);
-    assert_eq!(count_distribution_journals(pool.as_ref()).await, 0, "لا يُنشأ قيد على الإطلاق");
+    assert_eq!(
+        count_distribution_journals(pool.as_ref()).await,
+        0,
+        "لا يُنشأ قيد على الإطلاق"
+    );
 }
 
 #[tokio::test]
@@ -754,7 +855,9 @@ async fn same_idempotency_key_resolves_same_journal() {
     let key = uuid::Uuid::new_v4().to_string();
     let a = allocate
         .execute(DistributeProfitCommand {
-            source: ProfitDistributionSource::OpeningMigration { migration_id: migration_id.clone() },
+            source: ProfitDistributionSource::OpeningMigration {
+                migration_id: migration_id.clone(),
+            },
             net_profit: "20".to_string(),
             idempotency_key: key.clone(),
         })
@@ -768,8 +871,15 @@ async fn same_idempotency_key_resolves_same_journal() {
         })
         .await
         .unwrap();
-    assert_eq!(a.entry_number, b.entry_number, "إعادة الإرسال بنفس المفتاح توائم نفس القيد");
-    assert_eq!(count_distribution_journals(pool.as_ref()).await, 1, "لا يتكرر القيد");
+    assert_eq!(
+        a.entry_number, b.entry_number,
+        "إعادة الإرسال بنفس المفتاح توائم نفس القيد"
+    );
+    assert_eq!(
+        count_distribution_journals(pool.as_ref()).await,
+        1,
+        "لا يتكرر القيد"
+    );
 }
 
 #[tokio::test]
@@ -797,11 +907,25 @@ async fn preview_projects_without_posting() {
     .unwrap();
     assert!(!preview.posted, "المعاينة لا تُرحّل أي شيء");
     assert_eq!(preview.entry_number, "");
-    let a = preview.shares.iter().find(|s| s.partner_name == "أحمد").unwrap().share;
-    let m = preview.shares.iter().find(|s| s.partner_name == "محمد").unwrap().share;
+    let a = preview
+        .shares
+        .iter()
+        .find(|s| s.partner_name == "أحمد")
+        .unwrap()
+        .share;
+    let m = preview
+        .shares
+        .iter()
+        .find(|s| s.partner_name == "محمد")
+        .unwrap()
+        .share;
     assert_eq!(a, Decimal::new(27, 0));
     assert_eq!(m, Decimal::new(18, 0));
-    assert_eq!(count_distribution_journals(pool.as_ref()).await, 0, "لا قيد بعد المعاينة");
+    assert_eq!(
+        count_distribution_journals(pool.as_ref()).await,
+        0,
+        "لا قيد بعد المعاينة"
+    );
 }
 
 #[tokio::test]
@@ -818,7 +942,9 @@ async fn reversing_a_distribution_restores_the_pool() {
     let key = uuid::Uuid::new_v4().to_string();
     allocate
         .execute(DistributeProfitCommand {
-            source: ProfitDistributionSource::OpeningMigration { migration_id: migration_id.clone() },
+            source: ProfitDistributionSource::OpeningMigration {
+                migration_id: migration_id.clone(),
+            },
             net_profit: "45".to_string(),
             idempotency_key: key.clone(),
         })
@@ -835,12 +961,23 @@ async fn reversing_a_distribution_restores_the_pool() {
     // Reverse through the existing reversal mechanism (Sec 16) — never delete.
     let journal_repo: Arc<dyn JournalEntryRepository> =
         Arc::new(SqliteJournalEntryRepository::new(pool.clone()));
-    ReverseJournalEntryUseCase::new(journal_repo).execute(journal_id.clone()).await.unwrap();
+    ReverseJournalEntryUseCase::new(journal_repo)
+        .execute(journal_id.clone())
+        .await
+        .unwrap();
 
     let (retained, allocated, remaining) = opening_distributable(&pool).await;
-    assert_eq!(retained, Decimal::new(45, 0), "الأرباح المبقاة تُستعاد بالكامل بعد العكس");
+    assert_eq!(
+        retained,
+        Decimal::new(45, 0),
+        "الأرباح المبقاة تُستعاد بالكامل بعد العكس"
+    );
     assert_eq!(allocated, Decimal::ZERO, "الموزع يعود للصفر بعد العكس");
-    assert_eq!(remaining, Decimal::new(45, 0), "المتبقي القابل للتوزيع يُستعاد بعد العكس");
+    assert_eq!(
+        remaining,
+        Decimal::new(45, 0),
+        "المتبقي القابل للتوزيع يُستعاد بعد العكس"
+    );
 
     // The reversed original stays in the archive (records are never deleted).
     let status: String = sqlx::query_scalar("SELECT status FROM journal_entries WHERE id = ?")
@@ -862,16 +999,35 @@ async fn legacy_single_distribution_is_still_resolved() {
 
     // A distribution already posted with the legacy source key
     // `profit_distribution:{migration_id}` before this phase.
-    let account_repo: Arc<dyn AccountRepository> = Arc::new(SqliteAccountRepository::new(pool.clone()));
-    let current = account_repo.find_by_code("549999").await.unwrap().expect("current account");
-    let retained = account_repo.find_by_code("52").await.unwrap().expect("retained earnings");
+    let account_repo: Arc<dyn AccountRepository> =
+        Arc::new(SqliteAccountRepository::new(pool.clone()));
+    let current = account_repo
+        .find_by_code("549999")
+        .await
+        .unwrap()
+        .expect("current account");
+    let retained = account_repo
+        .find_by_code("52")
+        .await
+        .unwrap()
+        .expect("retained earnings");
     let c = test_currency();
     let mut legacy = JournalEntry::new(
         uuid::Uuid::new_v4().to_string(),
         JournalType::ProfitDistribution,
         vec![
-            JournalLine::new(retained.id, MonetaryAmount::from_base(Decimal::new(20, 0), c.clone()), MonetaryAmount::zero(c.clone()), "توزيع قديم".to_string()),
-            JournalLine::new(current.id, MonetaryAmount::zero(c.clone()), MonetaryAmount::from_base(Decimal::new(20, 0), c.clone()), "توزيع قديم".to_string()),
+            JournalLine::new(
+                retained.id,
+                MonetaryAmount::from_base(Decimal::new(20, 0), c.clone()),
+                MonetaryAmount::zero(c.clone()),
+                "توزيع قديم".to_string(),
+            ),
+            JournalLine::new(
+                current.id,
+                MonetaryAmount::zero(c.clone()),
+                MonetaryAmount::from_base(Decimal::new(20, 0), c.clone()),
+                "توزيع قديم".to_string(),
+            ),
         ],
         chrono::Utc::now(),
         "توزيع قديم".to_string(),
@@ -879,7 +1035,8 @@ async fn legacy_single_distribution_is_still_resolved() {
     )
     .unwrap();
     legacy.post().unwrap();
-    let journal_repo: Arc<dyn JournalEntryRepository> = Arc::new(SqliteJournalEntryRepository::new(pool.clone()));
+    let journal_repo: Arc<dyn JournalEntryRepository> =
+        Arc::new(SqliteJournalEntryRepository::new(pool.clone()));
     journal_repo.save(&legacy).await.unwrap();
 
     // A new distribution request (any event key) resolves the legacy journal
@@ -895,5 +1052,9 @@ async fn legacy_single_distribution_is_still_resolved() {
         .unwrap();
     assert_eq!(res.entry_number, legacy.entry_number);
     assert_eq!(res.allocated_total, Decimal::new(20, 0));
-    assert_eq!(count_distribution_journals(pool.as_ref()).await, 1, "لا يتكرر التوزيع القديم");
+    assert_eq!(
+        count_distribution_journals(pool.as_ref()).await,
+        1,
+        "لا يتكرر التوزيع القديم"
+    );
 }

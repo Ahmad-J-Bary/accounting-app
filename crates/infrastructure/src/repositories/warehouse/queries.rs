@@ -1,11 +1,14 @@
-use sqlx::SqlitePool;
-use application::errors::AppError;
-use application::dto::warehouse_dto::WarehouseDto;
-use domain::shared::ids::WarehouseId;
-use super::models::WarehouseRow;
 use super::mappers::row_to_dto;
+use super::models::WarehouseRow;
+use application::dto::warehouse_dto::WarehouseDto;
+use application::errors::AppError;
+use domain::shared::ids::WarehouseId;
+use sqlx::SqlitePool;
 
-pub async fn find_by_id(pool: &SqlitePool, id: &WarehouseId) -> Result<Option<WarehouseDto>, AppError> {
+pub async fn find_by_id(
+    pool: &SqlitePool,
+    id: &WarehouseId,
+) -> Result<Option<WarehouseDto>, AppError> {
     let row = sqlx::query_as::<_, WarehouseRow>(
         "SELECT id, name, address, is_active, is_default, created_at, updated_at FROM warehouses WHERE id = ?"
     )

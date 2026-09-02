@@ -1,7 +1,7 @@
 #![allow(clippy::too_many_arguments)]
+use crate::shared::currency::Currency;
 use crate::shared::errors::DomainError;
 use crate::shared::ids::{AccountId, CustomerId, SupplierId};
-use crate::shared::currency::Currency;
 use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
@@ -39,17 +39,17 @@ pub enum NormalBalance {
 #[serde(rename_all = "snake_case")]
 pub enum AccountPurpose {
     #[default]
-    General,            // غير محدد الغرض
-    PartnerCapital,     // رأس مال الشريك (51X)
-    PartnerDrawings,    // مسحوبات الشريك (44X) — contra-equity
-    PartnerCurrent,     // الحساب الجاري/الربح للشريك (متداول)
-    Receivable,         // ذمم عملاء (1203)
-    Payable,            // ذمم موردين (2203)
-    Inventory,          // مخزون (1204)
-    FixedAsset,         // أصول ثابتة (11)
-    Bank,               // بنوك (أصل متداول)
-    Loan,               // قروض (التزام)
-    RetainedEarnings,   // أرباح مبقاة (52)
+    General, // غير محدد الغرض
+    PartnerCapital,       // رأس مال الشريك (51X)
+    PartnerDrawings,      // مسحوبات الشريك (44X) — contra-equity
+    PartnerCurrent,       // الحساب الجاري/الربح للشريك (متداول)
+    Receivable,           // ذمم عملاء (1203)
+    Payable,              // ذمم موردين (2203)
+    Inventory,            // مخزون (1204)
+    FixedAsset,           // أصول ثابتة (11)
+    Bank,                 // بنوك (أصل متداول)
+    Loan,                 // قروض (التزام)
+    RetainedEarnings,     // أرباح مبقاة (52)
     OpeningBalanceEquity, // رصيد افتتاحي (53)
     /// تعديل حقوق ملكية افتتاحي — tailored equity absorption of an opening
     /// residual that is not attributable to retained earnings (521).
@@ -211,7 +211,7 @@ impl Account {
             is_active: true,
             is_default: false,
             is_final: false,
-linked_customer_id: None,
+            linked_customer_id: None,
             linked_supplier_id: None,
             purpose: AccountPurpose::General,
             created_at: now,
@@ -295,7 +295,7 @@ linked_customer_id: None,
         self.balance.abs()
     }
 
-/// Partner-drawings accounts (contra equity) are NOT operating expenses.
+    /// Partner-drawings accounts (contra equity) are NOT operating expenses.
     /// They must never appear in the P&L (Sec 11 / Sec 31).
     pub fn is_drawings_account(&self) -> bool {
         self.purpose == AccountPurpose::PartnerDrawings
@@ -341,7 +341,7 @@ linked_customer_id: None,
         self.linked_supplier_id.is_some()
     }
 
-/// هل هذا الحساب ضمن ذمم العملاء؟ (غرض الحساب = ذمم عملاء)
+    /// هل هذا الحساب ضمن ذمم العملاء؟ (غرض الحساب = ذمم عملاء)
     pub fn is_receivable_account(&self) -> bool {
         self.purpose == AccountPurpose::Receivable
     }
@@ -381,7 +381,7 @@ mod tests {
         )
     }
 
-#[test]
+    #[test]
     fn account_creation_with_valid_data_succeeds() {
         let account = create_test_account("1001", "النقدية", "Cash", AccountType::Assets).unwrap();
         assert_eq!(account.code, "1001");
@@ -411,7 +411,10 @@ mod tests {
             AccountPurpose::Bank,
             AccountPurpose::Loan,
         ] {
-            assert!(!p.is_residual_classification_target(), "{p:?} must be rejected");
+            assert!(
+                !p.is_residual_classification_target(),
+                "{p:?} must be rejected"
+            );
         }
     }
 
@@ -582,8 +585,8 @@ mod tests {
     #[test]
     fn equity_debit_contra_is_negative_signed() {
         let mut a = with_balance(AccountType::Equity, Decimal::ZERO);
-        a.credit(dec!(100)).unwrap();  // natural credit 100
-        a.debit(dec!(130)).unwrap();   // drawings push it to a net debit of 30
+        a.credit(dec!(100)).unwrap(); // natural credit 100
+        a.debit(dec!(130)).unwrap(); // drawings push it to a net debit of 30
         assert_eq!(a.signed_balance(), dec!(-30));
         assert_eq!(a.display_balance(), dec!(30));
     }
@@ -604,14 +607,14 @@ mod tests {
         assert_eq!(a.signed_balance(), dec!(-10));
     }
 
-#[test]
+    #[test]
     fn drawings_accounts_are_detected_by_purpose() {
         let drawings = create_test_account("4401", "مسحوبات", "Drawings", AccountType::Equity)
             .unwrap()
             .with_purpose(AccountPurpose::PartnerDrawings);
         assert!(drawings.is_drawings_account());
-        let capital = create_test_account("5101", "رأس المال", "Capital", AccountType::Equity).unwrap();
+        let capital =
+            create_test_account("5101", "رأس المال", "Capital", AccountType::Equity).unwrap();
         assert!(!capital.is_drawings_account());
     }
 }
-

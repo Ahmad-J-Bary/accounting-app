@@ -1,15 +1,15 @@
-use async_trait::async_trait;
-use sqlx::SqlitePool;
 use application::errors::AppError;
 use application::ports::material_repository::MaterialRepository;
+use async_trait::async_trait;
 use domain::inventory::material::Material;
-use domain::shared::ids::{MaterialId};
+use domain::shared::ids::MaterialId;
+use sqlx::SqlitePool;
 use std::sync::Arc;
 
-mod models;
-mod mappers;
-mod queries;
 mod commands;
+mod mappers;
+mod models;
+mod queries;
 
 pub(crate) use commands::update_tx;
 
@@ -33,7 +33,10 @@ impl MaterialRepository for SqliteMaterialRepository {
         queries::find_by_id(&self.pool, id).await
     }
 
-    async fn find_by_code_or_barcode(&self, code_or_barcode: &str) -> Result<Option<Material>, AppError> {
+    async fn find_by_code_or_barcode(
+        &self,
+        code_or_barcode: &str,
+    ) -> Result<Option<Material>, AppError> {
         queries::find_by_code_or_barcode(&self.pool, code_or_barcode).await
     }
 
@@ -49,7 +52,13 @@ impl MaterialRepository for SqliteMaterialRepository {
         commands::delete(&self.pool, id).await
     }
 
-    async fn add_unit(&self, material_id: &MaterialId, name: String, factor: rust_decimal::Decimal, barcode: Option<String>) -> Result<(), AppError> {
+    async fn add_unit(
+        &self,
+        material_id: &MaterialId,
+        name: String,
+        factor: rust_decimal::Decimal,
+        barcode: Option<String>,
+    ) -> Result<(), AppError> {
         commands::add_unit(&self.pool, material_id, name, factor, barcode).await
     }
 

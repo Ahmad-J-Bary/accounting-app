@@ -1,5 +1,5 @@
-use rust_decimal::Decimal;
 use rust_decimal::prelude::One;
+use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::ops::{Add, Mul, Sub};
 
@@ -74,7 +74,9 @@ impl Sub for Money {
 
     fn sub(self, other: Self) -> Self {
         if self.currency.code != other.currency.code {
-            panic!("Cannot subtract different currencies directly. Convert to same currency first.");
+            panic!(
+                "Cannot subtract different currencies directly. Convert to same currency first."
+            );
         }
         Self {
             amount: self.amount - other.amount,

@@ -1,13 +1,13 @@
-use std::sync::Arc;
+use crate::errors::AppError;
 use crate::ports::consumable_repository::ConsumableRepository;
 use crate::ports::journal_entry_repository::JournalEntryRepository;
-use domain::assets::{Consumable, ConsumableId, AssetMovement, AssetMovementType};
-use domain::accounting::{JournalEntry, JournalLine};
-use domain::shared::{Money, AccountId, MonetaryAmount};
-use crate::errors::AppError;
-use rust_decimal::Decimal;
-use uuid::Uuid;
 use chrono::Utc;
+use domain::accounting::{JournalEntry, JournalLine};
+use domain::assets::{AssetMovement, AssetMovementType, Consumable, ConsumableId};
+use domain::shared::{AccountId, MonetaryAmount, Money};
+use rust_decimal::Decimal;
+use std::sync::Arc;
+use uuid::Uuid;
 
 pub struct ConsumableUseCases {
     repo: Arc<dyn ConsumableRepository>,
@@ -50,9 +50,12 @@ impl ConsumableUseCases {
     }
 
     pub async fn add_stock(&self, id: Uuid, quantity: Decimal) -> Result<(), AppError> {
-        let mut item = self.repo.find_by_id(&ConsumableId(id)).await?
+        let mut item = self
+            .repo
+            .find_by_id(&ConsumableId(id))
+            .await?
             .ok_or_else(|| AppError::NotFound("Item not found".to_string()))?;
-        
+
         item.add_stock(quantity);
 
         // Log movement
@@ -65,13 +68,23 @@ impl ConsumableUseCases {
         );
 
         // Commit item + movement in ONE transaction (Sec 9 atomicity).
-        self.repo.save_with_accounting(&item, &[movement], &[]).await?;
+        self.repo
+            .save_with_accounting(&item, &[movement], &[])
+            .await?;
 
         Ok(())
     }
 
-    pub async fn issue_item(&self, id: Uuid, quantity: Decimal, description: String) -> Result<(), AppError> {
-        let mut item = self.repo.find_by_id(&ConsumableId(id)).await?
+    pub async fn issue_item(
+        &self,
+        id: Uuid,
+        quantity: Decimal,
+        description: String,
+    ) -> Result<(), AppError> {
+        let mut item = self
+            .repo
+            .find_by_id(&ConsumableId(id))
+            .await?
             .ok_or_else(|| AppError::NotFound("Item not found".to_string()))?;
 
         let total_value = item.issue(quantity).map_err(AppError::Invalid)?;
@@ -112,10 +125,13 @@ impl ConsumableUseCases {
             Utc::now(),
             format!("صرف مستهلكات: {}", item.name),
             Some(item.id.0.to_string()),
-        ).map_err(|e| AppError::Invalid(e.to_string()))?;
+        )
+        .map_err(|e| AppError::Invalid(e.to_string()))?;
 
         // Commit item + movement + journal in ONE transaction (Sec 9 atomicity).
-        self.repo.save_with_accounting(&item, &[movement], &[entry]).await?;
+        self.repo
+            .save_with_accounting(&item, &[movement], &[entry])
+            .await?;
 
         Ok(())
     }
@@ -140,7 +156,7 @@ mod tests {
         pub items: std::sync::Mutex<Vec<Consumable>>,
         pub entries: std::sync::Mutex<Vec<domain::accounting::JournalEntry>>,
     }
-    
+
     #[async_trait::async_trait]
     impl ConsumableRepository for MockConsumableRepo {
         async fn save(&self, item: &Consumable) -> Result<(), AppError> {
@@ -156,7 +172,9 @@ mod tests {
         async fn list_all(&self) -> Result<Vec<Consumable>, AppError> {
             Ok(self.items.lock().unwrap().clone())
         }
-        async fn delete(&self, _id: &ConsumableId) -> Result<(), AppError> { Ok(()) }
+        async fn delete(&self, _id: &ConsumableId) -> Result<(), AppError> {
+            Ok(())
+        }
         async fn save_with_accounting(
             &self,
             item: &Consumable,
@@ -174,30 +192,39 @@ mod tests {
 
     #[tokio::test]
     async fn test_consumable_lifecycle() {
-        let repo = Arc::new(MockConsumableRepo { items: std::sync::Mutex::new(Vec::new()), entries: std::sync::Mutex::new(Vec::new()) });
+        let repo = Arc::new(MockConsumableRepo {
+            items: std::sync::Mutex::new(Vec::new()),
+            entries: std::sync::Mutex::new(Vec::new()),
+        });
         let journal_repo = Arc::new(MockJournalRepository::default());
         let use_cases = ConsumableUseCases::new(repo.clone(), journal_repo.clone());
 
         // 1. Create
-        let id = use_cases.create_item(CreateConsumableRequest {
-            code: "C1".to_string(),
-            name: "Ink".to_string(),
-            category_id: Uuid::new_v4(),
-            unit_cost: Money::new(dec!(50), test_currency()),
-            fx_rate: dec!(1),
-            asset_account_id: Uuid::new_v4(),
-            expense_account_id: Uuid::new_v4(),
-        }).await.unwrap();
+        let id = use_cases
+            .create_item(CreateConsumableRequest {
+                code: "C1".to_string(),
+                name: "Ink".to_string(),
+                category_id: Uuid::new_v4(),
+                unit_cost: Money::new(dec!(50), test_currency()),
+                fx_rate: dec!(1),
+                asset_account_id: Uuid::new_v4(),
+                expense_account_id: Uuid::new_v4(),
+            })
+            .await
+            .unwrap();
 
         // 2. Add Stock
         use_cases.add_stock(id.0, dec!(10)).await.unwrap();
-        
+
         let items = use_cases.list_items().await.unwrap();
         assert_eq!(items[0].quantity_on_hand, dec!(10));
 
         // 3. Issue
-        use_cases.issue_item(id.0, dec!(2), "Printing".to_string()).await.unwrap();
-        
+        use_cases
+            .issue_item(id.0, dec!(2), "Printing".to_string())
+            .await
+            .unwrap();
+
         let updated = use_cases.list_items().await.unwrap();
         assert_eq!(updated[0].quantity_on_hand, dec!(8));
 

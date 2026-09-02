@@ -1,5 +1,5 @@
 use crate::shared::errors::DomainError;
-use crate::shared::ids::{ProductionOrderId, MaterialId};
+use crate::shared::ids::{MaterialId, ProductionOrderId};
 use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
@@ -16,7 +16,7 @@ pub enum ProductionOrderStatus {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProductionMaterial {
     pub id: String,
-    pub material_id: MaterialId,  // raw material
+    pub material_id: MaterialId, // raw material
     pub quantity_required: Decimal,
     pub quantity_consumed: Decimal,
 }
@@ -24,7 +24,7 @@ pub struct ProductionMaterial {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProductionOutput {
     pub id: String,
-    pub material_id: MaterialId,  // finished good
+    pub material_id: MaterialId, // finished good
     pub quantity_produced: Decimal,
     pub unit_cost: Decimal,
 }
@@ -50,7 +50,9 @@ impl ProductionOrder {
         notes: Option<String>,
     ) -> Result<Self, DomainError> {
         if order_number.trim().is_empty() {
-            return Err(DomainError::Invalid("رقم أمر الإنتاج لا يمكن أن يكون فارغًا".into()));
+            return Err(DomainError::Invalid(
+                "رقم أمر الإنتاج لا يمكن أن يكون فارغًا".into(),
+            ));
         }
         let now = Utc::now();
         Ok(Self {
@@ -73,10 +75,14 @@ impl ProductionOrder {
         quantity_required: Decimal,
     ) -> Result<(), DomainError> {
         if self.status == ProductionOrderStatus::Completed {
-            return Err(DomainError::Forbidden("لا يمكن تعديل أمر إنتاج مكتمل".into()));
+            return Err(DomainError::Forbidden(
+                "لا يمكن تعديل أمر إنتاج مكتمل".into(),
+            ));
         }
         if quantity_required <= Decimal::ZERO {
-            return Err(DomainError::Invalid("كمية المادة الخام يجب أن تكون موجبة".into()));
+            return Err(DomainError::Invalid(
+                "كمية المادة الخام يجب أن تكون موجبة".into(),
+            ));
         }
         self.materials.push(ProductionMaterial {
             id: Uuid::new_v4().to_string(),
@@ -95,7 +101,9 @@ impl ProductionOrder {
         unit_cost: Decimal,
     ) -> Result<(), DomainError> {
         if self.status == ProductionOrderStatus::Completed {
-            return Err(DomainError::Forbidden("لا يمكن تعديل أمر إنتاج مكتمل".into()));
+            return Err(DomainError::Forbidden(
+                "لا يمكن تعديل أمر إنتاج مكتمل".into(),
+            ));
         }
         if quantity_produced <= Decimal::ZERO {
             return Err(DomainError::Invalid("كمية الإنتاج يجب أن تكون موجبة".into()));
@@ -136,7 +144,9 @@ impl ProductionOrder {
 
     pub fn cancel(&mut self) -> Result<(), DomainError> {
         if self.status == ProductionOrderStatus::Completed {
-            return Err(DomainError::Forbidden("لا يمكن إلغاء أمر إنتاج مكتمل".into()));
+            return Err(DomainError::Forbidden(
+                "لا يمكن إلغاء أمر إنتاج مكتمل".into(),
+            ));
         }
         self.status = ProductionOrderStatus::Cancelled;
         self.updated_at = Utc::now();

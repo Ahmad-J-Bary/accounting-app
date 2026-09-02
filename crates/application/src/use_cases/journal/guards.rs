@@ -1,5 +1,5 @@
-use domain::accounting::journal_entry::{JournalEntry, JournalEntryStatus};
 use crate::errors::AppError;
+use domain::accounting::journal_entry::{JournalEntry, JournalEntryStatus};
 
 /// Guards a destructive/rewrite operation that would erase part of posted
 /// financial history. Only draft entries may be deleted or rewritten directly;
@@ -38,12 +38,12 @@ pub fn ensure_deletable(entries: &[JournalEntry]) -> Result<(), AppError> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use domain::accounting::journal_entry::{JournalLine, JournalType};
     use chrono::Utc;
+    use domain::accounting::journal_entry::{JournalLine, JournalType};
+    use domain::shared::currency::Currency;
     use domain::shared::ids::{AccountId, JournalEntryId};
     use domain::shared::monetary_amount::MonetaryAmount;
     use domain::shared::money::Money;
-    use domain::shared::currency::Currency;
     use uuid::Uuid;
 
     fn currency() -> Currency {
@@ -56,13 +56,16 @@ mod tests {
             id: Uuid::new_v4().to_string(),
             account_id: account,
             partner_id: None,
-            debit: MonetaryAmount::new(Money::new(rust_decimal::Decimal::ONE, c.clone()), rust_decimal::Decimal::ONE),
+            debit: MonetaryAmount::new(
+                Money::new(rust_decimal::Decimal::ONE, c.clone()),
+                rust_decimal::Decimal::ONE,
+            ),
             credit: MonetaryAmount::zero(c),
             description: "مدين".to_string(),
         }
     }
 
-fn entry(number: &str, status: JournalEntryStatus) -> JournalEntry {
+    fn entry(number: &str, status: JournalEntryStatus) -> JournalEntry {
         let account = AccountId(Uuid::new_v4());
         JournalEntry {
             id: JournalEntryId(Uuid::new_v4()),

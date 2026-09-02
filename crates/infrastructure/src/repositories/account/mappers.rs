@@ -1,12 +1,12 @@
+use super::models::AccountRow;
 use application::errors::AppError;
-use domain::accounting::account::{Account, AccountType, AccountCategory, AccountPurpose};
+use chrono::{DateTime, Utc};
+use domain::accounting::account::{Account, AccountCategory, AccountPurpose, AccountType};
 use domain::shared::currency::Currency;
 use domain::shared::ids::{AccountId, CustomerId, SupplierId};
 use rust_decimal::Decimal;
 use std::str::FromStr;
 use uuid::Uuid;
-use chrono::{DateTime, Utc};
-use super::models::AccountRow;
 
 pub fn purpose_from_str(value: &str) -> AccountPurpose {
     match value {
@@ -44,17 +44,30 @@ pub fn row_to_account(row: AccountRow) -> Result<Account, AppError> {
     };
 
     let currency_code = row.currency_code.unwrap_or("USD".to_string());
-    let currency = Currency::new(&currency_code, &currency_code, &currency_code, "", 2, currency_code == "USD");
+    let currency = Currency::new(
+        &currency_code,
+        &currency_code,
+        &currency_code,
+        "",
+        2,
+        currency_code == "USD",
+    );
 
-    let exchange_rate = Decimal::from_str(&row.exchange_rate.unwrap_or("1".to_string())).unwrap_or(Decimal::ONE);
+    let exchange_rate =
+        Decimal::from_str(&row.exchange_rate.unwrap_or("1".to_string())).unwrap_or(Decimal::ONE);
 
     Ok(Account {
-        id: AccountId(Uuid::parse_str(&row.id).map_err(|e| AppError::Infrastructure(e.to_string()))?),
+        id: AccountId(
+            Uuid::parse_str(&row.id).map_err(|e| AppError::Infrastructure(e.to_string()))?,
+        ),
         code: row.code,
         name_ar: row.name_ar,
         name_en: row.name_en,
         account_type,
-        parent_id: row.parent_id.and_then(|s| Uuid::parse_str(&s).ok()).map(AccountId),
+        parent_id: row
+            .parent_id
+            .and_then(|s| Uuid::parse_str(&s).ok())
+            .map(AccountId),
         category,
         level: row.level.unwrap_or(1),
         opening_balance: Decimal::from_str(&row.opening_balance).unwrap_or(Decimal::ZERO),
@@ -63,14 +76,22 @@ pub fn row_to_account(row: AccountRow) -> Result<Account, AppError> {
         is_active: row.is_active,
         is_default: row.is_default.unwrap_or(false),
         is_final: row.is_final.unwrap_or(false),
-        linked_customer_id: row.linked_customer_id.and_then(|s| s.parse::<CustomerId>().ok()),
-        linked_supplier_id: row.linked_supplier_id.and_then(|s| s.parse::<SupplierId>().ok()),
+        linked_customer_id: row
+            .linked_customer_id
+            .and_then(|s| s.parse::<CustomerId>().ok()),
+        linked_supplier_id: row
+            .linked_supplier_id
+            .and_then(|s| s.parse::<SupplierId>().ok()),
         debit: Decimal::from_str(&row.debit).unwrap_or(Decimal::ZERO),
         credit: Decimal::from_str(&row.credit).unwrap_or(Decimal::ZERO),
         currency,
         exchange_rate,
         purpose: purpose_from_str(&row.purpose.clone().unwrap_or_else(|| "general".to_string())),
-        created_at: DateTime::parse_from_rfc3339(&row.created_at).map(|d| d.with_timezone(&Utc)).unwrap_or_else(|_| Utc::now()),
-        updated_at: DateTime::parse_from_rfc3339(&row.updated_at).map(|d| d.with_timezone(&Utc)).unwrap_or_else(|_| Utc::now()),
+        created_at: DateTime::parse_from_rfc3339(&row.created_at)
+            .map(|d| d.with_timezone(&Utc))
+            .unwrap_or_else(|_| Utc::now()),
+        updated_at: DateTime::parse_from_rfc3339(&row.updated_at)
+            .map(|d| d.with_timezone(&Utc))
+            .unwrap_or_else(|_| Utc::now()),
     })
 }

@@ -69,10 +69,7 @@ async fn journal_count(pool: &infrastructure::sqlx::SqlitePool) -> i64 {
 
 #[tokio::test]
 async fn snapshot_under_active_writes_is_consistent_and_standalone() {
-    let dir = std::env::temp_dir().join(format!(
-        "aa_consistency_{}",
-        uuid::Uuid::new_v4()
-    ));
+    let dir = std::env::temp_dir().join(format!("aa_consistency_{}", uuid::Uuid::new_v4()));
     std::fs::create_dir_all(&dir).unwrap();
     let db = dir.join("almowakeb.sqlite");
     let url = format!("sqlite:{}?mode=rwc", db.to_string_lossy());
@@ -120,7 +117,10 @@ async fn snapshot_under_active_writes_is_consistent_and_standalone() {
     assert!(v.full_ok(), "snapshot failed verification: {v:?}");
     assert!(v.integrity_ok);
     assert!(v.missing_tables.is_empty());
-    assert!(v.posted_balance_ok, "all posted entries must be balanced in the snapshot");
+    assert!(
+        v.posted_balance_ok,
+        "all posted entries must be balanced in the snapshot"
+    );
     // The snapshot reflects exactly one committed state: at or after the
     // barrier batch, and never beyond the writer's final committed state.
     assert!(v.journal_entry_count >= count_at_barrier as u64);
@@ -128,14 +128,19 @@ async fn snapshot_under_active_writes_is_consistent_and_standalone() {
 
     // Truly independent read-only open proves the file is standalone.
     let url_ro = format!("sqlite:{}?mode=ro", snapshot.to_string_lossy());
-    let opts = SqliteConnectOptions::from_str(&url_ro).unwrap().busy_timeout(Duration::from_secs(5));
+    let opts = SqliteConnectOptions::from_str(&url_ro)
+        .unwrap()
+        .busy_timeout(Duration::from_secs(5));
     let ro = SqlitePoolOptions::new()
         .max_connections(1)
         .connect_with(opts)
         .await
         .unwrap();
     assert!(
-        missing_tables(&ro, &REQUIRED_TABLES).await.unwrap().is_empty(),
+        missing_tables(&ro, &REQUIRED_TABLES)
+            .await
+            .unwrap()
+            .is_empty(),
         "standalone snapshot lacks required accounting tables"
     );
     ro.close().await;

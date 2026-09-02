@@ -1,5 +1,5 @@
 use crate::shared::errors::DomainError;
-use crate::shared::ids::{UserId, RoleId};
+use crate::shared::ids::{RoleId, UserId};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -25,13 +25,19 @@ impl User {
         role_id: RoleId,
     ) -> Result<Self, DomainError> {
         if username.trim().is_empty() {
-            return Err(DomainError::Invalid("اسم المستخدم لا يمكن أن يكون فارغًا".into()));
+            return Err(DomainError::Invalid(
+                "اسم المستخدم لا يمكن أن يكون فارغًا".into(),
+            ));
         }
         if full_name.trim().is_empty() {
-            return Err(DomainError::Invalid("الاسم الكامل لا يمكن أن يكون فارغًا".into()));
+            return Err(DomainError::Invalid(
+                "الاسم الكامل لا يمكن أن يكون فارغًا".into(),
+            ));
         }
         if password_hash.trim().is_empty() {
-            return Err(DomainError::Invalid("كلمة المرور لا يمكن أن تكون فارغة".into()));
+            return Err(DomainError::Invalid(
+                "كلمة المرور لا يمكن أن تكون فارغة".into(),
+            ));
         }
         let now = Utc::now();
         Ok(Self {

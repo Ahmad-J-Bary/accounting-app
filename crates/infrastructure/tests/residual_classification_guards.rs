@@ -1,6 +1,14 @@
 use std::str::FromStr;
 use std::sync::Arc;
 
+use application::ports::account_repository::AccountRepository;
+use application::ports::journal_entry_repository::JournalEntryRepository;
+use application::ports::opening_migration_repository::OpeningMigrationRepository;
+use application::ports::opening_posting_repository::OpeningPostingRepository;
+use application::use_cases::opening_balance::{
+    ApplyResidualToLedgerUseCase, GetResidualClassificationSpecUseCase, LockOpeningBalanceUseCase,
+    PostOpeningBalanceUseCase, SetResidualClassificationCommand, SetResidualClassificationUseCase,
+};
 use chrono::Utc;
 use domain::accounting::journal_entry::{JournalEntry, JournalLine, JournalType};
 use domain::accounting::opening_balance::{OpeningBalanceLine, OpeningBalanceMigration};
@@ -9,15 +17,6 @@ use domain::shared::currency::Currency;
 use domain::shared::monetary_amount::MonetaryAmount;
 use domain::shared::money::Money;
 use domain::shared::AccountId;
-use application::ports::account_repository::AccountRepository;
-use application::ports::journal_entry_repository::JournalEntryRepository;
-use application::ports::opening_migration_repository::OpeningMigrationRepository;
-use application::ports::opening_posting_repository::OpeningPostingRepository;
-use application::use_cases::opening_balance::{
-    ApplyResidualToLedgerUseCase, GetResidualClassificationSpecUseCase,
-    LockOpeningBalanceUseCase, PostOpeningBalanceUseCase, SetResidualClassificationCommand,
-    SetResidualClassificationUseCase,
-};
 use infrastructure::db::pool::run_migrations;
 use infrastructure::repositories::{
     SqliteAccountRepository, SqliteJournalEntryRepository, SqliteOpeningItemRepository,
@@ -33,7 +32,10 @@ fn test_currency() -> Currency {
 
 async fn build_pool() -> Arc<sqlx::SqlitePool> {
     let mut path = std::env::temp_dir();
-    path.push(format!("acc_obclassify_test_{}.sqlite", uuid::Uuid::new_v4()));
+    path.push(format!(
+        "acc_obclassify_test_{}.sqlite",
+        uuid::Uuid::new_v4()
+    ));
     let options = SqliteConnectOptions::from_str(path.to_str().unwrap())
         .unwrap()
         .create_if_missing(true);
@@ -126,10 +128,26 @@ async fn post_migration_with_classification(
         cutover,
         None,
         vec![
-            OpeningBalanceLine { account_id: asset, amount: dec!(150), description: None },
-            OpeningBalanceLine { account_id: liability, amount: dec!(50), description: None },
-            OpeningBalanceLine { account_id: capital, amount: dec!(70), description: None },
-            OpeningBalanceLine { account_id: obe, amount: dec!(30), description: None },
+            OpeningBalanceLine {
+                account_id: asset,
+                amount: dec!(150),
+                description: None,
+            },
+            OpeningBalanceLine {
+                account_id: liability,
+                amount: dec!(50),
+                description: None,
+            },
+            OpeningBalanceLine {
+                account_id: capital,
+                amount: dec!(70),
+                description: None,
+            },
+            OpeningBalanceLine {
+                account_id: obe,
+                amount: dec!(30),
+                description: None,
+            },
         ],
     )
     .unwrap();
@@ -151,7 +169,11 @@ async fn post_migration_with_classification(
 
     // Status guard then a well-formed opening journal, exactly as the
     // migration aggregate owns it (manual post, mirroring residual_apply.rs).
-    let mut posted = migration_repo.find_by_id(&migration_id).await.unwrap().unwrap();
+    let mut posted = migration_repo
+        .find_by_id(&migration_id)
+        .await
+        .unwrap()
+        .unwrap();
     posted.mark_posted().unwrap();
     migration_repo.update(&posted).await.unwrap();
 
@@ -179,7 +201,11 @@ async fn post_migration_with_classification(
 async fn every_classification_auto_resolves_and_clears_obe_once() {
     for (key, expected_code, expected_purpose) in [
         ("RetainedEarnings", "52", "retained_earnings"),
-        ("OpeningEquityAdjustment", "521", "opening_equity_adjustment"),
+        (
+            "OpeningEquityAdjustment",
+            "521",
+            "opening_equity_adjustment",
+        ),
         ("PriorPeriodAdjustment", "525", "prior_period_adjustment"),
         ("OtherEquity", "526", "other_equity"),
     ] {
@@ -194,12 +220,20 @@ async fn every_classification_auto_resolves_and_clears_obe_once() {
             Arc::new(SqliteOpeningPostingRepository::new(pool.clone()));
 
         let migration_id = post_migration_with_classification(
-            &pool, &migration_repo, &account_repo, &posting_repo, key,
+            &pool,
+            &migration_repo,
+            &account_repo,
+            &posting_repo,
+            key,
         )
         .await;
 
         // Auto-mode resolved the designated account of the classification.
-        let saved = migration_repo.find_by_id(&migration_id).await.unwrap().unwrap();
+        let saved = migration_repo
+            .find_by_id(&migration_id)
+            .await
+            .unwrap()
+            .unwrap();
         let desired = account_id_by_code(pool.as_ref(), expected_code).await;
         assert_eq!(
             saved.residual_account_id,
@@ -218,13 +252,12 @@ async fn every_classification_auto_resolves_and_clears_obe_once() {
         .await
         .unwrap();
 
-        let row_count: i64 = sqlx::query_scalar(
-            "SELECT COUNT(*) FROM journal_entries WHERE source_id = ?",
-        )
-        .bind(format!("residual_classification:{migration_id}"))
-        .fetch_one(pool.as_ref())
-        .await
-        .unwrap();
+        let row_count: i64 =
+            sqlx::query_scalar("SELECT COUNT(*) FROM journal_entries WHERE source_id = ?")
+                .bind(format!("residual_classification:{migration_id}"))
+                .fetch_one(pool.as_ref())
+                .await
+                .unwrap();
         assert_eq!(row_count, 1, "{key}: exactly one reclassification journal");
 
         let obe = account_id_by_code(pool.as_ref(), "53").await;
@@ -250,16 +283,21 @@ async fn every_classification_auto_resolves_and_clears_obe_once() {
         .fetch_one(pool.as_ref())
         .await
         .unwrap();
-        assert_eq!(credited, 30.0, "{key}: designated account credited exactly once");
+        assert_eq!(
+            credited, 30.0,
+            "{key}: designated account credited exactly once"
+        );
 
-        let purpose_of_account: String = sqlx::query_scalar(
-            "SELECT purpose FROM accounts WHERE id = ?",
-        )
-        .bind(desired.0.to_string())
-        .fetch_one(pool.as_ref())
-        .await
-        .unwrap();
-        assert_eq!(purpose_of_account, expected_purpose, "{key} maps to its controlled purpose");
+        let purpose_of_account: String =
+            sqlx::query_scalar("SELECT purpose FROM accounts WHERE id = ?")
+                .bind(desired.0.to_string())
+                .fetch_one(pool.as_ref())
+                .await
+                .unwrap();
+        assert_eq!(
+            purpose_of_account, expected_purpose,
+            "{key} maps to its controlled purpose"
+        );
     }
 }
 
@@ -315,10 +353,26 @@ async fn unresolved_difference_blocks_posting_before_any_journal() {
         cutover,
         None,
         vec![
-            OpeningBalanceLine { account_id: asset, amount: dec!(150), description: None },
-            OpeningBalanceLine { account_id: liability, amount: dec!(50), description: None },
-            OpeningBalanceLine { account_id: capital, amount: dec!(70), description: None },
-            OpeningBalanceLine { account_id: obe, amount: dec!(30), description: None },
+            OpeningBalanceLine {
+                account_id: asset,
+                amount: dec!(150),
+                description: None,
+            },
+            OpeningBalanceLine {
+                account_id: liability,
+                amount: dec!(50),
+                description: None,
+            },
+            OpeningBalanceLine {
+                account_id: capital,
+                amount: dec!(70),
+                description: None,
+            },
+            OpeningBalanceLine {
+                account_id: obe,
+                amount: dec!(30),
+                description: None,
+            },
         ],
     )
     .unwrap();
@@ -363,7 +417,10 @@ async fn unresolved_difference_blocks_posting_before_any_journal() {
     .fetch_one(pool.as_ref())
     .await
     .unwrap();
-    assert_eq!(count, 0, "no ledger artifact may exist for an unresolved residual");
+    assert_eq!(
+        count, 0,
+        "no ledger artifact may exist for an unresolved residual"
+    );
 }
 
 #[tokio::test]
@@ -382,7 +439,11 @@ async fn unresolved_difference_blocks_locking_even_after_posting() {
     // re-classification (a direct-API defensive scenario — the wizard would
     // never produce it) — the lock gate must still refuse.
     let migration_id = post_migration_with_classification(
-        &pool, &migration_repo, &account_repo, &posting_repo, "RetainedEarnings",
+        &pool,
+        &migration_repo,
+        &account_repo,
+        &posting_repo,
+        "RetainedEarnings",
     )
     .await;
 
@@ -410,6 +471,14 @@ async fn unresolved_difference_blocks_locking_even_after_posting() {
         err
     );
 
-    let reloaded = migration_repo.find_by_id(&migration_id).await.unwrap().unwrap();
-    assert_eq!(reloaded.status, MigrationStatus::Posted, "migration stays posted");
+    let reloaded = migration_repo
+        .find_by_id(&migration_id)
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(
+        reloaded.status,
+        MigrationStatus::Posted,
+        "migration stays posted"
+    );
 }

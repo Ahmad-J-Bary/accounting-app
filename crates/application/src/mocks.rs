@@ -1,20 +1,22 @@
-use std::sync::Mutex;
-use async_trait::async_trait;
+use crate::errors::AppError;
 use crate::ports::account_repository::AccountRepository;
 use crate::ports::asset_repository::AssetRepository;
 use crate::ports::fiscal_period_repository::FiscalPeriodRepository;
 use crate::ports::journal_entry_repository::{JournalEntryRepository, ReversalScope};
 use crate::ports::opening_migration_repository::OpeningMigrationRepository;
 use crate::ports::settings_repository::SettingsRepository;
+use async_trait::async_trait;
 use domain::accounting::account::Account;
 use domain::accounting::fiscal_period::FiscalPeriod;
 use domain::accounting::opening_balance::OpeningBalanceMigration;
-use domain::assets::{FixedAsset, FixedAssetId, AssetCategory, AssetMovement, DepreciationSchedule, AssetType};
 use domain::accounting::{JournalEntry, JournalEntryId};
+use domain::assets::{
+    AssetCategory, AssetMovement, AssetType, DepreciationSchedule, FixedAsset, FixedAssetId,
+};
 use domain::settings::CompanySettings;
 use domain::shared::ids::FiscalPeriodId;
 use domain::shared::AccountId;
-use crate::errors::AppError;
+use std::sync::Mutex;
 use uuid::Uuid;
 
 pub struct MockAssetRepository {
@@ -60,22 +62,42 @@ impl AssetRepository for MockAssetRepository {
         self.categories.lock().unwrap().push(category.clone());
         Ok(())
     }
-    async fn list_categories(&self, _asset_type: AssetType) -> Result<Vec<AssetCategory>, AppError> {
+    async fn list_categories(
+        &self,
+        _asset_type: AssetType,
+    ) -> Result<Vec<AssetCategory>, AppError> {
         Ok(self.categories.lock().unwrap().clone())
     }
     async fn save_movement(&self, movement: &AssetMovement) -> Result<(), AppError> {
         self.movements.lock().unwrap().push(movement.clone());
         Ok(())
     }
-    async fn list_movements_by_asset(&self, asset_id: &Uuid) -> Result<Vec<AssetMovement>, AppError> {
+    async fn list_movements_by_asset(
+        &self,
+        asset_id: &Uuid,
+    ) -> Result<Vec<AssetMovement>, AppError> {
         let movements = self.movements.lock().unwrap();
-        Ok(movements.iter().filter(|m| m.asset_id == *asset_id).cloned().collect())
+        Ok(movements
+            .iter()
+            .filter(|m| m.asset_id == *asset_id)
+            .cloned()
+            .collect())
     }
     async fn list_all_movements(&self) -> Result<Vec<AssetMovement>, AppError> {
         Ok(self.movements.lock().unwrap().clone())
     }
-    async fn save_depreciation_schedule(&self, _schedule: &DepreciationSchedule) -> Result<(), AppError> { Ok(()) }
-    async fn get_depreciation_schedule(&self, _asset_id: &Uuid) -> Result<Vec<DepreciationSchedule>, AppError> { Ok(vec![]) }
+    async fn save_depreciation_schedule(
+        &self,
+        _schedule: &DepreciationSchedule,
+    ) -> Result<(), AppError> {
+        Ok(())
+    }
+    async fn get_depreciation_schedule(
+        &self,
+        _asset_id: &Uuid,
+    ) -> Result<Vec<DepreciationSchedule>, AppError> {
+        Ok(vec![])
+    }
 
     async fn delete_asset(&self, id: &FixedAssetId) -> Result<(), AppError> {
         let mut assets = self.assets.lock().unwrap();
@@ -135,7 +157,9 @@ impl MockJournalRepository {
 
 impl Default for MockJournalRepository {
     fn default() -> Self {
-        Self { entries: Mutex::new(Vec::new()) }
+        Self {
+            entries: Mutex::new(Vec::new()),
+        }
     }
 }
 
@@ -155,11 +179,27 @@ impl JournalEntryRepository for MockJournalRepository {
         store.push(original.clone());
         Ok(())
     }
-    async fn find_by_id(&self, _id: &JournalEntryId) -> Result<Option<JournalEntry>, AppError> { Ok(None) }
-    async fn find_by_number(&self, _number: &str) -> Result<Option<JournalEntry>, AppError> { Ok(None) }
-    async fn list_all(&self) -> Result<Vec<JournalEntry>, AppError> { Ok(self.entries.lock().unwrap().clone()) }
-    async fn list_by_account(&self, _account_id: &domain::shared::AccountId) -> Result<Vec<JournalEntry>, AppError> { Ok(vec![]) }
-    async fn list_by_accounts(&self, _account_ids: &[domain::shared::AccountId]) -> Result<Vec<JournalEntry>, AppError> { Ok(vec![]) }
+    async fn find_by_id(&self, _id: &JournalEntryId) -> Result<Option<JournalEntry>, AppError> {
+        Ok(None)
+    }
+    async fn find_by_number(&self, _number: &str) -> Result<Option<JournalEntry>, AppError> {
+        Ok(None)
+    }
+    async fn list_all(&self) -> Result<Vec<JournalEntry>, AppError> {
+        Ok(self.entries.lock().unwrap().clone())
+    }
+    async fn list_by_account(
+        &self,
+        _account_id: &domain::shared::AccountId,
+    ) -> Result<Vec<JournalEntry>, AppError> {
+        Ok(vec![])
+    }
+    async fn list_by_accounts(
+        &self,
+        _account_ids: &[domain::shared::AccountId],
+    ) -> Result<Vec<JournalEntry>, AppError> {
+        Ok(vec![])
+    }
     #[allow(clippy::too_many_arguments)]
     async fn list_with_filters(
         &self,
@@ -175,7 +215,8 @@ impl JournalEntryRepository for MockJournalRepository {
         Ok(entries
             .iter()
             .filter(|e| {
-                if reversal_scope == ReversalScope::PostedLedger && e.reversal_of_entry_id.is_some() {
+                if reversal_scope == ReversalScope::PostedLedger && e.reversal_of_entry_id.is_some()
+                {
                     return false;
                 }
                 if let Some(from) = from_date {
@@ -220,13 +261,22 @@ impl JournalEntryRepository for MockJournalRepository {
     }
     async fn find_by_source_id(&self, source_id: &str) -> Result<Option<JournalEntry>, AppError> {
         let entries = self.entries.lock().unwrap();
-        Ok(entries.iter().find(|e| e.source_id.as_deref() == Some(source_id)).cloned())
+        Ok(entries
+            .iter()
+            .find(|e| e.source_id.as_deref() == Some(source_id))
+            .cloned())
     }
     async fn find_all_by_source_id(&self, source_id: &str) -> Result<Vec<JournalEntry>, AppError> {
         let entries = self.entries.lock().unwrap();
-        Ok(entries.iter().filter(|e| e.source_id.as_deref() == Some(source_id)).cloned().collect())
+        Ok(entries
+            .iter()
+            .filter(|e| e.source_id.as_deref() == Some(source_id))
+            .cloned()
+            .collect())
     }
-    async fn delete(&self, _id: &JournalEntryId) -> Result<(), AppError> { Ok(()) }
+    async fn delete(&self, _id: &JournalEntryId) -> Result<(), AppError> {
+        Ok(())
+    }
 }
 
 pub struct MockAccountRepository {
@@ -241,13 +291,17 @@ impl MockAccountRepository {
 
 impl From<Vec<Account>> for MockAccountRepository {
     fn from(accounts: Vec<Account>) -> Self {
-        Self { accounts: Mutex::new(accounts) }
+        Self {
+            accounts: Mutex::new(accounts),
+        }
     }
 }
 
 impl Default for MockAccountRepository {
     fn default() -> Self {
-        Self { accounts: Mutex::new(Vec::new()) }
+        Self {
+            accounts: Mutex::new(Vec::new()),
+        }
     }
 }
 
@@ -286,7 +340,8 @@ impl AccountRepository for MockAccountRepository {
 
 pub struct MockFiscalPeriodRepository {
     pub periods: Mutex<Vec<FiscalPeriod>>,
-}impl MockFiscalPeriodRepository {
+}
+impl MockFiscalPeriodRepository {
     pub fn new() -> Self {
         Self::default()
     }
@@ -294,7 +349,9 @@ pub struct MockFiscalPeriodRepository {
 
 impl Default for MockFiscalPeriodRepository {
     fn default() -> Self {
-        Self { periods: Mutex::new(Vec::new()) }
+        Self {
+            periods: Mutex::new(Vec::new()),
+        }
     }
 }
 
@@ -306,14 +363,23 @@ impl FiscalPeriodRepository for MockFiscalPeriodRepository {
     }
 
     async fn find_by_id(&self, id: &FiscalPeriodId) -> Result<Option<FiscalPeriod>, AppError> {
-        Ok(self.periods.lock().unwrap().iter().find(|p| p.id == *id).cloned())
+        Ok(self
+            .periods
+            .lock()
+            .unwrap()
+            .iter()
+            .find(|p| p.id == *id)
+            .cloned())
     }
 
     async fn list(&self) -> Result<Vec<FiscalPeriod>, AppError> {
         Ok(self.periods.lock().unwrap().clone())
     }
 
-    async fn find_by_date(&self, date: chrono::DateTime<chrono::Utc>) -> Result<Vec<FiscalPeriod>, AppError> {
+    async fn find_by_date(
+        &self,
+        date: chrono::DateTime<chrono::Utc>,
+    ) -> Result<Vec<FiscalPeriod>, AppError> {
         Ok(self
             .periods
             .lock()
@@ -344,7 +410,9 @@ impl MockSettingsRepository {
 
 impl Default for MockSettingsRepository {
     fn default() -> Self {
-        Self { settings: Mutex::new(CompanySettings::default()) }
+        Self {
+            settings: Mutex::new(CompanySettings::default()),
+        }
     }
 }
 
@@ -373,7 +441,9 @@ impl MockOpeningMigrationRepository {
 
 impl Default for MockOpeningMigrationRepository {
     fn default() -> Self {
-        Self { migrations: Mutex::new(Vec::new()) }
+        Self {
+            migrations: Mutex::new(Vec::new()),
+        }
     }
 }
 
@@ -390,9 +460,18 @@ impl OpeningMigrationRepository for MockOpeningMigrationRepository {
         Ok(())
     }
     async fn find_by_id(&self, id: &str) -> Result<Option<OpeningBalanceMigration>, AppError> {
-        Ok(self.migrations.lock().unwrap().iter().find(|m| m.id == id).cloned())
+        Ok(self
+            .migrations
+            .lock()
+            .unwrap()
+            .iter()
+            .find(|m| m.id == id)
+            .cloned())
     }
-    async fn find_by_cutover_date(&self, _cutover_date: &str) -> Result<Vec<OpeningBalanceMigration>, AppError> {
+    async fn find_by_cutover_date(
+        &self,
+        _cutover_date: &str,
+    ) -> Result<Vec<OpeningBalanceMigration>, AppError> {
         Ok(self.migrations.lock().unwrap().clone())
     }
     async fn list(&self) -> Result<Vec<OpeningBalanceMigration>, AppError> {

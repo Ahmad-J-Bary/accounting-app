@@ -34,7 +34,10 @@ impl CodeGenerator {
 
     /// Generates a hybrid code by joining multiple prefixes and adding a sequence.
     /// e.g. ["أ", "a", "0"] -> "أ-a-0-seq"
-    pub fn generate_hybrid_code(prefixes: Vec<String>, sequence: u64) -> Result<String, DomainError> {
+    pub fn generate_hybrid_code(
+        prefixes: Vec<String>,
+        sequence: u64,
+    ) -> Result<String, DomainError> {
         if prefixes.is_empty() {
             return Err(DomainError::Invalid("يجب توفر بادئة واحدة على الأقل".into()));
         }
@@ -51,16 +54,34 @@ mod tests {
     #[test]
     fn test_generate_sequential_code() {
         // Length 1 (0-9)
-        assert_eq!(CodeGenerator::generate_sequential_code("A", 0).unwrap(), "A0");
-        assert_eq!(CodeGenerator::generate_sequential_code("A", 9).unwrap(), "A9");
-        
+        assert_eq!(
+            CodeGenerator::generate_sequential_code("A", 0).unwrap(),
+            "A0"
+        );
+        assert_eq!(
+            CodeGenerator::generate_sequential_code("A", 9).unwrap(),
+            "A9"
+        );
+
         // Length 2 (10-109 -> 00-99)
-        assert_eq!(CodeGenerator::generate_sequential_code("A", 10).unwrap(), "A00");
-        assert_eq!(CodeGenerator::generate_sequential_code("A", 109).unwrap(), "A99");
-        
+        assert_eq!(
+            CodeGenerator::generate_sequential_code("A", 10).unwrap(),
+            "A00"
+        );
+        assert_eq!(
+            CodeGenerator::generate_sequential_code("A", 109).unwrap(),
+            "A99"
+        );
+
         // Length 3 (110-1109 -> 000-999)
-        assert_eq!(CodeGenerator::generate_sequential_code("A", 110).unwrap(), "A000");
-        assert_eq!(CodeGenerator::generate_sequential_code("A", 1109).unwrap(), "A999");
+        assert_eq!(
+            CodeGenerator::generate_sequential_code("A", 110).unwrap(),
+            "A000"
+        );
+        assert_eq!(
+            CodeGenerator::generate_sequential_code("A", 1109).unwrap(),
+            "A999"
+        );
     }
 
     #[test]

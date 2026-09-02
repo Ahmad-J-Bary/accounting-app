@@ -17,7 +17,10 @@ impl DamagedItemQueries {
         repo: Arc<dyn DamagedItemRepository>,
         material_repo: Arc<dyn MaterialRepository>,
     ) -> Self {
-        Self { repo, material_repo }
+        Self {
+            repo,
+            material_repo,
+        }
     }
 
     pub async fn list_all(&self) -> Result<Vec<DamagedItemDto>, AppError> {

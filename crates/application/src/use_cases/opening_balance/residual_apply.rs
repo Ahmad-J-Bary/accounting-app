@@ -1,7 +1,7 @@
-use std::sync::Arc;
-use rust_decimal::Decimal;
 use domain::accounting::journal_entry::{JournalEntry, JournalLine, JournalType};
 use domain::shared::{Currency, MonetaryAmount};
+use rust_decimal::Decimal;
+use std::sync::Arc;
 
 use crate::errors::AppError;
 use crate::ports::account_repository::AccountRepository;
@@ -56,7 +56,10 @@ impl ApplyResidualToLedgerUseCase {
     }
 
     pub async fn execute(&self, migration_id: String) -> Result<(), AppError> {
-        let mut migration = self.repo.find_by_id(&migration_id).await?
+        let mut migration = self
+            .repo
+            .find_by_id(&migration_id)
+            .await?
             .ok_or_else(|| AppError::NotFound("ترحيل الرصيد الافتتاحي غير موجود".into()))?;
 
         if migration.status != domain::accounting::MigrationStatus::Posted {
@@ -70,9 +73,11 @@ impl ApplyResidualToLedgerUseCase {
             ));
         }
 
-        let classification = migration.residual_classification
+        let classification = migration
+            .residual_classification
             .ok_or_else(|| AppError::Invalid("لم يتم تحديد تصنيف الرصيد المتبقي".into()))?;
-        let residual_account_id = migration.residual_account_id
+        let residual_account_id = migration
+            .residual_account_id
             .ok_or_else(|| AppError::Invalid("لم يتم تحديد حساب التصنيف للرصيد المتبقي".into()))?;
 
         let residual_amount = self.obe_balance(&migration_id).await?;
@@ -82,11 +87,17 @@ impl ApplyResidualToLedgerUseCase {
             ));
         }
 
-        let obe_account_id = self.account_repo.find_by_code(OPENING_EQUITY_ACCOUNT_CODE).await?
+        let obe_account_id = self
+            .account_repo
+            .find_by_code(OPENING_EQUITY_ACCOUNT_CODE)
+            .await?
             .map(|a| a.id)
             .ok_or_else(|| AppError::NotFound("حساب الرصيد الافتتاحي (53) غير موجود".into()))?;
 
-        let target = self.account_repo.find_by_id(&residual_account_id).await?
+        let target = self
+            .account_repo
+            .find_by_id(&residual_account_id)
+            .await?
             .ok_or_else(|| AppError::NotFound("حساب التصنيف غير موجود".into()))?;
 
         // The residual is an equity clearing item; it may only be moved into an
@@ -140,11 +151,14 @@ impl ApplyResidualToLedgerUseCase {
             migration.cutover_date,
             "ترحيل تصنيف الرصيد المتبقي".to_string(),
             Some(residual_source_id(&migration_id)),
-        ).map_err(|e| AppError::Invalid(e.to_string()))?;
+        )
+        .map_err(|e| AppError::Invalid(e.to_string()))?;
 
         entry.post().map_err(|e| AppError::Invalid(e.to_string()))?;
 
-        migration.mark_residual_applied().map_err(AppError::Domain)?;
+        migration
+            .mark_residual_applied()
+            .map_err(AppError::Domain)?;
 
         self.posting_repo.apply_residual(&migration, &entry).await?;
 
@@ -158,7 +172,9 @@ impl ApplyResidualToLedgerUseCase {
     /// application.
     async fn obe_balance(&self, migration_id: &str) -> Result<Decimal, AppError> {
         let obe_account_id = self
-            .account_repo.find_by_code(OPENING_EQUITY_ACCOUNT_CODE).await?
+            .account_repo
+            .find_by_code(OPENING_EQUITY_ACCOUNT_CODE)
+            .await?
             .map(|a| a.id);
         obe_control_net(&self.journal_repo, obe_account_id, migration_id).await
     }

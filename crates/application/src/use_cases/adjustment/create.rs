@@ -1,18 +1,18 @@
-use std::sync::Arc;
-use chrono::{DateTime, Utc};
-use rust_decimal::Decimal;
-use domain::accounting::journal_entry::{JournalEntry, JournalLine, JournalType};
-use domain::inventory::StockAdjustment;
-use domain::inventory::stock_movement::{StockMovement, MovementType};
-use domain::shared::ids::MaterialId;
-use domain::shared::{Currency, MonetaryAmount};
-use crate::ports::account_repository::AccountRepository;
-use crate::ports::journal_entry_repository::JournalEntryRepository;
-use crate::ports::stock_adjustment_repository::StockAdjustmentRepository;
-use crate::ports::material_repository::MaterialRepository;
-use crate::ports::stock_movement_repository::StockMovementRepository;
 use crate::dto::adjustment_dto::{CreateStockAdjustmentRequest, StockAdjustmentDto};
 use crate::errors::AppError;
+use crate::ports::account_repository::AccountRepository;
+use crate::ports::journal_entry_repository::JournalEntryRepository;
+use crate::ports::material_repository::MaterialRepository;
+use crate::ports::stock_adjustment_repository::StockAdjustmentRepository;
+use crate::ports::stock_movement_repository::StockMovementRepository;
+use chrono::{DateTime, Utc};
+use domain::accounting::journal_entry::{JournalEntry, JournalLine, JournalType};
+use domain::inventory::stock_movement::{MovementType, StockMovement};
+use domain::inventory::StockAdjustment;
+use domain::shared::ids::MaterialId;
+use domain::shared::{Currency, MonetaryAmount};
+use rust_decimal::Decimal;
+use std::sync::Arc;
 
 pub const BASE_CURRENCY: &str = "SAR";
 
@@ -32,14 +32,28 @@ impl CreateStockAdjustmentUseCase {
         account_repo: Arc<dyn AccountRepository>,
         journal_repo: Arc<dyn JournalEntryRepository>,
     ) -> Self {
-        Self { adjustment_repo, material_repo, movement_repo, account_repo, journal_repo }
+        Self {
+            adjustment_repo,
+            material_repo,
+            movement_repo,
+            account_repo,
+            journal_repo,
+        }
     }
 
-    pub async fn execute(&self, req: CreateStockAdjustmentRequest) -> Result<StockAdjustmentDto, AppError> {
-        let material_id = req.material_id.parse::<MaterialId>()
+    pub async fn execute(
+        &self,
+        req: CreateStockAdjustmentRequest,
+    ) -> Result<StockAdjustmentDto, AppError> {
+        let material_id = req
+            .material_id
+            .parse::<MaterialId>()
             .map_err(|_| AppError::Invalid("معرف المادة غير صالح".into()))?;
 
-        let material = self.material_repo.find_by_id(&material_id).await?
+        let material = self
+            .material_repo
+            .find_by_id(&material_id)
+            .await?
             .ok_or_else(|| AppError::NotFound("المادة غير موجودة".into()))?;
 
         let current_balance = self.movement_repo.get_stock_balance(&material_id).await?;
@@ -61,10 +75,8 @@ impl CreateStockAdjustmentUseCase {
         let fx_rate = Decimal::try_from(req.fx_rate.unwrap_or(1.0))
             .map_err(|_| AppError::Invalid("سعر الصرف غير صالح".into()))?;
         // Base conversion: 1 base = fx_rate foreign units, so base = / fx_rate.
-        let unit_cost_base = (unit_cost / fx_rate).round_dp_with_strategy(
-            4,
-            rust_decimal::RoundingStrategy::MidpointAwayFromZero,
-        );
+        let unit_cost_base = (unit_cost / fx_rate)
+            .round_dp_with_strategy(4, rust_decimal::RoundingStrategy::MidpointAwayFromZero);
 
         let adjustment_date = DateTime::parse_from_rfc3339(&req.adjustment_date)
             .map_err(|_| AppError::Invalid("التاريخ غير صالح".into()))?
@@ -78,7 +90,8 @@ impl CreateStockAdjustmentUseCase {
             unit_cost,
             req.notes.clone(),
             adjustment_date,
-        ).map_err(|e| AppError::Invalid(e.to_string()))?;
+        )
+        .map_err(|e| AppError::Invalid(e.to_string()))?;
 
         let display_ref = self.adjustment_repo.get_next_reference().await?;
         adjustment.reference = Some(display_ref.clone());
@@ -117,7 +130,8 @@ impl CreateStockAdjustmentUseCase {
                 inventory_ref.clone(),
                 movement_notes,
                 adjustment.adjustment_date,
-            ).map_err(|e| AppError::Invalid(e.to_string()))?;
+            )
+            .map_err(|e| AppError::Invalid(e.to_string()))?;
             movement.signed_quantity = Some(difference);
             movement.document_number = Some(display_ref.clone());
             movement.original_currency = Some(currency_code.clone());
@@ -137,12 +151,15 @@ impl CreateStockAdjustmentUseCase {
                 difference,
                 &display_ref,
                 adjustment.adjustment_date,
-            ).await?;
+            )
+            .await?;
             entries.push(entry);
         }
 
         // Commit doc + movement + journal in ONE transaction (Sec 9 atomicity).
-        self.adjustment_repo.save_with_accounting(&adjustment, &movements, &entries, None, &[]).await?;
+        self.adjustment_repo
+            .save_with_accounting(&adjustment, &movements, &entries, None, &[])
+            .await?;
 
         Ok(to_dto(adjustment, material.name, currency_code, fx_rate))
     }
@@ -159,9 +176,13 @@ pub async fn build_adjustment_journal_entry(
     let base_currency = Currency::new(BASE_CURRENCY, BASE_CURRENCY, "ريال", "ر.س", 2, false);
     if difference > Decimal::ZERO {
         // Surplus: Dr 1241 (بضاعة آخر المدة), Cr 331 (أرباح تسوية المخزون)
-        let inventory_account = account_repo.find_by_code("1241").await?
+        let inventory_account = account_repo
+            .find_by_code("1241")
+            .await?
             .ok_or_else(|| AppError::NotFound("حساب بضاعة آخر المدة غير موجود: 1241".into()))?;
-        let gain_account = account_repo.find_by_code("331").await?
+        let gain_account = account_repo
+            .find_by_code("331")
+            .await?
             .ok_or_else(|| AppError::NotFound("حساب أرباح تسوية المخزون غير موجود: 331".into()))?;
 
         let lines = vec![
@@ -185,13 +206,17 @@ pub async fn build_adjustment_journal_entry(
             entry_date,
             format!("تسوية جرد (فائض) - مرجع {}", reference),
             Some(reference.to_string()),
-        ).map_err(|e| AppError::Invalid(e.to_string()))?;
+        )
+        .map_err(|e| AppError::Invalid(e.to_string()))?;
         Ok(entry)
     } else {
         // Shortage: Dr 45 (خسائر المواد التالفة والتسويات), Cr 1241 (بضاعة آخر المدة)
-        let loss_account = account_repo.find_by_code("45").await?
-            .ok_or_else(|| AppError::NotFound("حساب خسائر المواد التالفة والتسويات غير موجود: 45".into()))?;
-        let inventory_account = account_repo.find_by_code("1241").await?
+        let loss_account = account_repo.find_by_code("45").await?.ok_or_else(|| {
+            AppError::NotFound("حساب خسائر المواد التالفة والتسويات غير موجود: 45".into())
+        })?;
+        let inventory_account = account_repo
+            .find_by_code("1241")
+            .await?
             .ok_or_else(|| AppError::NotFound("حساب بضاعة آخر المدة غير موجود: 1241".into()))?;
 
         let lines = vec![
@@ -215,7 +240,8 @@ pub async fn build_adjustment_journal_entry(
             entry_date,
             format!("تسوية جرد (عجز) - مرجع {}", reference),
             Some(reference.to_string()),
-        ).map_err(|e| AppError::Invalid(e.to_string()))?;
+        )
+        .map_err(|e| AppError::Invalid(e.to_string()))?;
         Ok(entry)
     }
 }
@@ -240,7 +266,13 @@ pub fn to_dto(
         actual_quantity: a.actual_quantity.to_string(),
         difference: diff.to_string(),
         reason: a.reason,
-        unit_cost: (a.unit_cost / if diff != Decimal::ZERO { diff.abs() } else { Decimal::ONE }).to_string(),
+        unit_cost: (a.unit_cost
+            / if diff != Decimal::ZERO {
+                diff.abs()
+            } else {
+                Decimal::ONE
+            })
+        .to_string(),
         unit_cost_base: unit_cost_base.to_string(),
         total_cost: a.unit_cost.to_string(),
         total_cost_base: (a.unit_cost / fx_rate).to_string(),

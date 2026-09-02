@@ -1,11 +1,14 @@
-use sqlx::SqlitePool;
+use super::mappers::row_to_sales_return;
+use super::models::{SalesReturnLineRow, SalesReturnRow};
 use application::errors::AppError;
 use domain::returns::SalesReturn;
 use domain::shared::ids::SalesReturnId;
-use super::models::{SalesReturnRow, SalesReturnLineRow};
-use super::mappers::row_to_sales_return;
+use sqlx::SqlitePool;
 
-pub async fn find_by_id(pool: &SqlitePool, id: &SalesReturnId) -> Result<Option<SalesReturn>, AppError> {
+pub async fn find_by_id(
+    pool: &SqlitePool,
+    id: &SalesReturnId,
+) -> Result<Option<SalesReturn>, AppError> {
     let row = sqlx::query_as::<_, SalesReturnRow>(
         "SELECT id, return_number, customer_id, return_date, total_amount, notes, created_at, updated_at
          FROM sales_returns WHERE id = ?"

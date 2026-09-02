@@ -1,6 +1,6 @@
-use tauri::State;
-use application::use_cases::settle_partner_balance::SettlePartnerBalanceUseCase;
 use crate::bootstrap::container::AppState;
+use application::use_cases::settle_partner_balance::SettlePartnerBalanceUseCase;
+use tauri::State;
 
 #[tauri::command]
 pub async fn settle_partner_balance(
@@ -16,7 +16,8 @@ pub async fn settle_partner_balance(
         state.supplier_repo.clone(),
         state.currency_repo.clone(),
     );
-    use_case.execute(partner_type, partner_id)
+    use_case
+        .execute(partner_type, partner_id)
         .await
         .map_err(|e| e.to_string())
 }

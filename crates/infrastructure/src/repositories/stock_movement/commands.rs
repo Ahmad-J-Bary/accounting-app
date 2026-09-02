@@ -1,11 +1,14 @@
-use sqlx::SqlitePool;
 use application::errors::AppError;
-use domain::inventory::stock_movement::{StockMovement};
+use domain::inventory::stock_movement::StockMovement;
+use sqlx::SqlitePool;
 
 /// Resolves the warehouse ID to use for a stock movement.
 /// If the movement already has a warehouse_id, it's returned as-is.
 /// Otherwise, the default warehouse ID is looked up and used.
-async fn resolve_warehouse_id(pool: &SqlitePool, movement: &StockMovement) -> Result<Option<String>, AppError> {
+async fn resolve_warehouse_id(
+    pool: &SqlitePool,
+    movement: &StockMovement,
+) -> Result<Option<String>, AppError> {
     if let Some(id) = &movement.warehouse_id {
         return Ok(Some(id.to_string()));
     }
@@ -47,7 +50,11 @@ pub async fn save(pool: &SqlitePool, movement: &StockMovement) -> Result<(), App
     Ok(())
 }
 
-pub async fn delete_by_reference(pool: &SqlitePool, reference: &str, movement_type: &str) -> Result<(), AppError> {
+pub async fn delete_by_reference(
+    pool: &SqlitePool,
+    reference: &str,
+    movement_type: &str,
+) -> Result<(), AppError> {
     sqlx::query("DELETE FROM stock_movements WHERE (reference = ? OR document_number = ?) AND movement_type = ?")
         .bind(reference)
         .bind(reference)
@@ -59,7 +66,11 @@ pub async fn delete_by_reference(pool: &SqlitePool, reference: &str, movement_ty
     Ok(())
 }
 
-pub async fn delete_by_document_number(pool: &SqlitePool, document_number: &str, movement_type: &str) -> Result<(), AppError> {
+pub async fn delete_by_document_number(
+    pool: &SqlitePool,
+    document_number: &str,
+    movement_type: &str,
+) -> Result<(), AppError> {
     sqlx::query("DELETE FROM stock_movements WHERE movement_type = ? AND (document_number = ? OR (reference = ? AND document_number IS NULL))")
         .bind(movement_type)
         .bind(document_number)

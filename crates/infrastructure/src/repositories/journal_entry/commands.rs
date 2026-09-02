@@ -1,24 +1,28 @@
-use sqlx::SqlitePool;
 use application::errors::AppError;
 use chrono::{DateTime, Utc};
 use domain::accounting::fiscal_period::{FiscalPeriod, FiscalPeriodStatus};
 use domain::accounting::journal_entry::{JournalEntry, JournalEntryStatus, JournalType};
 use domain::settings::START_MODE_EXISTING;
-use domain::shared::{JournalEntryId};
+use domain::shared::JournalEntryId;
+use sqlx::SqlitePool;
 use uuid::Uuid;
 
 pub async fn save(pool: &SqlitePool, entry: &JournalEntry) -> Result<(), AppError> {
-    let mut tx = pool.begin().await.map_err(|e| AppError::Infrastructure(e.to_string()))?;
+    let mut tx = pool
+        .begin()
+        .await
+        .map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
     // Immutability guard: a persisted Posted / Reversed entry may only be
     // rewritten through `save_reversal_pair` (the reversal flow). Any other
     // attempt to overwrite posted financial history is rejected here so no
     // use case or UI can silently mutate the ledger.
-    let existing: Option<String> = sqlx::query_scalar("SELECT status FROM journal_entries WHERE id = ?")
-        .bind(entry.id.0.to_string())
-        .fetch_optional(&mut *tx)
-        .await
-        .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+    let existing: Option<String> =
+        sqlx::query_scalar("SELECT status FROM journal_entries WHERE id = ?")
+            .bind(entry.id.0.to_string())
+            .fetch_optional(&mut *tx)
+            .await
+            .map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
     if let Some("Posted" | "Reversed" | "Cancelled") = existing.as_deref() {
         return Err(AppError::Forbidden(
@@ -27,7 +31,9 @@ pub async fn save(pool: &SqlitePool, entry: &JournalEntry) -> Result<(), AppErro
     }
 
     insert_entry(&mut tx, entry).await?;
-    tx.commit().await.map_err(|e| AppError::Infrastructure(e.to_string()))?;
+    tx.commit()
+        .await
+        .map_err(|e| AppError::Infrastructure(e.to_string()))?;
     Ok(())
 }
 
@@ -38,11 +44,16 @@ pub async fn save_reversal_pair(
     reversal: &JournalEntry,
     original: &JournalEntry,
 ) -> Result<(), AppError> {
-    let mut tx = pool.begin().await.map_err(|e| AppError::Infrastructure(e.to_string()))?;
+    let mut tx = pool
+        .begin()
+        .await
+        .map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
     insert_entry(&mut tx, reversal).await?;
     insert_entry(&mut tx, original).await?;
-    tx.commit().await.map_err(|e| AppError::Infrastructure(e.to_string()))?;
+    tx.commit()
+        .await
+        .map_err(|e| AppError::Infrastructure(e.to_string()))?;
     Ok(())
 }
 
@@ -157,7 +168,9 @@ async fn ensure_after_latest_period(
     let year_end = NaiveDate::from_ymd_opt(year, 12, 31)
         .and_then(|d| d.and_hms_opt(23, 59, 59))
         .map(|naive| DateTime::from_naive_utc_and_offset(naive, Utc))
-        .ok_or_else(|| AppError::Infrastructure("فشل حساب نهاية السنة للفترة المالية التلقائية".into()))?;
+        .ok_or_else(|| {
+            AppError::Infrastructure("فشل حساب نهاية السنة للفترة المالية التلقائية".into())
+        })?;
 
     let period = FiscalPeriod::new(None, latest_end + Duration::nanoseconds(1), year_end)
         .map_err(|e| AppError::Infrastructure(e.to_string()))?;
@@ -253,13 +266,21 @@ pub(crate) async fn insert_entry(
     // must belong to an Open/Reopened period (or be a period-exempt opening /
     // reversal). Drafts may be edited freely; they only get checked on posting.
     if entry.status == JournalEntryStatus::Posted {
-        validate_posting_period(tx, entry.entry_date, entry.journal_type, entry.reversal_of_entry_id.as_ref()).await?;
+        validate_posting_period(
+            tx,
+            entry.entry_date,
+            entry.journal_type,
+            entry.reversal_of_entry_id.as_ref(),
+        )
+        .await?;
         validate_opening_gate(tx, entry).await?;
     }
 
     // Always persist a source_type. Explicit callers may set it; otherwise the
     // canonical tag for the journal type is used so templates can label entries.
-    let source_type = entry.source_type.clone()
+    let source_type = entry
+        .source_type
+        .clone()
         .or_else(|| Some(entry.journal_type.source_type().to_string()));
 
     // A pre-existing row with the same id is refreshed only when the caller is
@@ -269,11 +290,12 @@ pub(crate) async fn insert_entry(
     // UNIQUE(source_type, source_id) index is a genuine concurrency backstop:
     // a duplicate business event surfaces as AppError::Conflict instead of
     // silently replacing the already-posted journal (Sec 10 / Sec 45).
-    let existing_id: Option<String> = sqlx::query_scalar("SELECT id FROM journal_entries WHERE id = ?")
-        .bind(entry.id.0.to_string())
-        .fetch_optional(&mut **tx)
-        .await
-        .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+    let existing_id: Option<String> =
+        sqlx::query_scalar("SELECT id FROM journal_entries WHERE id = ?")
+            .bind(entry.id.0.to_string())
+            .fetch_optional(&mut **tx)
+            .await
+            .map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
     if existing_id.is_some() {
         sqlx::query(
@@ -429,11 +451,16 @@ fn duplicate_source(e: sqlx::Error) -> AppError {
 }
 
 pub async fn delete(pool: &SqlitePool, id: &JournalEntryId) -> Result<(), AppError> {
-    let mut tx = pool.begin().await.map_err(|e| AppError::Infrastructure(e.to_string()))?;
+    let mut tx = pool
+        .begin()
+        .await
+        .map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
     delete_tx(&mut tx, id).await?;
 
-    tx.commit().await.map_err(|e| AppError::Infrastructure(e.to_string()))?;
+    tx.commit()
+        .await
+        .map_err(|e| AppError::Infrastructure(e.to_string()))?;
     Ok(())
 }
 
@@ -448,11 +475,12 @@ pub(crate) async fn delete_tx<'a>(
     // Posted entries are part of the auditable financial history: they must
     // not be deleted, only reversed. Reversals may carry their own lifecycle
     // (a reversal entry itself is posted audit trail and is also protected).
-    let status: Option<String> = sqlx::query_scalar("SELECT status FROM journal_entries WHERE id = ?")
-        .bind(id.0.to_string())
-        .fetch_optional(&mut **tx)
-        .await
-        .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+    let status: Option<String> =
+        sqlx::query_scalar("SELECT status FROM journal_entries WHERE id = ?")
+            .bind(id.0.to_string())
+            .fetch_optional(&mut **tx)
+            .await
+            .map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
     if let Some(status) = status.as_deref() {
         if status == "Posted" || status == "Reversed" || status == "Cancelled" {

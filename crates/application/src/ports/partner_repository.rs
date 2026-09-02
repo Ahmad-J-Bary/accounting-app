@@ -1,8 +1,8 @@
-use domain::accounting::partner::Partner;
-use domain::accounting::account::Account;
-use domain::shared::ids::{AccountId, PartnerId};
 use crate::errors::AppError;
 use async_trait::async_trait;
+use domain::accounting::account::Account;
+use domain::accounting::partner::Partner;
+use domain::shared::ids::{AccountId, PartnerId};
 
 #[async_trait]
 pub trait PartnerRepository: Send + Sync {

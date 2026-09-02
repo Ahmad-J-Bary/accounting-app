@@ -1,15 +1,15 @@
-use async_trait::async_trait;
-use sqlx::SqlitePool;
 use application::errors::AppError;
 use application::ports::unified_invoice_repository::UnifiedInvoiceRepository;
-use domain::sales::unified_invoice::{UnifiedInvoice, InvoiceType};
-use domain::shared::ids::{InvoiceId};
+use async_trait::async_trait;
+use domain::sales::unified_invoice::{InvoiceType, UnifiedInvoice};
+use domain::shared::ids::InvoiceId;
+use sqlx::SqlitePool;
 use std::sync::Arc;
 
-mod models;
-mod mappers;
-mod queries;
 mod commands;
+mod mappers;
+mod models;
+mod queries;
 
 pub struct SqliteUnifiedInvoiceRepository {
     pool: Arc<SqlitePool>,
@@ -35,7 +35,10 @@ impl UnifiedInvoiceRepository for SqliteUnifiedInvoiceRepository {
         queries::list_all(&self.pool).await
     }
 
-    async fn list_by_type(&self, invoice_type: InvoiceType) -> Result<Vec<UnifiedInvoice>, AppError> {
+    async fn list_by_type(
+        &self,
+        invoice_type: InvoiceType,
+    ) -> Result<Vec<UnifiedInvoice>, AppError> {
         queries::list_by_type(&self.pool, invoice_type).await
     }
 
@@ -74,7 +77,10 @@ impl UnifiedInvoiceRepository for SqliteUnifiedInvoiceRepository {
         .await
     }
 
-    async fn get_last_original_prices(&self, material_id: &str) -> Result<(String, String), AppError> {
+    async fn get_last_original_prices(
+        &self,
+        material_id: &str,
+    ) -> Result<(String, String), AppError> {
         queries::get_last_original_prices(&self.pool, material_id).await
     }
 

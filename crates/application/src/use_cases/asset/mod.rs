@@ -1,5 +1,5 @@
-pub mod fixed_asset;
 pub mod consumable;
+pub mod fixed_asset;
 
-pub use fixed_asset::{FixedAssetUseCases, CreateAssetRequest, RotationResult};
 pub use consumable::{ConsumableUseCases, CreateConsumableRequest};
+pub use fixed_asset::{CreateAssetRequest, FixedAssetUseCases, RotationResult};

@@ -1,13 +1,6 @@
-use crate::dto::material_dto::{
-    CreateMaterialPriceRequest,
-    CreateMaterialSalePriceRequest,
-};
+use crate::dto::material_dto::{CreateMaterialPriceRequest, CreateMaterialSalePriceRequest};
 use crate::errors::AppError;
-use domain::inventory::material::{
-    MaterialPurchasePrice,
-    MaterialSalePrice,
-    MaterialUnit,
-};
+use domain::inventory::material::{MaterialPurchasePrice, MaterialSalePrice, MaterialUnit};
 use domain::shared::ids::MaterialUnitId;
 use uuid::Uuid;
 
@@ -126,7 +119,10 @@ pub fn build_sale_prices(
                 min_price: request.min_price.parse().unwrap_or_default(),
                 min_price_base: request.min_price_base.parse().unwrap_or_default(),
                 max_quantity: request.max_quantity.clone(),
-                max_quantity_unit_id: request.max_quantity_unit_id.clone().or(Some(request.unit_id.clone())),
+                max_quantity_unit_id: request
+                    .max_quantity_unit_id
+                    .clone()
+                    .or(Some(request.unit_id.clone())),
                 currency: request.currency,
             })
         })

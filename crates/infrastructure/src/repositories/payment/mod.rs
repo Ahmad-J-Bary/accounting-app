@@ -1,15 +1,15 @@
-use async_trait::async_trait;
-use sqlx::SqlitePool;
 use application::errors::AppError;
 use application::ports::payment_repository::PaymentRepository;
+use async_trait::async_trait;
 use domain::payments::Payment;
-use domain::shared::ids::{PaymentId, CustomerId, SupplierId};
+use domain::shared::ids::{CustomerId, PaymentId, SupplierId};
+use sqlx::SqlitePool;
 use std::sync::Arc;
 
-mod models;
-mod mappers;
-mod queries;
 mod commands;
+mod mappers;
+mod models;
+mod queries;
 
 pub struct SqlitePaymentRepository {
     pool: Arc<SqlitePool>,
@@ -46,8 +46,16 @@ impl PaymentRepository for SqlitePaymentRepository {
         suppliers: &[domain::suppliers::Supplier],
         accounts: &[domain::accounting::account::Account],
     ) -> Result<(), AppError> {
-        commands::save_with_accounting(&self.pool, payment, entry, delete_entries, customers, suppliers, accounts)
-            .await
+        commands::save_with_accounting(
+            &self.pool,
+            payment,
+            entry,
+            delete_entries,
+            customers,
+            suppliers,
+            accounts,
+        )
+        .await
     }
 
     async fn delete_with_accounting(
@@ -58,8 +66,15 @@ impl PaymentRepository for SqlitePaymentRepository {
         suppliers: &[domain::suppliers::Supplier],
         accounts: &[domain::accounting::account::Account],
     ) -> Result<(), AppError> {
-        commands::delete_with_accounting(&self.pool, payment_id, delete_entries, customers, suppliers, accounts)
-            .await
+        commands::delete_with_accounting(
+            &self.pool,
+            payment_id,
+            delete_entries,
+            customers,
+            suppliers,
+            accounts,
+        )
+        .await
     }
 
     async fn find_by_id(&self, id: &PaymentId) -> Result<Option<Payment>, AppError> {

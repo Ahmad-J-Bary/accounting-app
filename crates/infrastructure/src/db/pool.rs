@@ -1,7 +1,7 @@
-use sqlx::SqlitePool;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
-use std::sync::Arc;
+use sqlx::SqlitePool;
 use std::str::FromStr;
+use std::sync::Arc;
 use std::time::Duration;
 
 pub type DbPool = Arc<SqlitePool>;
@@ -123,13 +123,41 @@ async fn ensure_currency_columns(pool: &SqlitePool) {
     // material_sale_prices
     add_column_if_missing(pool, "material_sale_prices", "currency", "TEXT", "''").await;
     // fixed_assets
-    add_column_if_missing(pool, "fixed_assets", "depreciation_method", "TEXT", "'StraightLine'").await;
+    add_column_if_missing(
+        pool,
+        "fixed_assets",
+        "depreciation_method",
+        "TEXT",
+        "'StraightLine'",
+    )
+    .await;
     // inventory_lots (for lot-level sale prices)
     add_column_if_missing(pool, "inventory_lots", "retail_price_base", "TEXT", "NULL").await;
-    add_column_if_missing(pool, "inventory_lots", "semi_wholesale_price_base", "TEXT", "NULL").await;
-    add_column_if_missing(pool, "inventory_lots", "wholesale_price_base", "TEXT", "NULL").await;
+    add_column_if_missing(
+        pool,
+        "inventory_lots",
+        "semi_wholesale_price_base",
+        "TEXT",
+        "NULL",
+    )
+    .await;
+    add_column_if_missing(
+        pool,
+        "inventory_lots",
+        "wholesale_price_base",
+        "TEXT",
+        "NULL",
+    )
+    .await;
     // unified_invoice_lines (for line-level discount)
-    add_column_if_missing(pool, "unified_invoice_lines", "discount_percent", "TEXT", "'0'").await;
+    add_column_if_missing(
+        pool,
+        "unified_invoice_lines",
+        "discount_percent",
+        "TEXT",
+        "'0'",
+    )
+    .await;
     // stock_movements (for shared sequential reference)
     add_column_if_missing(pool, "stock_movements", "document_number", "TEXT", "NULL").await;
 }
@@ -225,10 +253,11 @@ async fn ensure_discount_earned_account(pool: &SqlitePool) {
     // Rename 3301 → 332 if it exists from botched migration 133
     let _ = sqlx::query("UPDATE accounts SET code = '332', name_ar = 'الخصوم المكتسبة', name_en = 'Discount Earned', updated_at = datetime('now') WHERE code = '3301'")
         .execute(pool).await;
-    let exists_now: bool = sqlx::query_scalar("SELECT COUNT(*) > 0 FROM accounts WHERE code = '332'")
-        .fetch_one(pool)
-        .await
-        .unwrap_or(false);
+    let exists_now: bool =
+        sqlx::query_scalar("SELECT COUNT(*) > 0 FROM accounts WHERE code = '332'")
+            .fetch_one(pool)
+            .await
+            .unwrap_or(false);
     if !exists_now {
         let _ = sqlx::query(
             "INSERT OR IGNORE INTO accounts (id, code, name_ar, name_en, account_type, parent_id, category, level, opening_balance, balance, is_active, created_at, updated_at) SELECT '00000000-0000-0000-0000-000000000332', '332', 'الخصوم المكتسبة', 'Discount Earned', 'Revenue', COALESCE((SELECT id FROM accounts WHERE code = '33'), (SELECT id FROM accounts WHERE code = '3')), 'Detail', 3, '0', '0', 1, datetime('now'), datetime('now') WHERE NOT EXISTS (SELECT 1 FROM accounts WHERE code = '332')"
@@ -254,10 +283,11 @@ async fn ensure_discount_granted_account(pool: &SqlitePool) {
 /// Migration 128 deletes 224, and there is no proper root-level Equity section, so we create them here.
 async fn ensure_opening_balance_equity_account(pool: &SqlitePool) {
     // 1. Ensure root-level "حقوق الملكية" (Equity) account (5) exists under root (0)
-    let root_equity: bool = sqlx::query_scalar("SELECT COUNT(*) > 0 FROM accounts WHERE code = '5'")
-        .fetch_one(pool)
-        .await
-        .unwrap_or(false);
+    let root_equity: bool =
+        sqlx::query_scalar("SELECT COUNT(*) > 0 FROM accounts WHERE code = '5'")
+            .fetch_one(pool)
+            .await
+            .unwrap_or(false);
     if !root_equity {
         let _ = sqlx::query(
             "INSERT OR IGNORE INTO accounts (id, code, name_ar, name_en, account_type, parent_id, category, level, opening_balance, balance, purpose, is_active, created_at, updated_at) SELECT '00000000-0000-0000-0000-000000000005', '5', 'حقوق الملكية', 'Equity', 'Equity', (SELECT id FROM accounts WHERE code = '0'), 'Summary', 1, '0', '0', 'general', 1, datetime('now'), datetime('now') WHERE NOT EXISTS (SELECT 1 FROM accounts WHERE code = '5')"
@@ -265,7 +295,9 @@ async fn ensure_opening_balance_equity_account(pool: &SqlitePool) {
     }
 
     // Cleanup: Remove old temporary "حقوق الملكية" (24) that was previously created under الخصوم
-    let _ = sqlx::query("DELETE FROM accounts WHERE code = '24'").execute(pool).await;
+    let _ = sqlx::query("DELETE FROM accounts WHERE code = '24'")
+        .execute(pool)
+        .await;
 
     // 2. Rename existing "رأس المال" (Capital) account from code '222' → '51' under '5'
     //    (the old 222 was created by migration 011 under الخصوم المتداولة 22)
@@ -390,15 +422,19 @@ async fn ensure_fixed_asset_accounts(pool: &SqlitePool) {
     let _ = sqlx::query(
         "UPDATE accounts SET purpose = 'fixed_asset', updated_at = datetime('now')
          WHERE code LIKE '11%' AND account_type = 'Assets'
-         AND (purpose IS NULL OR purpose = 'general')"
-    ).execute(pool).await;
+         AND (purpose IS NULL OR purpose = 'general')",
+    )
+    .execute(pool)
+    .await;
 
     // 8) Ensure "آليات ومركبات" exists in asset_categories
     let _ = sqlx::query(
         "INSERT INTO asset_categories (id, name, asset_type)
          SELECT '00000000-0000-0000-0000-00000000c101', 'آليات ومركبات', 'Fixed'
-         WHERE NOT EXISTS (SELECT 1 FROM asset_categories WHERE name = 'آليات ومركبات')"
-    ).execute(pool).await;
+         WHERE NOT EXISTS (SELECT 1 FROM asset_categories WHERE name = 'آليات ومركبات')",
+    )
+    .execute(pool)
+    .await;
 }
 
 pub async fn run_migrations(pool: &SqlitePool) -> Result<(), sqlx::migrate::MigrateError> {

@@ -1,10 +1,12 @@
-use tauri::State;
 use crate::bootstrap::container::AppState;
-use application::use_cases::adjustment::{
-    CreateStockAdjustmentUseCase, StockAdjustmentQueries,
-    UpdateStockAdjustmentUseCase, DeleteStockAdjustmentUseCase,
+use application::dto::adjustment_dto::{
+    CreateStockAdjustmentRequest, StockAdjustmentDto, UpdateStockAdjustmentRequest,
 };
-use application::dto::adjustment_dto::{CreateStockAdjustmentRequest, UpdateStockAdjustmentRequest, StockAdjustmentDto};
+use application::use_cases::adjustment::{
+    CreateStockAdjustmentUseCase, DeleteStockAdjustmentUseCase, StockAdjustmentQueries,
+    UpdateStockAdjustmentUseCase,
+};
+use tauri::State;
 
 #[tauri::command]
 pub async fn create_stock_adjustment(
@@ -18,7 +20,9 @@ pub async fn create_stock_adjustment(
         state.account_repo.clone(),
         state.journal_entry_repo.clone(),
     )
-    .execute(request).await.map_err(|e| e.to_string())
+    .execute(request)
+    .await
+    .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -30,7 +34,9 @@ pub async fn list_stock_adjustments(
         state.material_repo.clone(),
         state.stock_movement_repo.clone(),
     )
-        .list_all().await.map_err(|e| e.to_string())
+    .list_all()
+    .await
+    .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -43,9 +49,10 @@ pub async fn get_stock_adjustment(
         state.material_repo.clone(),
         state.stock_movement_repo.clone(),
     )
-        .find_by_id(&id).await
-        .map_err(|e| e.to_string())?
-        .ok_or_else(|| "التسوية غير موجودة".to_string())
+    .find_by_id(&id)
+    .await
+    .map_err(|e| e.to_string())?
+    .ok_or_else(|| "التسوية غير موجودة".to_string())
 }
 
 #[tauri::command]
@@ -60,18 +67,19 @@ pub async fn update_stock_adjustment(
         state.account_repo.clone(),
         state.journal_entry_repo.clone(),
     )
-    .execute(request).await.map_err(|e| e.to_string())
+    .execute(request)
+    .await
+    .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
-pub async fn delete_stock_adjustment(
-    id: String,
-    state: State<'_, AppState>,
-) -> Result<(), String> {
+pub async fn delete_stock_adjustment(id: String, state: State<'_, AppState>) -> Result<(), String> {
     DeleteStockAdjustmentUseCase::new(
         state.adjustment_repo.clone(),
         state.stock_movement_repo.clone(),
         state.journal_entry_repo.clone(),
     )
-    .execute(&id).await.map_err(|e| e.to_string())
+    .execute(&id)
+    .await
+    .map_err(|e| e.to_string())
 }

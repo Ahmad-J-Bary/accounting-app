@@ -1,16 +1,16 @@
-use std::sync::Arc;
 use chrono::Utc;
 use domain::shared::ids::{AccountId, CustomerId};
+use std::sync::Arc;
 
-use crate::ports::customer_repository::CustomerRepository;
+use crate::dto::customer_dto::{CustomerDto, UpdateCustomerRequest};
+use crate::errors::AppError;
 use crate::ports::account_repository::AccountRepository;
 use crate::ports::currency_repository::CurrencyRepository;
+use crate::ports::customer_repository::CustomerRepository;
 use crate::ports::journal_entry_repository::JournalEntryRepository;
 use crate::ports::opening_migration_repository::OpeningMigrationRepository;
-use crate::dto::customer_dto::{UpdateCustomerRequest, CustomerDto};
-use crate::errors::AppError;
 use crate::use_cases::opening_balance::opening_window_active;
-use crate::use_cases::shared::partner_account::{PartnerKind, build_balance_adjustment_entry};
+use crate::use_cases::shared::partner_account::{build_balance_adjustment_entry, PartnerKind};
 
 pub struct UpdateCustomerUseCase {
     customer_repo: Arc<dyn CustomerRepository>,
@@ -28,25 +28,43 @@ impl UpdateCustomerUseCase {
         journal_repo: Arc<dyn JournalEntryRepository>,
         opening_migration_repo: Arc<dyn OpeningMigrationRepository>,
     ) -> Self {
-        Self { customer_repo, account_repo, currency_repo, journal_repo, opening_migration_repo }
+        Self {
+            customer_repo,
+            account_repo,
+            currency_repo,
+            journal_repo,
+            opening_migration_repo,
+        }
     }
 
     pub async fn execute(&self, req: UpdateCustomerRequest) -> Result<CustomerDto, AppError> {
-        let cid = req.id.parse::<CustomerId>()
+        let cid = req
+            .id
+            .parse::<CustomerId>()
             .map_err(|_| AppError::NotFound("معرف العميل غير صالح".into()))?;
-        let mut customer = self.customer_repo.find_by_id(&cid).await?
+        let mut customer = self
+            .customer_repo
+            .find_by_id(&cid)
+            .await?
             .ok_or_else(|| AppError::NotFound("العميل غير موجود".into()))?;
 
         let old_debit = customer.debit;
         let old_credit = customer.credit;
 
-        customer.update_info(req.name.clone(), req.phone.clone(), req.address.clone(), req.notes.clone())
+        customer
+            .update_info(
+                req.name.clone(),
+                req.phone.clone(),
+                req.address.clone(),
+                req.notes.clone(),
+            )
             .map_err(|e| AppError::Invalid(e.to_string()))?;
 
         customer.code = crate::utils::ensure_code(Some(req.code), customer.code);
 
         if let Some(ref acc_id_str) = req.account_id {
-            let account_id = acc_id_str.parse::<AccountId>()
+            let account_id = acc_id_str
+                .parse::<AccountId>()
                 .map_err(|_| AppError::Invalid("معرف الحساب غير صالح".into()))?;
             customer.link_account(account_id);
         }
@@ -91,7 +109,10 @@ impl UpdateCustomerUseCase {
         // During the window the balance keeps its static value.
         let mut synced_account = None;
         if let Some(ref account_id) = &customer.account_id {
-            let mut account = self.account_repo.find_by_id(account_id).await
+            let mut account = self
+                .account_repo
+                .find_by_id(account_id)
+                .await
                 .map_err(|e| AppError::Infrastructure(e.to_string()))?
                 .ok_or_else(|| AppError::NotFound("معرف الحساب غير صالح".into()))?;
             account.name_ar = customer.name.clone();
@@ -117,7 +138,8 @@ impl UpdateCustomerUseCase {
                     &self.account_repo,
                     &self.journal_repo,
                     &self.currency_repo,
-                ).await?
+                )
+                .await?
             } else {
                 None
             }

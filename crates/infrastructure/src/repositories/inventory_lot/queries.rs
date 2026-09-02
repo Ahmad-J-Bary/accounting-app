@@ -1,8 +1,8 @@
-use sqlx::SqlitePool;
+use super::mappers::row_to_inventory_lot;
+use super::models::InventoryLotRow;
 use application::errors::AppError;
 use domain::inventory::inventory_lot::InventoryLot;
-use super::models::InventoryLotRow;
-use super::mappers::row_to_inventory_lot;
+use sqlx::SqlitePool;
 
 pub async fn find_available_by_material(
     pool: &SqlitePool,
@@ -91,18 +91,13 @@ pub async fn find_by_material(
     rows.into_iter().map(row_to_inventory_lot).collect()
 }
 
-pub async fn get_costing_method(
-    pool: &SqlitePool,
-    material_id: &str,
-) -> Result<String, AppError> {
+pub async fn get_costing_method(pool: &SqlitePool, material_id: &str) -> Result<String, AppError> {
     use super::models::CostingMethodRow;
-    let row: CostingMethodRow = sqlx::query_as(
-        "SELECT costing_method FROM materials WHERE id = ?"
-    )
-    .bind(material_id)
-    .fetch_one(pool)
-    .await
-    .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+    let row: CostingMethodRow = sqlx::query_as("SELECT costing_method FROM materials WHERE id = ?")
+        .bind(material_id)
+        .fetch_one(pool)
+        .await
+        .map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
     Ok(row.costing_method)
 }

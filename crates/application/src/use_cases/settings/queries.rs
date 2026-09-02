@@ -1,7 +1,7 @@
-use std::sync::Arc;
-use crate::ports::settings_repository::SettingsRepository;
-use crate::dto::settings_dto::{CompanySettingsDto};
+use crate::dto::settings_dto::CompanySettingsDto;
 use crate::errors::AppError;
+use crate::ports::settings_repository::SettingsRepository;
+use std::sync::Arc;
 
 pub struct SettingsQueries {
     repo: Arc<dyn SettingsRepository>,

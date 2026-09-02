@@ -1,4 +1,6 @@
-use domain::inventory::material::{Material, MaterialUnit, MaterialPurchasePrice, MaterialSalePrice};
+use domain::inventory::material::{
+    Material, MaterialPurchasePrice, MaterialSalePrice, MaterialUnit,
+};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -80,8 +82,6 @@ pub struct CreateMaterialUnitRequest {
     pub barcode: Option<String>,
 }
 
-
-
 impl From<MaterialUnit> for MaterialUnitDto {
     fn from(u: MaterialUnit) -> Self {
         Self {
@@ -132,7 +132,11 @@ impl From<Material> for MaterialDto {
             name_en: material.name_en,
             barcode: material.barcode,
             code: material.code,
-            category_ids: material.category_ids.iter().map(|id| id.0.to_string()).collect(),
+            category_ids: material
+                .category_ids
+                .iter()
+                .map(|id| id.0.to_string())
+                .collect(),
             minimum_stock: material.minimum_stock.to_string(),
             notes: material.notes,
             image_path: material.image_path,
@@ -143,8 +147,16 @@ impl From<Material> for MaterialDto {
             default_warehouse_id: material.default_warehouse_id,
             has_expiry: material.has_expiry,
             expiry_alert_before_days: material.expiry_alert_before_days,
-            purchase_prices: material.purchase_prices.into_iter().map(MaterialPurchasePriceDto::from).collect(),
-            sale_prices: material.sale_prices.into_iter().map(MaterialSalePriceDto::from).collect(),
+            purchase_prices: material
+                .purchase_prices
+                .into_iter()
+                .map(MaterialPurchasePriceDto::from)
+                .collect(),
+            sale_prices: material
+                .sale_prices
+                .into_iter()
+                .map(MaterialSalePriceDto::from)
+                .collect(),
             total_received: "0".to_string(),
             total_sold: "0".to_string(),
             total_available: "0".to_string(),
@@ -160,7 +172,11 @@ impl From<Material> for MaterialDto {
             average_raw_price_base: "0".to_string(),
             costing_method: "Average".to_string(),
             active_lots_count: 0,
-            units: material.units.into_iter().map(MaterialUnitDto::from).collect(),
+            units: material
+                .units
+                .into_iter()
+                .map(MaterialUnitDto::from)
+                .collect(),
         }
     }
 }

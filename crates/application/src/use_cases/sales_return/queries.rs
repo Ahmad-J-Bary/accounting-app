@@ -1,11 +1,11 @@
-use std::sync::Arc;
-use std::str::FromStr;
-use domain::shared::ids::{SalesReturnId, CustomerId, MaterialId};
-use crate::ports::sales_return_repository::SalesReturnRepository;
-use crate::ports::customer_repository::CustomerRepository;
-use crate::ports::material_repository::MaterialRepository;
 use crate::dto::returns_dto::SalesReturnDto;
 use crate::errors::AppError;
+use crate::ports::customer_repository::CustomerRepository;
+use crate::ports::material_repository::MaterialRepository;
+use crate::ports::sales_return_repository::SalesReturnRepository;
+use domain::shared::ids::{CustomerId, MaterialId, SalesReturnId};
+use std::str::FromStr;
+use std::sync::Arc;
 
 pub struct SalesReturnQueries {
     repo: Arc<dyn SalesReturnRepository>,
@@ -19,7 +19,11 @@ impl SalesReturnQueries {
         customer_repo: Arc<dyn CustomerRepository>,
         material_repo: Arc<dyn MaterialRepository>,
     ) -> Self {
-        Self { repo, customer_repo, material_repo }
+        Self {
+            repo,
+            customer_repo,
+            material_repo,
+        }
     }
 
     pub async fn list_all(&self) -> Result<Vec<SalesReturnDto>, AppError> {
@@ -35,7 +39,10 @@ impl SalesReturnQueries {
     pub async fn get_by_id(&self, id: String) -> Result<SalesReturnDto, AppError> {
         let rid = SalesReturnId::from_str(&id)
             .map_err(|_| AppError::Invalid("معرف المرتجع غير صالح".into()))?;
-        let r = self.repo.find_by_id(&rid).await?
+        let r = self
+            .repo
+            .find_by_id(&rid)
+            .await?
             .ok_or_else(|| AppError::NotFound("مرتجع المبيعات غير موجود".into()))?;
         let dto: SalesReturnDto = r.into();
         self.populate(dto).await

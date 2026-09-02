@@ -1,20 +1,20 @@
-use std::sync::Arc;
-use std::str::FromStr;
-use rust_decimal::Decimal;
 use domain::accounting::account::Account;
+use domain::customers::Customer;
 use domain::shared::currency::Currency;
 use domain::shared::ids::{CustomerId, SupplierId};
-use domain::customers::Customer;
 use domain::suppliers::Supplier;
+use rust_decimal::Decimal;
+use std::str::FromStr;
+use std::sync::Arc;
 
 use crate::ports::account_repository::AccountRepository;
-use crate::ports::customer_repository::CustomerRepository;
 use crate::ports::currency_repository::CurrencyRepository;
+use crate::ports::customer_repository::CustomerRepository;
 use crate::ports::opening_migration_repository::OpeningMigrationRepository;
 
+use crate::constants::{PAYABLES_PARENT_ID, RECEIVABLES_PARENT_ID};
 use crate::ports::journal_entry_repository::JournalEntryRepository;
 use crate::ports::supplier_repository::SupplierRepository;
-use crate::constants::{RECEIVABLES_PARENT_ID, PAYABLES_PARENT_ID};
 use crate::use_cases::opening_balance::opening_window_active;
 
 use super::error::AccountUseCaseError;
@@ -49,10 +49,7 @@ impl CreateAccountUseCase {
         }
     }
 
-    pub async fn execute(
-        &self,
-        cmd: CreateAccountCommand,
-    ) -> Result<Account, AccountUseCaseError> {
+    pub async fn execute(&self, cmd: CreateAccountCommand) -> Result<Account, AccountUseCaseError> {
         let opening_balance = Decimal::from_str(&cmd.opening_balance)
             .map_err(|e| AccountUseCaseError::InvalidDecimal(e.to_string()))?;
 
@@ -62,37 +59,68 @@ impl CreateAccountUseCase {
         AccountValidation::validate_type_hierarchy(&*self.account_repo, &cmd).await?;
         AccountValidation::protect_root_policy_on_create(&cmd)?;
 
-        let _linked_customer_id = cmd.linked_customer_id
+        let _linked_customer_id = cmd
+            .linked_customer_id
             .as_deref()
             .and_then(|s| s.parse::<CustomerId>().ok());
 
-        let _linked_supplier_id = cmd.linked_supplier_id
+        let _linked_supplier_id = cmd
+            .linked_supplier_id
             .as_deref()
             .and_then(|s| s.parse::<SupplierId>().ok());
 
         let final_name_ar = cmd.name_ar.trim().to_string();
 
         // Get currency and exchange rate
-        let base_currency = self.currency_repo.get_base_currency().await
+        let base_currency = self
+            .currency_repo
+            .get_base_currency()
+            .await
             .map_err(|e| AccountUseCaseError::RepositoryError(e.to_string()))?
-            .unwrap_or(Currency::new("USD", "دولار أمريكي", "US Dollar", "$", 2, true));
-        
+            .unwrap_or(Currency::new(
+                "USD",
+                "دولار أمريكي",
+                "US Dollar",
+                "$",
+                2,
+                true,
+            ));
+
         let currency_code = cmd.currency.as_deref().unwrap_or(&base_currency.code);
         let currency = if currency_code == base_currency.code {
             base_currency
         } else {
-            self.currency_repo.find_by_code(currency_code).await
+            self.currency_repo
+                .find_by_code(currency_code)
+                .await
                 .map_err(|e| AccountUseCaseError::RepositoryError(e.to_string()))?
-                .unwrap_or(Currency::new(currency_code, currency_code, currency_code, "", 2, false))
+                .unwrap_or(Currency::new(
+                    currency_code,
+                    currency_code,
+                    currency_code,
+                    "",
+                    2,
+                    false,
+                ))
         };
 
-        let exchange_rate = cmd.exchange_rate.as_deref()
+        let exchange_rate = cmd
+            .exchange_rate
+            .as_deref()
             .and_then(|s| Decimal::from_str(s).ok())
             .filter(|r| *r > Decimal::ZERO)
             .unwrap_or(Decimal::ONE);
 
-        let debit = cmd.debit.as_deref().and_then(|s| Decimal::from_str(s).ok()).unwrap_or(Decimal::ZERO);
-        let credit = cmd.credit.as_deref().and_then(|s| Decimal::from_str(s).ok()).unwrap_or(Decimal::ZERO);
+        let debit = cmd
+            .debit
+            .as_deref()
+            .and_then(|s| Decimal::from_str(s).ok())
+            .unwrap_or(Decimal::ZERO);
+        let credit = cmd
+            .credit
+            .as_deref()
+            .and_then(|s| Decimal::from_str(s).ok())
+            .unwrap_or(Decimal::ZERO);
 
         // While an opening-balance migration window is open (ExistingCompany),
         // the migration's aggregate journal owns the ledger. New CoA accounts
@@ -125,7 +153,8 @@ impl CreateAccountUseCase {
             currency,
             exchange_rate,
             cmd.notes.as_ref().map(|n| n.trim().to_string()),
-        ).map_err(AccountUseCaseError::from)?;
+        )
+        .map_err(AccountUseCaseError::from)?;
 
         // Account::new() computes balance = opening_balance + debit - credit.
         // After the direction-toggle refactoring, debit/credit may represent
@@ -143,10 +172,14 @@ impl CreateAccountUseCase {
             .await
             .map_err(|e| AccountUseCaseError::RepositoryError(e.to_string()))?;
 
-        let debit = cmd.debit.as_deref()
+        let debit = cmd
+            .debit
+            .as_deref()
             .and_then(|s| Decimal::from_str(s).ok())
             .unwrap_or(Decimal::ZERO);
-        let credit = cmd.credit.as_deref()
+        let credit = cmd
+            .credit
+            .as_deref()
             .and_then(|s| Decimal::from_str(s).ok())
             .unwrap_or(Decimal::ZERO);
 
@@ -154,10 +187,14 @@ impl CreateAccountUseCase {
         // (skip for auto-created customer/supplier accounts, their entries are
         // handled separately; skip while an opening-migration window is open,
         // the migration's aggregate journal owns the ledger).
-        let is_receivable_or_payable = cmd.parent_id.as_ref().map(|p| {
-            let pid = p.to_string();
-            pid == RECEIVABLES_PARENT_ID || pid == PAYABLES_PARENT_ID
-        }).unwrap_or(false);
+        let is_receivable_or_payable = cmd
+            .parent_id
+            .as_ref()
+            .map(|p| {
+                let pid = p.to_string();
+                pid == RECEIVABLES_PARENT_ID || pid == PAYABLES_PARENT_ID
+            })
+            .unwrap_or(false);
 
         if !is_receivable_or_payable && !opening_window {
             let total_opening = debit - credit;
@@ -191,13 +228,28 @@ impl CreateAccountUseCase {
         }
 
         // Auto-create customer if account is under Receivables Parent
-        let is_receivable = cmd.parent_id.as_ref().map(|p| p.to_string() == RECEIVABLES_PARENT_ID).unwrap_or(false);
+        let is_receivable = cmd
+            .parent_id
+            .as_ref()
+            .map(|p| p.to_string() == RECEIVABLES_PARENT_ID)
+            .unwrap_or(false);
         if is_receivable {
             if let Some(ref customer_repo) = self.customer_repo {
                 // Extract customer number: suffix of the code
-                let parent_code = self.account_repo.find_by_id(cmd.parent_id.as_ref().unwrap()).await.ok().flatten().map(|p| p.code).unwrap_or_default();
-                let customer_num = if account.code.starts_with(&parent_code) { &account.code[parent_code.len()..] } else { &account.code };
-                
+                let parent_code = self
+                    .account_repo
+                    .find_by_id(cmd.parent_id.as_ref().unwrap())
+                    .await
+                    .ok()
+                    .flatten()
+                    .map(|p| p.code)
+                    .unwrap_or_default();
+                let customer_num = if account.code.starts_with(&parent_code) {
+                    &account.code[parent_code.len()..]
+                } else {
+                    &account.code
+                };
+
                 let customer_id = CustomerId::new();
 
                 let customer = Customer::new_with_id(
@@ -224,13 +276,28 @@ impl CreateAccountUseCase {
         }
 
         // Auto-create supplier if account is under Payables Parent
-        let is_payable = cmd.parent_id.as_ref().map(|p| p.to_string() == PAYABLES_PARENT_ID).unwrap_or(false);
+        let is_payable = cmd
+            .parent_id
+            .as_ref()
+            .map(|p| p.to_string() == PAYABLES_PARENT_ID)
+            .unwrap_or(false);
         if is_payable {
             if let Some(ref supplier_repo) = self.supplier_repo {
                 // Extract supplier number: suffix of the code
-                let parent_code = self.account_repo.find_by_id(cmd.parent_id.as_ref().unwrap()).await.ok().flatten().map(|p| p.code).unwrap_or_default();
-                let supplier_num = if account.code.starts_with(&parent_code) { &account.code[parent_code.len()..] } else { &account.code };
-                
+                let parent_code = self
+                    .account_repo
+                    .find_by_id(cmd.parent_id.as_ref().unwrap())
+                    .await
+                    .ok()
+                    .flatten()
+                    .map(|p| p.code)
+                    .unwrap_or_default();
+                let supplier_num = if account.code.starts_with(&parent_code) {
+                    &account.code[parent_code.len()..]
+                } else {
+                    &account.code
+                };
+
                 let supplier_id = SupplierId::new();
 
                 let supplier = Supplier::new_with_id(

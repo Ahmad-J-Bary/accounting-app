@@ -1,11 +1,11 @@
-use sqlx::SqlitePool;
 use application::errors::AppError;
-use domain::suppliers::Supplier;
 use domain::shared::ids::SupplierId;
 use domain::shared::AccountId;
+use domain::suppliers::Supplier;
+use sqlx::SqlitePool;
 
-use super::models::SupplierRow;
 use super::mappers::row_to_supplier;
+use super::models::SupplierRow;
 
 pub async fn find_by_id(pool: &SqlitePool, id: &SupplierId) -> Result<Option<Supplier>, AppError> {
     let row = sqlx::query_as::<_, SupplierRow>(
@@ -31,7 +31,10 @@ pub async fn find_by_id(pool: &SqlitePool, id: &SupplierId) -> Result<Option<Sup
     row.map(row_to_supplier).transpose()
 }
 
-pub async fn find_by_account_id(pool: &SqlitePool, account_id: &AccountId) -> Result<Option<Supplier>, AppError> {
+pub async fn find_by_account_id(
+    pool: &SqlitePool,
+    account_id: &AccountId,
+) -> Result<Option<Supplier>, AppError> {
     let row = sqlx::query_as::<_, SupplierRow>(
         "SELECT id, code, name, phone, address, account_id, debit, credit, opening_balance, balance, currency, notes, is_active, created_at, updated_at
          FROM suppliers WHERE account_id = ?

@@ -1,5 +1,5 @@
 use crate::shared::errors::DomainError;
-use crate::shared::ids::{PaymentId, CustomerId, SupplierId, AccountId};
+use crate::shared::ids::{AccountId, CustomerId, PaymentId, SupplierId};
 use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
@@ -7,15 +7,15 @@ use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum PaymentType {
-    Receipt,           // قبض من عميل
-    SupplierPayment,   // دفع لمورد
-    CustomerPayment,   // دفع لعميل (auto-generated for sales return cash refund)
-    SupplierReceipt,   // قبض من مورد (auto-generated for purchase return cash receipt)
-    ExpenseVoucher,    // سند مصاريف
-    DrawingsVoucher,   // سند مسحوبات
-    CashIn,            // إيداع
-    CashOut,           // سحب
-    Other,             // أخرى
+    Receipt,         // قبض من عميل
+    SupplierPayment, // دفع لمورد
+    CustomerPayment, // دفع لعميل (auto-generated for sales return cash refund)
+    SupplierReceipt, // قبض من مورد (auto-generated for purchase return cash receipt)
+    ExpenseVoucher,  // سند مصاريف
+    DrawingsVoucher, // سند مسحوبات
+    CashIn,          // إيداع
+    CashOut,         // سحب
+    Other,           // أخرى
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -56,9 +56,19 @@ impl Payment {
         notes: Option<String>,
     ) -> Result<Self, DomainError> {
         Self::with_invoice_id(
-            voucher_number, payment_type, amount, currency_code, exchange_rate,
-            payment_date, debit_account_id, credit_account_id, customer_id,
-            supplier_id, reference, notes, None,
+            voucher_number,
+            payment_type,
+            amount,
+            currency_code,
+            exchange_rate,
+            payment_date,
+            debit_account_id,
+            credit_account_id,
+            customer_id,
+            supplier_id,
+            reference,
+            notes,
+            None,
         )
     }
 
@@ -82,7 +92,9 @@ impl Payment {
             return Err(DomainError::Invalid("مبلغ الدفعة يجب أن يكون موجبًا".into()));
         }
         if voucher_number.trim().is_empty() {
-            return Err(DomainError::Invalid("رقم السند لا يمكن أن يكون فارغًا".into()));
+            return Err(DomainError::Invalid(
+                "رقم السند لا يمكن أن يكون فارغًا".into(),
+            ));
         }
         if currency_code.trim().is_empty() {
             return Err(DomainError::Invalid("عملة السند مطلوبة".into()));

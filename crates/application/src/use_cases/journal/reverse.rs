@@ -1,11 +1,11 @@
 use std::sync::Arc;
 use uuid::Uuid;
 
-use domain::accounting::journal_entry::{JournalEntry, JournalEntryStatus};
-use domain::shared::JournalEntryId;
+use crate::dto::journal_entry_dto::JournalEntryDto;
 use crate::errors::AppError;
 use crate::ports::journal_entry_repository::JournalEntryRepository;
-use crate::dto::journal_entry_dto::JournalEntryDto;
+use domain::accounting::journal_entry::{JournalEntry, JournalEntryStatus};
+use domain::shared::JournalEntryId;
 
 /// Reverses a posted journal entry by posting a true contra entry (debit/credit
 /// swapped, typed `Reversal`, linked via `reversal_of_entry_id`) and then
@@ -23,10 +23,13 @@ impl ReverseJournalEntryUseCase {
     pub async fn execute(&self, entry_id: String) -> Result<JournalEntryDto, AppError> {
         let id = JournalEntryId(
             Uuid::parse_str(&entry_id)
-                .map_err(|e| AppError::Invalid(format!("Invalid entry ID: {}", e)))?
+                .map_err(|e| AppError::Invalid(format!("Invalid entry ID: {}", e)))?,
         );
 
-        let original = self.repo.find_by_id(&id).await?
+        let original = self
+            .repo
+            .find_by_id(&id)
+            .await?
             .ok_or_else(|| AppError::NotFound("Journal entry not found".into()))?;
 
         if original.status != JournalEntryStatus::Posted {
@@ -43,9 +46,12 @@ impl ReverseJournalEntryUseCase {
             entry_number,
             chrono::Utc::now(),
             format!("عكس قيد {}", original.entry_number),
-        ).map_err(|e| AppError::Invalid(e.to_string()))?;
+        )
+        .map_err(|e| AppError::Invalid(e.to_string()))?;
 
-        reversal.post().map_err(|e| AppError::Invalid(e.to_string()))?;
+        reversal
+            .post()
+            .map_err(|e| AppError::Invalid(e.to_string()))?;
 
         let mut original = original;
         original.reverse().map_err(AppError::from)?;

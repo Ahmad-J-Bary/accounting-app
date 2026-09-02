@@ -1,8 +1,8 @@
+use super::error::AccountUseCaseError;
+use super::types::CreateAccountCommand;
 use crate::ports::account_repository::AccountRepository;
 use domain::accounting::account::{Account, AccountCategory, AccountType};
 use domain::shared::ids::AccountId;
-use super::error::AccountUseCaseError;
-use super::types::CreateAccountCommand;
 
 pub struct AccountValidation;
 
@@ -29,13 +29,19 @@ impl AccountValidation {
             return Err(AccountUseCaseError::Validation("كود الحساب مطلوب".into()));
         }
         if cmd.name_ar.trim().is_empty() {
-            return Err(AccountUseCaseError::Validation("اسم الحساب بالعربية مطلوب".into()));
+            return Err(AccountUseCaseError::Validation(
+                "اسم الحساب بالعربية مطلوب".into(),
+            ));
         }
         if cmd.name_en.trim().is_empty() {
-            return Err(AccountUseCaseError::Validation("اسم الحساب بالإنجليزية مطلوب".into()));
+            return Err(AccountUseCaseError::Validation(
+                "اسم الحساب بالإنجليزية مطلوب".into(),
+            ));
         }
         if cmd.level < 1 {
-            return Err(AccountUseCaseError::Validation("المستوى يجب أن يكون 1 أو أكثر".into()));
+            return Err(AccountUseCaseError::Validation(
+                "المستوى يجب أن يكون 1 أو أكثر".into(),
+            ));
         }
         Ok(())
     }
@@ -47,7 +53,9 @@ impl AccountValidation {
         match &cmd.parent_id {
             None => {
                 if cmd.level != 1 {
-                    return Err(AccountUseCaseError::Validation("الحساب بدون أب يجب أن يكون في المستوى 1".into()));
+                    return Err(AccountUseCaseError::Validation(
+                        "الحساب بدون أب يجب أن يكون في المستوى 1".into(),
+                    ));
                 }
             }
             Some(parent_id) => {
@@ -58,7 +66,9 @@ impl AccountValidation {
                     .ok_or(AccountUseCaseError::ParentNotFound)?;
 
                 if parent.category != AccountCategory::Summary {
-                    return Err(AccountUseCaseError::Validation("لا يمكن إضافة حساب فرعي تحت حساب تفصيلي".into()));
+                    return Err(AccountUseCaseError::Validation(
+                        "لا يمكن إضافة حساب فرعي تحت حساب تفصيلي".into(),
+                    ));
                 }
 
                 if cmd.level != parent.level + 1 {
@@ -84,16 +94,21 @@ impl AccountValidation {
                 .ok_or(AccountUseCaseError::ParentNotFound)?;
 
             let allowed = parent.account_type == cmd.account_type
-                || (parent.account_type == AccountType::Liabilities && cmd.account_type == AccountType::Equity);
+                || (parent.account_type == AccountType::Liabilities
+                    && cmd.account_type == AccountType::Equity);
 
             if !allowed {
-                return Err(AccountUseCaseError::Validation("نوع الحساب الفرعي غير متوافق مع نوع الحساب الأب".into()));
+                return Err(AccountUseCaseError::Validation(
+                    "نوع الحساب الفرعي غير متوافق مع نوع الحساب الأب".into(),
+                ));
             }
         }
         Ok(())
     }
 
-    pub fn protect_root_policy_on_create(cmd: &CreateAccountCommand) -> Result<(), AccountUseCaseError> {
+    pub fn protect_root_policy_on_create(
+        cmd: &CreateAccountCommand,
+    ) -> Result<(), AccountUseCaseError> {
         if cmd.parent_id.is_none() {
             let ok = matches!(
                 (cmd.code.trim(), &cmd.account_type),
@@ -103,7 +118,9 @@ impl AccountValidation {
                     | ("4", AccountType::Expenses)
             );
             if !ok {
-                return Err(AccountUseCaseError::Forbidden("لا يمكن إنشاء حساب جذري خارج الجذور الأساسية المعتمدة".into()));
+                return Err(AccountUseCaseError::Forbidden(
+                    "لا يمكن إنشاء حساب جذري خارج الجذور الأساسية المعتمدة".into(),
+                ));
             }
         }
         Ok(())
@@ -123,7 +140,9 @@ impl AccountValidation {
 
         if required {
             if cmd.parent_id.is_some() {
-                return Err(AccountUseCaseError::Forbidden("لا يمكن تحويل الحساب الجذري الأساسي إلى حساب فرعي".into()));
+                return Err(AccountUseCaseError::Forbidden(
+                    "لا يمكن تحويل الحساب الجذري الأساسي إلى حساب فرعي".into(),
+                ));
             }
 
             let type_ok = matches!(
@@ -135,11 +154,15 @@ impl AccountValidation {
             );
 
             if !type_ok {
-                return Err(AccountUseCaseError::Forbidden("لا يمكن تغيير نوع الحساب الجذري الأساسي".into()));
+                return Err(AccountUseCaseError::Forbidden(
+                    "لا يمكن تغيير نوع الحساب الجذري الأساسي".into(),
+                ));
             }
 
             if cmd.code.trim() != current_code {
-                return Err(AccountUseCaseError::Forbidden("لا يمكن تغيير كود الحساب الجذري الأساسي".into()));
+                return Err(AccountUseCaseError::Forbidden(
+                    "لا يمكن تغيير كود الحساب الجذري الأساسي".into(),
+                ));
             }
         }
 

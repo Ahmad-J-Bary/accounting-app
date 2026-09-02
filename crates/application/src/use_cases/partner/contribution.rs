@@ -1,15 +1,15 @@
-use std::sync::Arc;
-use rust_decimal::Decimal;
 use chrono::Utc;
 use domain::accounting::journal_entry::{JournalEntry, JournalLine, JournalType};
-use domain::shared::{Money, MonetaryAmount, AccountId};
 use domain::shared::ids::PartnerId;
+use domain::shared::{AccountId, MonetaryAmount, Money};
+use rust_decimal::Decimal;
+use std::sync::Arc;
 
-use crate::ports::partner_repository::PartnerRepository;
+use crate::errors::AppError;
 use crate::ports::account_repository::AccountRepository;
 use crate::ports::journal_entry_repository::JournalEntryRepository;
 use crate::ports::opening_migration_repository::OpeningMigrationRepository;
-use crate::errors::AppError;
+use crate::ports::partner_repository::PartnerRepository;
 use crate::use_cases::opening_balance::opening_window_active;
 use uuid::Uuid;
 
@@ -37,7 +37,12 @@ impl CreateCapitalContributionUseCase {
         journal_repo: Arc<dyn JournalEntryRepository>,
         opening_migration_repo: Arc<dyn OpeningMigrationRepository>,
     ) -> Self {
-        Self { repo, account_repo, journal_repo, opening_migration_repo }
+        Self {
+            repo,
+            account_repo,
+            journal_repo,
+            opening_migration_repo,
+        }
     }
 
     pub async fn execute(
@@ -55,21 +60,32 @@ impl CreateCapitalContributionUseCase {
             ));
         }
 
-        let partner_id_parsed = partner_id.parse::<PartnerId>()
+        let partner_id_parsed = partner_id
+            .parse::<PartnerId>()
             .map_err(|_| AppError::NotFound("معرف الشريك غير صالح".into()))?;
-        let partner = self.repo.find_by_id(&partner_id_parsed).await?
+        let partner = self
+            .repo
+            .find_by_id(&partner_id_parsed)
+            .await?
             .ok_or_else(|| AppError::NotFound("الشريك غير موجود".into()))?;
 
         if amount <= Decimal::ZERO {
-            return Err(AppError::Invalid("مبلغ مساهمة رأس المال يجب أن يكون أكبر من الصفر".into()));
+            return Err(AppError::Invalid(
+                "مبلغ مساهمة رأس المال يجب أن يكون أكبر من الصفر".into(),
+            ));
         }
 
-        let capital_account_id = partner.linked_account_id
+        let capital_account_id = partner
+            .linked_account_id
             .ok_or_else(|| AppError::Invalid("الشريك لا يملك حساب رأس مال مرتبط".into()))?;
 
-        let funding_id = funding_account_id.parse::<AccountId>()
+        let funding_id = funding_account_id
+            .parse::<AccountId>()
             .map_err(|_| AppError::NotFound("معرف حساب التمويل غير صالح".into()))?;
-        let _funding_account = self.account_repo.find_by_id(&funding_id).await?
+        let _funding_account = self
+            .account_repo
+            .find_by_id(&funding_id)
+            .await?
             .ok_or_else(|| AppError::NotFound("حساب التمويل غير موجود".into()))?;
 
         // Build the contribution monetary amount in the partner's own currency
@@ -79,7 +95,8 @@ impl CreateCapitalContributionUseCase {
         } else {
             Decimal::ONE
         };
-        let amount_ma = contribution_currency_amount(amount, fx_rate, &partner.currency, is_amount_in_original);
+        let amount_ma =
+            contribution_currency_amount(amount, fx_rate, &partner.currency, is_amount_in_original);
         let zero_ma = MonetaryAmount::zero(amount_ma.currency().clone());
 
         let lines = vec![
@@ -115,7 +132,8 @@ impl CreateCapitalContributionUseCase {
             Utc::now(),
             format!("مساهمة رأس مال — الشريك {}", partner.name),
             Some(source_id),
-        ).map_err(|e| AppError::Invalid(e.to_string()))?;
+        )
+        .map_err(|e| AppError::Invalid(e.to_string()))?;
 
         entry.post().map_err(|e| AppError::Invalid(e.to_string()))?;
         // The journal repository persists the entry atomically (single write);
@@ -160,7 +178,10 @@ mod tests {
 
         let ma = contribution_currency_amount(base_amount, fx, &usd, false);
 
-        assert_eq!(ma.base_amount, base_amount, "base leg must equal the entered base amount");
+        assert_eq!(
+            ma.base_amount, base_amount,
+            "base leg must equal the entered base amount"
+        );
         assert_eq!(ma.amount(), Decimal::new(7500000, 2)); // 20000 * 3.75 USD
     }
 

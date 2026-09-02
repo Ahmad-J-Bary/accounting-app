@@ -1,11 +1,14 @@
-use sqlx::SqlitePool;
+use super::mappers::row_to_category;
+use super::models::CategoryRow;
 use application::errors::AppError;
 use domain::inventory::category::MaterialCategory;
 use domain::shared::ids::MaterialCategoryId;
-use super::models::CategoryRow;
-use super::mappers::row_to_category;
+use sqlx::SqlitePool;
 
-pub async fn find_by_id(pool: &SqlitePool, id: &MaterialCategoryId) -> Result<Option<MaterialCategory>, AppError> {
+pub async fn find_by_id(
+    pool: &SqlitePool,
+    id: &MaterialCategoryId,
+) -> Result<Option<MaterialCategory>, AppError> {
     let row = sqlx::query_as::<_, CategoryRow>(
         "SELECT id, name, parent_id, is_active, is_hybrid, code_prefix, created_at, updated_at
          FROM categories WHERE id = ?",
@@ -18,7 +21,10 @@ pub async fn find_by_id(pool: &SqlitePool, id: &MaterialCategoryId) -> Result<Op
     row.map(row_to_category).transpose()
 }
 
-pub async fn find_by_name(pool: &SqlitePool, name: &str) -> Result<Option<MaterialCategory>, AppError> {
+pub async fn find_by_name(
+    pool: &SqlitePool,
+    name: &str,
+) -> Result<Option<MaterialCategory>, AppError> {
     let row = sqlx::query_as::<_, CategoryRow>(
         "SELECT id, name, parent_id, is_active, is_hybrid, code_prefix, created_at, updated_at
          FROM categories WHERE name = ?",
@@ -46,7 +52,10 @@ pub async fn list_all(pool: &SqlitePool) -> Result<Vec<MaterialCategory>, AppErr
     rows.into_iter().map(row_to_category).collect()
 }
 
-pub async fn count_materials_in_category(pool: &SqlitePool, id: &MaterialCategoryId) -> Result<u64, AppError> {
+pub async fn count_materials_in_category(
+    pool: &SqlitePool,
+    id: &MaterialCategoryId,
+) -> Result<u64, AppError> {
     let row: (i64,) =
         sqlx::query_as("SELECT COUNT(*) FROM material_categories WHERE category_id = ?")
             .bind(id.to_string())

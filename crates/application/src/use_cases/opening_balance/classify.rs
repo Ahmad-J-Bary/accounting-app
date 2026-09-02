@@ -1,8 +1,8 @@
-use std::sync::Arc;
-use std::str::FromStr;
 use domain::accounting::account::Account;
 use domain::accounting::ResidualClassification;
 use domain::shared::ids::AccountId;
+use std::str::FromStr;
+use std::sync::Arc;
 
 use crate::errors::AppError;
 use crate::ports::account_repository::AccountRepository;
@@ -43,9 +43,13 @@ impl SetResidualClassificationUseCase {
         let classification = ResidualClassification::from_str(&cmd.classification)
             .ok_or_else(|| AppError::Invalid(format!("تصنيف غير معروف: {}", cmd.classification)))?;
 
-        let residual_account_id = resolve_target(&self.account_repo, classification, &cmd.residual_account_id).await?;
+        let residual_account_id =
+            resolve_target(&self.account_repo, classification, &cmd.residual_account_id).await?;
 
-        let mut migration = self.repo.find_by_id(&cmd.migration_id).await?
+        let mut migration = self
+            .repo
+            .find_by_id(&cmd.migration_id)
+            .await?
             .ok_or_else(|| AppError::NotFound("ترحيل الرصيد الافتتاحي غير موجود".into()))?;
 
         migration.set_residual_classification(Some(classification), residual_account_id);
@@ -68,7 +72,8 @@ async fn resolve_target(
     if classification == ResidualClassification::UnresolvedDifference {
         if supplied.is_some() {
             return Err(AppError::Invalid(
-                "تصنيف «فرق غير محلول» لا يعتمد حساباً — لا يمكن ترحيل الفرق غير المحلول إلى حساب".into(),
+                "تصنيف «فرق غير محلول» لا يعتمد حساباً — لا يمكن ترحيل الفرق غير المحلول إلى حساب"
+                    .into(),
             ));
         }
         return Ok(None);
@@ -94,8 +99,11 @@ async fn resolve_target(
         };
     };
 
-    let account = account_repo.find_by_id(&AccountId::from_str(account_id)
-        .map_err(|_| AppError::Invalid("معرف الحساب غير صالح".into()))?)
+    let account = account_repo
+        .find_by_id(
+            &AccountId::from_str(account_id)
+                .map_err(|_| AppError::Invalid("معرف الحساب غير صالح".into()))?,
+        )
         .await?
         .ok_or_else(|| AppError::NotFound(format!("الحساب غير موجود: {account_id}")))?;
 
@@ -118,7 +126,10 @@ async fn resolve_target(
 /// carries EXACTLY the classification's controlled purpose (the residual is an
 /// equity clearing item — cash, banks, revenue/expenses, customers, suppliers,
 /// inventory, fixed assets and registered partner capital are all excluded).
-fn account_carries_classification(account: &Account, classification: ResidualClassification) -> bool {
+fn account_carries_classification(
+    account: &Account,
+    classification: ResidualClassification,
+) -> bool {
     let Some(purpose) = classification.account_purpose() else {
         return false;
     };
@@ -129,9 +140,7 @@ fn account_carries_classification(account: &Account, classification: ResidualCla
 #[cfg(test)]
 mod tests {
     use super::*;
-    use domain::accounting::account::{
-        Account, AccountCategory, AccountPurpose, AccountType,
-    };
+    use domain::accounting::account::{Account, AccountCategory, AccountPurpose, AccountType};
     use domain::accounting::opening_balance::{OpeningBalanceLine, ResidualClassification};
     use domain::shared::currency::Currency;
     use rust_decimal::Decimal;
@@ -178,15 +187,19 @@ mod tests {
 
     #[tokio::test]
     async fn auto_resolves_designated_account_for_retained_earnings() {
-        let account_repo: Arc<dyn AccountRepository> = Arc::new(
-            MockAccountRepository::from(vec![
-                account("52", AccountPurpose::RetainedEarnings, true),
-            ]),
-        );
+        let account_repo: Arc<dyn AccountRepository> =
+            Arc::new(MockAccountRepository::from(vec![account(
+                "52",
+                AccountPurpose::RetainedEarnings,
+                true,
+            )]));
         let migration_repo: Arc<dyn OpeningMigrationRepository> =
             Arc::new(MockOpeningMigrationRepository::default());
         let migration_id = "mig-auto";
-        migration_repo.create(&sample_migration(migration_id)).await.unwrap();
+        migration_repo
+            .create(&sample_migration(migration_id))
+            .await
+            .unwrap();
 
         SetResidualClassificationUseCase::new(migration_repo.clone(), account_repo.clone())
             .execute(SetResidualClassificationCommand {
@@ -197,9 +210,19 @@ mod tests {
             .await
             .unwrap();
 
-        let saved = migration_repo.find_by_id(migration_id).await.unwrap().unwrap();
-        assert_eq!(saved.residual_classification, Some(ResidualClassification::RetainedEarnings));
-        assert!(saved.residual_account_id.is_some(), "auto-mode must resolve an account");
+        let saved = migration_repo
+            .find_by_id(migration_id)
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(
+            saved.residual_classification,
+            Some(ResidualClassification::RetainedEarnings)
+        );
+        assert!(
+            saved.residual_account_id.is_some(),
+            "auto-mode must resolve an account"
+        );
     }
 
     #[tokio::test]
@@ -209,16 +232,20 @@ mod tests {
         let migration_repo: Arc<dyn OpeningMigrationRepository> =
             Arc::new(MockOpeningMigrationRepository::default());
         let migration_id = "mig-no-account";
-        migration_repo.create(&sample_migration(migration_id)).await.unwrap();
-
-        let err = SetResidualClassificationUseCase::new(migration_repo.clone(), account_repo.clone())
-            .execute(SetResidualClassificationCommand {
-                migration_id: migration_id.to_string(),
-                classification: "PriorPeriodAdjustment".into(),
-                residual_account_id: None,
-            })
+        migration_repo
+            .create(&sample_migration(migration_id))
             .await
-            .unwrap_err();
+            .unwrap();
+
+        let err =
+            SetResidualClassificationUseCase::new(migration_repo.clone(), account_repo.clone())
+                .execute(SetResidualClassificationCommand {
+                    migration_id: migration_id.to_string(),
+                    classification: "PriorPeriodAdjustment".into(),
+                    residual_account_id: None,
+                })
+                .await
+                .unwrap_err();
         assert!(
             err.to_string().contains("وضع متقدم") || err.to_string().contains("مخصص"),
             "missing designated account must be rejected clearly: {}",
@@ -234,16 +261,20 @@ mod tests {
         let migration_repo: Arc<dyn OpeningMigrationRepository> =
             Arc::new(MockOpeningMigrationRepository::default());
         let migration_id = "mig-wrong-purpose";
-        migration_repo.create(&sample_migration(migration_id)).await.unwrap();
-
-        let err = SetResidualClassificationUseCase::new(migration_repo.clone(), account_repo.clone())
-            .execute(SetResidualClassificationCommand {
-                migration_id: migration_id.to_string(),
-                classification: "RetainedEarnings".into(),
-                residual_account_id: Some(partner_current.id.0.to_string()),
-            })
+        migration_repo
+            .create(&sample_migration(migration_id))
             .await
-            .unwrap_err();
+            .unwrap();
+
+        let err =
+            SetResidualClassificationUseCase::new(migration_repo.clone(), account_repo.clone())
+                .execute(SetResidualClassificationCommand {
+                    migration_id: migration_id.to_string(),
+                    classification: "RetainedEarnings".into(),
+                    residual_account_id: Some(partner_current.id.0.to_string()),
+                })
+                .await
+                .unwrap_err();
         assert!(
             err.to_string().contains("غير صالح"),
             "partner-current target for RetainedEarnings must be rejected: {}",
@@ -261,16 +292,20 @@ mod tests {
         let migration_repo: Arc<dyn OpeningMigrationRepository> =
             Arc::new(MockOpeningMigrationRepository::default());
         let migration_id = "mig-cash";
-        migration_repo.create(&sample_migration(migration_id)).await.unwrap();
-
-        let err = SetResidualClassificationUseCase::new(migration_repo.clone(), account_repo.clone())
-            .execute(SetResidualClassificationCommand {
-                migration_id: migration_id.to_string(),
-                classification: "RetainedEarnings".into(),
-                residual_account_id: Some(cash.id.0.to_string()),
-            })
+        migration_repo
+            .create(&sample_migration(migration_id))
             .await
-            .unwrap_err();
+            .unwrap();
+
+        let err =
+            SetResidualClassificationUseCase::new(migration_repo.clone(), account_repo.clone())
+                .execute(SetResidualClassificationCommand {
+                    migration_id: migration_id.to_string(),
+                    classification: "RetainedEarnings".into(),
+                    residual_account_id: Some(cash.id.0.to_string()),
+                })
+                .await
+                .unwrap_err();
         assert!(
             err.to_string().contains("غير صالح"),
             "cash account target must be rejected: {}",
@@ -286,16 +321,20 @@ mod tests {
         let migration_repo: Arc<dyn OpeningMigrationRepository> =
             Arc::new(MockOpeningMigrationRepository::default());
         let migration_id = "mig-unresolved";
-        migration_repo.create(&sample_migration(migration_id)).await.unwrap();
-
-        let err = SetResidualClassificationUseCase::new(migration_repo.clone(), account_repo.clone())
-            .execute(SetResidualClassificationCommand {
-                migration_id: migration_id.to_string(),
-                classification: "UnresolvedDifference".into(),
-                residual_account_id: Some(retained.id.0.to_string()),
-            })
+        migration_repo
+            .create(&sample_migration(migration_id))
             .await
-            .unwrap_err();
+            .unwrap();
+
+        let err =
+            SetResidualClassificationUseCase::new(migration_repo.clone(), account_repo.clone())
+                .execute(SetResidualClassificationCommand {
+                    migration_id: migration_id.to_string(),
+                    classification: "UnresolvedDifference".into(),
+                    residual_account_id: Some(retained.id.0.to_string()),
+                })
+                .await
+                .unwrap_err();
         assert!(
             err.to_string().contains("غير محلول"),
             "UnresolvedDifference with a supplied account must be rejected: {}",
@@ -311,8 +350,15 @@ mod tests {
             })
             .await
             .unwrap();
-        let saved = migration_repo.find_by_id(migration_id).await.unwrap().unwrap();
-        assert_eq!(saved.residual_classification, Some(ResidualClassification::UnresolvedDifference));
+        let saved = migration_repo
+            .find_by_id(migration_id)
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(
+            saved.residual_classification,
+            Some(ResidualClassification::UnresolvedDifference)
+        );
         assert!(saved.residual_account_id.is_none());
     }
 }

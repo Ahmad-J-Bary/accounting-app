@@ -1,16 +1,16 @@
-use std::sync::Arc;
-use rust_decimal::Decimal;
+use crate::dto::payment_dto::PaymentDto;
+use crate::errors::AppError;
+use crate::ports::account_repository::AccountRepository;
+use crate::ports::customer_repository::CustomerRepository;
+use crate::ports::supplier_repository::SupplierRepository;
 use domain::accounting::account::Account;
 use domain::customers::Customer;
 use domain::payments::{Payment, PaymentType};
-use domain::shared::ids::{CustomerId, SupplierId, AccountId};
-use domain::shared::{Currency, Money, MonetaryAmount};
+use domain::shared::ids::{AccountId, CustomerId, SupplierId};
+use domain::shared::{Currency, MonetaryAmount, Money};
 use domain::suppliers::Supplier;
-use crate::dto::payment_dto::PaymentDto;
-use crate::errors::AppError;
-use crate::ports::customer_repository::CustomerRepository;
-use crate::ports::supplier_repository::SupplierRepository;
-use crate::ports::account_repository::AccountRepository;
+use rust_decimal::Decimal;
+use std::sync::Arc;
 
 /// Accumulated customer / supplier / account balance mutations for a payment
 /// accounting event. The mutations are applied by the repository composite in
@@ -79,7 +79,11 @@ pub async fn enrich_payment(
 /// Converts a monetary amount from a currency string and exchange rate.
 /// Returns both the `MonetaryAmount` and the `Currency` so callers can build
 /// a zero `MonetaryAmount` for the same currency without recreating it.
-pub fn build_monetary_amount(amount: Decimal, currency_code: &str, exchange_rate: Decimal) -> (MonetaryAmount, Currency) {
+pub fn build_monetary_amount(
+    amount: Decimal,
+    currency_code: &str,
+    exchange_rate: Decimal,
+) -> (MonetaryAmount, Currency) {
     let currency = Currency::new(currency_code, currency_code, currency_code, "", 2, false);
     let ma = MonetaryAmount::new(Money::new(amount, currency.clone()), exchange_rate);
     (ma, currency)
@@ -103,27 +107,36 @@ pub async fn compute_apply_balances(
     match payment_type {
         PaymentType::Receipt => {
             if let Some(cid) = customer_id {
-                let mut customer = customer_repo.find_by_id(cid).await?
+                let mut customer = customer_repo
+                    .find_by_id(cid)
+                    .await?
                     .ok_or_else(|| AppError::NotFound("العميل غير موجود".into()))?;
-                customer.increase_credit(base_amount)
+                customer
+                    .increase_credit(base_amount)
                     .map_err(|e| AppError::Invalid(e.to_string()))?;
                 changes.push_customer(customer);
             }
         }
         PaymentType::SupplierPayment => {
             if let Some(sid) = supplier_id {
-                let mut supplier = supplier_repo.find_by_id(sid).await?
+                let mut supplier = supplier_repo
+                    .find_by_id(sid)
+                    .await?
                     .ok_or_else(|| AppError::NotFound("المورد غير موجود".into()))?;
-                supplier.increase_debit(base_amount)
+                supplier
+                    .increase_debit(base_amount)
                     .map_err(|e| AppError::Invalid(e.to_string()))?;
                 changes.push_supplier(supplier);
             }
         }
         PaymentType::ExpenseVoucher => {
             if let Some(acc_id) = debit_account_id {
-                let mut account = account_repo.find_by_id(acc_id).await?
+                let mut account = account_repo
+                    .find_by_id(acc_id)
+                    .await?
                     .ok_or_else(|| AppError::NotFound("حساب المصروف غير موجود".into()))?;
-                account.debit(base_amount)
+                account
+                    .debit(base_amount)
                     .map_err(|e| AppError::Invalid(e.to_string()))?;
                 account.debit += base_amount;
                 changes.push_account(account);
@@ -131,9 +144,12 @@ pub async fn compute_apply_balances(
         }
         PaymentType::DrawingsVoucher => {
             if let Some(acc_id) = debit_account_id {
-                let mut account = account_repo.find_by_id(acc_id).await?
+                let mut account = account_repo
+                    .find_by_id(acc_id)
+                    .await?
                     .ok_or_else(|| AppError::NotFound("حساب المسحوبات غير موجود".into()))?;
-                account.debit(base_amount)
+                account
+                    .debit(base_amount)
                     .map_err(|e| AppError::Invalid(e.to_string()))?;
                 account.debit += base_amount;
                 changes.push_account(account);
@@ -141,18 +157,24 @@ pub async fn compute_apply_balances(
         }
         PaymentType::CustomerPayment => {
             if let Some(cid) = customer_id {
-                let mut customer = customer_repo.find_by_id(cid).await?
+                let mut customer = customer_repo
+                    .find_by_id(cid)
+                    .await?
                     .ok_or_else(|| AppError::NotFound("العميل غير موجود".into()))?;
-                customer.decrease_debit(base_amount)
+                customer
+                    .decrease_debit(base_amount)
                     .map_err(|e| AppError::Invalid(e.to_string()))?;
                 changes.push_customer(customer);
             }
         }
         PaymentType::SupplierReceipt => {
             if let Some(sid) = supplier_id {
-                let mut supplier = supplier_repo.find_by_id(sid).await?
+                let mut supplier = supplier_repo
+                    .find_by_id(sid)
+                    .await?
                     .ok_or_else(|| AppError::NotFound("المورد غير موجود".into()))?;
-                supplier.decrease_credit(base_amount)
+                supplier
+                    .decrease_credit(base_amount)
                     .map_err(|e| AppError::Invalid(e.to_string()))?;
                 changes.push_supplier(supplier);
             }
@@ -181,27 +203,36 @@ pub async fn compute_reverse_balances(
     match payment_type {
         PaymentType::Receipt => {
             if let Some(cid) = customer_id {
-                let mut customer = customer_repo.find_by_id(cid).await?
+                let mut customer = customer_repo
+                    .find_by_id(cid)
+                    .await?
                     .ok_or_else(|| AppError::NotFound("العميل غير موجود".into()))?;
-                customer.decrease_credit(base_amount)
+                customer
+                    .decrease_credit(base_amount)
                     .map_err(|e| AppError::Invalid(e.to_string()))?;
                 changes.push_customer(customer);
             }
         }
         PaymentType::SupplierPayment => {
             if let Some(sid) = supplier_id {
-                let mut supplier = supplier_repo.find_by_id(sid).await?
+                let mut supplier = supplier_repo
+                    .find_by_id(sid)
+                    .await?
                     .ok_or_else(|| AppError::NotFound("المورد غير موجود".into()))?;
-                supplier.decrease_debit(base_amount)
+                supplier
+                    .decrease_debit(base_amount)
                     .map_err(|e| AppError::Invalid(e.to_string()))?;
                 changes.push_supplier(supplier);
             }
         }
         PaymentType::ExpenseVoucher => {
             if let Some(acc_id) = debit_account_id {
-                let mut account = account_repo.find_by_id(acc_id).await?
+                let mut account = account_repo
+                    .find_by_id(acc_id)
+                    .await?
                     .ok_or_else(|| AppError::NotFound("حساب المصروف غير موجود".into()))?;
-                account.credit(base_amount)
+                account
+                    .credit(base_amount)
                     .map_err(|e| AppError::Invalid(e.to_string()))?;
                 account.debit -= base_amount;
                 changes.push_account(account);
@@ -209,9 +240,12 @@ pub async fn compute_reverse_balances(
         }
         PaymentType::DrawingsVoucher => {
             if let Some(acc_id) = debit_account_id {
-                let mut account = account_repo.find_by_id(acc_id).await?
+                let mut account = account_repo
+                    .find_by_id(acc_id)
+                    .await?
                     .ok_or_else(|| AppError::NotFound("حساب المسحوبات غير موجود".into()))?;
-                account.credit(base_amount)
+                account
+                    .credit(base_amount)
                     .map_err(|e| AppError::Invalid(e.to_string()))?;
                 account.debit -= base_amount;
                 changes.push_account(account);
@@ -219,7 +253,9 @@ pub async fn compute_reverse_balances(
         }
         PaymentType::CustomerPayment => {
             if let Some(cid) = customer_id {
-                let mut customer = customer_repo.find_by_id(cid).await?
+                let mut customer = customer_repo
+                    .find_by_id(cid)
+                    .await?
                     .ok_or_else(|| AppError::NotFound("العميل غير موجود".into()))?;
                 if is_settlement {
                     if customer.debit.is_zero() && customer.credit.is_zero() {
@@ -232,7 +268,8 @@ pub async fn compute_reverse_balances(
                     }
                     customer.balance = customer.debit - customer.credit;
                 } else {
-                    customer.increase_debit(base_amount)
+                    customer
+                        .increase_debit(base_amount)
                         .map_err(|e| AppError::Invalid(e.to_string()))?;
                 }
                 changes.push_customer(customer);
@@ -240,7 +277,9 @@ pub async fn compute_reverse_balances(
         }
         PaymentType::SupplierReceipt => {
             if let Some(sid) = supplier_id {
-                let mut supplier = supplier_repo.find_by_id(sid).await?
+                let mut supplier = supplier_repo
+                    .find_by_id(sid)
+                    .await?
                     .ok_or_else(|| AppError::NotFound("المورد غير موجود".into()))?;
                 if is_settlement {
                     if supplier.debit.is_zero() && supplier.credit.is_zero() {
@@ -253,7 +292,8 @@ pub async fn compute_reverse_balances(
                     }
                     supplier.balance = supplier.credit - supplier.debit;
                 } else {
-                    supplier.increase_credit(base_amount)
+                    supplier
+                        .increase_credit(base_amount)
                         .map_err(|e| AppError::Invalid(e.to_string()))?;
                 }
                 changes.push_supplier(supplier);
@@ -283,13 +323,17 @@ pub async fn apply_balance_onto(
     match payment_type {
         PaymentType::Receipt => {
             if let Some(cid) = customer_id {
-                let mut customer = if let Some(c) = changes.customers.iter().find(|c| c.id == *cid).cloned() {
-                    c
-                } else {
-                    customer_repo.find_by_id(cid).await?
-                        .ok_or_else(|| AppError::NotFound("العميل غير موجود".into()))?
-                };
-                customer.increase_credit(base_amount)
+                let mut customer =
+                    if let Some(c) = changes.customers.iter().find(|c| c.id == *cid).cloned() {
+                        c
+                    } else {
+                        customer_repo
+                            .find_by_id(cid)
+                            .await?
+                            .ok_or_else(|| AppError::NotFound("العميل غير موجود".into()))?
+                    };
+                customer
+                    .increase_credit(base_amount)
                     .map_err(|e| AppError::Invalid(e.to_string()))?;
                 if let Some(c) = changes.customers.iter_mut().find(|c| c.id == *cid) {
                     *c = customer;
@@ -300,13 +344,17 @@ pub async fn apply_balance_onto(
         }
         PaymentType::SupplierPayment => {
             if let Some(sid) = supplier_id {
-                let mut supplier = if let Some(s) = changes.suppliers.iter().find(|s| s.id == *sid).cloned() {
-                    s
-                } else {
-                    supplier_repo.find_by_id(sid).await?
-                        .ok_or_else(|| AppError::NotFound("المورد غير موجود".into()))?
-                };
-                supplier.increase_debit(base_amount)
+                let mut supplier =
+                    if let Some(s) = changes.suppliers.iter().find(|s| s.id == *sid).cloned() {
+                        s
+                    } else {
+                        supplier_repo
+                            .find_by_id(sid)
+                            .await?
+                            .ok_or_else(|| AppError::NotFound("المورد غير موجود".into()))?
+                    };
+                supplier
+                    .increase_debit(base_amount)
                     .map_err(|e| AppError::Invalid(e.to_string()))?;
                 if let Some(s) = changes.suppliers.iter_mut().find(|s| s.id == *sid) {
                     *s = supplier;
@@ -317,13 +365,17 @@ pub async fn apply_balance_onto(
         }
         PaymentType::ExpenseVoucher | PaymentType::DrawingsVoucher => {
             if let Some(acc_id) = debit_account_id {
-                let mut account = if let Some(a) = changes.accounts.iter().find(|a| a.id == *acc_id).cloned() {
-                    a
-                } else {
-                    account_repo.find_by_id(acc_id).await?
-                        .ok_or_else(|| AppError::NotFound("حساب المصروف غير موجود".into()))?
-                };
-                account.debit(base_amount)
+                let mut account =
+                    if let Some(a) = changes.accounts.iter().find(|a| a.id == *acc_id).cloned() {
+                        a
+                    } else {
+                        account_repo
+                            .find_by_id(acc_id)
+                            .await?
+                            .ok_or_else(|| AppError::NotFound("حساب المصروف غير موجود".into()))?
+                    };
+                account
+                    .debit(base_amount)
                     .map_err(|e| AppError::Invalid(e.to_string()))?;
                 account.debit += base_amount;
                 if let Some(a) = changes.accounts.iter_mut().find(|a| a.id == *acc_id) {
@@ -335,13 +387,17 @@ pub async fn apply_balance_onto(
         }
         PaymentType::CustomerPayment => {
             if let Some(cid) = customer_id {
-                let mut customer = if let Some(c) = changes.customers.iter().find(|c| c.id == *cid).cloned() {
-                    c
-                } else {
-                    customer_repo.find_by_id(cid).await?
-                        .ok_or_else(|| AppError::NotFound("العميل غير موجود".into()))?
-                };
-                customer.decrease_debit(base_amount)
+                let mut customer =
+                    if let Some(c) = changes.customers.iter().find(|c| c.id == *cid).cloned() {
+                        c
+                    } else {
+                        customer_repo
+                            .find_by_id(cid)
+                            .await?
+                            .ok_or_else(|| AppError::NotFound("العميل غير موجود".into()))?
+                    };
+                customer
+                    .decrease_debit(base_amount)
                     .map_err(|e| AppError::Invalid(e.to_string()))?;
                 if let Some(c) = changes.customers.iter_mut().find(|c| c.id == *cid) {
                     *c = customer;
@@ -352,13 +408,17 @@ pub async fn apply_balance_onto(
         }
         PaymentType::SupplierReceipt => {
             if let Some(sid) = supplier_id {
-                let mut supplier = if let Some(s) = changes.suppliers.iter().find(|s| s.id == *sid).cloned() {
-                    s
-                } else {
-                    supplier_repo.find_by_id(sid).await?
-                        .ok_or_else(|| AppError::NotFound("المورد غير موجود".into()))?
-                };
-                supplier.decrease_credit(base_amount)
+                let mut supplier =
+                    if let Some(s) = changes.suppliers.iter().find(|s| s.id == *sid).cloned() {
+                        s
+                    } else {
+                        supplier_repo
+                            .find_by_id(sid)
+                            .await?
+                            .ok_or_else(|| AppError::NotFound("المورد غير موجود".into()))?
+                    };
+                supplier
+                    .decrease_credit(base_amount)
                     .map_err(|e| AppError::Invalid(e.to_string()))?;
                 if let Some(s) = changes.suppliers.iter_mut().find(|s| s.id == *sid) {
                     *s = supplier;
@@ -386,18 +446,24 @@ pub async fn compute_reverse_return_balances(
     match payment_type {
         PaymentType::CustomerPayment => {
             if let Some(cid) = customer_id {
-                let mut customer = customer_repo.find_by_id(cid).await?
+                let mut customer = customer_repo
+                    .find_by_id(cid)
+                    .await?
                     .ok_or_else(|| AppError::NotFound("العميل غير موجود".into()))?;
-                customer.decrease_debit(base_amount)
+                customer
+                    .decrease_debit(base_amount)
                     .map_err(|e| AppError::Invalid(e.to_string()))?;
                 changes.push_customer(customer);
             }
         }
         PaymentType::SupplierReceipt => {
             if let Some(sid) = supplier_id {
-                let mut supplier = supplier_repo.find_by_id(sid).await?
+                let mut supplier = supplier_repo
+                    .find_by_id(sid)
+                    .await?
                     .ok_or_else(|| AppError::NotFound("المورد غير موجود".into()))?;
-                supplier.decrease_credit(base_amount)
+                supplier
+                    .decrease_credit(base_amount)
                     .map_err(|e| AppError::Invalid(e.to_string()))?;
                 changes.push_supplier(supplier);
             }
@@ -421,18 +487,24 @@ pub async fn compute_apply_return_balances(
     match payment_type {
         PaymentType::CustomerPayment => {
             if let Some(cid) = customer_id {
-                let mut customer = customer_repo.find_by_id(cid).await?
+                let mut customer = customer_repo
+                    .find_by_id(cid)
+                    .await?
                     .ok_or_else(|| AppError::NotFound("العميل غير موجود".into()))?;
-                customer.increase_debit(base_amount)
+                customer
+                    .increase_debit(base_amount)
                     .map_err(|e| AppError::Invalid(e.to_string()))?;
                 changes.push_customer(customer);
             }
         }
         PaymentType::SupplierReceipt => {
             if let Some(sid) = supplier_id {
-                let mut supplier = supplier_repo.find_by_id(sid).await?
+                let mut supplier = supplier_repo
+                    .find_by_id(sid)
+                    .await?
                     .ok_or_else(|| AppError::NotFound("المورد غير موجود".into()))?;
-                supplier.increase_credit(base_amount)
+                supplier
+                    .increase_credit(base_amount)
                     .map_err(|e| AppError::Invalid(e.to_string()))?;
                 changes.push_supplier(supplier);
             }

@@ -1,5 +1,5 @@
-use async_trait::async_trait;
 use crate::errors::AppError;
+use async_trait::async_trait;
 
 /// Stores/reads a single resumable opening-balance wizard draft (the frontend
 /// editor state serialized as JSON). Deliberately not a business entity: it

@@ -82,16 +82,26 @@ async fn create_draft(pool: &Arc<sqlx::SqlitePool>) -> String {
         Arc::new(SqliteAccountRepository::new(pool.clone()));
     let settings_repo = Arc::new(SqliteSettingsRepository::new(pool.clone()));
     let draft = CreateOpeningBalanceUseCase::new(migration_repo, account_repo, settings_repo)
-        .execute(application::use_cases::opening_balance::types::CreateOpeningBalanceMigrationCommand {
-            cutover_date: chrono::Utc::now().to_rfc3339(),
-            notes: None,
-            source_system: None,
-            source_reference: None,
-            lines: vec![
-                OpeningLineInput { account_id: cash.to_string(), amount: "2000".into(), description: None },
-                OpeningLineInput { account_id: equity.to_string(), amount: "2000".into(), description: None },
-            ],
-        })
+        .execute(
+            application::use_cases::opening_balance::types::CreateOpeningBalanceMigrationCommand {
+                cutover_date: chrono::Utc::now().to_rfc3339(),
+                notes: None,
+                source_system: None,
+                source_reference: None,
+                lines: vec![
+                    OpeningLineInput {
+                        account_id: cash.to_string(),
+                        amount: "2000".into(),
+                        description: None,
+                    },
+                    OpeningLineInput {
+                        account_id: equity.to_string(),
+                        amount: "2000".into(),
+                        description: None,
+                    },
+                ],
+            },
+        )
         .await
         .expect("create draft");
     draft.0.id
@@ -101,7 +111,10 @@ async fn create_draft(pool: &Arc<sqlx::SqlitePool>) -> String {
 async fn reload(pool: &Arc<sqlx::SqlitePool>, id: &str) -> OpeningBalanceMigration {
     let repo: Arc<dyn OpeningMigrationRepository> =
         Arc::new(SqliteOpeningMigrationRepository::new(pool.clone()));
-    repo.find_by_id(id).await.unwrap().expect("migration exists")
+    repo.find_by_id(id)
+        .await
+        .unwrap()
+        .expect("migration exists")
 }
 
 // ---------------------------------------------------------------------------
@@ -145,7 +158,10 @@ async fn lifecycle_stamps_full_audit_trail_on_persisted_row() {
     let validated = reload(&pool, &id).await;
     assert_eq!(validated.validated_by.as_deref(), Some("validator-a"));
     assert!(validated.validated_at.is_some());
-    assert!(validated.approved_at.is_none(), "approve metadata appears only after approve");
+    assert!(
+        validated.approved_at.is_none(),
+        "approve metadata appears only after approve"
+    );
 
     // Approve by "approver-b".
     ApproveOpeningBalanceUseCase::new(migration_repo.clone())
@@ -171,14 +187,16 @@ async fn lifecycle_stamps_full_audit_trail_on_persisted_row() {
     assert!(posted.posted_at.is_some());
     assert!(posted.locked_at.is_none());
 
-    let opening_journal_count: i64 = sqlx::query_scalar(
-        "SELECT COUNT(*) FROM journal_entries WHERE source_id = ?",
-    )
-    .bind(format!("opening_balance:{id}"))
-    .fetch_one(&*pool)
-    .await
-    .unwrap();
-    assert_eq!(opening_journal_count, 1, "the audit trail has exactly one opening journal");
+    let opening_journal_count: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM journal_entries WHERE source_id = ?")
+            .bind(format!("opening_balance:{id}"))
+            .fetch_one(&*pool)
+            .await
+            .unwrap();
+    assert_eq!(
+        opening_journal_count, 1,
+        "the audit trail has exactly one opening journal"
+    );
 
     // Lock: locked_at stamped.
     LockOpeningBalanceUseCase::new(
@@ -192,9 +210,18 @@ async fn lifecycle_stamps_full_audit_trail_on_persisted_row() {
     .expect("lock");
     let locked = reload(&pool, &id).await;
     assert!(locked.locked_at.is_some());
-    assert!(locked.validated_at.is_some(), "validated_at survives the whole lifecycle");
-    assert!(locked.approved_at.is_some(), "approved_at survives the whole lifecycle");
-    assert!(locked.posted_at.is_some(), "posted_at survives the whole lifecycle");
+    assert!(
+        locked.validated_at.is_some(),
+        "validated_at survives the whole lifecycle"
+    );
+    assert!(
+        locked.approved_at.is_some(),
+        "approved_at survives the whole lifecycle"
+    );
+    assert!(
+        locked.posted_at.is_some(),
+        "posted_at survives the whole lifecycle"
+    );
     assert_eq!(locked.validated_by.as_deref(), Some("validator-a"));
     assert_eq!(locked.approved_by.as_deref(), Some("approver-b"));
 }

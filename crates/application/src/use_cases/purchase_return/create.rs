@@ -1,14 +1,14 @@
-use std::sync::Arc;
-use std::str::FromStr;
-use chrono::Utc;
-use rust_decimal::Decimal;
-use domain::returns::{PurchaseReturn};
-use domain::returns::purchase_return::PurchaseReturnLine;
-use domain::shared::ids::{MaterialId, SupplierId, PurchaseReturnId};
-use crate::ports::purchase_return_repository::PurchaseReturnRepository;
-use crate::ports::supplier_repository::SupplierRepository;
 use crate::dto::returns_dto::{CreatePurchaseReturnRequest, PurchaseReturnDto};
 use crate::errors::AppError;
+use crate::ports::purchase_return_repository::PurchaseReturnRepository;
+use crate::ports::supplier_repository::SupplierRepository;
+use chrono::Utc;
+use domain::returns::purchase_return::PurchaseReturnLine;
+use domain::returns::PurchaseReturn;
+use domain::shared::ids::{MaterialId, PurchaseReturnId, SupplierId};
+use rust_decimal::Decimal;
+use std::str::FromStr;
+use std::sync::Arc;
 
 pub struct CreatePurchaseReturnUseCase {
     repo: Arc<dyn PurchaseReturnRepository>,
@@ -20,10 +20,16 @@ impl CreatePurchaseReturnUseCase {
         repo: Arc<dyn PurchaseReturnRepository>,
         supplier_repo: Arc<dyn SupplierRepository>,
     ) -> Self {
-        Self { repo, supplier_repo }
+        Self {
+            repo,
+            supplier_repo,
+        }
     }
 
-    pub async fn execute(&self, req: CreatePurchaseReturnRequest) -> Result<PurchaseReturnDto, AppError> {
+    pub async fn execute(
+        &self,
+        req: CreatePurchaseReturnRequest,
+    ) -> Result<PurchaseReturnDto, AppError> {
         let supplier_id = SupplierId::from_str(&req.supplier_id)
             .map_err(|_| AppError::Invalid("معرف المورد غير صالح".into()))?;
 
@@ -31,18 +37,18 @@ impl CreatePurchaseReturnUseCase {
             .map(|dt| dt.with_timezone(&Utc))
             .unwrap_or_else(|_| Utc::now());
 
-        let return_number = if req.return_number.trim().is_empty() || req.return_number == "تلقائي" {
+        let return_number = if req.return_number.trim().is_empty() || req.return_number == "تلقائي"
+        {
             self.repo.get_next_return_number().await?
         } else {
             req.return_number
         };
 
-        let mut ret = PurchaseReturn::new(
-            return_number.clone(),
-            supplier_id,
-            return_date,
-            req.notes,
-        ).map_err(|e: domain::shared::errors::DomainError| AppError::Invalid(e.to_string()))?;
+        let mut ret =
+            PurchaseReturn::new(return_number.clone(), supplier_id, return_date, req.notes)
+                .map_err(|e: domain::shared::errors::DomainError| {
+                    AppError::Invalid(e.to_string())
+                })?;
 
         // If editing (id provided), reuse existing ID
         if let Some(ref edit_id) = req.id {
@@ -65,8 +71,12 @@ impl CreatePurchaseReturnUseCase {
                 line_dto.unit_id,
                 line_dto.notes,
                 line_dto.invoice_line_id,
-            ).map_err(|e: domain::shared::errors::DomainError| AppError::Invalid(e.to_string()))?;
-            ret.add_line(line).map_err(|e: domain::shared::errors::DomainError| AppError::Invalid(e.to_string()))?;
+            )
+            .map_err(|e: domain::shared::errors::DomainError| AppError::Invalid(e.to_string()))?;
+            ret.add_line(line)
+                .map_err(|e: domain::shared::errors::DomainError| {
+                    AppError::Invalid(e.to_string())
+                })?;
         }
 
         self.repo.save(&ret).await?;

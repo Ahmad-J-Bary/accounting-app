@@ -1,12 +1,12 @@
 use std::str::FromStr;
 use std::sync::Arc;
 
+use application::ports::partner_repository::PartnerRepository;
+use application::use_cases::partner::CreateCapitalContributionUseCase;
 use domain::accounting::account::{Account, AccountCategory, AccountType};
 use domain::accounting::partner::{Partner, ProfitSharingType};
 use domain::shared::currency::Currency;
 use domain::shared::ids::AccountId;
-use application::ports::partner_repository::PartnerRepository;
-use application::use_cases::partner::CreateCapitalContributionUseCase;
 use infrastructure::db::pool::run_migrations;
 use infrastructure::repositories::{
     SqliteAccountRepository, SqliteJournalEntryRepository, SqliteOpeningMigrationRepository,
@@ -38,18 +38,16 @@ async fn build_pool() -> Arc<sqlx::SqlitePool> {
 async fn seed_partner(pool: &sqlx::SqlitePool) -> String {
     let repo = SqlitePartnerRepository::new(Arc::new(pool.clone()));
     let (capital_parent, drawings_parent) = {
-        let capital = sqlx::query_scalar::<_, String>(
-            "SELECT id FROM accounts WHERE code = '51' LIMIT 1",
-        )
-        .fetch_one(pool)
-        .await
-        .unwrap();
-        let drawings = sqlx::query_scalar::<_, String>(
-            "SELECT id FROM accounts WHERE code = '44' LIMIT 1",
-        )
-        .fetch_one(pool)
-        .await
-        .unwrap();
+        let capital =
+            sqlx::query_scalar::<_, String>("SELECT id FROM accounts WHERE code = '51' LIMIT 1")
+                .fetch_one(pool)
+                .await
+                .unwrap();
+        let drawings =
+            sqlx::query_scalar::<_, String>("SELECT id FROM accounts WHERE code = '44' LIMIT 1")
+                .fetch_one(pool)
+                .await
+                .unwrap();
         (
             AccountId::from_str(&capital).unwrap(),
             AccountId::from_str(&drawings).unwrap(),
@@ -102,7 +100,9 @@ async fn seed_partner(pool: &sqlx::SqlitePool) -> String {
     .unwrap();
     partner.link_account(capital.id);
     partner.link_drawings_account(drawings.id);
-    repo.save_with_accounts(&partner, &capital, &drawings, None).await.unwrap();
+    repo.save_with_accounts(&partner, &capital, &drawings, None)
+        .await
+        .unwrap();
     partner.id.to_string()
 }
 
@@ -131,24 +131,37 @@ async fn contribution_with_same_event_id_posts_once() {
 
     let event = "8f1a2b3c-0000-0000-0000-000000000001".to_string();
     let first = case
-        .execute(partner_id.clone(), funding.to_string(), Decimal::from(1000), false, Some(event.clone()))
+        .execute(
+            partner_id.clone(),
+            funding.to_string(),
+            Decimal::from(1000),
+            false,
+            Some(event.clone()),
+        )
         .await
         .expect("first contribution should post");
 
     let second = case
-        .execute(partner_id.clone(), funding.to_string(), Decimal::from(1000), false, Some(event.clone()))
+        .execute(
+            partner_id.clone(),
+            funding.to_string(),
+            Decimal::from(1000),
+            false,
+            Some(event.clone()),
+        )
         .await
         .expect("re-run must be idempotent");
 
-    assert_eq!(first, second, "same event id must resolve to the same journal");
+    assert_eq!(
+        first, second,
+        "same event id must resolve to the same journal"
+    );
 
-    let count: i64 = sqlx::query_scalar(
-        "SELECT count(*) FROM journal_entries WHERE source_id = ?",
-    )
-    .bind(format!("capital_contribution:{event}"))
-    .fetch_one(&*pool)
-    .await
-    .unwrap();
+    let count: i64 = sqlx::query_scalar("SELECT count(*) FROM journal_entries WHERE source_id = ?")
+        .bind(format!("capital_contribution:{event}"))
+        .fetch_one(&*pool)
+        .await
+        .unwrap();
     assert_eq!(count, 1, "only one journal may exist for the event");
 }
 
@@ -166,11 +179,23 @@ async fn distinct_event_ids_create_distinct_journals() {
     );
 
     let a = case
-        .execute(partner_id.clone(), funding.to_string(), Decimal::from(100), false, Some("evt-A".into()))
+        .execute(
+            partner_id.clone(),
+            funding.to_string(),
+            Decimal::from(100),
+            false,
+            Some("evt-A".into()),
+        )
         .await
         .unwrap();
     let b = case
-        .execute(partner_id.clone(), funding.to_string(), Decimal::from(200), false, Some("evt-B".into()))
+        .execute(
+            partner_id.clone(),
+            funding.to_string(),
+            Decimal::from(200),
+            false,
+            Some("evt-B".into()),
+        )
         .await
         .unwrap();
     assert_ne!(a, b);
@@ -211,14 +236,15 @@ async fn database_rejects_duplicate_source_pair() {
     .bind(src)
     .execute(&*pool)
     .await;
-    assert!(err.is_err(), "UNIQUE(source_type, source_id) must reject a duplicate event journal");
+    assert!(
+        err.is_err(),
+        "UNIQUE(source_type, source_id) must reject a duplicate event journal"
+    );
 
-    let count: i64 = sqlx::query_scalar(
-        "SELECT count(*) FROM journal_entries WHERE source_id = ?",
-    )
-    .bind(src)
-    .fetch_one(&*pool)
-    .await
-    .unwrap();
+    let count: i64 = sqlx::query_scalar("SELECT count(*) FROM journal_entries WHERE source_id = ?")
+        .bind(src)
+        .fetch_one(&*pool)
+        .await
+        .unwrap();
     assert_eq!(count, 1);
 }

@@ -41,7 +41,10 @@ fn test_currency() -> Currency {
 
 async fn build_pool() -> Arc<sqlx::SqlitePool> {
     let mut path = std::env::temp_dir();
-    path.push(format!("acc_oblock_obe_test_{}.sqlite", uuid::Uuid::new_v4()));
+    path.push(format!(
+        "acc_oblock_obe_test_{}.sqlite",
+        uuid::Uuid::new_v4()
+    ));
     let options = SqliteConnectOptions::from_str(path.to_str().unwrap())
         .unwrap()
         .create_if_missing(true);
@@ -161,10 +164,26 @@ async fn setup_migration_with_obe(
         chrono::Utc::now(),
         None,
         vec![
-            OpeningBalanceLine { account_id: asset, amount: dec!(150), description: None },
-            OpeningBalanceLine { account_id: liability, amount: dec!(50), description: None },
-            OpeningBalanceLine { account_id: capital, amount: dec!(55), description: None },
-            OpeningBalanceLine { account_id: obe, amount: dec!(45), description: None },
+            OpeningBalanceLine {
+                account_id: asset,
+                amount: dec!(150),
+                description: None,
+            },
+            OpeningBalanceLine {
+                account_id: liability,
+                amount: dec!(50),
+                description: None,
+            },
+            OpeningBalanceLine {
+                account_id: capital,
+                amount: dec!(55),
+                description: None,
+            },
+            OpeningBalanceLine {
+                account_id: obe,
+                amount: dec!(45),
+                description: None,
+            },
         ],
     )
     .unwrap();
@@ -191,7 +210,13 @@ async fn setup_migration_with_obe(
     entry.post().unwrap();
     posting_repo.post(&migration, &entry).await.unwrap();
 
-    (migration_id, migration_repo, account_repo, journal_repo, posting_repo)
+    (
+        migration_id,
+        migration_repo,
+        account_repo,
+        journal_repo,
+        posting_repo,
+    )
 }
 
 #[tokio::test]
@@ -215,8 +240,16 @@ async fn lock_rejected_when_obe_nonzero_and_migration_stays_posted() {
     assert!(err.to_string().contains("53"), "unexpected error: {err}");
 
     // …and the rejected attempt must NOT mutate the aggregate (B4 ordering).
-    let after = migration_repo.find_by_id(&migration_id).await.unwrap().unwrap();
-    assert_eq!(after.status, MigrationStatus::Posted, "failed lock must leave migration Posted");
+    let after = migration_repo
+        .find_by_id(&migration_id)
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(
+        after.status,
+        MigrationStatus::Posted,
+        "failed lock must leave migration Posted"
+    );
     assert!(after.locked_at.is_none());
 }
 
@@ -264,7 +297,11 @@ async fn lock_succeeds_after_residual_and_obe_nets_zero() {
     let net = ledger_account_net(&journal_repo, obe).await;
     assert_eq!(net, Decimal::ZERO, "post-lock 53 must present as zero");
 
-    let after = migration_repo.find_by_id(&migration_id).await.unwrap().unwrap();
+    let after = migration_repo
+        .find_by_id(&migration_id)
+        .await
+        .unwrap()
+        .unwrap();
     assert_eq!(after.status, MigrationStatus::Locked);
     assert!(after.residual_applied_at.is_some());
 }

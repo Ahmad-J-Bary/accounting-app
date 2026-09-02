@@ -1,5 +1,5 @@
-use thiserror::Error;
 use domain::shared::errors::DomainError;
+use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum AccountUseCaseError {

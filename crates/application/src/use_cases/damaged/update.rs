@@ -12,11 +12,12 @@ use chrono::{DateTime, Utc};
 use domain::inventory::stock_movement::{MovementType, StockMovement};
 use domain::inventory::DamageFinancialSnapshot;
 use domain::shared::ids::{DamagedItemId, MaterialId};
-use domain::shared::{Currency, Money, MonetaryAmount};
+use domain::shared::{Currency, MonetaryAmount, Money};
 use std::sync::Arc;
 
 use crate::use_cases::damaged::create::{
-    base_to_original, build_damaged_journal_entry, compute_carrying_cost_base, resolve_fx_rate, to_dto,
+    base_to_original, build_damaged_journal_entry, compute_carrying_cost_base, resolve_fx_rate,
+    to_dto,
 };
 
 pub struct UpdateDamagedItemUseCase {
@@ -135,7 +136,10 @@ impl UpdateDamagedItemUseCase {
         if item.reference.is_none() {
             item.reference = Some(self.repo.get_next_reference().await?);
         }
-        let reference = item.reference.clone().unwrap_or_else(|| format!("DAM-{}", item.id));
+        let reference = item
+            .reference
+            .clone()
+            .unwrap_or_else(|| format!("DAM-{}", item.id));
 
         let old_entry = self.journal_repo.find_by_source_id(&reference).await?;
         let mut delete_entries = Vec::new();
@@ -186,7 +190,13 @@ impl UpdateDamagedItemUseCase {
         .await?;
 
         self.repo
-            .save_with_accounting(&item, &[movement], &[entry], Some(&reference), &delete_entries)
+            .save_with_accounting(
+                &item,
+                &[movement],
+                &[entry],
+                Some(&reference),
+                &delete_entries,
+            )
             .await?;
 
         Ok(to_dto(item))

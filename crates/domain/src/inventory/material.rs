@@ -1,5 +1,5 @@
 use crate::shared::errors::DomainError;
-use crate::shared::ids::{MaterialId, MaterialCategoryId, MaterialUnitId};
+use crate::shared::ids::{MaterialCategoryId, MaterialId, MaterialUnitId};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
@@ -71,26 +71,34 @@ impl Material {
         category_ids: Vec<MaterialCategoryId>,
     ) -> Result<Self, DomainError> {
         if name.trim().is_empty() {
-            return Err(DomainError::Invalid("اسم المادة لا يمكن أن يكون فارغًا".into()));
+            return Err(DomainError::Invalid(
+                "اسم المادة لا يمكن أن يكون فارغًا".into(),
+            ));
         }
 
         if code.trim().is_empty() && barcode.trim().is_empty() {
-            return Err(DomainError::Invalid("يجب إدخال إما الكود أو الباركود على الأقل".into()));
+            return Err(DomainError::Invalid(
+                "يجب إدخال إما الكود أو الباركود على الأقل".into(),
+            ));
         }
 
         if unit_defs.is_empty() {
-            return Err(DomainError::Invalid("يجب إضافة وحدة قياس واحدة على الأقل".into()));
+            return Err(DomainError::Invalid(
+                "يجب إضافة وحدة قياس واحدة على الأقل".into(),
+            ));
         }
 
         let now = Utc::now();
         let mid = MaterialId::new();
-        
+
         let mut units = Vec::new();
         let mut found_base = false;
 
         for (u_name, u_factor, u_barcode) in unit_defs {
             let is_base = u_factor == rust_decimal::Decimal::from(1) && !found_base;
-            if is_base { found_base = true; }
+            if is_base {
+                found_base = true;
+            }
 
             units.push(MaterialUnit {
                 id: MaterialUnitId::new(),
@@ -138,7 +146,12 @@ impl Material {
         self.updated_at = Utc::now();
     }
 
-    pub fn add_unit(&mut self, name: String, factor: rust_decimal::Decimal, barcode: Option<String>) {
+    pub fn add_unit(
+        &mut self,
+        name: String,
+        factor: rust_decimal::Decimal,
+        barcode: Option<String>,
+    ) {
         let unit = MaterialUnit {
             id: MaterialUnitId::new(),
             material_id: self.id,

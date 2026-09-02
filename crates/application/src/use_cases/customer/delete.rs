@@ -1,8 +1,8 @@
-use std::sync::Arc;
-use domain::shared::ids::CustomerId;
+use crate::errors::AppError;
 use crate::ports::customer_repository::CustomerRepository;
 use crate::ports::journal_entry_repository::JournalEntryRepository;
-use crate::errors::AppError;
+use domain::shared::ids::CustomerId;
+use std::sync::Arc;
 
 pub struct DeleteCustomerUseCase {
     customer_repo: Arc<dyn CustomerRepository>,
@@ -14,11 +14,16 @@ impl DeleteCustomerUseCase {
         customer_repo: Arc<dyn CustomerRepository>,
         journal_repo: Arc<dyn JournalEntryRepository>,
     ) -> Self {
-        Self { customer_repo, journal_repo }
+        Self {
+            customer_repo,
+            journal_repo,
+        }
     }
 
     pub async fn execute(&self, id: String) -> Result<(), AppError> {
-        let cid = id.parse::<CustomerId>().map_err(|_| AppError::NotFound("معرف العميل غير صالح".into()))?;
+        let cid = id
+            .parse::<CustomerId>()
+            .map_err(|_| AppError::NotFound("معرف العميل غير صالح".into()))?;
 
         let customer = self.customer_repo.find_by_id(&cid).await?;
 

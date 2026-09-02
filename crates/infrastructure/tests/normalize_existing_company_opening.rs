@@ -27,14 +27,14 @@ use application::use_cases::asset::fixed_asset::{CreateAssetRequest, FixedAssetU
 use application::use_cases::journal::ListJournalEntriesUseCase;
 use application::use_cases::opening_balance::create::START_MODE_EXISTING;
 use application::use_cases::opening_balance::types::{
-    CreateOpeningBalanceMigrationCommand, OpeningItemInput, OpeningLineInput, SaveOpeningItemsCommand,
-    SetResidualClassificationCommand,
+    CreateOpeningBalanceMigrationCommand, OpeningItemInput, OpeningLineInput,
+    SaveOpeningItemsCommand, SetResidualClassificationCommand,
 };
 use application::use_cases::opening_balance::{
     ApplyResidualToLedgerUseCase, ApproveOpeningBalanceUseCase, CreateOpeningBalanceUseCase,
-    KIND_AR, KIND_AP, KIND_BANK, KIND_FIXED_ASSET, KIND_INVENTORY, KIND_LOAN,
     LockOpeningBalanceUseCase, PostOpeningBalanceUseCase, SaveOpeningItemsUseCase,
-    SetResidualClassificationUseCase, ValidateOpeningBalanceUseCase,
+    SetResidualClassificationUseCase, ValidateOpeningBalanceUseCase, KIND_AP, KIND_AR, KIND_BANK,
+    KIND_FIXED_ASSET, KIND_INVENTORY, KIND_LOAN,
 };
 use domain::accounting::account::{Account, AccountCategory, AccountPurpose, AccountType};
 use domain::accounting::journal_entry::{JournalEntry, JournalLine, JournalType};
@@ -117,7 +117,10 @@ async fn save_account(
     .unwrap()
     .with_purpose(purpose);
     let id = account.id;
-    SqliteAccountRepository::new(pool.clone()).save(&account).await.unwrap();
+    SqliteAccountRepository::new(pool.clone())
+        .save(&account)
+        .await
+        .unwrap();
     id
 }
 
@@ -161,19 +164,53 @@ async fn seed_accounts(pool: &Arc<sqlx::SqlitePool>) -> Accounts {
     Accounts {
         cash: save_account(pool, "1910", AccountPurpose::General, AccountType::Assets).await,
         bank: save_account(pool, "1911", AccountPurpose::Bank, AccountType::Assets).await,
-        ar: save_account(pool, "1912", AccountPurpose::Receivable, AccountType::Assets).await,
+        ar: save_account(
+            pool,
+            "1912",
+            AccountPurpose::Receivable,
+            AccountType::Assets,
+        )
+        .await,
         inventory: save_account(pool, "1913", AccountPurpose::Inventory, AccountType::Assets).await,
-        fa: save_account(pool, "1914", AccountPurpose::FixedAsset, AccountType::Assets).await,
-        ap: save_account(pool, "2910", AccountPurpose::Payable, AccountType::Liabilities).await,
+        fa: save_account(
+            pool,
+            "1914",
+            AccountPurpose::FixedAsset,
+            AccountType::Assets,
+        )
+        .await,
+        ap: save_account(
+            pool,
+            "2910",
+            AccountPurpose::Payable,
+            AccountType::Liabilities,
+        )
+        .await,
         loan: save_account(pool, "2911", AccountPurpose::Loan, AccountType::Liabilities).await,
-        capital: save_account(pool, "3910", AccountPurpose::PartnerCapital, AccountType::Equity).await,
+        capital: save_account(
+            pool,
+            "3910",
+            AccountPurpose::PartnerCapital,
+            AccountType::Equity,
+        )
+        .await,
         obe,
-        retained: save_account(pool, "3912", AccountPurpose::RetainedEarnings, AccountType::Equity).await,
+        retained: save_account(
+            pool,
+            "3912",
+            AccountPurpose::RetainedEarnings,
+            AccountType::Equity,
+        )
+        .await,
     }
 }
 
 fn line(account: AccountId, amount: &str) -> OpeningLineInput {
-    OpeningLineInput { account_id: account.to_string(), amount: amount.into(), description: None }
+    OpeningLineInput {
+        account_id: account.to_string(),
+        amount: amount.into(),
+        description: None,
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -191,34 +228,55 @@ async fn canonical_full_lifecycle_single_gl_effect_per_subledger() {
     let customer = Customer::new(
         "C-NORM".into(),
         "عميل أول المدة".into(),
-        None, None, None,
-        Decimal::ZERO, Decimal::ZERO, Decimal::from(80),
-        test_currency(), None,
+        None,
+        None,
+        None,
+        Decimal::ZERO,
+        Decimal::ZERO,
+        Decimal::from(80),
+        test_currency(),
+        None,
     )
     .unwrap();
     let customer_id = customer.id.to_string();
-    SqliteCustomerRepository::new(pool.clone()).save(&customer).await.unwrap();
+    SqliteCustomerRepository::new(pool.clone())
+        .save(&customer)
+        .await
+        .unwrap();
 
     let supplier = Supplier::new(
         "S-NORM".into(),
         "مورد أول المدة".into(),
-        None, None, None,
-        Decimal::ZERO, Decimal::ZERO, Decimal::from(70),
-        test_currency(), None,
+        None,
+        None,
+        None,
+        Decimal::ZERO,
+        Decimal::ZERO,
+        Decimal::from(70),
+        test_currency(),
+        None,
     )
     .unwrap();
     let supplier_id = supplier.id.to_string();
-    SqliteSupplierRepository::new(pool.clone()).save(&supplier).await.unwrap();
+    SqliteSupplierRepository::new(pool.clone())
+        .save(&supplier)
+        .await
+        .unwrap();
 
     let material = Material::new(
-        "مادة أول المدة".into(), "M-NORM".into(), "M-NORM".into(),
+        "مادة أول المدة".into(),
+        "M-NORM".into(),
+        "M-NORM".into(),
         Decimal::ZERO,
         vec![("قطعة".into(), Decimal::ONE, None)],
         vec![],
     )
     .unwrap();
     let material_id = material.id.to_string();
-    SqliteMaterialRepository::new(pool.clone()).save(&material).await.unwrap();
+    SqliteMaterialRepository::new(pool.clone())
+        .save(&material)
+        .await
+        .unwrap();
 
     // 1) The migration draft exists FIRST so the opening window is active for
     //    the fixed-asset create_asset calls below (subledger-only).
@@ -255,12 +313,14 @@ async fn canonical_full_lifecycle_single_gl_effect_per_subledger() {
     let migration_id = draft.0.id.clone();
 
     // 2) Fixed assets are SUBLEDGER detail only: Car 150 + Equipment 50.
-    let asset_repo: Arc<dyn AssetRepository> =
-        Arc::new(SqliteAssetRepository::new(pool.clone()));
+    let asset_repo: Arc<dyn AssetRepository> = Arc::new(SqliteAssetRepository::new(pool.clone()));
     let journal_repo: Arc<dyn JournalEntryRepository> =
         Arc::new(SqliteJournalEntryRepository::new(pool.clone()));
     let category = AssetCategory::new("أصول ثابتة".into(), AssetType::Fixed);
-    asset_repo.save_category(&category).await.expect("save category");
+    asset_repo
+        .save_category(&category)
+        .await
+        .expect("save category");
     let fa_uc = FixedAssetUseCases::new(
         asset_repo.clone(),
         journal_repo.clone(),
@@ -315,22 +375,36 @@ async fn canonical_full_lifecycle_single_gl_effect_per_subledger() {
 
     // 3) The opening window defers every GL write: no standalone journals yet,
     //    no FA journal per asset, subledger holds exactly the two assets = 200.
-    assert_eq!(entry_count_by_source(&pool, &car_id.0.to_string()).await, 0,
-        "car must not write a GL journal during opening preparation");
-    assert_eq!(entry_count_by_source(&pool, &equipment_id.0.to_string()).await, 0,
-        "equipment must not write a GL journal during opening preparation");
-    assert_eq!(gl_net(&pool, &accounts.fa).await, Decimal::ZERO,
-        "FA account GL untouched before the migration posts");
+    assert_eq!(
+        entry_count_by_source(&pool, &car_id.0.to_string()).await,
+        0,
+        "car must not write a GL journal during opening preparation"
+    );
+    assert_eq!(
+        entry_count_by_source(&pool, &equipment_id.0.to_string()).await,
+        0,
+        "equipment must not write a GL journal during opening preparation"
+    );
+    assert_eq!(
+        gl_net(&pool, &accounts.fa).await,
+        Decimal::ZERO,
+        "FA account GL untouched before the migration posts"
+    );
 
-    let fa_rows: i64 =
-        sqlx::query_scalar("SELECT COUNT(*) FROM fixed_assets").fetch_one(&*pool).await.unwrap();
+    let fa_rows: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM fixed_assets")
+        .fetch_one(&*pool)
+        .await
+        .unwrap();
     let fa_sum: f64 = sqlx::query_scalar(
         "SELECT COALESCE(SUM(CAST(purchase_cost AS REAL)), 0.0) FROM fixed_assets",
     )
     .fetch_one(&*pool)
     .await
     .unwrap();
-    assert_eq!(fa_rows, 2, "subledger preserves the individual assets (Car + Equipment)");
+    assert_eq!(
+        fa_rows, 2,
+        "subledger preserves the individual assets (Car + Equipment)"
+    );
     assert_eq!(Decimal::try_from(fa_sum).unwrap(), Decimal::from(200));
 
     // 4) Save the sub-ledger item links (all six kinds; FA = 150 + 50).
@@ -346,13 +420,55 @@ async fn canonical_full_lifecycle_single_gl_effect_per_subledger() {
     .execute(SaveOpeningItemsCommand {
         migration_id: migration_id.clone(),
         items: vec![
-            OpeningItemInput { kind: KIND_AR.into(), entity_id: customer_id, reference: None, amount: "80".into(), qty: "0".into() },
-            OpeningItemInput { kind: KIND_AP.into(), entity_id: supplier_id, reference: None, amount: "70".into(), qty: "0".into() },
-            OpeningItemInput { kind: KIND_INVENTORY.into(), entity_id: material_id, reference: None, amount: "120".into(), qty: "10".into() },
-            OpeningItemInput { kind: KIND_FIXED_ASSET.into(), entity_id: car_id.0.to_string(), reference: None, amount: "150".into(), qty: "1".into() },
-            OpeningItemInput { kind: KIND_FIXED_ASSET.into(), entity_id: equipment_id.0.to_string(), reference: None, amount: "50".into(), qty: "1".into() },
-            OpeningItemInput { kind: KIND_BANK.into(), entity_id: accounts.bank.to_string(), reference: Some("حساب البنوك".into()), amount: "40".into(), qty: "0".into() },
-            OpeningItemInput { kind: KIND_LOAN.into(), entity_id: accounts.loan.to_string(), reference: Some("حساب القروض".into()), amount: "50".into(), qty: "0".into() },
+            OpeningItemInput {
+                kind: KIND_AR.into(),
+                entity_id: customer_id,
+                reference: None,
+                amount: "80".into(),
+                qty: "0".into(),
+            },
+            OpeningItemInput {
+                kind: KIND_AP.into(),
+                entity_id: supplier_id,
+                reference: None,
+                amount: "70".into(),
+                qty: "0".into(),
+            },
+            OpeningItemInput {
+                kind: KIND_INVENTORY.into(),
+                entity_id: material_id,
+                reference: None,
+                amount: "120".into(),
+                qty: "10".into(),
+            },
+            OpeningItemInput {
+                kind: KIND_FIXED_ASSET.into(),
+                entity_id: car_id.0.to_string(),
+                reference: None,
+                amount: "150".into(),
+                qty: "1".into(),
+            },
+            OpeningItemInput {
+                kind: KIND_FIXED_ASSET.into(),
+                entity_id: equipment_id.0.to_string(),
+                reference: None,
+                amount: "50".into(),
+                qty: "1".into(),
+            },
+            OpeningItemInput {
+                kind: KIND_BANK.into(),
+                entity_id: accounts.bank.to_string(),
+                reference: Some("حساب البنوك".into()),
+                amount: "40".into(),
+                qty: "0".into(),
+            },
+            OpeningItemInput {
+                kind: KIND_LOAN.into(),
+                entity_id: accounts.loan.to_string(),
+                reference: Some("حساب القروض".into()),
+                amount: "50".into(),
+                qty: "0".into(),
+            },
         ],
     })
     .await
@@ -387,8 +503,11 @@ async fn canonical_full_lifecycle_single_gl_effect_per_subledger() {
     .expect("migration must post");
 
     let aggregate = format!("opening_balance:{migration_id}");
-    assert_eq!(entry_count_by_source(&pool, &aggregate).await, 1,
-        "exactly one canonical opening GL posting");
+    assert_eq!(
+        entry_count_by_source(&pool, &aggregate).await,
+        1,
+        "exactly one canonical opening GL posting"
+    );
 
     let aggregate_lines: i64 = sqlx::query_scalar(
         "SELECT COUNT(*) FROM journal_lines jl
@@ -399,7 +518,10 @@ async fn canonical_full_lifecycle_single_gl_effect_per_subledger() {
     .fetch_one(&*pool)
     .await
     .unwrap();
-    assert_eq!(aggregate_lines, 9, "the aggregate carries exactly the nine opening lines");
+    assert_eq!(
+        aggregate_lines, 9,
+        "the aggregate carries exactly the nine opening lines"
+    );
 
     // No temporary/preparation journals may survive in the ledger.
     let standalone_aob: i64 = sqlx::query_scalar(
@@ -409,54 +531,70 @@ async fn canonical_full_lifecycle_single_gl_effect_per_subledger() {
     .fetch_one(&*pool)
     .await
     .unwrap();
-    assert_eq!(standalone_aob, 1, "the ONLY posted AccountOpeningBalance is the aggregate");
+    assert_eq!(
+        standalone_aob, 1,
+        "the ONLY posted AccountOpeningBalance is the aggregate"
+    );
     let material_j: i64 = sqlx::query_scalar(
         "SELECT COUNT(*) FROM journal_entries WHERE journal_type = 'MaterialOpeningBalance'",
     )
     .fetch_one(&*pool)
     .await
     .unwrap();
-    assert_eq!(material_j, 0, "no deferred MaterialOpeningBalance journal may appear");
+    assert_eq!(
+        material_j, 0,
+        "no deferred MaterialOpeningBalance journal may appear"
+    );
     let fa_tag: i64 = sqlx::query_scalar(
         "SELECT COUNT(*) FROM journal_entries WHERE source_type = 'fixed_asset_opening'",
     )
     .fetch_one(&*pool)
     .await
     .unwrap();
-    assert_eq!(fa_tag, 0, "no fixed_asset_opening standalone journal may appear");
+    assert_eq!(
+        fa_tag, 0,
+        "no fixed_asset_opening standalone journal may appear"
+    );
 
     // 6) Every opening account nets EXACTLY ONCE in the live ledger.
     assert_eq!(gl_net(&pool, &accounts.cash).await, Decimal::from(25));
     assert_eq!(gl_net(&pool, &accounts.bank).await, Decimal::from(40));
     assert_eq!(gl_net(&pool, &accounts.ar).await, Decimal::from(80));
     assert_eq!(gl_net(&pool, &accounts.inventory).await, Decimal::from(120));
-    assert_eq!(gl_net(&pool, &accounts.fa).await, Decimal::from(200),
-        "GL fixed-asset opening = 200 exactly once while the subledger keeps 150 + 50");
+    assert_eq!(
+        gl_net(&pool, &accounts.fa).await,
+        Decimal::from(200),
+        "GL fixed-asset opening = 200 exactly once while the subledger keeps 150 + 50"
+    );
     assert_eq!(gl_net(&pool, &accounts.ap).await, Decimal::from(-70));
     assert_eq!(gl_net(&pool, &accounts.loan).await, Decimal::from(-50));
     assert_eq!(gl_net(&pool, &accounts.capital).await, Decimal::from(-300));
-    assert_eq!(gl_net(&pool, &accounts.obe).await, Decimal::from(-45),
-        "residual sits on OBE 53 before reclassification");
+    assert_eq!(
+        gl_net(&pool, &accounts.obe).await,
+        Decimal::from(-45),
+        "residual sits on OBE 53 before reclassification"
+    );
 
     // Report surface: exactly one ledger movement per account.
     let queries = AccountQueries::new(account_repo.clone(), journal_repo.clone());
     for acc in [accounts.ar, accounts.fa, accounts.bank, accounts.inventory] {
         let ledger = queries.get_ledger(&[acc]).await.expect("ledger");
-        assert_eq!(ledger.lines.len(), 1, "exactly one GL opening movement per sub-ledger");
+        assert_eq!(
+            ledger.lines.len(),
+            1,
+            "exactly one GL opening movement per sub-ledger"
+        );
     }
 
     // 7) Optional residual classification: Retained Earnings 45, exactly once.
-    SetResidualClassificationUseCase::new(
-        migration_repo.clone(),
-        account_repo.clone(),
-    )
-    .execute(SetResidualClassificationCommand {
-        migration_id: migration_id.clone(),
-        classification: "RetainedEarnings".into(),
-        residual_account_id: Some(accounts.retained.to_string()),
-    })
-    .await
-    .expect("classify residual");
+    SetResidualClassificationUseCase::new(migration_repo.clone(), account_repo.clone())
+        .execute(SetResidualClassificationCommand {
+            migration_id: migration_id.clone(),
+            classification: "RetainedEarnings".into(),
+            residual_account_id: Some(accounts.retained.to_string()),
+        })
+        .await
+        .expect("classify residual");
     ApplyResidualToLedgerUseCase::new(
         migration_repo.clone(),
         account_repo.clone(),
@@ -468,12 +606,21 @@ async fn canonical_full_lifecycle_single_gl_effect_per_subledger() {
     .expect("apply residual");
 
     let residual = format!("residual_classification:{migration_id}");
-    assert_eq!(entry_count_by_source(&pool, &residual).await, 1,
-        "exactly one residual classification journal");
-    assert_eq!(gl_net(&pool, &accounts.obe).await, Decimal::ZERO,
-        "OBE 53 nets to zero after the classification");
-    assert_eq!(gl_net(&pool, &accounts.retained).await, Decimal::from(-45),
-        "retained earnings holds exactly one 45 classification effect (credited once)");
+    assert_eq!(
+        entry_count_by_source(&pool, &residual).await,
+        1,
+        "exactly one residual classification journal"
+    );
+    assert_eq!(
+        gl_net(&pool, &accounts.obe).await,
+        Decimal::ZERO,
+        "OBE 53 nets to zero after the classification"
+    );
+    assert_eq!(
+        gl_net(&pool, &accounts.retained).await,
+        Decimal::from(-45),
+        "retained earnings holds exactly one 45 classification effect (credited once)"
+    );
 
     // 8) Lock.
     let locked = LockOpeningBalanceUseCase::new(
@@ -494,16 +641,23 @@ async fn canonical_full_lifecycle_single_gl_effect_per_subledger() {
         .execute_posted(None, None, None, None)
         .await
         .unwrap();
-    assert_eq!(feed.len(), 2, "feed = aggregate + residual classification only");
-    let mut sources: Vec<Option<String>> =
-        feed.iter().map(|e| e.source_id.clone()).collect();
+    assert_eq!(
+        feed.len(),
+        2,
+        "feed = aggregate + residual classification only"
+    );
+    let mut sources: Vec<Option<String>> = feed.iter().map(|e| e.source_id.clone()).collect();
     sources.sort();
-    let mut expected: Vec<Option<String>> =
-        vec![Some(aggregate.clone()), Some(residual.clone())];
+    let mut expected: Vec<Option<String>> = vec![Some(aggregate.clone()), Some(residual.clone())];
     expected.sort();
-    assert_eq!(sources, expected, "no temporary/preparation journal may reach the feed");
-    assert!(feed.iter().all(|e| e.reversal_of_entry_id.is_none()),
-        "no reversal contra may reach the feed");
+    assert_eq!(
+        sources, expected,
+        "no temporary/preparation journal may reach the feed"
+    );
+    assert!(
+        feed.iter().all(|e| e.reversal_of_entry_id.is_none()),
+        "no reversal contra may reach the feed"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -525,8 +679,20 @@ async fn legacy_standalone_opening_journal_auto_reversed_even_on_amount_mismatch
     // 1) NO migration exists yet → the opening window is closed → a customer
     //    opening books a standalone AccountOpeningBalance journal (Dr AR 90 /
     //    Cr 53 90) against the seeded OBE 53.
-    let ar = save_account(&pool, "1912", AccountPurpose::Receivable, AccountType::Assets).await;
-    let capital = save_account(&pool, "3910", AccountPurpose::PartnerCapital, AccountType::Equity).await;
+    let ar = save_account(
+        &pool,
+        "1912",
+        AccountPurpose::Receivable,
+        AccountType::Assets,
+    )
+    .await;
+    let capital = save_account(
+        &pool,
+        "3910",
+        AccountPurpose::PartnerCapital,
+        AccountType::Equity,
+    )
+    .await;
     let cash = save_account(&pool, "1910", AccountPurpose::General, AccountType::Assets).await;
     let obe = account_id_by_code(&pool, "53").await;
 
@@ -566,11 +732,7 @@ async fn legacy_standalone_opening_journal_auto_reversed_even_on_amount_mismatch
         notes: None,
         source_system: None,
         source_reference: None,
-        lines: vec![
-            line(ar, "80"),
-            line(cash, "25"),
-            line(capital, "105"),
-        ],
+        lines: vec![line(ar, "80"), line(cash, "25"), line(capital, "105")],
     })
     .await
     .expect("create draft migration");
@@ -580,13 +742,21 @@ async fn legacy_standalone_opening_journal_auto_reversed_even_on_amount_mismatch
     let customer = Customer::new(
         "C-LEG".into(),
         "عميل قديم".into(),
-        None, None, None,
-        Decimal::ZERO, Decimal::ZERO, Decimal::from(80),
-        test_currency(), None,
+        None,
+        None,
+        None,
+        Decimal::ZERO,
+        Decimal::ZERO,
+        Decimal::from(80),
+        test_currency(),
+        None,
     )
     .unwrap();
     let customer_id = customer.id.to_string();
-    SqliteCustomerRepository::new(pool.clone()).save(&customer).await.unwrap();
+    SqliteCustomerRepository::new(pool.clone())
+        .save(&customer)
+        .await
+        .unwrap();
     SaveOpeningItemsUseCase::new(
         migration_repo.clone(),
         Arc::new(SqliteOpeningItemRepository::new(pool.clone())),
@@ -598,9 +768,13 @@ async fn legacy_standalone_opening_journal_auto_reversed_even_on_amount_mismatch
     )
     .execute(SaveOpeningItemsCommand {
         migration_id: migration_id.clone(),
-        items: vec![
-            OpeningItemInput { kind: KIND_AR.into(), entity_id: customer_id, reference: None, amount: "80".into(), qty: "0".into() },
-        ],
+        items: vec![OpeningItemInput {
+            kind: KIND_AR.into(),
+            entity_id: customer_id,
+            reference: None,
+            amount: "80".into(),
+            qty: "0".into(),
+        }],
     })
     .await
     .expect("save AR item");
@@ -634,24 +808,37 @@ async fn legacy_standalone_opening_journal_auto_reversed_even_on_amount_mismatch
     .expect("migration must post");
 
     // The legacy original is Reversed and its contra is linked back to it.
-    let (legacy_status, contra_link, contra_type): (String, Option<String>, String) = sqlx::query_as(
-        "SELECT je.status, r.reversal_of_entry_id, r.journal_type
+    let (legacy_status, contra_link, contra_type): (String, Option<String>, String) =
+        sqlx::query_as(
+            "SELECT je.status, r.reversal_of_entry_id, r.journal_type
          FROM journal_entries je
          LEFT JOIN journal_entries r ON r.reversal_of_entry_id = je.id
          WHERE je.source_id = 'legacy_customer_opening'",
-    )
-    .fetch_one(&*pool)
-    .await
-    .unwrap();
-    assert_eq!(legacy_status, "Reversed", "legacy standalone must be auto-reversed");
+        )
+        .fetch_one(&*pool)
+        .await
+        .unwrap();
+    assert_eq!(
+        legacy_status, "Reversed",
+        "legacy standalone must be auto-reversed"
+    );
     assert!(contra_link.is_some(), "reversal contra must exist");
-    assert_eq!(contra_type, "AccountOpeningBalance", "contra inherits the original's type");
+    assert_eq!(
+        contra_type, "AccountOpeningBalance",
+        "contra inherits the original's type"
+    );
 
     // AR nets exactly the single canonical effect (80): 90 − 90 + 80 = 80.
-    assert_eq!(gl_net(&pool, &ar).await, Decimal::from(80),
-        "AR GL = 80 exactly once after the auto-reversal");
-    assert_eq!(gl_net(&pool, &obe).await, Decimal::ZERO,
-        "OBE 53 nets zero (standalone 90 + reversal −90, aggregate residual zero)");
+    assert_eq!(
+        gl_net(&pool, &ar).await,
+        Decimal::from(80),
+        "AR GL = 80 exactly once after the auto-reversal"
+    );
+    assert_eq!(
+        gl_net(&pool, &obe).await,
+        Decimal::ZERO,
+        "OBE 53 nets zero (standalone 90 + reversal −90, aggregate residual zero)"
+    );
 
     // Exactly one aggregate posting exists.
     let aggregate = format!("opening_balance:{migration_id}");
@@ -660,7 +847,11 @@ async fn legacy_standalone_opening_journal_auto_reversed_even_on_amount_mismatch
     // Report surface: the AR ledger shows ONLY the aggregate movement.
     let queries = AccountQueries::new(account_repo.clone(), journal_repo.clone());
     let ar_ledger = queries.get_ledger(&[ar]).await.expect("AR ledger");
-    assert_eq!(ar_ledger.lines.len(), 1, "report surface hides the reversal pair");
+    assert_eq!(
+        ar_ledger.lines.len(),
+        1,
+        "report surface hides the reversal pair"
+    );
 
     // Feed: the POSTED-LEDGER policy (ReversalScope) keeps ONLY the aggregate —
     // the reversal contra is excluded server-side and the Reversed legacy
@@ -669,10 +860,14 @@ async fn legacy_standalone_opening_journal_auto_reversed_even_on_amount_mismatch
         .execute_posted(None, None, None, None)
         .await
         .unwrap();
-    let aggregate_entry = feed.iter().find(|e| e.source_id.as_deref() == Some(aggregate.as_str()));
+    let aggregate_entry = feed
+        .iter()
+        .find(|e| e.source_id.as_deref() == Some(aggregate.as_str()));
     assert!(aggregate_entry.is_some(), "aggregate is in the feed");
-    assert!(feed.iter().all(|e| e.reversal_of_entry_id.is_none()),
-        "neither side of a reversal pair reaches the posted report feed");
+    assert!(
+        feed.iter().all(|e| e.reversal_of_entry_id.is_none()),
+        "neither side of a reversal pair reaches the posted report feed"
+    );
     assert!(feed.iter().all(|e| e.status == "Posted"));
 }
 

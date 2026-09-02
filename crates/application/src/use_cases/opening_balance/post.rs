@@ -1,7 +1,7 @@
-use std::sync::Arc;
 use domain::accounting::journal_entry::{JournalEntry, JournalLine, JournalType};
 use domain::accounting::JournalEntryStatus;
 use domain::shared::{Currency, MonetaryAmount};
+use std::sync::Arc;
 
 use crate::errors::AppError;
 use crate::ports::account_repository::AccountRepository;
@@ -10,7 +10,9 @@ use crate::ports::opening_item_repository::OpeningItemRepository;
 use crate::ports::opening_migration_repository::OpeningMigrationRepository;
 use crate::ports::opening_posting_repository::OpeningPostingRepository;
 use crate::use_cases::journal::ReverseJournalEntryUseCase;
-use crate::use_cases::opening_balance::reconcile::{readiness_blockers, GetOpeningReconciliationUseCase};
+use crate::use_cases::opening_balance::reconcile::{
+    readiness_blockers, GetOpeningReconciliationUseCase,
+};
 use crate::use_cases::opening_balance::types::{OpeningMigrationDto, PostOpeningBalanceResult};
 
 /// Migration aggregate journals (and their artifacts) carry these source_id
@@ -64,7 +66,10 @@ impl PostOpeningBalanceUseCase {
     }
 
     pub async fn execute(&self, id: String) -> Result<PostOpeningBalanceResult, AppError> {
-        let mut migration = self.repo.find_by_id(&id).await?
+        let mut migration = self
+            .repo
+            .find_by_id(&id)
+            .await?
             .ok_or_else(|| AppError::NotFound("ترحيل الرصيد الافتتاحي غير موجود".into()))?;
 
         if migration.lines.is_empty() {
@@ -121,8 +126,13 @@ impl PostOpeningBalanceUseCase {
 
         let mut lines: Vec<JournalLine> = Vec::with_capacity(migration.lines.len());
         for line in &migration.lines {
-            let account = self.account_repo.find_by_id(&line.account_id).await?
-                .ok_or_else(|| AppError::NotFound(format!("الحساب غير موجود: {}", line.account_id)))?;
+            let account = self
+                .account_repo
+                .find_by_id(&line.account_id)
+                .await?
+                .ok_or_else(|| {
+                    AppError::NotFound(format!("الحساب غير موجود: {}", line.account_id))
+                })?;
 
             // Opening balances carry balance-sheet items only. P&L accounts
             // (Revenue/Expenses) are never posted to the Opening Balance; the
@@ -138,13 +148,25 @@ impl PostOpeningBalanceUseCase {
                 domain::accounting::account::NormalBalance::Debit
             );
 
-            let description = line.description.clone()
+            let description = line
+                .description
+                .clone()
                 .unwrap_or_else(|| format!("رصيد افتتاحي — {}", account.name_ar));
 
             lines.push(if debit_nature {
-                JournalLine::new(line.account_id, amount.clone(), MonetaryAmount::zero(base_currency.clone()), description)
+                JournalLine::new(
+                    line.account_id,
+                    amount.clone(),
+                    MonetaryAmount::zero(base_currency.clone()),
+                    description,
+                )
             } else {
-                JournalLine::new(line.account_id, MonetaryAmount::zero(base_currency.clone()), amount.clone(), description)
+                JournalLine::new(
+                    line.account_id,
+                    MonetaryAmount::zero(base_currency.clone()),
+                    amount.clone(),
+                    description,
+                )
             });
         }
 
@@ -155,7 +177,8 @@ impl PostOpeningBalanceUseCase {
             migration.cutover_date,
             "قيد ترحيل رصيد افتتاح الشركة".to_string(),
             Some(format!("opening_balance:{}", migration.id)),
-        ).map_err(|e| AppError::Invalid(e.to_string()))?;
+        )
+        .map_err(|e| AppError::Invalid(e.to_string()))?;
 
         entry.post().map_err(|e| AppError::Invalid(e.to_string()))?;
 
@@ -187,7 +210,10 @@ impl PostOpeningBalanceUseCase {
     ) -> Result<Vec<JournalEntry>, AppError> {
         use std::collections::HashSet;
 
-        let migration = self.repo.find_by_id(id).await?
+        let migration = self
+            .repo
+            .find_by_id(id)
+            .await?
             .ok_or_else(|| AppError::NotFound("ترحيل الرصيد الافتتاحي غير موجود".into()))?;
 
         // The set of accounts the migration's opening lines cover. Any posted
@@ -196,8 +222,13 @@ impl PostOpeningBalanceUseCase {
         // irrelevant because the aggregate is the canonical GL owner.
         let mut expected: HashSet<String> = HashSet::new();
         for line in &migration.lines {
-            let account = self.account_repo.find_by_id(&line.account_id).await?
-                .ok_or_else(|| AppError::NotFound(format!("الحساب غير موجود: {}", line.account_id)))?;
+            let account = self
+                .account_repo
+                .find_by_id(&line.account_id)
+                .await?
+                .ok_or_else(|| {
+                    AppError::NotFound(format!("الحساب غير موجود: {}", line.account_id))
+                })?;
             expected.insert(account.id.0.to_string());
         }
 

@@ -6,7 +6,7 @@ use domain::accounting::{JournalEntry, JournalEntryStatus};
 use crate::errors::AppError;
 use crate::ports::account_repository::AccountRepository;
 use crate::ports::journal_entry_repository::{JournalEntryRepository, ReversalScope};
-use crate::use_cases::fiscal_period::types::{ComputedPeriodProfitDto, ComputePeriodProfitCommand};
+use crate::use_cases::fiscal_period::types::{ComputePeriodProfitCommand, ComputedPeriodProfitDto};
 
 /// Computes net profit for an explicit accounting window (Sec 19 / Sec 20) —
 /// NOT derived from any opening migration. The ledger (posted journals) is the
@@ -62,7 +62,9 @@ impl ComputePeriodNetProfitUseCase {
             .await?;
 
         let accounts = self.account_repo.list_all().await?;
-        let totals = crate::use_cases::opening_balance::net_profit::compute_ledger_totals(&accounts, &entries);
+        let totals = crate::use_cases::opening_balance::net_profit::compute_ledger_totals(
+            &accounts, &entries,
+        );
 
         Ok(ComputedPeriodProfitDto {
             net_profit: totals.net.round_dp(2).to_string(),
@@ -143,13 +145,19 @@ mod tests {
     fn explicit_window_totals_as_expected() {
         let rev = account("4001", AccountType::Revenue);
         let exp = account("5001", AccountType::Expenses);
-        let totals = period_ledger_totals(&[rev.clone(), exp.clone()], &[
-            posted_entry(rev.id, 0, 1000),
-            posted_entry(exp.id, 400, 0),
-        ]);
+        let totals = period_ledger_totals(
+            &[rev.clone(), exp.clone()],
+            &[posted_entry(rev.id, 0, 1000), posted_entry(exp.id, 400, 0)],
+        );
         assert_eq!(totals.revenue, Decimal::new(1000, 0));
         assert_eq!(totals.expenses, Decimal::new(400, 0));
-        assert_eq!(totals.net.round_dp(2).round_dp_with_strategy(2, RoundingStrategy::ToZero), Decimal::new(600, 0));
+        assert_eq!(
+            totals
+                .net
+                .round_dp(2)
+                .round_dp_with_strategy(2, RoundingStrategy::ToZero),
+            Decimal::new(600, 0)
+        );
     }
 
     #[test]
@@ -157,10 +165,13 @@ mod tests {
         let rev = account("4001", AccountType::Revenue);
         let drawings = account("4401", AccountType::Equity)
             .with_purpose(domain::accounting::account::AccountPurpose::PartnerDrawings);
-        let totals = period_ledger_totals(&[rev.clone(), drawings.clone()], &[
-            posted_entry(rev.id, 0, 1000),
-            posted_entry(drawings.id, 250, 0),
-        ]);
+        let totals = period_ledger_totals(
+            &[rev.clone(), drawings.clone()],
+            &[
+                posted_entry(rev.id, 0, 1000),
+                posted_entry(drawings.id, 250, 0),
+            ],
+        );
         assert_eq!(totals.expenses, Decimal::ZERO);
         assert_eq!(totals.net, Decimal::new(1000, 0));
     }
@@ -177,7 +188,12 @@ mod tests {
     #[test]
     fn parse_period_bound_parses_utc() {
         let dt = parse_period_bound("2026-01-01T00:00:00Z").unwrap();
-        assert_eq!(dt, DateTime::parse_from_rfc3339("2026-01-01T00:00:00Z").unwrap().with_timezone(&Utc));
+        assert_eq!(
+            dt,
+            DateTime::parse_from_rfc3339("2026-01-01T00:00:00Z")
+                .unwrap()
+                .with_timezone(&Utc)
+        );
     }
 
     #[test]

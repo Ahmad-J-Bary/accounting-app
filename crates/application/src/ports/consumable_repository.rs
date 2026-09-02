@@ -1,7 +1,7 @@
-use async_trait::async_trait;
-use domain::assets::{Consumable, ConsumableId, AssetMovement};
-use domain::accounting::journal_entry::JournalEntry;
 use crate::errors::AppError;
+use async_trait::async_trait;
+use domain::accounting::journal_entry::JournalEntry;
+use domain::assets::{AssetMovement, Consumable, ConsumableId};
 
 #[async_trait]
 pub trait ConsumableRepository: Send + Sync {

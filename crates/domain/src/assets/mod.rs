@@ -1,11 +1,11 @@
-pub mod fixed_asset;
-pub mod consumable;
 pub mod category;
-pub mod movement;
+pub mod consumable;
 pub mod depreciation;
+pub mod fixed_asset;
+pub mod movement;
 
-pub use fixed_asset::*;
-pub use consumable::*;
 pub use category::*;
-pub use movement::*;
+pub use consumable::*;
 pub use depreciation::*;
+pub use fixed_asset::*;
+pub use movement::*;

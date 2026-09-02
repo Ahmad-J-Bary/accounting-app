@@ -1,10 +1,10 @@
-use std::sync::Arc;
 use chrono::Utc;
-use rust_decimal::Decimal;
 use domain::accounting::account::Account;
 use domain::accounting::journal_entry::{JournalEntry, JournalLine, JournalType};
 use domain::shared::money::Money;
 use domain::shared::MonetaryAmount;
+use rust_decimal::Decimal;
+use std::sync::Arc;
 
 use crate::ports::account_repository::AccountRepository;
 use crate::ports::journal_entry_repository::JournalEntryRepository;
@@ -43,17 +43,16 @@ pub async fn book_opening_journal(
         Decimal::ONE
     };
 
-    let amount_ma = MonetaryAmount::new(
-        Money::new(amount, account.currency.clone()),
-        fx_rate,
-    );
+    let amount_ma = MonetaryAmount::new(Money::new(amount, account.currency.clone()), fx_rate);
     let zero_ma = MonetaryAmount::zero(account.currency.clone());
 
     let equity_account = account_repo
         .find_by_code("53")
         .await
         .map_err(|e| AccountUseCaseError::RepositoryError(e.to_string()))?
-        .ok_or_else(|| AccountUseCaseError::Validation("حساب الرصيد الافتتاحي غير موجود: 53".into()))?;
+        .ok_or_else(|| {
+            AccountUseCaseError::Validation("حساب الرصيد الافتتاحي غير موجود: 53".into())
+        })?;
 
     let mut lines = Vec::new();
     if debit_nature {

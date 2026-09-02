@@ -1,16 +1,15 @@
-﻿use rust_decimal::Decimal;
-use std::str::FromStr;
-use domain::shared::currency::Currency;
 use crate::errors::AppError;
+use domain::shared::currency::Currency;
+use rust_decimal::Decimal;
+use std::str::FromStr;
 
 /// ÙŠØ­ÙˆÙ„ Ù†ØµØ§Ù‹ Ø¥Ù„Ù‰ Decimal Ù…Ø¹ Ù…Ø¹Ø§Ù„Ø¬Ø© Ø§Ù„Ø£Ø®Ø·Ø§Ø¡ Ø¨Ø±Ø³Ø§Ù„Ø© Ù…Ø®ØµØµØ©
 pub fn parse_decimal(val: Option<&str>, field_name: &str) -> Result<Decimal, AppError> {
     match val {
-        Some(s) if !s.trim().is_empty() => {
-            Decimal::from_str(s)
-                .map_err(|_| AppError::Invalid(format!("Ù‚ÙŠÙ…Ø© Ø­Ù‚Ù„ '{}' ØºÙŠØ± ØµØ§Ù„Ø­Ø©", field_name)))
-        }
-        _ => Ok(Decimal::ZERO)
+        Some(s) if !s.trim().is_empty() => Decimal::from_str(s).map_err(|_| {
+            AppError::Invalid(format!("Ù‚ÙŠÙ…Ø© Ø­Ù‚Ù„ '{}' ØºÙŠØ± ØµØ§Ù„Ø­Ø©", field_name))
+        }),
+        _ => Ok(Decimal::ZERO),
     }
 }
 
@@ -24,6 +23,6 @@ pub fn parse_currency(val: Option<&str>) -> Currency {
 pub fn ensure_code(provided: Option<String>, default: String) -> String {
     match provided {
         Some(c) if !c.trim().is_empty() => c,
-        _ => default
+        _ => default,
     }
 }

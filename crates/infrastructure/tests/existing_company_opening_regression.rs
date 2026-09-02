@@ -40,13 +40,14 @@ use application::ports::supplier_repository::SupplierRepository;
 use application::use_cases::account::AccountQueries;
 use application::use_cases::opening_balance::create::START_MODE_EXISTING;
 use application::use_cases::opening_balance::types::{
-    CreateOpeningBalanceMigrationCommand, OpeningItemInput, OpeningLineInput, SaveOpeningItemsCommand,
+    CreateOpeningBalanceMigrationCommand, OpeningItemInput, OpeningLineInput,
+    SaveOpeningItemsCommand,
 };
 use application::use_cases::opening_balance::{
     ApproveOpeningBalanceUseCase, CreateOpeningBalanceUseCase, GetOpeningPositionControlUseCase,
-    GetOpeningReconciliationUseCase, KIND_AR, KIND_AP, KIND_FIXED_ASSET, KIND_INVENTORY, KIND_LOAN,
-    LockOpeningBalanceUseCase, PostOpeningBalanceUseCase, SaveOpeningItemsUseCase,
-    ValidateOpeningBalanceUseCase,
+    GetOpeningReconciliationUseCase, LockOpeningBalanceUseCase, PostOpeningBalanceUseCase,
+    SaveOpeningItemsUseCase, ValidateOpeningBalanceUseCase, KIND_AP, KIND_AR, KIND_FIXED_ASSET,
+    KIND_INVENTORY, KIND_LOAN,
 };
 use chrono::{DateTime, Utc};
 use domain::accounting::account::{Account, AccountCategory, AccountPurpose, AccountType};
@@ -75,7 +76,10 @@ fn test_currency() -> Currency {
 
 async fn build_pool() -> Arc<sqlx::SqlitePool> {
     let mut path = std::env::temp_dir();
-    path.push(format!("acc_existing_company_opening_{}.sqlite", uuid::Uuid::new_v4()));
+    path.push(format!(
+        "acc_existing_company_opening_{}.sqlite",
+        uuid::Uuid::new_v4()
+    ));
     let options = SqliteConnectOptions::from_str(path.to_str().unwrap())
         .unwrap()
         .create_if_missing(true);
@@ -147,7 +151,10 @@ async fn save_account(
     .unwrap()
     .with_purpose(purpose);
     let id = account.id;
-    SqliteAccountRepository::new(pool.clone()).save(&account).await.unwrap();
+    SqliteAccountRepository::new(pool.clone())
+        .save(&account)
+        .await
+        .unwrap();
     id
 }
 
@@ -169,12 +176,36 @@ struct Accounts {
 async fn seed_accounts(pool: &Arc<sqlx::SqlitePool>) -> Accounts {
     Accounts {
         cash: save_account(pool, "1910", AccountPurpose::General, AccountType::Assets).await,
-        ar: save_account(pool, "1912", AccountPurpose::Receivable, AccountType::Assets).await,
+        ar: save_account(
+            pool,
+            "1912",
+            AccountPurpose::Receivable,
+            AccountType::Assets,
+        )
+        .await,
         inventory: save_account(pool, "1913", AccountPurpose::Inventory, AccountType::Assets).await,
-        fa: save_account(pool, "1914", AccountPurpose::FixedAsset, AccountType::Assets).await,
-        ap: save_account(pool, "2910", AccountPurpose::Payable, AccountType::Liabilities).await,
+        fa: save_account(
+            pool,
+            "1914",
+            AccountPurpose::FixedAsset,
+            AccountType::Assets,
+        )
+        .await,
+        ap: save_account(
+            pool,
+            "2910",
+            AccountPurpose::Payable,
+            AccountType::Liabilities,
+        )
+        .await,
         loan: account_id_by_code(pool, "224").await,
-        capital: save_account(pool, "3910", AccountPurpose::PartnerCapital, AccountType::Equity).await,
+        capital: save_account(
+            pool,
+            "3910",
+            AccountPurpose::PartnerCapital,
+            AccountType::Equity,
+        )
+        .await,
         historical_equity: save_account(
             pool,
             "3912",
@@ -207,7 +238,10 @@ async fn seed_entities(pool: &Arc<sqlx::SqlitePool>) -> Entities {
         None,
     )
     .unwrap();
-    SqliteCustomerRepository::new(pool.clone()).save(&customer).await.unwrap();
+    SqliteCustomerRepository::new(pool.clone())
+        .save(&customer)
+        .await
+        .unwrap();
 
     let supplier = Supplier::new(
         "S-P6".into(),
@@ -222,7 +256,10 @@ async fn seed_entities(pool: &Arc<sqlx::SqlitePool>) -> Entities {
         None,
     )
     .unwrap();
-    SqliteSupplierRepository::new(pool.clone()).save(&supplier).await.unwrap();
+    SqliteSupplierRepository::new(pool.clone())
+        .save(&supplier)
+        .await
+        .unwrap();
 
     let material = Material::new(
         "مادة أول المدة".into(),
@@ -233,7 +270,10 @@ async fn seed_entities(pool: &Arc<sqlx::SqlitePool>) -> Entities {
         vec![],
     )
     .unwrap();
-    SqliteMaterialRepository::new(pool.clone()).save(&material).await.unwrap();
+    SqliteMaterialRepository::new(pool.clone())
+        .save(&material)
+        .await
+        .unwrap();
 
     let asset_repo = SqliteAssetRepository::new(pool.clone());
     let category = AssetCategory::new("أصول أول المدة".into(), AssetType::Fixed);
@@ -264,7 +304,11 @@ async fn seed_entities(pool: &Arc<sqlx::SqlitePool>) -> Entities {
 }
 
 fn line(account: AccountId, amount: &str) -> OpeningLineInput {
-    OpeningLineInput { account_id: account.to_string(), amount: amount.into(), description: None }
+    OpeningLineInput {
+        account_id: account.to_string(),
+        amount: amount.into(),
+        description: None,
+    }
 }
 
 /// The exact lines: Cash 65 / AR 80 / Inventory 120 / FA 200 (Dr 465)
@@ -287,11 +331,41 @@ fn full_lines(a: &Accounts) -> Vec<OpeningLineInput> {
 /// asset 200, Loan on the canonical account 224 for 50. No bank -> 0 / 0.
 fn subledger_items(a: &Accounts, e: &Entities) -> Vec<OpeningItemInput> {
     vec![
-        OpeningItemInput { kind: KIND_AR.into(), entity_id: e.customer.clone(), reference: None, amount: "80".into(), qty: "0".into() },
-        OpeningItemInput { kind: KIND_AP.into(), entity_id: e.supplier.clone(), reference: None, amount: "70".into(), qty: "0".into() },
-        OpeningItemInput { kind: KIND_INVENTORY.into(), entity_id: e.material.clone(), reference: None, amount: "120".into(), qty: "10".into() },
-        OpeningItemInput { kind: KIND_FIXED_ASSET.into(), entity_id: e.asset.clone(), reference: None, amount: "200".into(), qty: "1".into() },
-        OpeningItemInput { kind: KIND_LOAN.into(), entity_id: a.loan.to_string(), reference: Some("حساب القروض".into()), amount: "50".into(), qty: "0".into() },
+        OpeningItemInput {
+            kind: KIND_AR.into(),
+            entity_id: e.customer.clone(),
+            reference: None,
+            amount: "80".into(),
+            qty: "0".into(),
+        },
+        OpeningItemInput {
+            kind: KIND_AP.into(),
+            entity_id: e.supplier.clone(),
+            reference: None,
+            amount: "70".into(),
+            qty: "0".into(),
+        },
+        OpeningItemInput {
+            kind: KIND_INVENTORY.into(),
+            entity_id: e.material.clone(),
+            reference: None,
+            amount: "120".into(),
+            qty: "10".into(),
+        },
+        OpeningItemInput {
+            kind: KIND_FIXED_ASSET.into(),
+            entity_id: e.asset.clone(),
+            reference: None,
+            amount: "200".into(),
+            qty: "1".into(),
+        },
+        OpeningItemInput {
+            kind: KIND_LOAN.into(),
+            entity_id: a.loan.to_string(),
+            reference: Some("حساب القروض".into()),
+            amount: "50".into(),
+            qty: "0".into(),
+        },
     ]
 }
 
@@ -350,7 +424,11 @@ fn positioner(pool: &Arc<sqlx::SqlitePool>) -> GetOpeningPositionControlUseCase 
     )
 }
 
-async fn save_items(pool: &Arc<sqlx::SqlitePool>, migration_id: &str, items: Vec<OpeningItemInput>) {
+async fn save_items(
+    pool: &Arc<sqlx::SqlitePool>,
+    migration_id: &str,
+    items: Vec<OpeningItemInput>,
+) {
     SaveOpeningItemsUseCase::new(
         Arc::new(SqliteOpeningMigrationRepository::new(pool.clone())),
         Arc::new(SqliteOpeningItemRepository::new(pool.clone())),
@@ -360,7 +438,10 @@ async fn save_items(pool: &Arc<sqlx::SqlitePool>, migration_id: &str, items: Vec
         Arc::new(SqliteAssetRepository::new(pool.clone())),
         Arc::new(SqliteAccountRepository::new(pool.clone())),
     )
-    .execute(SaveOpeningItemsCommand { migration_id: migration_id.into(), items })
+    .execute(SaveOpeningItemsCommand {
+        migration_id: migration_id.into(),
+        items,
+    })
     .await
     .expect("save sub-ledger items");
 }
@@ -391,7 +472,11 @@ async fn fixture(cutover: &str) -> Fixture {
     let migration_id = draft.0.id.clone();
     save_items(&pool, &migration_id, subledger_items(&accounts, &entities)).await;
 
-    Fixture { pool, accounts, migration_id }
+    Fixture {
+        pool,
+        accounts,
+        migration_id,
+    }
 }
 
 /// Runs Validate -> Approve -> Post (returning the posted snapshot) for a
@@ -401,11 +486,16 @@ async fn post_fixture(fx: &Fixture) {
         .execute(fx.migration_id.clone(), "tester".into())
         .await
         .expect("balanced reconciled migration must validate");
-    ApproveOpeningBalanceUseCase::new(Arc::new(SqliteOpeningMigrationRepository::new(fx.pool.clone())))
-        .execute(fx.migration_id.clone(), "approver".into())
+    ApproveOpeningBalanceUseCase::new(Arc::new(SqliteOpeningMigrationRepository::new(
+        fx.pool.clone(),
+    )))
+    .execute(fx.migration_id.clone(), "approver".into())
+    .await
+    .expect("validated migration must approve");
+    poster(&fx.pool)
+        .execute(fx.migration_id.clone())
         .await
-        .expect("validated migration must approve");
-    poster(&fx.pool).execute(fx.migration_id.clone()).await.expect("approved reconciliation must post");
+        .expect("approved reconciliation must post");
 }
 
 // ---------------------------------------------------------------------------
@@ -418,7 +508,10 @@ async fn chart_canonical_loan_224_and_partner_current_54_under_equity() {
     let pool = build_pool().await;
 
     // Loans = 224, never 225; a Detail Liability under 22 -> 2.
-    assert!(row_by_code(&pool, "225").await.is_none(), "loan must never use code 225");
+    assert!(
+        row_by_code(&pool, "225").await.is_none(),
+        "loan must never use code 225"
+    );
     let loan = row_by_code(&pool, "224").await.expect("code 224 exists");
     assert_eq!(loan.1, "القروض");
     assert_eq!(loan.2, "Liabilities");
@@ -427,13 +520,19 @@ async fn chart_canonical_loan_224_and_partner_current_54_under_equity() {
     assert_eq!(loan.5, 3);
     let liab_22 = row_by_code(&pool, "22").await.expect("22 exists");
     assert_eq!(loan.6.as_deref(), Some(liab_22.0.as_str()));
-    assert_eq!(liab_22.6.as_deref(), Some(row_by_code(&pool, "2").await.expect("2 exists").0.as_str()));
+    assert_eq!(
+        liab_22.6.as_deref(),
+        Some(row_by_code(&pool, "2").await.expect("2 exists").0.as_str())
+    );
 
     // Partner Current Accounts under the equity root 5.
     let current = row_by_code(&pool, "54").await.expect("54 exists");
     assert_eq!(current.2, "Equity");
     assert_eq!(current.4, "partner_current");
-    assert_eq!(current.6.as_deref(), Some(row_by_code(&pool, "5").await.expect("5 exists").0.as_str()));
+    assert_eq!(
+        current.6.as_deref(),
+        Some(row_by_code(&pool, "5").await.expect("5 exists").0.as_str())
+    );
 
     // No duplicate account codes (index backstop).
     let dupes: Vec<(String, i64)> =
@@ -444,10 +543,11 @@ async fn chart_canonical_loan_224_and_partner_current_54_under_equity() {
     assert!(dupes.is_empty(), "duplicate account codes: {dupes:?}");
 
     // Every parent_id references an existing account and the tree is acyclic.
-    let rows: Vec<(Option<String>, String)> =
-        sqlx::query_as("SELECT parent_id, id FROM accounts").fetch_all(&*pool).await.unwrap();
-    let ids: std::collections::HashSet<String> =
-        rows.iter().map(|(_, id)| id.clone()).collect();
+    let rows: Vec<(Option<String>, String)> = sqlx::query_as("SELECT parent_id, id FROM accounts")
+        .fetch_all(&*pool)
+        .await
+        .unwrap();
+    let ids: std::collections::HashSet<String> = rows.iter().map(|(_, id)| id.clone()).collect();
     for (parent, id) in &rows {
         if let Some(p) = parent {
             assert!(ids.contains(p), "account {id} parent {p} missing");
@@ -455,7 +555,10 @@ async fn chart_canonical_loan_224_and_partner_current_54_under_equity() {
         let mut cursor: Option<String> = Some(id.clone());
         let mut hops = 0;
         while let Some(c) = cursor {
-            let next = rows.iter().find(|(_, i)| i == &c).and_then(|(p, _)| p.clone());
+            let next = rows
+                .iter()
+                .find(|(_, i)| i == &c)
+                .and_then(|(p, _)| p.clone());
             match next {
                 Some(up) => cursor = Some(up),
                 None => break,
@@ -474,22 +577,42 @@ async fn chart_canonical_loan_224_and_partner_current_54_under_equity() {
 async fn opening_exact_465_scenario_validates_posts_and_locks() {
     let fx = fixture("2026-01-01T00:00:00Z").await;
 
-    let recon = reconciler(&fx.pool).execute(fx.migration_id.clone()).await.expect("recon");
-    assert!(recon.all_reconciled, "every sub-ledger must reconcile: {recon:?}");
+    let recon = reconciler(&fx.pool)
+        .execute(fx.migration_id.clone())
+        .await
+        .expect("recon");
+    assert!(
+        recon.all_reconciled,
+        "every sub-ledger must reconcile: {recon:?}"
+    );
     assert_eq!(recon.debit_total, dec!(465));
     assert_eq!(recon.credit_total, dec!(465));
     assert!(recon.debit_equals_credit);
-    let loan_row = recon.rows.iter().find(|r| r.key == "Loan").expect("Loan row");
+    let loan_row = recon
+        .rows
+        .iter()
+        .find(|r| r.key == "Loan")
+        .expect("Loan row");
     assert_eq!(loan_row.subledger, dec!(50));
-    assert_eq!(loan_row.general_ledger, dec!(50), "loan GL via canonical account 224");
+    assert_eq!(
+        loan_row.general_ledger,
+        dec!(50),
+        "loan GL via canonical account 224"
+    );
 
     post_fixture(&fx).await;
 
     // Control (53) exactly zero: no OBE plug exists, so lock passes directly.
-    let after = reconciler(&fx.pool).execute(fx.migration_id.clone()).await.expect("recon after post");
+    let after = reconciler(&fx.pool)
+        .execute(fx.migration_id.clone())
+        .await
+        .expect("recon after post");
     assert_eq!(after.opening_control_balance, dec!(0));
 
-    let locked = locker(&fx.pool).execute(fx.migration_id.clone()).await.expect("lock");
+    let locked = locker(&fx.pool)
+        .execute(fx.migration_id.clone())
+        .await
+        .expect("lock");
     assert_eq!(locked.0.status, MigrationStatus::Locked);
 }
 
@@ -506,10 +629,20 @@ async fn gl_customer_ammar_is_exactly_one_opening_movement() {
         Arc::new(SqliteAccountRepository::new(fx.pool.clone())),
         Arc::new(SqliteJournalEntryRepository::new(fx.pool.clone())),
     );
-    let ledger = queries.get_ledger(&[fx.accounts.ar]).await.expect("AR ledger");
+    let ledger = queries
+        .get_ledger(&[fx.accounts.ar])
+        .await
+        .expect("AR ledger");
 
-    assert_eq!(ledger.lines.len(), 1, "Ammar's AR must be exactly one GL opening movement");
-    assert!(ledger.opening_entries.is_empty(), "no synthetic opening rows");
+    assert_eq!(
+        ledger.lines.len(),
+        1,
+        "Ammar's AR must be exactly one GL opening movement"
+    );
+    assert!(
+        ledger.opening_entries.is_empty(),
+        "no synthetic opening rows"
+    );
     assert_eq!(ledger.lines[0].debit_base, Decimal::from(80));
     assert_eq!(ledger.lines[0].credit_base, Decimal::ZERO);
     assert_eq!(ledger.lines[0].balance_base, Decimal::from(80));
@@ -523,7 +656,10 @@ async fn gl_customer_ammar_is_exactly_one_opening_movement() {
     .fetch_one(&*fx.pool)
     .await
     .unwrap();
-    assert_eq!(opening_count, 1, "exactly one posted AccountOpeningBalance journal");
+    assert_eq!(
+        opening_count, 1,
+        "exactly one posted AccountOpeningBalance journal"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -535,11 +671,18 @@ async fn subledger_ammar_reconciles_to_gl_with_zero_difference() {
     let fx = fixture("2026-01-01T00:00:00Z").await;
     post_fixture(&fx).await;
 
-    let recon = reconciler(&fx.pool).execute(fx.migration_id.clone()).await.expect("recon");
+    let recon = reconciler(&fx.pool)
+        .execute(fx.migration_id.clone())
+        .await
+        .expect("recon");
     let ar = recon.rows.iter().find(|r| r.key == "AR").expect("AR row");
     assert_eq!(ar.subledger, dec!(80), "Ammar's sub-ledger");
     assert_eq!(ar.general_ledger, dec!(80), "GL receivable");
-    assert_eq!(ar.subledger - ar.general_ledger, dec!(0), "difference must be zero");
+    assert_eq!(
+        ar.subledger - ar.general_ledger,
+        dec!(0),
+        "difference must be zero"
+    );
     assert!(ar.reconciled);
     assert!(recon.all_reconciled, "all sub-ledgers reconcile: {recon:?}");
 }
@@ -558,27 +701,38 @@ async fn date_opening_uses_cutover_not_creation_timestamp() {
         Arc::new(SqliteAccountRepository::new(fx.pool.clone())),
         Arc::new(SqliteJournalEntryRepository::new(fx.pool.clone())),
     );
-    let ledger = queries.get_ledger(&[fx.accounts.ar]).await.expect("AR ledger");
+    let ledger = queries
+        .get_ledger(&[fx.accounts.ar])
+        .await
+        .expect("AR ledger");
     let line_date = ledger.lines[0].date;
     let cutover = DateTime::parse_from_rfc3339("2026-01-01T00:00:00Z")
         .unwrap()
         .with_timezone(&Utc);
-    assert_eq!(line_date, cutover, "GL line must be dated by the accounting date");
+    assert_eq!(
+        line_date, cutover,
+        "GL line must be dated by the accounting date"
+    );
 
     // The stored journal carries the accounting date while `created_at` is later.
-    let (entry_date, created_at): (String, String) = sqlx::query_as(
-        "SELECT entry_date, created_at FROM journal_entries WHERE source_id = ?",
-    )
-    .bind(format!("opening_balance:{}", fx.migration_id))
-    .fetch_one(&*fx.pool)
-    .await
-    .unwrap();
-    assert!(entry_date.starts_with("2026-01-01"), "entry_date = accounting date: {entry_date}");
+    let (entry_date, created_at): (String, String) =
+        sqlx::query_as("SELECT entry_date, created_at FROM journal_entries WHERE source_id = ?")
+            .bind(format!("opening_balance:{}", fx.migration_id))
+            .fetch_one(&*fx.pool)
+            .await
+            .unwrap();
+    assert!(
+        entry_date.starts_with("2026-01-01"),
+        "entry_date = accounting date: {entry_date}"
+    );
     assert!(
         !created_at.starts_with("2026-01"),
         "created_at must be the actual creation moment, not the cutover date: {created_at}"
     );
-    assert!(created_at > entry_date, "created_at must follow the backdated entry_date");
+    assert!(
+        created_at > entry_date,
+        "created_at must follow the backdated entry_date"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -599,22 +753,42 @@ async fn report_date_ranges_surface_one_movement_and_keep_beginning_only() {
         Arc::new(SqliteAccountRepository::new(fx.pool.clone())),
         Arc::new(SqliteJournalEntryRepository::new(fx.pool.clone())),
     );
-    let ledger = queries.get_ledger(&[fx.accounts.ar]).await.expect("AR ledger");
+    let ledger = queries
+        .get_ledger(&[fx.accounts.ar])
+        .await
+        .expect("AR ledger");
     let in_range: Vec<_> = ledger
         .lines
         .iter()
-        .filter(|l| l.date >= DateTime::parse_from_rfc3339("2026-01-01T00:00:00Z").unwrap().with_timezone(&Utc))
+        .filter(|l| {
+            l.date
+                >= DateTime::parse_from_rfc3339("2026-01-01T00:00:00Z")
+                    .unwrap()
+                    .with_timezone(&Utc)
+        })
         .collect();
-    assert_eq!(in_range.len(), 1, "from 2026-01-01 there is exactly one opening movement");
+    assert_eq!(
+        in_range.len(),
+        1,
+        "from 2026-01-01 there is exactly one opening movement"
+    );
 
     // The opening (dated 2026-01-01) lands BEFORE a 2026-02-01 report start,
     // so it only contributes the beginning balance — never a second movement.
     let in_february_range: Vec<_> = ledger
         .lines
         .iter()
-        .filter(|l| l.date >= DateTime::parse_from_rfc3339("2026-02-01T00:00:00Z").unwrap().with_timezone(&Utc))
+        .filter(|l| {
+            l.date
+                >= DateTime::parse_from_rfc3339("2026-02-01T00:00:00Z")
+                    .unwrap()
+                    .with_timezone(&Utc)
+        })
         .collect();
-    assert!(in_february_range.is_empty(), "no second opening movement in 2026-02-01+ range");
+    assert!(
+        in_february_range.is_empty(),
+        "no second opening movement in 2026-02-01+ range"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -628,22 +802,24 @@ async fn idempotency_posting_same_migration_twice_creates_single_journal() {
     post_fixture(&fx).await;
 
     let source = format!("opening_balance:{}", fx.migration_id);
-    let count_before: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM journal_entries WHERE source_id = ?")
-        .bind(&source)
-        .fetch_one(&*fx.pool)
-        .await
-        .unwrap();
+    let count_before: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM journal_entries WHERE source_id = ?")
+            .bind(&source)
+            .fetch_one(&*fx.pool)
+            .await
+            .unwrap();
     assert_eq!(count_before, 1);
 
     // A second post of the same (now Posted) migration must be rejected.
     let err = poster(&fx.pool).execute(fx.migration_id.clone()).await;
     assert!(err.is_err(), "re-posting a Posted migration must fail");
 
-    let count_after: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM journal_entries WHERE source_id = ?")
-        .bind(&source)
-        .fetch_one(&*fx.pool)
-        .await
-        .unwrap();
+    let count_after: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM journal_entries WHERE source_id = ?")
+            .bind(&source)
+            .fetch_one(&*fx.pool)
+            .await
+            .unwrap();
     assert_eq!(count_after, 1, "no duplicate GL journal may ever exist");
 }
 
@@ -658,20 +834,30 @@ async fn final_trial_balance_balanced_gl_equals_journal_and_reports_read_only() 
     post_fixture(&fx).await;
 
     // Snapshot accounting rows before any report read.
-    let entries_before: i64 =
-        sqlx::query_scalar("SELECT COUNT(*) FROM journal_entries").fetch_one(&*fx.pool).await.unwrap();
-    let lines_before: i64 =
-        sqlx::query_scalar("SELECT COUNT(*) FROM journal_lines").fetch_one(&*fx.pool).await.unwrap();
+    let entries_before: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM journal_entries")
+        .fetch_one(&*fx.pool)
+        .await
+        .unwrap();
+    let lines_before: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM journal_lines")
+        .fetch_one(&*fx.pool)
+        .await
+        .unwrap();
 
     // Trial balance: A = L + E from the position control (read-only).
-    let pos = positioner(&fx.pool).execute(fx.migration_id.clone()).await.expect("position");
+    let pos = positioner(&fx.pool)
+        .execute(fx.migration_id.clone())
+        .await
+        .expect("position");
     assert_eq!(pos.total_assets, dec!(465));
     assert_eq!(pos.total_liabilities, dec!(120));
     assert_eq!(pos.total_equity, dec!(345));
     assert_eq!(pos.net_assets, dec!(345));
     assert_eq!(pos.total_assets, pos.total_liabilities + pos.total_equity);
     assert!(pos.is_balanced, "final trial balance must be balanced");
-    assert!(pos.validation_errors.is_empty(), "no readiness blockers after lock");
+    assert!(
+        pos.validation_errors.is_empty(),
+        "no readiness blockers after lock"
+    );
 
     // GL == journal lines: one posted AccountOpeningBalance with the 8
     // lines; the AR account's ledger exposes exactly its line.
@@ -683,26 +869,48 @@ async fn final_trial_balance_balanced_gl_equals_journal_and_reports_read_only() 
     .fetch_one(&*fx.pool)
     .await
     .unwrap();
-    assert_eq!(gl_lines, 8, "the posted opening journal carries exactly the scenario lines");
+    assert_eq!(
+        gl_lines, 8,
+        "the posted opening journal carries exactly the scenario lines"
+    );
 
     let queries = AccountQueries::new(
         Arc::new(SqliteAccountRepository::new(fx.pool.clone())),
         Arc::new(SqliteJournalEntryRepository::new(fx.pool.clone())),
     );
-    let ar_ledger = queries.get_ledger(&[fx.accounts.ar]).await.expect("AR ledger");
+    let ar_ledger = queries
+        .get_ledger(&[fx.accounts.ar])
+        .await
+        .expect("AR ledger");
     assert_eq!(ar_ledger.lines.len() as i64, 1);
 
     // Sub-ledgers reconcile to the GL after posting.
-    let recon = reconciler(&fx.pool).execute(fx.migration_id.clone()).await.expect("recon");
-    assert!(recon.all_reconciled, "sub-ledgers must reconcile with GL post-lock");
+    let recon = reconciler(&fx.pool)
+        .execute(fx.migration_id.clone())
+        .await
+        .expect("recon");
+    assert!(
+        recon.all_reconciled,
+        "sub-ledgers must reconcile with GL post-lock"
+    );
 
     // Reports are pure reads: no accounting row count may change.
-    let entries_after: i64 =
-        sqlx::query_scalar("SELECT COUNT(*) FROM journal_entries").fetch_one(&*fx.pool).await.unwrap();
-    let lines_after: i64 =
-        sqlx::query_scalar("SELECT COUNT(*) FROM journal_lines").fetch_one(&*fx.pool).await.unwrap();
-    assert_eq!(entries_after, entries_before, "reports must not alter journal_entries");
-    assert_eq!(lines_after, lines_before, "reports must not alter journal_lines");
+    let entries_after: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM journal_entries")
+        .fetch_one(&*fx.pool)
+        .await
+        .unwrap();
+    let lines_after: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM journal_lines")
+        .fetch_one(&*fx.pool)
+        .await
+        .unwrap();
+    assert_eq!(
+        entries_after, entries_before,
+        "reports must not alter journal_entries"
+    );
+    assert_eq!(
+        lines_after, lines_before,
+        "reports must not alter journal_lines"
+    );
 }
 
 // Keep `AppError` reachable in case a future test needs to match error kinds.

@@ -1,12 +1,17 @@
-use super::models::{MigrationRow, MigrationLineRow};
+use super::models::{MigrationLineRow, MigrationRow};
 use application::errors::AppError;
-use domain::accounting::{OpeningBalanceMigration, OpeningBalanceLine, MigrationStatus, ResidualClassification};
-use domain::shared::AccountId;
 use chrono::{DateTime, Utc};
+use domain::accounting::{
+    MigrationStatus, OpeningBalanceLine, OpeningBalanceMigration, ResidualClassification,
+};
+use domain::shared::AccountId;
 use rust_decimal::Decimal;
 use std::str::FromStr;
 
-pub fn row_to_migration(row: MigrationRow, lines: Vec<OpeningBalanceLine>) -> Result<OpeningBalanceMigration, AppError> {
+pub fn row_to_migration(
+    row: MigrationRow,
+    lines: Vec<OpeningBalanceLine>,
+) -> Result<OpeningBalanceMigration, AppError> {
     let ts = |s: Option<String>| {
         s.and_then(|d| DateTime::parse_from_rfc3339(&d).ok())
             .map(|d| d.with_timezone(&Utc))

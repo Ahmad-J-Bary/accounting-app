@@ -1,4 +1,3 @@
-use sqlx::SqlitePool;
 use application::errors::AppError;
 use domain::accounting::account::Account;
 use domain::accounting::journal_entry::JournalEntry;
@@ -6,6 +5,7 @@ use domain::customers::Customer;
 use domain::payments::Payment;
 use domain::shared::ids::{JournalEntryId, PaymentId};
 use domain::suppliers::Supplier;
+use sqlx::SqlitePool;
 
 pub async fn save(pool: &SqlitePool, payment: &Payment) -> Result<(), AppError> {
     sqlx::query(
@@ -276,7 +276,7 @@ async fn update_account_tx<'a>(
     account: &Account,
 ) -> Result<(), AppError> {
     sqlx::query(
-        "UPDATE accounts SET debit = ?, credit = ?, balance = ?, updated_at = ? WHERE id = ?"
+        "UPDATE accounts SET debit = ?, credit = ?, balance = ?, updated_at = ? WHERE id = ?",
     )
     .bind(account.debit.to_string())
     .bind(account.credit.to_string())

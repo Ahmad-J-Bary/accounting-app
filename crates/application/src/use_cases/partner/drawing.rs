@@ -1,14 +1,14 @@
-use std::sync::Arc;
-use rust_decimal::Decimal;
 use chrono::{DateTime, Utc};
 use domain::accounting::journal_entry::{JournalEntry, JournalLine, JournalType};
-use domain::shared::{Money, MonetaryAmount, AccountId};
 use domain::shared::ids::PartnerId;
+use domain::shared::{AccountId, MonetaryAmount, Money};
+use rust_decimal::Decimal;
+use std::sync::Arc;
 
-use crate::ports::partner_repository::PartnerRepository;
+use crate::errors::AppError;
 use crate::ports::account_repository::AccountRepository;
 use crate::ports::journal_entry_repository::JournalEntryRepository;
-use crate::errors::AppError;
+use crate::ports::partner_repository::PartnerRepository;
 use uuid::Uuid;
 
 /// Explicit partner-drawing event: a partner withdraws cash/bank funds from the
@@ -32,7 +32,11 @@ impl CreatePartnerDrawingUseCase {
         account_repo: Arc<dyn AccountRepository>,
         journal_repo: Arc<dyn JournalEntryRepository>,
     ) -> Self {
-        Self { repo, account_repo, journal_repo }
+        Self {
+            repo,
+            account_repo,
+            journal_repo,
+        }
     }
 
     pub async fn execute(
@@ -44,21 +48,32 @@ impl CreatePartnerDrawingUseCase {
         description: Option<String>,
         event_id: Option<String>,
     ) -> Result<String, AppError> {
-        let partner_id_parsed = partner_id.parse::<PartnerId>()
+        let partner_id_parsed = partner_id
+            .parse::<PartnerId>()
             .map_err(|_| AppError::NotFound("معرف الشريك غير صالح".into()))?;
-        let partner = self.repo.find_by_id(&partner_id_parsed).await?
+        let partner = self
+            .repo
+            .find_by_id(&partner_id_parsed)
+            .await?
             .ok_or_else(|| AppError::NotFound("الشريك غير موجود".into()))?;
 
         if amount <= Decimal::ZERO {
-            return Err(AppError::Invalid("مبلغ المسحوبات يجب أن يكون أكبر من الصفر".into()));
+            return Err(AppError::Invalid(
+                "مبلغ المسحوبات يجب أن يكون أكبر من الصفر".into(),
+            ));
         }
 
-        let drawings_account_id = partner.drawings_account_id
+        let drawings_account_id = partner
+            .drawings_account_id
             .ok_or_else(|| AppError::Invalid("الشريك لا يملك حساب مسحوبات مرتبط".into()))?;
 
-        let funding_id = funding_account_id.parse::<AccountId>()
+        let funding_id = funding_account_id
+            .parse::<AccountId>()
             .map_err(|_| AppError::NotFound("معرف حساب التمويل غير صالح".into()))?;
-        let _funding_account = self.account_repo.find_by_id(&funding_id).await?
+        let _funding_account = self
+            .account_repo
+            .find_by_id(&funding_id)
+            .await?
             .ok_or_else(|| AppError::NotFound("حساب التمويل غير موجود".into()))?;
 
         let fx_rate = if partner.exchange_rate > Decimal::ZERO {
@@ -104,7 +119,8 @@ impl CreatePartnerDrawingUseCase {
                 .unwrap_or_else(Utc::now),
             description.unwrap_or_else(|| format!("سحب الشريك {}", partner.name)),
             Some(source_id),
-        ).map_err(|e| AppError::Invalid(e.to_string()))?;
+        )
+        .map_err(|e| AppError::Invalid(e.to_string()))?;
 
         entry.post().map_err(|e| AppError::Invalid(e.to_string()))?;
         // Single-repo atomic write; journal_lines persist in the same transaction.
@@ -118,7 +134,11 @@ impl CreatePartnerDrawingUseCase {
 /// is in the local (base) currency. `original = base * fx` so `Money::to_base`
 /// divides back to exactly `base` — the journal balances in the base currency
 /// without an fx^2 drift for non-base (foreign-currency) partners (Sec 38).
-fn drawing_currency_amount(base_amount: Decimal, fx_rate: Decimal, currency: &domain::shared::currency::Currency) -> MonetaryAmount {
+fn drawing_currency_amount(
+    base_amount: Decimal,
+    fx_rate: Decimal,
+    currency: &domain::shared::currency::Currency,
+) -> MonetaryAmount {
     let amount_original = base_amount * fx_rate;
     MonetaryAmount::new(Money::new(amount_original, currency.clone()), fx_rate)
 }

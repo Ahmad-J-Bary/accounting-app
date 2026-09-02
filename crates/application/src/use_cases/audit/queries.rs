@@ -1,7 +1,7 @@
-use std::sync::Arc;
-use crate::ports::audit_log_repository::AuditLogRepository;
 use crate::dto::audit_dto::AuditLogDto;
 use crate::errors::AppError;
+use crate::ports::audit_log_repository::AuditLogRepository;
+use std::sync::Arc;
 
 pub struct AuditQueries {
     repo: Arc<dyn AuditLogRepository>,
@@ -13,7 +13,13 @@ impl AuditQueries {
     }
 
     pub async fn list_all(&self, limit: Option<u32>) -> Result<Vec<AuditLogDto>, AppError> {
-        Ok(self.repo.list_all(limit).await?.into_iter().map(to_dto).collect())
+        Ok(self
+            .repo
+            .list_all(limit)
+            .await?
+            .into_iter()
+            .map(to_dto)
+            .collect())
     }
 }
 

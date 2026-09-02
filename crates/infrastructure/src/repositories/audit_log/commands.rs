@@ -1,6 +1,6 @@
-use sqlx::SqlitePool;
 use application::errors::AppError;
 use domain::audit::AuditLog;
+use sqlx::SqlitePool;
 
 pub async fn save(pool: &SqlitePool, log: &AuditLog) -> Result<(), AppError> {
     sqlx::query(

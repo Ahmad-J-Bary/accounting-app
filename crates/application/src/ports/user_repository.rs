@@ -1,7 +1,7 @@
-use async_trait::async_trait;
-use domain::auth::{User, Role};
-use domain::shared::ids::{UserId, RoleId};
 use crate::errors::AppError;
+use async_trait::async_trait;
+use domain::auth::{Role, User};
+use domain::shared::ids::{RoleId, UserId};
 
 #[async_trait]
 pub trait UserRepository: Send + Sync {

@@ -1,20 +1,20 @@
+use crate::shared::currency::Currency;
+use crate::shared::errors::DomainError;
+use crate::shared::money::Money;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
-use std::ops::{Add, Sub, Mul};
-use crate::shared::currency::Currency;
-use crate::shared::money::Money;
-use crate::shared::errors::DomainError;
+use std::ops::{Add, Mul, Sub};
 
-/// A comprehensive monetary value that stores both the original entry 
+/// A comprehensive monetary value that stores both the original entry
 /// and its equivalent in the system's reference base currency.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct MonetaryAmount {
     /// The amount in the original currency as entered by the user.
     pub original: Money,
-    
+
     /// The equivalent amount in the system's base currency.
     pub base_amount: Decimal,
-    
+
     /// The exchange rate used at the time of entry.
     /// Formula: base_amount = original.amount * fx_rate
     pub fx_rate: Decimal,
@@ -69,9 +69,11 @@ impl Add for MonetaryAmount {
 
     fn add(self, other: Self) -> Result<Self, DomainError> {
         if self.original.currency().code != other.original.currency().code {
-            return Err(DomainError::Invalid("Cannot add MonetaryAmounts with different original currencies".into()));
+            return Err(DomainError::Invalid(
+                "Cannot add MonetaryAmounts with different original currencies".into(),
+            ));
         }
-        
+
         // Fx rates should be consistent if currencies are the same
         Ok(Self {
             original: self.original + other.original,
@@ -86,9 +88,11 @@ impl Sub for MonetaryAmount {
 
     fn sub(self, other: Self) -> Result<Self, DomainError> {
         if self.original.currency().code != other.original.currency().code {
-            return Err(DomainError::Invalid("Cannot subtract MonetaryAmounts with different original currencies".into()));
+            return Err(DomainError::Invalid(
+                "Cannot subtract MonetaryAmounts with different original currencies".into(),
+            ));
         }
-        
+
         Ok(Self {
             original: self.original - other.original,
             base_amount: self.base_amount - other.base_amount,

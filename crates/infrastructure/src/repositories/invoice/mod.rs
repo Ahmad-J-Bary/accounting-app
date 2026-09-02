@@ -1,15 +1,15 @@
-use async_trait::async_trait;
-use sqlx::SqlitePool;
 use application::errors::AppError;
 use application::ports::invoice_repository::InvoiceRepository;
+use async_trait::async_trait;
 use domain::sales::Invoice;
-use domain::shared::ids::{InvoiceId, CustomerId};
+use domain::shared::ids::{CustomerId, InvoiceId};
+use sqlx::SqlitePool;
 use std::sync::Arc;
 
-mod models;
-mod mappers;
-mod queries;
 mod commands;
+mod mappers;
+mod models;
+mod queries;
 
 pub struct SqliteInvoiceRepository {
     pool: Arc<SqlitePool>,

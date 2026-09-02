@@ -80,7 +80,8 @@ impl UnifiedInvoice {
         }
 
         let now = Utc::now();
-        let doc_currency = Currency::new(&currency_code, &currency_code, &currency_code, "", 2, false);
+        let doc_currency =
+            Currency::new(&currency_code, &currency_code, &currency_code, "", 2, false);
 
         Ok(Self {
             id: InvoiceId(Uuid::new_v4()),
@@ -124,7 +125,8 @@ impl UnifiedInvoice {
 
     pub fn recalculate_totals(&mut self) {
         let code = &self.currency_code;
-        let doc_currency = Currency::new(code, code, code, "", 2, self.exchange_rate == Decimal::ONE);
+        let doc_currency =
+            Currency::new(code, code, code, "", 2, self.exchange_rate == Decimal::ONE);
 
         // Compute gross subtotal from qty * unit_price (ignoring all discounts)
         let subtotal =
@@ -140,20 +142,17 @@ impl UnifiedInvoice {
         let header_discount = self.discount_amount.amount();
 
         // Compute total discount from line-level discount_percent
-        let line_discount_total =
-            self.lines
-                .iter()
-                .fold(Decimal::ZERO, |acc, line| {
-                    acc + (line.quantity * line.unit_price.amount() * line.discount_percent / Decimal::from(100))
-                });
+        let line_discount_total = self.lines.iter().fold(Decimal::ZERO, |acc, line| {
+            acc + (line.quantity * line.unit_price.amount() * line.discount_percent
+                / Decimal::from(100))
+        });
 
         self.discount_amount = MonetaryAmount::new(
             Money::new(line_discount_total + header_discount, doc_currency.clone()),
             self.exchange_rate,
         );
 
-        let before_extra =
-            (subtotal + self.tax_amount.clone()).unwrap();
+        let before_extra = (subtotal + self.tax_amount.clone()).unwrap();
         self.total_amount =
             (before_extra.clone() + self.extra_costs.clone()).unwrap_or(before_extra);
 
@@ -171,7 +170,8 @@ impl UnifiedInvoice {
 
     pub fn subtotal(&self) -> MonetaryAmount {
         let code = &self.currency_code;
-        let doc_currency = Currency::new(code, code, code, "", 2, self.exchange_rate == Decimal::ONE);
+        let doc_currency =
+            Currency::new(code, code, code, "", 2, self.exchange_rate == Decimal::ONE);
         self.lines
             .iter()
             .fold(MonetaryAmount::zero(doc_currency.clone()), |acc, line| {
@@ -183,7 +183,9 @@ impl UnifiedInvoice {
 
     pub fn post(&mut self) -> Result<(), DomainError> {
         if self.status != InvoiceStatus::Draft && self.status != InvoiceStatus::Posted {
-            return Err(DomainError::Invalid("الحالة الحالية لا تسمح بالترحيل".into()));
+            return Err(DomainError::Invalid(
+                "الحالة الحالية لا تسمح بالترحيل".into(),
+            ));
         }
         if self.lines.is_empty() {
             return Err(DomainError::Invalid("لا يمكن ترحيل فاتورة فارغة".into()));

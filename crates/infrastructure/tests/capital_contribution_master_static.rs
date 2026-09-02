@@ -1,13 +1,13 @@
 use std::str::FromStr;
 use std::sync::Arc;
 
+use application::ports::partner_repository::PartnerRepository;
+use application::use_cases::equity::GetPartnerEquityStatementUseCase;
+use application::use_cases::partner::CreateCapitalContributionUseCase;
 use domain::accounting::account::{Account, AccountCategory, AccountType};
 use domain::accounting::partner::{Partner, ProfitSharingType};
 use domain::shared::currency::Currency;
 use domain::shared::ids::AccountId;
-use application::ports::partner_repository::PartnerRepository;
-use application::use_cases::equity::GetPartnerEquityStatementUseCase;
-use application::use_cases::partner::CreateCapitalContributionUseCase;
 use infrastructure::db::pool::run_migrations;
 use infrastructure::repositories::{
     SqliteAccountRepository, SqliteJournalEntryRepository, SqliteOpeningMigrationRepository,
@@ -22,7 +22,10 @@ fn test_currency() -> Currency {
 
 async fn build_pool() -> Arc<sqlx::SqlitePool> {
     let mut path = std::env::temp_dir();
-    path.push(format!("acc_contrib_static_test_{}.sqlite", uuid::Uuid::new_v4()));
+    path.push(format!(
+        "acc_contrib_static_test_{}.sqlite",
+        uuid::Uuid::new_v4()
+    ));
     let options = SqliteConnectOptions::from_str(path.to_str().unwrap())
         .unwrap()
         .create_if_missing(true);
@@ -105,7 +108,9 @@ async fn seed_partner_uncontributed(pool: &Arc<sqlx::SqlitePool>) -> (String, St
     .unwrap();
     partner.link_account(capital.id);
     partner.link_drawings_account(drawings.id);
-    repo.save_with_accounts(&partner, &capital, &drawings, None).await.unwrap();
+    repo.save_with_accounts(&partner, &capital, &drawings, None)
+        .await
+        .unwrap();
     (partner.id.to_string(), capital.id.0.to_string())
 }
 
@@ -145,13 +150,12 @@ async fn contribution_keeps_master_static_and_ledger_is_truth() {
     .await
     .expect("contribution must post");
 
-    let stored_amount: String = sqlx::query_scalar(
-        "SELECT amount_local FROM partners WHERE id = ?",
-    )
-    .bind(&partner_id)
-    .fetch_one(pool.as_ref())
-    .await
-    .unwrap();
+    let stored_amount: String =
+        sqlx::query_scalar("SELECT amount_local FROM partners WHERE id = ?")
+            .bind(&partner_id)
+            .fetch_one(pool.as_ref())
+            .await
+            .unwrap();
     assert_eq!(
         stored_amount, "1000",
         "master-data registered capital must stay static after a contribution"
@@ -164,10 +168,23 @@ async fn contribution_keeps_master_static_and_ledger_is_truth() {
     .execute(None, None)
     .await
     .unwrap();
-    let row = statement.rows.iter().find(|r| r.partner_id == partner_id).expect("row");
-    assert_eq!(row.capital_registered, "1000", "registered capital = master data");
-    assert_eq!(row.ledger_balance, "500", "ledger is the truth: contribution moves it");
-    assert_eq!(row.total_equity, "500", "equity = ledger capital (no drawings, no current)");
+    let row = statement
+        .rows
+        .iter()
+        .find(|r| r.partner_id == partner_id)
+        .expect("row");
+    assert_eq!(
+        row.capital_registered, "1000",
+        "registered capital = master data"
+    );
+    assert_eq!(
+        row.ledger_balance, "500",
+        "ledger is the truth: contribution moves it"
+    );
+    assert_eq!(
+        row.total_equity, "500",
+        "equity = ledger capital (no drawings, no current)"
+    );
     assert_eq!(row.current_balance, "0");
     assert_eq!(row.drawings, "0");
 

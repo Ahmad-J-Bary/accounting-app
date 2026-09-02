@@ -13,8 +13,8 @@ use crate::ports::opening_item_repository::OpeningItemRepository;
 use crate::ports::opening_migration_repository::OpeningMigrationRepository;
 use crate::ports::supplier_repository::SupplierRepository;
 use crate::use_cases::opening_balance::types::{
-    KIND_AR, KIND_AP, KIND_FIXED_ASSET, KIND_INVENTORY, KIND_BANK, KIND_LOAN, OpeningItemsDto,
-    SaveOpeningItemsCommand,
+    OpeningItemsDto, SaveOpeningItemsCommand, KIND_AP, KIND_AR, KIND_BANK, KIND_FIXED_ASSET,
+    KIND_INVENTORY, KIND_LOAN,
 };
 
 /// Persists the sub-ledger item links (AR / AP / Inventory / Fixed Assets /
@@ -56,7 +56,10 @@ impl SaveOpeningItemsUseCase {
     }
 
     pub async fn execute(&self, cmd: SaveOpeningItemsCommand) -> Result<OpeningItemsDto, AppError> {
-        let migration = self.migration_repo.find_by_id(&cmd.migration_id).await?
+        let migration = self
+            .migration_repo
+            .find_by_id(&cmd.migration_id)
+            .await?
             .ok_or_else(|| AppError::NotFound("ترحيل الرصيد الافتتاحي غير موجود".into()))?;
 
         // Editing items is only allowed while the migration is still editable.
@@ -79,32 +82,42 @@ impl SaveOpeningItemsUseCase {
                 KIND_AR => {
                     let id = CustomerId::from_str(&it.entity_id)
                         .map_err(|_| AppError::Invalid("معرف العميل غير صالح".into()))?;
-                    self.customer_repo.find_by_id(&id).await?
-                        .ok_or_else(|| AppError::NotFound(format!("العميل غير موجود: {}", it.entity_id)))?;
+                    self.customer_repo.find_by_id(&id).await?.ok_or_else(|| {
+                        AppError::NotFound(format!("العميل غير موجود: {}", it.entity_id))
+                    })?;
                 }
                 KIND_AP => {
                     let id = SupplierId::from_str(&it.entity_id)
                         .map_err(|_| AppError::Invalid("معرف المورد غير صالح".into()))?;
-                    self.supplier_repo.find_by_id(&id).await?
-                        .ok_or_else(|| AppError::NotFound(format!("المورد غير موجود: {}", it.entity_id)))?;
+                    self.supplier_repo.find_by_id(&id).await?.ok_or_else(|| {
+                        AppError::NotFound(format!("المورد غير موجود: {}", it.entity_id))
+                    })?;
                 }
                 KIND_INVENTORY => {
                     let id = MaterialId::from_str(&it.entity_id)
                         .map_err(|_| AppError::Invalid("معرف المادة غير صالح".into()))?;
-                    self.material_repo.find_by_id(&id).await?
-                        .ok_or_else(|| AppError::NotFound(format!("المادة غير موجودة: {}", it.entity_id)))?;
+                    self.material_repo.find_by_id(&id).await?.ok_or_else(|| {
+                        AppError::NotFound(format!("المادة غير موجودة: {}", it.entity_id))
+                    })?;
                 }
                 KIND_FIXED_ASSET => {
-                    let id = FixedAssetId(uuid::Uuid::parse_str(&it.entity_id)
-                        .map_err(|_| AppError::Invalid("معرف الأصل الثابت غير صالح".into()))?);
-                    self.asset_repo.find_asset_by_id(&id).await?
-                        .ok_or_else(|| AppError::NotFound(format!("الأصل الثابت غير موجود: {}", it.entity_id)))?;
+                    let id = FixedAssetId(
+                        uuid::Uuid::parse_str(&it.entity_id)
+                            .map_err(|_| AppError::Invalid("معرف الأصل الثابت غير صالح".into()))?,
+                    );
+                    self.asset_repo
+                        .find_asset_by_id(&id)
+                        .await?
+                        .ok_or_else(|| {
+                            AppError::NotFound(format!("الأصل الثابت غير موجود: {}", it.entity_id))
+                        })?;
                 }
                 KIND_BANK | KIND_LOAN => {
                     let id = AccountId::from_str(&it.entity_id)
                         .map_err(|_| AppError::Invalid("معرف الحساب غير صالح".into()))?;
-                    self.account_repo.find_by_id(&id).await?
-                        .ok_or_else(|| AppError::NotFound(format!("الحساب غير موجود: {}", it.entity_id)))?;
+                    self.account_repo.find_by_id(&id).await?.ok_or_else(|| {
+                        AppError::NotFound(format!("الحساب غير موجود: {}", it.entity_id))
+                    })?;
                 }
                 _ => {
                     return Err(AppError::Invalid(format!("نوع بند غير معروف: {}", it.kind)));
@@ -112,9 +125,9 @@ impl SaveOpeningItemsUseCase {
             }
         }
 
-        self.item_repo.replace_items(&cmd.migration_id, &cmd.items).await?;
-        Ok(OpeningItemsDto {
-            items: cmd.items,
-        })
+        self.item_repo
+            .replace_items(&cmd.migration_id, &cmd.items)
+            .await?;
+        Ok(OpeningItemsDto { items: cmd.items })
     }
 }

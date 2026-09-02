@@ -1,9 +1,9 @@
-use std::sync::Arc;
-use crate::errors::AppError;
-use crate::ports::invoice_repository::InvoiceRepository;
-use crate::ports::customer_repository::CustomerRepository;
-use crate::ports::material_repository::MaterialRepository;
 use crate::dto::invoice_dto::InvoiceDto;
+use crate::errors::AppError;
+use crate::ports::customer_repository::CustomerRepository;
+use crate::ports::invoice_repository::InvoiceRepository;
+use crate::ports::material_repository::MaterialRepository;
+use std::sync::Arc;
 
 pub struct ListInvoicesUseCase {
     repo: Arc<dyn InvoiceRepository>,
@@ -17,12 +17,17 @@ impl ListInvoicesUseCase {
         customer_repo: Arc<dyn CustomerRepository>,
         material_repo: Arc<dyn MaterialRepository>,
     ) -> Self {
-        Self { repo, customer_repo, material_repo }
+        Self {
+            repo,
+            customer_repo,
+            material_repo,
+        }
     }
 
     pub async fn execute(&self, customer_id: Option<String>) -> Result<Vec<InvoiceDto>, AppError> {
         let invoices = if let Some(cid) = customer_id {
-            let id = cid.parse::<domain::shared::ids::CustomerId>()
+            let id = cid
+                .parse::<domain::shared::ids::CustomerId>()
                 .map_err(|e| AppError::Invalid(format!("Invalid customer ID: {}", e)))?;
             self.repo.list_for_customer(id).await?
         } else {
@@ -32,7 +37,7 @@ impl ListInvoicesUseCase {
         let mut dtos = Vec::new();
         for inv in invoices {
             let mut dto = InvoiceDto::from(inv);
-            
+
             // Populate Customer Name
             if let Some(cid_str) = &dto.customer_id {
                 if let Ok(id) = cid_str.parse::<domain::shared::ids::CustomerId>() {
@@ -41,7 +46,7 @@ impl ListInvoicesUseCase {
                     }
                 }
             }
-            
+
             // Populate Material Names
             for line in &mut dto.lines {
                 if let Ok(mid) = line.material_id.parse::<domain::shared::ids::MaterialId>() {

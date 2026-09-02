@@ -18,7 +18,10 @@ impl ReopenFiscalPeriodUseCase {
         Self { period_repo }
     }
 
-    pub async fn execute(&self, cmd: ReopenFiscalPeriodCommand) -> Result<FiscalPeriodDto, AppError> {
+    pub async fn execute(
+        &self,
+        cmd: ReopenFiscalPeriodCommand,
+    ) -> Result<FiscalPeriodDto, AppError> {
         let period_id = cmd
             .period_id
             .parse::<FiscalPeriodId>()

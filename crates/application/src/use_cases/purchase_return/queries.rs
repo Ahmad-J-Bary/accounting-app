@@ -1,11 +1,11 @@
-use std::sync::Arc;
-use std::str::FromStr;
-use domain::shared::ids::{PurchaseReturnId, SupplierId, MaterialId};
-use crate::ports::purchase_return_repository::PurchaseReturnRepository;
-use crate::ports::supplier_repository::SupplierRepository;
-use crate::ports::material_repository::MaterialRepository;
 use crate::dto::returns_dto::PurchaseReturnDto;
 use crate::errors::AppError;
+use crate::ports::material_repository::MaterialRepository;
+use crate::ports::purchase_return_repository::PurchaseReturnRepository;
+use crate::ports::supplier_repository::SupplierRepository;
+use domain::shared::ids::{MaterialId, PurchaseReturnId, SupplierId};
+use std::str::FromStr;
+use std::sync::Arc;
 
 pub struct PurchaseReturnQueries {
     repo: Arc<dyn PurchaseReturnRepository>,
@@ -19,7 +19,11 @@ impl PurchaseReturnQueries {
         supplier_repo: Arc<dyn SupplierRepository>,
         material_repo: Arc<dyn MaterialRepository>,
     ) -> Self {
-        Self { repo, supplier_repo, material_repo }
+        Self {
+            repo,
+            supplier_repo,
+            material_repo,
+        }
     }
 
     pub async fn list_all(&self) -> Result<Vec<PurchaseReturnDto>, AppError> {
@@ -35,13 +39,19 @@ impl PurchaseReturnQueries {
     pub async fn get_by_id(&self, id: String) -> Result<PurchaseReturnDto, AppError> {
         let rid = PurchaseReturnId::from_str(&id)
             .map_err(|_| AppError::Invalid("معرف المرتجع غير صالح".into()))?;
-        let r = self.repo.find_by_id(&rid).await?
+        let r = self
+            .repo
+            .find_by_id(&rid)
+            .await?
             .ok_or_else(|| AppError::NotFound("مرتجع المشتريات غير موجود".into()))?;
         let dto: PurchaseReturnDto = r.into();
         self.populate(dto).await
     }
 
-    pub async fn populate(&self, mut dto: PurchaseReturnDto) -> Result<PurchaseReturnDto, AppError> {
+    pub async fn populate(
+        &self,
+        mut dto: PurchaseReturnDto,
+    ) -> Result<PurchaseReturnDto, AppError> {
         if let Ok(sid) = SupplierId::from_str(&dto.supplier_id) {
             if let Ok(Some(s)) = self.supplier_repo.find_by_id(&sid).await {
                 dto.supplier_name = Some(s.name);

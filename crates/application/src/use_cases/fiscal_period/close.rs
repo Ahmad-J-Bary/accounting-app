@@ -19,7 +19,10 @@ impl CloseFiscalPeriodUseCase {
     /// Closes (or finalizes the closing of) a fiscal period. Re-running the
     /// command for an already-closed period is idempotent: the existing state
     /// is returned unchanged instead of failing.
-    pub async fn execute(&self, cmd: CloseFiscalPeriodCommand) -> Result<FiscalPeriodDto, AppError> {
+    pub async fn execute(
+        &self,
+        cmd: CloseFiscalPeriodCommand,
+    ) -> Result<FiscalPeriodDto, AppError> {
         let period_id = cmd
             .period_id
             .parse::<FiscalPeriodId>()
@@ -54,9 +57,9 @@ impl CloseFiscalPeriodUseCase {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::mocks::MockFiscalPeriodRepository;
     use chrono::{Duration, Utc};
     use domain::accounting::fiscal_period::FiscalPeriod;
-    use crate::mocks::MockFiscalPeriodRepository;
 
     async fn seeded(repo: &Arc<MockFiscalPeriodRepository>) -> FiscalPeriodId {
         let start = Utc::now() - Duration::days(30);

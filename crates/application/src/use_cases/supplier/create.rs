@@ -2,20 +2,19 @@ use domain::shared::ids::SupplierId;
 use domain::shared::Currency;
 use domain::suppliers::Supplier;
 use rust_decimal::Decimal;
-use std::sync::Arc;
 use std::str::FromStr;
+use std::sync::Arc;
 
+use crate::constants::PAYABLES_PARENT_ID;
 use crate::dto::supplier_dto::{CreateSupplierRequest, SupplierDto};
 use crate::errors::AppError;
 use crate::ports::account_repository::AccountRepository;
-use crate::ports::supplier_repository::SupplierRepository;
 use crate::ports::journal_entry_repository::JournalEntryRepository;
 use crate::ports::opening_migration_repository::OpeningMigrationRepository;
-use crate::constants::PAYABLES_PARENT_ID;
+use crate::ports::supplier_repository::SupplierRepository;
 use crate::use_cases::opening_balance::opening_window_active;
 use crate::use_cases::shared::partner_account::{
-    PartnerAccountParams, PartnerKind,
-    build_partner_account, build_opening_balance_entry,
+    build_opening_balance_entry, build_partner_account, PartnerAccountParams, PartnerKind,
 };
 
 pub struct CreateSupplierUseCase {
@@ -32,7 +31,12 @@ impl CreateSupplierUseCase {
         journal_repo: Arc<dyn JournalEntryRepository>,
         opening_migration_repo: Arc<dyn OpeningMigrationRepository>,
     ) -> Self {
-        Self { supplier_repo, account_repo, journal_repo, opening_migration_repo }
+        Self {
+            supplier_repo,
+            account_repo,
+            journal_repo,
+            opening_migration_repo,
+        }
     }
 
     pub async fn execute(&self, req: CreateSupplierRequest) -> Result<SupplierDto, AppError> {
@@ -44,7 +48,8 @@ impl CreateSupplierUseCase {
 
         let debit = crate::utils::parse_decimal(req.debit.as_deref(), "المدين")?;
         let credit = crate::utils::parse_decimal(req.credit.as_deref(), "الدائن")?;
-        let opening_balance = crate::utils::parse_decimal(req.opening_balance.as_deref(), "رصيد الافتتاح")?;
+        let opening_balance =
+            crate::utils::parse_decimal(req.opening_balance.as_deref(), "رصيد الافتتاح")?;
 
         let currency_code = req.currency.clone().unwrap_or_default();
         let currency = Currency::new(&currency_code, &currency_code, &currency_code, "", 2, false);
@@ -99,7 +104,8 @@ impl CreateSupplierUseCase {
                 kind: PartnerKind::Supplier,
             },
             &self.account_repo,
-        ).await?;
+        )
+        .await?;
 
         supplier.link_account(new_account_id);
 
@@ -122,7 +128,8 @@ impl CreateSupplierUseCase {
                 PartnerKind::Supplier,
                 &self.account_repo,
                 &self.journal_repo,
-            ).await?
+            )
+            .await?
         };
 
         let mut entries = Vec::new();

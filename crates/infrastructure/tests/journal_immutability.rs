@@ -1,23 +1,27 @@
-use std::sync::Arc;
-use std::str::FromStr;
-use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
-use chrono::Utc;
-use domain::accounting::journal_entry::{JournalEntry, JournalLine, JournalType};
-use domain::shared::{AccountId};
-use domain::shared::currency::Currency;
-use domain::shared::money::Money;
-use domain::shared::monetary_amount::MonetaryAmount;
 use application::errors::AppError;
 use application::ports::journal_entry_repository::JournalEntryRepository;
+use chrono::Utc;
+use domain::accounting::journal_entry::{JournalEntry, JournalLine, JournalType};
+use domain::shared::currency::Currency;
+use domain::shared::monetary_amount::MonetaryAmount;
+use domain::shared::money::Money;
+use domain::shared::AccountId;
 use infrastructure::db::pool::run_migrations;
 use infrastructure::repositories::SqliteJournalEntryRepository;
 use rust_decimal_macros::dec;
+use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+use std::str::FromStr;
+use std::sync::Arc;
 
 fn test_currency() -> Currency {
     Currency::new("BASE", "عملة أساسية", "Base Currency", "B", 2, true)
 }
 
-fn balanced_lines(amount: rust_decimal::Decimal, account_a: AccountId, account_b: AccountId) -> Vec<JournalLine> {
+fn balanced_lines(
+    amount: rust_decimal::Decimal,
+    account_a: AccountId,
+    account_b: AccountId,
+) -> Vec<JournalLine> {
     let c = test_currency();
     vec![
         JournalLine::new(
@@ -152,7 +156,10 @@ async fn foreign_keys_are_enforced_on_the_pool() {
     )
     .execute(pool.as_ref())
     .await;
-    assert!(err.is_err(), "dangling journal_line must violate the FK constraint");
+    assert!(
+        err.is_err(),
+        "dangling journal_line must violate the FK constraint"
+    );
 
     let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM journal_lines")
         .fetch_one(pool.as_ref())

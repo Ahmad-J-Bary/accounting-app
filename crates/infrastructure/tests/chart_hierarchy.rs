@@ -36,7 +36,10 @@ use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 
 async fn build_pool() -> Arc<sqlx::SqlitePool> {
     let mut path = std::env::temp_dir();
-    path.push(format!("acc_chart_hierarchy_{}.sqlite", uuid::Uuid::new_v4()));
+    path.push(format!(
+        "acc_chart_hierarchy_{}.sqlite",
+        uuid::Uuid::new_v4()
+    ));
     let options = SqliteConnectOptions::from_str(path.to_str().unwrap())
         .unwrap()
         .create_if_missing(true);
@@ -103,13 +106,11 @@ async fn descendant_codes(pool: &sqlx::SqlitePool, root_code: &str) -> Vec<Strin
 
 async fn assert_no_cycles_and_valid_parents(pool: &sqlx::SqlitePool) {
     // Rows: (parent_id, id) — parent_id may be NULL for roots.
-    let rows: Vec<(Option<String>, String)> =
-        sqlx::query_as("SELECT parent_id, id FROM accounts")
-            .fetch_all(pool)
-            .await
-            .unwrap();
-    let ids: std::collections::HashSet<String> =
-        rows.iter().map(|(_, id)| id.clone()).collect();
+    let rows: Vec<(Option<String>, String)> = sqlx::query_as("SELECT parent_id, id FROM accounts")
+        .fetch_all(pool)
+        .await
+        .unwrap();
+    let ids: std::collections::HashSet<String> = rows.iter().map(|(_, id)| id.clone()).collect();
     for (parent, id) in &rows {
         if let Some(p) = parent {
             assert!(
@@ -166,7 +167,11 @@ async fn loans_use_code_224_under_current_liabilities() {
             .fetch_optional(&*pool)
             .await
             .unwrap();
-    assert_eq!(by_purpose.as_ref().map(|r| r.0.as_str()), Some("224"), "one loan account, code 224");
+    assert_eq!(
+        by_purpose.as_ref().map(|r| r.0.as_str()),
+        Some("224"),
+        "one loan account, code 224"
+    );
 }
 
 #[tokio::test]
@@ -201,7 +206,11 @@ async fn drawings_under_equity_not_expenses() {
     assert_eq!(drawings.4, "partner_drawings");
     assert_eq!(drawings.5, 2);
     let parent = drawings.6.expect("44 has a parent");
-    assert_eq!(parent, id_by_code(&pool, "5").await, "44 under equity root 5");
+    assert_eq!(
+        parent,
+        id_by_code(&pool, "5").await,
+        "44 under equity root 5"
+    );
     assert_ne!(
         parent,
         id_by_code(&pool, "4").await,
@@ -244,7 +253,10 @@ async fn codes_are_unique_and_indexed() {
     .fetch_optional(&*pool)
     .await
     .unwrap();
-    assert!(idx.is_some(), "unique index idx_accounts_code_unique exists");
+    assert!(
+        idx.is_some(),
+        "unique index idx_accounts_code_unique exists"
+    );
 }
 
 #[tokio::test]

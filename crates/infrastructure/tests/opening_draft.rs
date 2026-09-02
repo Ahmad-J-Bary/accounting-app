@@ -64,28 +64,28 @@ async fn draft_round_trips_save_get_clear() {
     );
 
     let snapshot = r#"{"stepIndex":3,"items":[{"kind":"AR","amount":"1200"}]}"#.to_string();
-    save_uc(&pool)
-        .execute(&snapshot)
-        .await
-        .unwrap();
+    save_uc(&pool).execute(&snapshot).await.unwrap();
     assert_eq!(
-        GetOpeningDraftUseCase::new(repos.clone()).execute().await.unwrap(),
+        GetOpeningDraftUseCase::new(repos.clone())
+            .execute()
+            .await
+            .unwrap(),
         Some(snapshot.clone()),
         "saved draft must be returned verbatim"
     );
 
     // Overwriting replaces, not appends.
-    save_uc(&pool)
-        .execute("{\"step\":5}")
-        .await
-        .unwrap();
+    save_uc(&pool).execute("{\"step\":5}").await.unwrap();
     assert_eq!(
         GetOpeningDraftUseCase::new(repos).execute().await.unwrap(),
         Some("{\"step\":5}".to_string()),
         "re-saving must replace the previous draft"
     );
 
-    ClearOpeningDraftUseCase::new(repo(&pool)).execute().await.unwrap();
+    ClearOpeningDraftUseCase::new(repo(&pool))
+        .execute()
+        .await
+        .unwrap();
     assert_eq!(
         repo(&pool).get().await.unwrap(),
         None,
@@ -99,14 +99,8 @@ async fn draft_round_trips_save_get_clear() {
 #[tokio::test]
 async fn draft_store_uses_single_row() {
     let pool = build_pool().await;
-    save_uc(&pool)
-        .execute(r#"{"once":true}"#)
-        .await
-        .unwrap();
-    save_uc(&pool)
-        .execute(r#"{"twice":true}"#)
-        .await
-        .unwrap();
+    save_uc(&pool).execute(r#"{"once":true}"#).await.unwrap();
+    save_uc(&pool).execute(r#"{"twice":true}"#).await.unwrap();
 
     let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM opening_wizard_draft")
         .fetch_one(pool.as_ref())

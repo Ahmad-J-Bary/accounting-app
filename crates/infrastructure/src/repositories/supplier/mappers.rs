@@ -1,22 +1,28 @@
-﻿use application::errors::AppError;
-use domain::suppliers::Supplier;
+use super::models::SupplierRow;
+use application::errors::AppError;
+use chrono::DateTime;
 use domain::shared::{AccountId, Currency};
+use domain::suppliers::Supplier;
 use rust_decimal::Decimal;
 use std::str::FromStr;
 use uuid::Uuid;
-use chrono::DateTime;
-use super::models::SupplierRow;
 
 pub fn row_to_supplier(row: SupplierRow) -> Result<Supplier, AppError> {
     let currency = Currency::new(&row.currency, &row.currency, &row.currency, "", 2, false);
 
     Ok(Supplier {
-        id: row.id.parse().map_err(|e| AppError::Infrastructure(format!("Invalid supplier ID: {}", e)))?,
+        id: row
+            .id
+            .parse()
+            .map_err(|e| AppError::Infrastructure(format!("Invalid supplier ID: {}", e)))?,
         code: row.code,
         name: row.name,
         phone: row.phone,
         address: row.address,
-        account_id: row.account_id.and_then(|s| Uuid::parse_str(&s).ok()).map(AccountId),
+        account_id: row
+            .account_id
+            .and_then(|s| Uuid::parse_str(&s).ok())
+            .map(AccountId),
         debit: Decimal::from_str(&row.debit).unwrap_or(Decimal::ZERO),
         credit: Decimal::from_str(&row.credit).unwrap_or(Decimal::ZERO),
         opening_balance: Decimal::from_str(&row.opening_balance).unwrap_or(Decimal::ZERO),
@@ -24,7 +30,11 @@ pub fn row_to_supplier(row: SupplierRow) -> Result<Supplier, AppError> {
         currency,
         notes: row.notes,
         is_active: row.is_active,
-        created_at: DateTime::parse_from_rfc3339(&row.created_at).map(|d| d.with_timezone(&chrono::Utc)).unwrap_or_else(|_| chrono::Utc::now()),
-        updated_at: DateTime::parse_from_rfc3339(&row.updated_at).map(|d| d.with_timezone(&chrono::Utc)).unwrap_or_else(|_| chrono::Utc::now()),
+        created_at: DateTime::parse_from_rfc3339(&row.created_at)
+            .map(|d| d.with_timezone(&chrono::Utc))
+            .unwrap_or_else(|_| chrono::Utc::now()),
+        updated_at: DateTime::parse_from_rfc3339(&row.updated_at)
+            .map(|d| d.with_timezone(&chrono::Utc))
+            .unwrap_or_else(|_| chrono::Utc::now()),
     })
 }

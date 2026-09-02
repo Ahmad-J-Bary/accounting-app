@@ -1,8 +1,8 @@
-﻿use uuid::Uuid;
-use chrono::{DateTime, Utc};
-use serde::{Deserialize, Serialize};
 use crate::shared::Money;
+use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
+use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ConsumableId(pub Uuid);
@@ -74,13 +74,13 @@ impl Consumable {
         if self.quantity_on_hand < quantity {
             return Err("Insufficient quantity".to_string());
         }
-        
+
         self.quantity_on_hand -= quantity;
         if self.quantity_on_hand == Decimal::ZERO {
             self.status = ConsumableStatus::Exhausted;
         }
         self.updated_at = Utc::now();
-        
+
         Ok(self.unit_cost.clone() * quantity)
     }
 }
@@ -96,7 +96,10 @@ mod tests {
             "C1".to_string(),
             "Paper".to_string(),
             Uuid::new_v4(),
-            Money::new(Decimal::from(10), Currency::new("XUS", "TestDollar", "TestDollar", "X$", 2, false)),
+            Money::new(
+                Decimal::from(10),
+                Currency::new("XUS", "TestDollar", "TestDollar", "X$", 2, false),
+            ),
             Decimal::ONE,
             Uuid::new_v4(),
             Uuid::new_v4(),

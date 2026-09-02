@@ -41,7 +41,10 @@ use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 
 async fn build_pool() -> Arc<sqlx::SqlitePool> {
     let mut path = std::env::temp_dir();
-    path.push(format!("acc_opening_cancel_{}.sqlite", uuid::Uuid::new_v4()));
+    path.push(format!(
+        "acc_opening_cancel_{}.sqlite",
+        uuid::Uuid::new_v4()
+    ));
     let options = SqliteConnectOptions::from_str(path.to_str().unwrap())
         .unwrap()
         .create_if_missing(true);
@@ -83,16 +86,26 @@ async fn create_draft(pool: &Arc<sqlx::SqlitePool>) -> String {
         Arc::new(SqliteAccountRepository::new(pool.clone())),
         Arc::new(SqliteSettingsRepository::new(pool.clone())),
     )
-    .execute(application::use_cases::opening_balance::types::CreateOpeningBalanceMigrationCommand {
-        cutover_date: chrono::Utc::now().to_rfc3339(),
-        notes: None,
-        source_system: None,
-        source_reference: None,
-        lines: vec![
-            OpeningLineInput { account_id: cash.to_string(), amount: "2000".into(), description: None },
-            OpeningLineInput { account_id: equity.to_string(), amount: "2000".into(), description: None },
-        ],
-    })
+    .execute(
+        application::use_cases::opening_balance::types::CreateOpeningBalanceMigrationCommand {
+            cutover_date: chrono::Utc::now().to_rfc3339(),
+            notes: None,
+            source_system: None,
+            source_reference: None,
+            lines: vec![
+                OpeningLineInput {
+                    account_id: cash.to_string(),
+                    amount: "2000".into(),
+                    description: None,
+                },
+                OpeningLineInput {
+                    account_id: equity.to_string(),
+                    amount: "2000".into(),
+                    description: None,
+                },
+            ],
+        },
+    )
     .await
     .expect("create draft");
     draft.0.id
@@ -153,13 +166,11 @@ async fn posted_opening_is_cancelled_with_balanced_reversal() {
 
     // Posting created the opening journal: cash +2000 (debit), equity −2000.
     assert_eq!(
-        sqlx::query_scalar::<_, i64>(
-            "SELECT COUNT(*) FROM journal_entries WHERE source_id = ?",
-        )
-        .bind(format!("opening_balance:{id}"))
-        .fetch_one(&*pool)
-        .await
-        .unwrap(),
+        sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM journal_entries WHERE source_id = ?",)
+            .bind(format!("opening_balance:{id}"))
+            .fetch_one(&*pool)
+            .await
+            .unwrap(),
         1
     );
 
@@ -170,20 +181,29 @@ async fn posted_opening_is_cancelled_with_balanced_reversal() {
         Arc::new(SqliteJournalEntryRepository::new(pool.clone()));
     let posting_repo: Arc<dyn OpeningPostingRepository> =
         Arc::new(SqliteOpeningPostingRepository::new(pool.clone()));
-    let cancelled = CancelOpeningBalanceUseCase::new(migration_repo.clone(), journal_repo.clone(), posting_repo.clone())
-        .execute(id.clone())
-        .await
-        .expect("cancel");
+    let cancelled = CancelOpeningBalanceUseCase::new(
+        migration_repo.clone(),
+        journal_repo.clone(),
+        posting_repo.clone(),
+    )
+    .execute(id.clone())
+    .await
+    .expect("cancel");
 
-    assert_eq!(cancelled.0.status, domain::accounting::MigrationStatus::Cancelled);
+    assert_eq!(
+        cancelled.0.status,
+        domain::accounting::MigrationStatus::Cancelled
+    );
 
     // Persisted row is Cancelled.
     assert_eq!(
-        sqlx::query_scalar::<_, String>("SELECT status FROM opening_balance_migrations WHERE id = ?")
-            .bind(&id)
-            .fetch_one(&*pool)
-            .await
-            .unwrap(),
+        sqlx::query_scalar::<_, String>(
+            "SELECT status FROM opening_balance_migrations WHERE id = ?"
+        )
+        .bind(&id)
+        .fetch_one(&*pool)
+        .await
+        .unwrap(),
         "Cancelled"
     );
 
@@ -197,7 +217,10 @@ async fn posted_opening_is_cancelled_with_balanced_reversal() {
     .await
     .unwrap();
     assert_eq!(count, 1, "exactly one reversal journal");
-    assert_eq!(source.as_deref(), Some(format!("ob_reversal:{id}").as_str()));
+    assert_eq!(
+        source.as_deref(),
+        Some(format!("ob_reversal:{id}").as_str())
+    );
 
     let (contra_type, original_status): (String, String) = sqlx::query_as(
         "SELECT j.journal_type, o.status
@@ -209,8 +232,14 @@ async fn posted_opening_is_cancelled_with_balanced_reversal() {
     .fetch_one(&*pool)
     .await
     .unwrap();
-    assert_eq!(contra_type, "AccountOpeningBalance", "the contra inherits the original's type");
-    assert_eq!(original_status, "Reversed", "the opening original is marked Reversed");
+    assert_eq!(
+        contra_type, "AccountOpeningBalance",
+        "the contra inherits the original's type"
+    );
+    assert_eq!(
+        original_status, "Reversed",
+        "the opening original is marked Reversed"
+    );
 
     // Each account nets back to zero (opening + reversal cancel out).
     let (d, c): (f64, f64) = sqlx::query_as(
@@ -222,7 +251,10 @@ async fn posted_opening_is_cancelled_with_balanced_reversal() {
     .fetch_one(&*pool)
     .await
     .unwrap();
-    assert!(close_enough(d, c), "reversal swaps legs so cash+equity net balanced ({d} vs {c})");
+    assert!(
+        close_enough(d, c),
+        "reversal swaps legs so cash+equity net balanced ({d} vs {c})"
+    );
     let cash_net: f64 = sqlx::query_scalar(
         "SELECT COALESCE(SUM(CAST(debit_base AS REAL) - CAST(credit_base AS REAL)),0)
          FROM journal_lines WHERE account_id = ?",
@@ -231,7 +263,10 @@ async fn posted_opening_is_cancelled_with_balanced_reversal() {
     .fetch_one(&*pool)
     .await
     .unwrap();
-    assert!(close_enough(cash_net, 0.0), "cash nets back to zero after cancel, got {cash_net}");
+    assert!(
+        close_enough(cash_net, 0.0),
+        "cash nets back to zero after cancel, got {cash_net}"
+    );
 
     // Whole ledger still balanced.
     let (td, tc): (f64, f64) = sqlx::query_as(
@@ -241,21 +276,30 @@ async fn posted_opening_is_cancelled_with_balanced_reversal() {
     .fetch_one(&*pool)
     .await
     .unwrap();
-    assert!(close_enough(td, tc), "whole ledger must balance after cancel ({td} vs {tc})");
+    assert!(
+        close_enough(td, tc),
+        "whole ledger must balance after cancel ({td} vs {tc})"
+    );
 
     // Idempotent: cancelling again returns the same Cancelled state.
     let again = CancelOpeningBalanceUseCase::new(migration_repo, journal_repo, posting_repo)
         .execute(id)
         .await
         .expect("idempotent cancel");
-    assert_eq!(again.0.status, domain::accounting::MigrationStatus::Cancelled);
+    assert_eq!(
+        again.0.status,
+        domain::accounting::MigrationStatus::Cancelled
+    );
     let reversal_count: i64 = sqlx::query_scalar(
         "SELECT COUNT(*) FROM journal_entries WHERE source_id LIKE 'ob_reversal:%'",
     )
     .fetch_one(&*pool)
     .await
     .unwrap();
-    assert_eq!(reversal_count, 1, "a second cancel must not post another reversal");
+    assert_eq!(
+        reversal_count, 1,
+        "a second cancel must not post another reversal"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -277,15 +321,23 @@ async fn cancel_draft_requires_no_journal() {
     .await
     .expect("cancel draft");
 
-    assert_eq!(cancelled.0.status, domain::accounting::MigrationStatus::Cancelled);
-    let journal_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM journal_entries").fetch_one(&*pool).await.unwrap();
+    assert_eq!(
+        cancelled.0.status,
+        domain::accounting::MigrationStatus::Cancelled
+    );
+    let journal_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM journal_entries")
+        .fetch_one(&*pool)
+        .await
+        .unwrap();
     assert_eq!(journal_count, 0, "cancelling a draft posts no journal");
     assert_eq!(
-        sqlx::query_scalar::<_, String>("SELECT status FROM opening_balance_migrations WHERE id = ?")
-            .bind(&id)
-            .fetch_one(&*pool)
-            .await
-            .unwrap(),
+        sqlx::query_scalar::<_, String>(
+            "SELECT status FROM opening_balance_migrations WHERE id = ?"
+        )
+        .bind(&id)
+        .fetch_one(&*pool)
+        .await
+        .unwrap(),
         "Cancelled"
     );
 }

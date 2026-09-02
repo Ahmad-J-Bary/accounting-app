@@ -37,7 +37,10 @@ use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 
 async fn build_pool() -> Arc<sqlx::SqlitePool> {
     let mut path = std::env::temp_dir();
-    path.push(format!("acc_account_opening_journal_{}.sqlite", uuid::Uuid::new_v4()));
+    path.push(format!(
+        "acc_account_opening_journal_{}.sqlite",
+        uuid::Uuid::new_v4()
+    ));
     let options = SqliteConnectOptions::from_str(path.to_str().unwrap())
         .unwrap()
         .create_if_missing(true);
@@ -88,8 +91,16 @@ async fn create_draft_migration(pool: &Arc<sqlx::SqlitePool>) {
             source_system: None,
             source_reference: None,
             lines: vec![
-                OpeningLineInput { account_id: cash.to_string(), amount: "1000".into(), description: None },
-                OpeningLineInput { account_id: equity.to_string(), amount: "1000".into(), description: None },
+                OpeningLineInput {
+                    account_id: cash.to_string(),
+                    amount: "1000".into(),
+                    description: None,
+                },
+                OpeningLineInput {
+                    account_id: equity.to_string(),
+                    amount: "1000".into(),
+                    description: None,
+                },
             ],
         },
     )
@@ -97,12 +108,7 @@ async fn create_draft_migration(pool: &Arc<sqlx::SqlitePool>) {
     .expect("create draft migration");
 }
 
-fn cmd(
-    code: &str,
-    parent: AccountId,
-    opening: &str,
-    debit: Option<&str>,
-) -> CreateAccountCommand {
+fn cmd(code: &str, parent: AccountId, opening: &str, debit: Option<&str>) -> CreateAccountCommand {
     CreateAccountCommand {
         code: code.into(),
         name_ar: "حساب اختبار افتتاحي".into(),
@@ -206,10 +212,7 @@ async fn update_books_opening_delta_post_window() {
 
     // Raise the opening: +1000 delta must appear on the natural side.
     let raised = update_use_case(&pool)
-        .execute(
-            created.id,
-            cmd("1102", assets_root, "2000", None),
-        )
+        .execute(created.id, cmd("1102", assets_root, "2000", None))
         .await
         .expect("raise opening");
     assert_eq!(raised.opening_balance, Decimal::from(2000));
@@ -221,10 +224,7 @@ async fn update_books_opening_delta_post_window() {
 
     // Lower the opening: −1500 delta must reverse onto the contra side.
     let lowered = update_use_case(&pool)
-        .execute(
-            created.id,
-            cmd("1102", assets_root, "500", None),
-        )
+        .execute(created.id, cmd("1102", assets_root, "500", None))
         .await
         .expect("lower opening");
     assert_eq!(lowered.opening_balance, Decimal::from(500));

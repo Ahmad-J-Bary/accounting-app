@@ -1,15 +1,15 @@
-use async_trait::async_trait;
-use sqlx::SqlitePool;
 use application::errors::AppError;
 use application::ports::user_repository::UserRepository;
-use domain::auth::{User, Role};
-use domain::shared::ids::{UserId, RoleId};
+use async_trait::async_trait;
+use domain::auth::{Role, User};
+use domain::shared::ids::{RoleId, UserId};
+use sqlx::SqlitePool;
 use std::sync::Arc;
 
-mod models;
-mod mappers;
-mod queries;
 mod commands;
+mod mappers;
+mod models;
+mod queries;
 
 pub struct SqliteUserRepository {
     pool: Arc<SqlitePool>,

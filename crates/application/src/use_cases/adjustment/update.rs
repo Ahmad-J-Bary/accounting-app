@@ -1,16 +1,16 @@
-use std::sync::Arc;
-use chrono::DateTime;
-use rust_decimal::Decimal;
-use domain::inventory::stock_movement::{StockMovement, MovementType};
-use domain::shared::ids::{StockAdjustmentId, MaterialId};
+use super::create::{build_adjustment_journal_entry, to_dto};
+use crate::dto::adjustment_dto::{StockAdjustmentDto, UpdateStockAdjustmentRequest};
+use crate::errors::AppError;
 use crate::ports::account_repository::AccountRepository;
 use crate::ports::journal_entry_repository::JournalEntryRepository;
-use crate::ports::stock_adjustment_repository::StockAdjustmentRepository;
 use crate::ports::material_repository::MaterialRepository;
+use crate::ports::stock_adjustment_repository::StockAdjustmentRepository;
 use crate::ports::stock_movement_repository::StockMovementRepository;
-use crate::dto::adjustment_dto::{UpdateStockAdjustmentRequest, StockAdjustmentDto};
-use crate::errors::AppError;
-use super::create::{to_dto, build_adjustment_journal_entry};
+use chrono::DateTime;
+use domain::inventory::stock_movement::{MovementType, StockMovement};
+use domain::shared::ids::{MaterialId, StockAdjustmentId};
+use rust_decimal::Decimal;
+use std::sync::Arc;
 
 pub struct UpdateStockAdjustmentUseCase {
     adjustment_repo: Arc<dyn StockAdjustmentRepository>,
@@ -28,20 +28,39 @@ impl UpdateStockAdjustmentUseCase {
         account_repo: Arc<dyn AccountRepository>,
         journal_repo: Arc<dyn JournalEntryRepository>,
     ) -> Self {
-        Self { adjustment_repo, material_repo, movement_repo, account_repo, journal_repo }
+        Self {
+            adjustment_repo,
+            material_repo,
+            movement_repo,
+            account_repo,
+            journal_repo,
+        }
     }
 
-    pub async fn execute(&self, req: UpdateStockAdjustmentRequest) -> Result<StockAdjustmentDto, AppError> {
-        let id = req.id.parse::<StockAdjustmentId>()
+    pub async fn execute(
+        &self,
+        req: UpdateStockAdjustmentRequest,
+    ) -> Result<StockAdjustmentDto, AppError> {
+        let id = req
+            .id
+            .parse::<StockAdjustmentId>()
             .map_err(|_| AppError::Invalid("معرف التسوية غير صالح".into()))?;
 
-        let mut adjustment = self.adjustment_repo.find_by_id(&id).await?
+        let mut adjustment = self
+            .adjustment_repo
+            .find_by_id(&id)
+            .await?
             .ok_or_else(|| AppError::NotFound("التسوية غير موجودة".into()))?;
 
-        let material_id = req.material_id.parse::<MaterialId>()
+        let material_id = req
+            .material_id
+            .parse::<MaterialId>()
             .map_err(|_| AppError::Invalid("معرف المادة غير صالح".into()))?;
 
-        let material = self.material_repo.find_by_id(&material_id).await?
+        let material = self
+            .material_repo
+            .find_by_id(&material_id)
+            .await?
             .ok_or_else(|| AppError::NotFound("المادة غير موجودة".into()))?;
 
         let current_balance = self.movement_repo.get_stock_balance(&material_id).await?;
@@ -61,10 +80,8 @@ impl UpdateStockAdjustmentUseCase {
         let fx_rate = Decimal::try_from(req.fx_rate.unwrap_or(1.0))
             .map_err(|_| AppError::Invalid("سعر الصرف غير صالح".into()))?;
         // Base conversion: 1 base = fx_rate foreign units, so base = / fx_rate.
-        let unit_cost_base = (unit_cost / fx_rate).round_dp_with_strategy(
-            4,
-            rust_decimal::RoundingStrategy::MidpointAwayFromZero,
-        );
+        let unit_cost_base = (unit_cost / fx_rate)
+            .round_dp_with_strategy(4, rust_decimal::RoundingStrategy::MidpointAwayFromZero);
 
         let adjustment_date = DateTime::parse_from_rfc3339(&req.adjustment_date)
             .map_err(|_| AppError::Invalid("التاريخ غير صالح".into()))?
@@ -74,7 +91,9 @@ impl UpdateStockAdjustmentUseCase {
             return Err(AppError::Invalid("كمية النظام لا يمكن أن تكون سالبة".into()));
         }
         if actual_quantity < Decimal::ZERO {
-            return Err(AppError::Invalid("الكمية المجرودة لا يمكن أن تكون سالبة".into()));
+            return Err(AppError::Invalid(
+                "الكمية المجرودة لا يمكن أن تكون سالبة".into(),
+            ));
         }
 
         adjustment.material_id = material_id;
@@ -87,7 +106,10 @@ impl UpdateStockAdjustmentUseCase {
         adjustment.adjustment_date = adjustment_date;
 
         // Delete old stock movement
-        let display_ref = adjustment.reference.clone().unwrap_or_else(|| adjustment.id.to_string());
+        let display_ref = adjustment
+            .reference
+            .clone()
+            .unwrap_or_else(|| adjustment.id.to_string());
 
         // Delete old journal entry — drafts only; posted entries are immutable.
         let old_entry = self.journal_repo.find_by_source_id(&display_ref).await?;
@@ -135,7 +157,8 @@ impl UpdateStockAdjustmentUseCase {
                 inventory_ref.clone(),
                 movement_notes,
                 adjustment.adjustment_date,
-            ).map_err(|e| AppError::Invalid(e.to_string()))?;
+            )
+            .map_err(|e| AppError::Invalid(e.to_string()))?;
             movement.signed_quantity = Some(difference);
             movement.document_number = Some(display_ref.clone());
             movement.original_currency = Some(currency_code.clone());
@@ -155,19 +178,22 @@ impl UpdateStockAdjustmentUseCase {
                 difference,
                 &display_ref,
                 adjustment.adjustment_date,
-            ).await?;
+            )
+            .await?;
             entries.push(entry);
         }
 
         // Commit old-entry deletions + doc + movement + journal in ONE
         // transaction (Sec 9 atomicity).
-        self.adjustment_repo.save_with_accounting(
-            &adjustment,
-            &movements,
-            &entries,
-            Some(&display_ref),
-            &delete_entries,
-        ).await?;
+        self.adjustment_repo
+            .save_with_accounting(
+                &adjustment,
+                &movements,
+                &entries,
+                Some(&display_ref),
+                &delete_entries,
+            )
+            .await?;
 
         Ok(to_dto(adjustment, material.name, currency_code, fx_rate))
     }

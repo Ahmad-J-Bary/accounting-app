@@ -1,4 +1,5 @@
-﻿use application::ports::account_repository::AccountRepository;
+use application::ports::account_repository::AccountRepository;
+use application::ports::app_config_repository::AppConfigRepository;
 use application::ports::asset_repository::AssetRepository;
 use application::ports::audit_log_repository::AuditLogRepository;
 use application::ports::category_repository::CategoryRepository;
@@ -8,51 +9,55 @@ use application::ports::currency_repository::CurrencyRepository;
 use application::ports::customer_repository::CustomerRepository;
 use application::ports::damaged_item_repository::DamagedItemRepository;
 use application::ports::exchange_rate_repository::ExchangeRateRepository;
+use application::ports::fiscal_period_repository::FiscalPeriodRepository;
 use application::ports::inventory_lot_repository::InventoryLotRepository;
 use application::ports::invoice_repository::InvoiceRepository;
 use application::ports::journal_entry_repository::JournalEntryRepository;
 use application::ports::material_repository::MaterialRepository;
+use application::ports::opening_draft_repository::OpeningDraftRepository;
+use application::ports::opening_item_repository::OpeningItemRepository;
+use application::ports::opening_migration_repository::OpeningMigrationRepository;
+use application::ports::opening_posting_repository::OpeningPostingRepository;
 use application::ports::partner_repository::PartnerRepository;
 use application::ports::payment_repository::PaymentRepository;
 use application::ports::production_repository::ProductionRepository;
 use application::ports::purchase_invoice_repository::PurchaseInvoiceRepository;
+use application::ports::purchase_return_repository::PurchaseReturnRepository;
+use application::ports::sales_return_repository::SalesReturnRepository;
+use application::ports::search_provider::SearchProvider;
 use application::ports::settings_repository::SettingsRepository;
 use application::ports::stock_adjustment_repository::StockAdjustmentRepository;
 use application::ports::stock_movement_repository::StockMovementRepository;
 use application::ports::supplier_repository::SupplierRepository;
-use application::ports::warehouse_repository::WarehouseRepository;
-use application::ports::opening_migration_repository::OpeningMigrationRepository;
-use application::ports::opening_posting_repository::OpeningPostingRepository;
-use application::ports::opening_item_repository::OpeningItemRepository;
-use application::ports::opening_draft_repository::OpeningDraftRepository;
-use application::ports::fiscal_period_repository::FiscalPeriodRepository;
 use application::ports::unified_invoice_repository::UnifiedInvoiceRepository;
 use application::ports::user_repository::UserRepository;
-use application::ports::sales_return_repository::SalesReturnRepository;
-use application::ports::purchase_return_repository::PurchaseReturnRepository;
+use application::ports::warehouse_repository::WarehouseRepository;
 use application::use_cases::currency::commands::CurrencyCommands;
 use application::use_cases::currency::queries::CurrencyQueries;
 use application::use_cases::currency::setup::CurrencySetupUseCase;
 use application::use_cases::material::MaterialCodeUseCases;
-use infrastructure::db::backup;use infrastructure::{
-    create_pool, run_migrations, SqliteAccountRepository, SqliteAssetRepository,
-    SqliteAuditLogRepository, SqliteCategoryRepository, SqliteCodePrefixRepository,
-    SqliteConsumableRepository, SqliteCurrencyRepository, SqliteCustomerRepository,
-    SqliteDamagedItemRepository, SqliteExchangeRateRepository, SqliteInventoryLotRepository,
-    SqliteJournalEntryRepository, SqliteMaterialRepository, SqlitePartnerRepository,
-    SqlitePaymentRepository, SqliteProductionRepository,
-    SqliteSettingsRepository, SqliteStockAdjustmentRepository, SqliteStockMovementRepository,
-    SqliteSupplierRepository, SqliteUnifiedInvoiceRepository,
-    SqliteUserRepository, SqliteSalesReturnRepository, SqlitePurchaseReturnRepository,
-};
+use infrastructure::db::backup;
+use infrastructure::repositories::SqliteFiscalPeriodRepository;
 use infrastructure::repositories::SqliteInvoiceRepository;
-use infrastructure::repositories::SqlitePurchaseInvoiceRepository;
-use infrastructure::SqliteWarehouseRepository;
+use infrastructure::repositories::SqliteOpeningDraftRepository;
+use infrastructure::repositories::SqliteOpeningItemRepository;
 use infrastructure::repositories::SqliteOpeningMigrationRepository;
 use infrastructure::repositories::SqliteOpeningPostingRepository;
-use infrastructure::repositories::SqliteOpeningItemRepository;
-use infrastructure::repositories::SqliteOpeningDraftRepository;
-use infrastructure::repositories::SqliteFiscalPeriodRepository;
+use infrastructure::repositories::SqlitePurchaseInvoiceRepository;
+use infrastructure::SqliteWarehouseRepository;
+use infrastructure::{
+    create_pool, run_migrations, SqliteAccountRepository, SqliteAccountSearchProvider,
+    SqliteAppConfigRepository, SqliteAssetRepository, SqliteAuditLogRepository,
+    SqliteCategoryRepository, SqliteCodePrefixRepository, SqliteConsumableRepository,
+    SqliteCurrencyRepository, SqliteCustomerRepository, SqliteCustomerSearchProvider,
+    SqliteDamagedItemRepository, SqliteExchangeRateRepository, SqliteInventoryLotRepository,
+    SqliteJournalEntryRepository, SqliteMaterialRepository, SqliteMaterialSearchProvider,
+    SqlitePartnerRepository, SqlitePartnerSearchProvider, SqlitePaymentRepository,
+    SqliteProductionRepository, SqlitePurchaseReturnRepository, SqliteSalesReturnRepository,
+    SqliteSettingsRepository, SqliteStockAdjustmentRepository, SqliteStockMovementRepository,
+    SqliteSupplierRepository, SqliteSupplierSearchProvider, SqliteUnifiedInvoiceRepository,
+    SqliteUserRepository,
+};
 use std::sync::Arc;
 
 #[derive(Clone)]
@@ -90,6 +95,8 @@ pub struct AppState {
     pub opening_item_repo: Arc<dyn OpeningItemRepository>,
     pub opening_draft_repo: Arc<dyn OpeningDraftRepository>,
     pub fiscal_period_repo: Arc<dyn FiscalPeriodRepository>,
+    pub app_config_repo: Arc<dyn AppConfigRepository>,
+    pub search_providers: Vec<Arc<dyn SearchProvider>>,
     pub material_code_use_cases: Arc<MaterialCodeUseCases>,
     pub currency_commands: Arc<CurrencyCommands>,
     pub currency_queries: Arc<CurrencyQueries>,
@@ -118,6 +125,8 @@ pub async fn build_app_state(database_url: &str) -> Result<AppState, String> {
     let stock_movement_repo = Arc::new(SqliteStockMovementRepository::new(pool.clone()));
     let customer_repo = Arc::new(SqliteCustomerRepository::new(pool.clone()));
     let supplier_repo = Arc::new(SqliteSupplierRepository::new(pool.clone()));
+    let account_repo = Arc::new(SqliteAccountRepository::new(pool.clone()));
+    let partner_repo = Arc::new(SqlitePartnerRepository::new(pool.clone()));
     let journal_repo = Arc::new(SqliteJournalEntryRepository::new(pool.clone()));
     let unified_invoice_repo = Arc::new(SqliteUnifiedInvoiceRepository::new(pool.clone()));
     let prefix_repo = Arc::new(SqliteCodePrefixRepository::new(pool.clone()));
@@ -130,14 +139,31 @@ pub async fn build_app_state(database_url: &str) -> Result<AppState, String> {
     let purchase_return_repo = Arc::new(SqlitePurchaseReturnRepository::new(pool.clone()));
     let inventory_lot_repo = Arc::new(SqliteInventoryLotRepository::new(pool.clone()));
     let warehouse_repo = Arc::new(SqliteWarehouseRepository::new(pool.clone()));
+    let app_config_repo = Arc::new(SqliteAppConfigRepository::new(pool.clone()));
+    let search_providers: Vec<Arc<dyn SearchProvider>> = vec![
+        Arc::new(SqliteAccountSearchProvider::new(
+            account_repo.clone() as Arc<dyn AccountRepository>
+        )),
+        Arc::new(SqliteCustomerSearchProvider::new(
+            customer_repo.clone() as Arc<dyn CustomerRepository>
+        )),
+        Arc::new(SqliteSupplierSearchProvider::new(
+            supplier_repo.clone() as Arc<dyn SupplierRepository>
+        )),
+        Arc::new(SqlitePartnerSearchProvider::new(
+            partner_repo.clone() as Arc<dyn PartnerRepository>
+        )),
+        Arc::new(SqliteMaterialSearchProvider::new(
+            material_repo.clone() as Arc<dyn MaterialRepository>
+        )),
+    ];
 
     Ok(AppState {
         pool: pool.clone(),
         customer_repo: customer_repo.clone() as Arc<dyn CustomerRepository>,
         material_repo: material_repo.clone() as Arc<dyn MaterialRepository>,
         category_repo: category_repo.clone() as Arc<dyn CategoryRepository>,
-        account_repo: Arc::new(SqliteAccountRepository::new(pool.clone()))
-            as Arc<dyn AccountRepository>,
+        account_repo: account_repo.clone() as Arc<dyn AccountRepository>,
         journal_entry_repo: journal_repo.clone() as Arc<dyn JournalEntryRepository>,
         supplier_repo: supplier_repo.clone() as Arc<dyn SupplierRepository>,
         payment_repo: Arc::new(SqlitePaymentRepository::new(pool.clone()))
@@ -157,8 +183,7 @@ pub async fn build_app_state(database_url: &str) -> Result<AppState, String> {
             as Arc<dyn ConsumableRepository>,
         stock_movement_repo: stock_movement_repo.clone() as Arc<dyn StockMovementRepository>,
         unified_invoice_repo: unified_invoice_repo.clone() as Arc<dyn UnifiedInvoiceRepository>,
-        partner_repo: Arc::new(SqlitePartnerRepository::new(pool.clone()))
-            as Arc<dyn PartnerRepository>,
+        partner_repo: partner_repo.clone() as Arc<dyn PartnerRepository>,
         prefix_repo: prefix_repo.clone() as Arc<dyn CodePrefixRepository>,
         currency_repo: currency_repo.clone() as Arc<dyn CurrencyRepository>,
         exchange_rate_repo: exchange_rate_repo.clone() as Arc<dyn ExchangeRateRepository>,
@@ -178,6 +203,8 @@ pub async fn build_app_state(database_url: &str) -> Result<AppState, String> {
             as Arc<dyn OpeningDraftRepository>,
         fiscal_period_repo: Arc::new(SqliteFiscalPeriodRepository::new(pool.clone()))
             as Arc<dyn FiscalPeriodRepository>,
+        app_config_repo: app_config_repo.clone() as Arc<dyn AppConfigRepository>,
+        search_providers,
         material_code_use_cases: Arc::new(MaterialCodeUseCases::new(
             prefix_repo.clone(),
             category_repo.clone(),

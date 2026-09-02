@@ -1,14 +1,14 @@
-use std::sync::Arc;
-use rust_decimal::Decimal;
 use chrono::Utc;
 use domain::accounting::journal_entry::{JournalEntry, JournalLine, JournalType};
-use domain::shared::{Money, MonetaryAmount};
 use domain::shared::ids::PartnerId;
+use domain::shared::{MonetaryAmount, Money};
+use rust_decimal::Decimal;
+use std::sync::Arc;
 
-use crate::ports::partner_repository::PartnerRepository;
+use crate::errors::AppError;
 use crate::ports::account_repository::AccountRepository;
 use crate::ports::journal_entry_repository::JournalEntryRepository;
-use crate::errors::AppError;
+use crate::ports::partner_repository::PartnerRepository;
 use uuid::Uuid;
 
 /// Capitalizes a portion of the company's retained earnings (52) into a
@@ -29,7 +29,11 @@ impl CapitalizeRetainedEarningsUseCase {
         account_repo: Arc<dyn AccountRepository>,
         journal_repo: Arc<dyn JournalEntryRepository>,
     ) -> Self {
-        Self { repo, account_repo, journal_repo }
+        Self {
+            repo,
+            account_repo,
+            journal_repo,
+        }
     }
 
     pub async fn execute(
@@ -39,22 +43,32 @@ impl CapitalizeRetainedEarningsUseCase {
         effective_date: Option<String>,
         event_id: Option<String>,
     ) -> Result<String, AppError> {
-        let partner_id_parsed = partner_id.parse::<PartnerId>()
+        let partner_id_parsed = partner_id
+            .parse::<PartnerId>()
             .map_err(|_| AppError::NotFound("معرف الشريك غير صالح".into()))?;
-        let partner = self.repo.find_by_id(&partner_id_parsed).await?
+        let partner = self
+            .repo
+            .find_by_id(&partner_id_parsed)
+            .await?
             .ok_or_else(|| AppError::NotFound("الشريك غير موجود".into()))?;
 
         if amount <= Decimal::ZERO {
-            return Err(AppError::Invalid("مبلغ الرسملة يجب أن يكون أكبر من الصفر".into()));
+            return Err(AppError::Invalid(
+                "مبلغ الرسملة يجب أن يكون أكبر من الصفر".into(),
+            ));
         }
 
-        let capital_account_id = partner.linked_account_id
+        let capital_account_id = partner
+            .linked_account_id
             .ok_or_else(|| AppError::Invalid("الشريك لا يملك حساب رأس مال مرتبط".into()))?;
 
-        let retained = self.account_repo.find_by_code("52").await?
+        let retained = self
+            .account_repo
+            .find_by_code("52")
+            .await?
             .ok_or_else(|| AppError::NotFound("حساب الأرباح المبقاة (52) غير موجود".into()))?;
 
-let fx_rate = if partner.exchange_rate > Decimal::ZERO {
+        let fx_rate = if partner.exchange_rate > Decimal::ZERO {
             partner.exchange_rate
         } else {
             Decimal::ONE
@@ -97,7 +111,8 @@ let fx_rate = if partner.exchange_rate > Decimal::ZERO {
                 .unwrap_or_else(Utc::now),
             format!("رسملة الأرباح المبقاة — الشريك {}", partner.name),
             Some(source_id),
-        ).map_err(|e| AppError::Invalid(e.to_string()))?;
+        )
+        .map_err(|e| AppError::Invalid(e.to_string()))?;
 
         entry.post().map_err(|e| AppError::Invalid(e.to_string()))?;
         // Journal lines persist atomically with the entry (single transaction).
@@ -111,7 +126,11 @@ let fx_rate = if partner.exchange_rate > Decimal::ZERO {
 /// amount is in the local (base) currency. `original = base * fx` so
 /// `Money::to_base` divides back to exactly `base` — no fx^2 drift for
 /// non-base partners (Sec 38).
-fn capitalization_currency_amount(base_amount: Decimal, fx_rate: Decimal, currency: &domain::shared::currency::Currency) -> MonetaryAmount {
+fn capitalization_currency_amount(
+    base_amount: Decimal,
+    fx_rate: Decimal,
+    currency: &domain::shared::currency::Currency,
+) -> MonetaryAmount {
     let amount_original = base_amount * fx_rate;
     MonetaryAmount::new(Money::new(amount_original, currency.clone()), fx_rate)
 }
@@ -120,8 +139,8 @@ fn capitalization_currency_amount(base_amount: Decimal, fx_rate: Decimal, curren
 mod tests {
     use super::*;
     use domain::shared::currency::Currency;
-    use domain::shared::AccountId;
     use domain::shared::ids::PartnerId;
+    use domain::shared::AccountId;
 
     #[test]
     fn capitalization_reduces_retained_and_credits_capital() {

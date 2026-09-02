@@ -44,10 +44,10 @@ use application::use_cases::opening_balance::types::{
 };
 use application::use_cases::opening_balance::{
     ApplyResidualToLedgerUseCase, ApproveOpeningBalanceUseCase, CreateOpeningBalanceUseCase,
-    GetOpeningPositionControlUseCase, GetOpeningReconciliationUseCase, KIND_AR, KIND_AP,
-    KIND_BANK, KIND_FIXED_ASSET, KIND_INVENTORY, KIND_LOAN, LockOpeningBalanceUseCase,
+    GetOpeningPositionControlUseCase, GetOpeningReconciliationUseCase, LockOpeningBalanceUseCase,
     PostOpeningBalanceUseCase, SaveOpeningItemsUseCase, SetResidualClassificationUseCase,
-    ValidateOpeningBalanceUseCase,
+    ValidateOpeningBalanceUseCase, KIND_AP, KIND_AR, KIND_BANK, KIND_FIXED_ASSET, KIND_INVENTORY,
+    KIND_LOAN,
 };
 use domain::accounting::account::{Account, AccountCategory, AccountPurpose, AccountType};
 use domain::accounting::journal_entry::{JournalEntry, JournalLine, JournalType};
@@ -77,7 +77,11 @@ fn test_currency() -> Currency {
 
 fn fresh_db_path(tag: &str) -> String {
     let mut path = std::env::temp_dir();
-    path.push(format!("acc_residual_classification_{}_{}.sqlite", tag, uuid::Uuid::new_v4()));
+    path.push(format!(
+        "acc_residual_classification_{}_{}.sqlite",
+        tag,
+        uuid::Uuid::new_v4()
+    ));
     path.to_str().unwrap().to_string()
 }
 
@@ -155,7 +159,10 @@ async fn save_account(
     .unwrap()
     .with_purpose(purpose);
     let id = account.id;
-    SqliteAccountRepository::new(pool.clone()).save(&account).await.unwrap();
+    SqliteAccountRepository::new(pool.clone())
+        .save(&account)
+        .await
+        .unwrap();
     id
 }
 
@@ -201,15 +208,51 @@ async fn seed_accounts(pool: &Arc<sqlx::SqlitePool>) -> Accounts {
     Accounts {
         cash: save_account(pool, "1910", AccountPurpose::General, AccountType::Assets).await,
         bank: save_account(pool, "1911", AccountPurpose::Bank, AccountType::Assets).await,
-        ar: save_account(pool, "1912", AccountPurpose::Receivable, AccountType::Assets).await,
+        ar: save_account(
+            pool,
+            "1912",
+            AccountPurpose::Receivable,
+            AccountType::Assets,
+        )
+        .await,
         inventory: save_account(pool, "1913", AccountPurpose::Inventory, AccountType::Assets).await,
-        fa: save_account(pool, "1914", AccountPurpose::FixedAsset, AccountType::Assets).await,
-        ap: save_account(pool, "2910", AccountPurpose::Payable, AccountType::Liabilities).await,
+        fa: save_account(
+            pool,
+            "1914",
+            AccountPurpose::FixedAsset,
+            AccountType::Assets,
+        )
+        .await,
+        ap: save_account(
+            pool,
+            "2910",
+            AccountPurpose::Payable,
+            AccountType::Liabilities,
+        )
+        .await,
         loan: account_id_by_code(pool, "224").await,
-        ahmad: save_account(pool, "3911", AccountPurpose::PartnerCapital, AccountType::Equity).await,
-        mohammad: save_account(pool, "3912", AccountPurpose::PartnerCapital, AccountType::Equity).await,
+        ahmad: save_account(
+            pool,
+            "3911",
+            AccountPurpose::PartnerCapital,
+            AccountType::Equity,
+        )
+        .await,
+        mohammad: save_account(
+            pool,
+            "3912",
+            AccountPurpose::PartnerCapital,
+            AccountType::Equity,
+        )
+        .await,
         obe: account_id_by_code(pool, "53").await,
-        retained: save_account(pool, "3913", AccountPurpose::RetainedEarnings, AccountType::Equity).await,
+        retained: save_account(
+            pool,
+            "3913",
+            AccountPurpose::RetainedEarnings,
+            AccountType::Equity,
+        )
+        .await,
     }
 }
 
@@ -236,7 +279,10 @@ async fn seed_entities(pool: &Arc<sqlx::SqlitePool>) -> Entities {
         None,
     )
     .unwrap();
-    SqliteCustomerRepository::new(pool.clone()).save(&customer).await.unwrap();
+    SqliteCustomerRepository::new(pool.clone())
+        .save(&customer)
+        .await
+        .unwrap();
 
     let supplier = Supplier::new(
         "S-P7".into(),
@@ -251,7 +297,10 @@ async fn seed_entities(pool: &Arc<sqlx::SqlitePool>) -> Entities {
         None,
     )
     .unwrap();
-    SqliteSupplierRepository::new(pool.clone()).save(&supplier).await.unwrap();
+    SqliteSupplierRepository::new(pool.clone())
+        .save(&supplier)
+        .await
+        .unwrap();
 
     let material = Material::new(
         "مادة أول المدة".into(),
@@ -262,7 +311,10 @@ async fn seed_entities(pool: &Arc<sqlx::SqlitePool>) -> Entities {
         vec![],
     )
     .unwrap();
-    SqliteMaterialRepository::new(pool.clone()).save(&material).await.unwrap();
+    SqliteMaterialRepository::new(pool.clone())
+        .save(&material)
+        .await
+        .unwrap();
 
     let asset_repo = SqliteAssetRepository::new(pool.clone());
     let category = AssetCategory::new("أصول أول المدة".into(), AssetType::Fixed);
@@ -293,7 +345,11 @@ async fn seed_entities(pool: &Arc<sqlx::SqlitePool>) -> Entities {
 }
 
 fn line(account: AccountId, amount: &str) -> OpeningLineInput {
-    OpeningLineInput { account_id: account.to_string(), amount: amount.into(), description: None }
+    OpeningLineInput {
+        account_id: account.to_string(),
+        amount: amount.into(),
+        description: None,
+    }
 }
 
 /// The exact lines: Cash 25 / Bank 40 / AR 80 / Inventory 120 / FA 200
@@ -316,12 +372,48 @@ fn full_lines(a: &Accounts) -> Vec<OpeningLineInput> {
 
 fn subledger_items(a: &Accounts, e: &Entities) -> Vec<OpeningItemInput> {
     vec![
-        OpeningItemInput { kind: KIND_AR.into(), entity_id: e.customer.clone(), reference: None, amount: "80".into(), qty: "0".into() },
-        OpeningItemInput { kind: KIND_AP.into(), entity_id: e.supplier.clone(), reference: None, amount: "70".into(), qty: "0".into() },
-        OpeningItemInput { kind: KIND_INVENTORY.into(), entity_id: e.material.clone(), reference: None, amount: "120".into(), qty: "10".into() },
-        OpeningItemInput { kind: KIND_FIXED_ASSET.into(), entity_id: e.asset.clone(), reference: None, amount: "200".into(), qty: "1".into() },
-        OpeningItemInput { kind: KIND_BANK.into(), entity_id: a.bank.to_string(), reference: Some("حساب البنوك".into()), amount: "40".into(), qty: "0".into() },
-        OpeningItemInput { kind: KIND_LOAN.into(), entity_id: a.loan.to_string(), reference: Some("حساب القروض".into()), amount: "50".into(), qty: "0".into() },
+        OpeningItemInput {
+            kind: KIND_AR.into(),
+            entity_id: e.customer.clone(),
+            reference: None,
+            amount: "80".into(),
+            qty: "0".into(),
+        },
+        OpeningItemInput {
+            kind: KIND_AP.into(),
+            entity_id: e.supplier.clone(),
+            reference: None,
+            amount: "70".into(),
+            qty: "0".into(),
+        },
+        OpeningItemInput {
+            kind: KIND_INVENTORY.into(),
+            entity_id: e.material.clone(),
+            reference: None,
+            amount: "120".into(),
+            qty: "10".into(),
+        },
+        OpeningItemInput {
+            kind: KIND_FIXED_ASSET.into(),
+            entity_id: e.asset.clone(),
+            reference: None,
+            amount: "200".into(),
+            qty: "1".into(),
+        },
+        OpeningItemInput {
+            kind: KIND_BANK.into(),
+            entity_id: a.bank.to_string(),
+            reference: Some("حساب البنوك".into()),
+            amount: "40".into(),
+            qty: "0".into(),
+        },
+        OpeningItemInput {
+            kind: KIND_LOAN.into(),
+            entity_id: a.loan.to_string(),
+            reference: Some("حساب القروض".into()),
+            amount: "50".into(),
+            qty: "0".into(),
+        },
     ]
 }
 
@@ -396,7 +488,11 @@ fn residual_applier(pool: &Arc<sqlx::SqlitePool>) -> ApplyResidualToLedgerUseCas
     )
 }
 
-async fn save_items(pool: &Arc<sqlx::SqlitePool>, migration_id: &str, items: Vec<OpeningItemInput>) {
+async fn save_items(
+    pool: &Arc<sqlx::SqlitePool>,
+    migration_id: &str,
+    items: Vec<OpeningItemInput>,
+) {
     SaveOpeningItemsUseCase::new(
         Arc::new(SqliteOpeningMigrationRepository::new(pool.clone())),
         Arc::new(SqliteOpeningItemRepository::new(pool.clone())),
@@ -406,7 +502,10 @@ async fn save_items(pool: &Arc<sqlx::SqlitePool>, migration_id: &str, items: Vec
         Arc::new(SqliteAssetRepository::new(pool.clone())),
         Arc::new(SqliteAccountRepository::new(pool.clone())),
     )
-    .execute(SaveOpeningItemsCommand { migration_id: migration_id.into(), items })
+    .execute(SaveOpeningItemsCommand {
+        migration_id: migration_id.into(),
+        items,
+    })
     .await
     .expect("save sub-ledger items");
 }
@@ -432,7 +531,10 @@ async fn seed_partners(pool: &Arc<sqlx::SqlitePool>, accounts: &Accounts) {
         )
         .unwrap();
         partner.link_account(account_id);
-        SqlitePartnerRepository::new(pool.clone()).save(&partner).await.unwrap();
+        SqlitePartnerRepository::new(pool.clone())
+            .save(&partner)
+            .await
+            .unwrap();
     }
 }
 
@@ -466,7 +568,12 @@ async fn fixture(tag: &str, cutover: &str) -> Fixture {
     let entities = seed_entities(&pool).await;
     save_items(&pool, &migration_id, subledger_items(&accounts, &entities)).await;
 
-    Fixture { pool, db_path, accounts, migration_id }
+    Fixture {
+        pool,
+        db_path,
+        accounts,
+        migration_id,
+    }
 }
 
 /// Runs Validate -> Approve -> Post -> Classify residual (RetainedEarnings) ->
@@ -476,11 +583,16 @@ async fn run_full_flow(fx: &Fixture) -> String {
         .execute(fx.migration_id.clone(), "tester".into())
         .await
         .expect("balanced reconciled residual draft must validate");
-    ApproveOpeningBalanceUseCase::new(Arc::new(SqliteOpeningMigrationRepository::new(fx.pool.clone())))
-        .execute(fx.migration_id.clone(), "approver".into())
+    ApproveOpeningBalanceUseCase::new(Arc::new(SqliteOpeningMigrationRepository::new(
+        fx.pool.clone(),
+    )))
+    .execute(fx.migration_id.clone(), "approver".into())
+    .await
+    .expect("validated migration must approve");
+    poster(&fx.pool)
+        .execute(fx.migration_id.clone())
         .await
-        .expect("validated migration must approve");
-    poster(&fx.pool).execute(fx.migration_id.clone()).await.expect("approved reconciliation must post");
+        .expect("approved reconciliation must post");
 
     splitter(&fx.pool)
         .execute(SetResidualClassificationCommand {
@@ -490,9 +602,15 @@ async fn run_full_flow(fx: &Fixture) -> String {
         })
         .await
         .expect("residual must classify to retained earnings");
-    residual_applier(&fx.pool).execute(fx.migration_id.clone()).await.expect("residual must apply");
+    residual_applier(&fx.pool)
+        .execute(fx.migration_id.clone())
+        .await
+        .expect("residual must apply");
 
-    let locked = locker(&fx.pool).execute(fx.migration_id.clone()).await.expect("lock requires clear 53");
+    let locked = locker(&fx.pool)
+        .execute(fx.migration_id.clone())
+        .await
+        .expect("lock requires clear 53");
     assert_eq!(locked.0.status, MigrationStatus::Locked);
 
     format!("residual_classification:{}", fx.migration_id)
@@ -513,8 +631,14 @@ async fn canonical_residual_lifecycle_two_official_entries_and_verdict_gate() {
 
     // Posting precondition: every sub-ledger reconciles and the opening lines
     // are in equilibrium.
-    let recon = reconciler(&fx.pool).execute(fx.migration_id.clone()).await.expect("recon");
-    assert!(recon.all_reconciled, "every sub-ledger must reconcile: {recon:?}");
+    let recon = reconciler(&fx.pool)
+        .execute(fx.migration_id.clone())
+        .await
+        .expect("recon");
+    assert!(
+        recon.all_reconciled,
+        "every sub-ledger must reconcile: {recon:?}"
+    );
     assert_eq!(recon.debit_total, dec!(465));
     assert_eq!(recon.credit_total, dec!(465));
     assert!(recon.debit_equals_credit);
@@ -523,10 +647,16 @@ async fn canonical_residual_lifecycle_two_official_entries_and_verdict_gate() {
     let aggregate_source = format!("opening_balance:{}", fx.migration_id);
 
     // -- The two official entries exist exactly once each -----------------
-    assert_eq!(entry_count_by_source(&fx.pool, &aggregate_source).await, 1,
-        "exactly one canonical opening GL posting");
-    assert_eq!(entry_count_by_source(&fx.pool, &residual_source).await, 1,
-        "exactly one residual classification journal");
+    assert_eq!(
+        entry_count_by_source(&fx.pool, &aggregate_source).await,
+        1,
+        "exactly one canonical opening GL posting"
+    );
+    assert_eq!(
+        entry_count_by_source(&fx.pool, &residual_source).await,
+        1,
+        "exactly one residual classification journal"
+    );
 
     // -- Daily Journal: EXACTLY the two official entries, nothing else -----
     let feed = ListJournalEntriesUseCase::new(
@@ -536,30 +666,58 @@ async fn canonical_residual_lifecycle_two_official_entries_and_verdict_gate() {
     .execute_posted(None, None, None, None)
     .await
     .unwrap();
-    assert_eq!(feed.len(), 2, "feed = opening migration + residual classification only");
+    assert_eq!(
+        feed.len(),
+        2,
+        "feed = opening migration + residual classification only"
+    );
 
     let mut sources: Vec<Option<String>> = feed.iter().map(|e| e.source_id.clone()).collect();
     sources.sort();
-    let mut expected: Vec<Option<String>> = vec![Some(aggregate_source.clone()), Some(residual_source.clone())];
+    let mut expected: Vec<Option<String>> = vec![
+        Some(aggregate_source.clone()),
+        Some(residual_source.clone()),
+    ];
     expected.sort();
-    assert_eq!(sources, expected, "no temporary/preparation journal may reach the feed");
+    assert_eq!(
+        sources, expected,
+        "no temporary/preparation journal may reach the feed"
+    );
 
-    let mut types: Vec<String> = feed.iter().map(|e| e.journal_type.source_type().to_string()).collect();
+    let mut types: Vec<String> = feed
+        .iter()
+        .map(|e| e.journal_type.source_type().to_string())
+        .collect();
     types.sort();
-    let mut expected_types: Vec<String> =
-        vec![JournalType::AccountOpeningBalance.source_type().to_string(), JournalType::GeneralJournal.source_type().to_string()];
+    let mut expected_types: Vec<String> = vec![
+        JournalType::AccountOpeningBalance.source_type().to_string(),
+        JournalType::GeneralJournal.source_type().to_string(),
+    ];
     expected_types.sort();
-    assert_eq!(types, expected_types, "one AccountOpeningBalance + one GeneralJournal");
+    assert_eq!(
+        types, expected_types,
+        "one AccountOpeningBalance + one GeneralJournal"
+    );
 
     // -- No blank / duplicated Entry metadata on any GL row ----------------
-    assert!(feed.iter().all(|e| !e.entry_number.trim().is_empty()),
-        "every official journal carries a non-blank Entry Number");
+    assert!(
+        feed.iter().all(|e| !e.entry_number.trim().is_empty()),
+        "every official journal carries a non-blank Entry Number"
+    );
     assert!(feed.iter().all(|e| e.status == "Posted"));
-    assert!(feed.iter().all(|e| e.reversal_of_entry_id.is_none()),
-        "no reversal contra may reach the operational feed");
+    assert!(
+        feed.iter().all(|e| e.reversal_of_entry_id.is_none()),
+        "no reversal contra may reach the operational feed"
+    );
     let numbers: Vec<&str> = feed.iter().map(|e| e.entry_number.as_str()).collect();
-    assert_eq!(numbers.len(), numbers.iter().collect::<std::collections::HashSet<_>>().len(),
-        "Entry Numbers must be distinct");
+    assert_eq!(
+        numbers.len(),
+        numbers
+            .iter()
+            .collect::<std::collections::HashSet<_>>()
+            .len(),
+        "Entry Numbers must be distinct"
+    );
 
     // -- Phase 6 integrity: each logical entry is exactly ONE register entry --
     // The opening migration must surface as a SINGLE daily-journal entry
@@ -570,14 +728,30 @@ async fn canonical_residual_lifecycle_two_official_entries_and_verdict_gate() {
         .iter()
         .find(|e| e.source_id.as_deref() == Some(aggregate_source.as_str()))
         .expect("the opening migration reaches the feed exactly once");
-    assert_eq!(feed.iter().filter(|e| e.source_id.as_deref() == Some(aggregate_source.as_str())).count(), 1,
-        "the opening migration must NEVER unnest into per-line journal entries");
-    assert_eq!(opening.journal_type, JournalType::AccountOpeningBalance,
-        "entry 9 stays an AccountOpeningBalance (Opening Migration)");
-    assert_eq!(opening.lines.len(), full_lines(&fx.accounts).len(),
-        "the migration is ONE entry holding every opening line");
-    assert!(opening.lines.iter().all(|l| l.debit != "0" || l.credit != "0"),
-        "every migration line carries a real amount");
+    assert_eq!(
+        feed.iter()
+            .filter(|e| e.source_id.as_deref() == Some(aggregate_source.as_str()))
+            .count(),
+        1,
+        "the opening migration must NEVER unnest into per-line journal entries"
+    );
+    assert_eq!(
+        opening.journal_type,
+        JournalType::AccountOpeningBalance,
+        "entry 9 stays an AccountOpeningBalance (Opening Migration)"
+    );
+    assert_eq!(
+        opening.lines.len(),
+        full_lines(&fx.accounts).len(),
+        "the migration is ONE entry holding every opening line"
+    );
+    assert!(
+        opening
+            .lines
+            .iter()
+            .all(|l| l.debit != "0" || l.credit != "0"),
+        "every migration line carries a real amount"
+    );
     assert_eq!(opening.total_base_debit, dec!(465).to_string());
     assert_eq!(opening.total_base_credit, dec!(465).to_string());
 
@@ -585,12 +759,23 @@ async fn canonical_residual_lifecycle_two_official_entries_and_verdict_gate() {
         .iter()
         .find(|e| e.source_id.as_deref() == Some(residual_source.as_str()))
         .expect("the residual classification reaches the feed exactly once");
-    assert_eq!(feed.iter().filter(|e| e.source_id.as_deref() == Some(residual_source.as_str())).count(), 1,
-        "the residual pair must NEVER unnest into two separate entries");
-    assert_eq!(residual.journal_type, JournalType::GeneralJournal,
-        "entry 10 stays a GeneralJournal (Residual Classification)");
-    assert_eq!(residual.lines.len(), 2,
-        "the residual classification is ONE entry with exactly its Dr 45 / Cr 45 pair");
+    assert_eq!(
+        feed.iter()
+            .filter(|e| e.source_id.as_deref() == Some(residual_source.as_str()))
+            .count(),
+        1,
+        "the residual pair must NEVER unnest into two separate entries"
+    );
+    assert_eq!(
+        residual.journal_type,
+        JournalType::GeneralJournal,
+        "entry 10 stays a GeneralJournal (Residual Classification)"
+    );
+    assert_eq!(
+        residual.lines.len(),
+        2,
+        "the residual classification is ONE entry with exactly its Dr 45 / Cr 45 pair"
+    );
     assert_eq!(residual.total_base_debit, dec!(45).to_string());
     assert_eq!(residual.total_base_credit, dec!(45).to_string());
 
@@ -602,7 +787,10 @@ async fn canonical_residual_lifecycle_two_official_entries_and_verdict_gate() {
     .fetch_one(&*fx.pool)
     .await
     .unwrap();
-    assert_eq!(blanks, 0, "no journal row may carry a blank entry_number/journal_type");
+    assert_eq!(
+        blanks, 0,
+        "no journal row may carry a blank entry_number/journal_type"
+    );
 
     // Every GL line surfaced by a ledger carries its parent entry metadata.
     let queries = AccountQueries::new(
@@ -611,62 +799,131 @@ async fn canonical_residual_lifecycle_two_official_entries_and_verdict_gate() {
     );
     for acc in [fx.accounts.ar, fx.accounts.bank, fx.accounts.fa] {
         let ledger = queries.get_ledger(&[acc]).await.expect("ledger");
-        assert!(ledger.lines.iter().all(|l| !l.entry_number.trim().is_empty()
-            && matches!(l.journal_type, JournalType::AccountOpeningBalance | JournalType::GeneralJournal)),
-            "every GL row carries non-blank Entry Number / an official Entry Type");
-        assert!(ledger.lines.iter().all(|l| {
-            !l.line_id.trim().is_empty()
-                && !l.account_id.0.to_string().trim().is_empty()
-                && !l.entry_status.trim().is_empty()
-                && !l.entry_type.trim().is_empty()
-                && !l.journal_type_display.trim().is_empty()
-                && !l.journal_id.0.to_string().trim().is_empty()
-        }),
-            "every GL row carries canonical parent/line identity metadata");
+        assert!(
+            ledger
+                .lines
+                .iter()
+                .all(|l| !l.entry_number.trim().is_empty()
+                    && matches!(
+                        l.journal_type,
+                        JournalType::AccountOpeningBalance | JournalType::GeneralJournal
+                    )),
+            "every GL row carries non-blank Entry Number / an official Entry Type"
+        );
+        assert!(
+            ledger.lines.iter().all(|l| {
+                !l.line_id.trim().is_empty()
+                    && !l.account_id.0.to_string().trim().is_empty()
+                    && !l.entry_status.trim().is_empty()
+                    && !l.entry_type.trim().is_empty()
+                    && !l.journal_type_display.trim().is_empty()
+                    && !l.journal_id.0.to_string().trim().is_empty()
+            }),
+            "every GL row carries canonical parent/line identity metadata"
+        );
     }
 
     // -- GL holds every amount exactly once --------------------------------
     assert_eq!(gl_net(&fx.pool, &fx.accounts.cash).await, Decimal::from(25));
     assert_eq!(gl_net(&fx.pool, &fx.accounts.bank).await, Decimal::from(40));
     assert_eq!(gl_net(&fx.pool, &fx.accounts.ar).await, Decimal::from(80));
-    assert_eq!(gl_net(&fx.pool, &fx.accounts.inventory).await, Decimal::from(120));
-    assert_eq!(gl_net(&fx.pool, &fx.accounts.fa).await, Decimal::from(200),
-        "GL fixed-asset opening = 200 exactly once while the sub-ledger keeps the asset");
+    assert_eq!(
+        gl_net(&fx.pool, &fx.accounts.inventory).await,
+        Decimal::from(120)
+    );
+    assert_eq!(
+        gl_net(&fx.pool, &fx.accounts.fa).await,
+        Decimal::from(200),
+        "GL fixed-asset opening = 200 exactly once while the sub-ledger keeps the asset"
+    );
     assert_eq!(gl_net(&fx.pool, &fx.accounts.ap).await, Decimal::from(-70));
-    assert_eq!(gl_net(&fx.pool, &fx.accounts.loan).await, Decimal::from(-50));
-    assert_eq!(gl_net(&fx.pool, &fx.accounts.ahmad).await, Decimal::from(-180));
-    assert_eq!(gl_net(&fx.pool, &fx.accounts.mohammad).await, Decimal::from(-120));
-    assert_eq!(gl_net(&fx.pool, &fx.accounts.obe).await, Decimal::ZERO,
-        "OBE 53 must net to zero after the residual reclassification");
-    assert_eq!(gl_net(&fx.pool, &fx.accounts.retained).await, Decimal::from(-45),
-        "retained earnings holds exactly one 45 effect via the residual journal");
+    assert_eq!(
+        gl_net(&fx.pool, &fx.accounts.loan).await,
+        Decimal::from(-50)
+    );
+    assert_eq!(
+        gl_net(&fx.pool, &fx.accounts.ahmad).await,
+        Decimal::from(-180)
+    );
+    assert_eq!(
+        gl_net(&fx.pool, &fx.accounts.mohammad).await,
+        Decimal::from(-120)
+    );
+    assert_eq!(
+        gl_net(&fx.pool, &fx.accounts.obe).await,
+        Decimal::ZERO,
+        "OBE 53 must net to zero after the residual reclassification"
+    );
+    assert_eq!(
+        gl_net(&fx.pool, &fx.accounts.retained).await,
+        Decimal::from(-45),
+        "retained earnings holds exactly one 45 effect via the residual journal"
+    );
 
     // Report surface: one movement per sub-ledger account.
-    let ar_ledger = queries.get_ledger(&[fx.accounts.ar]).await.expect("AR ledger");
-    assert_eq!(ar_ledger.lines.len(), 1, "AR GL exactly one opening movement");
+    let ar_ledger = queries
+        .get_ledger(&[fx.accounts.ar])
+        .await
+        .expect("AR ledger");
+    assert_eq!(
+        ar_ledger.lines.len(),
+        1,
+        "AR GL exactly one opening movement"
+    );
 
     // -- Reconciliation after reclassification: 53 clear, Dr = Cr ----------
-    let after = reconciler(&fx.pool).execute(fx.migration_id.clone()).await.expect("recon after");
-    assert!(after.all_reconciled, "sub-ledgers reconcile after lock: {after:?}");
-    assert_eq!(after.opening_control_balance, Decimal::ZERO, "control 53 nets zero");
+    let after = reconciler(&fx.pool)
+        .execute(fx.migration_id.clone())
+        .await
+        .expect("recon after");
+    assert!(
+        after.all_reconciled,
+        "sub-ledgers reconcile after lock: {after:?}"
+    );
+    assert_eq!(
+        after.opening_control_balance,
+        Decimal::ZERO,
+        "control 53 nets zero"
+    );
     assert_eq!(after.debit_total, Decimal::from(465));
     assert_eq!(after.credit_total, Decimal::from(465));
 
     // -- Final Trial Balance / Balance Sheet verdict (465 = 120 + 345) ------
-    let pos = positioner(&fx.pool).execute(fx.migration_id.clone()).await.expect("position");
+    let pos = positioner(&fx.pool)
+        .execute(fx.migration_id.clone())
+        .await
+        .expect("position");
     assert_eq!(pos.total_assets, Decimal::from(465));
     assert_eq!(pos.total_liabilities, Decimal::from(120));
-    assert_eq!(pos.total_equity, Decimal::from(345), "300 partner capital + 45 retained via residual");
+    assert_eq!(
+        pos.total_equity,
+        Decimal::from(345),
+        "300 partner capital + 45 retained via residual"
+    );
     assert_eq!(pos.net_assets, Decimal::from(345));
     assert_eq!(pos.total_assets, pos.total_liabilities + pos.total_equity);
     assert!(pos.is_balanced, "trial balance must be balanced");
     assert!(pos.residual_applied, "residual must be applied before lock");
-    assert!(!pos.obe_pending_reclassification, "53 must not pend after reclassification");
-    assert!(pos.validation_errors.is_empty(), "no readiness blockers after lock");
+    assert!(
+        !pos.obe_pending_reclassification,
+        "53 must not pend after reclassification"
+    );
+    assert!(
+        pos.validation_errors.is_empty(),
+        "no readiness blockers after lock"
+    );
 
     // Per-partner slice: Ahmad 180 / Mohammad 120 / 60% / 40%.
-    let ahmad = pos.partner_rows.iter().find(|r| r.partner_name == "أحمد").expect("Ahmad row");
-    let mohammad = pos.partner_rows.iter().find(|r| r.partner_name == "محمد").expect("Mohammad row");
+    let ahmad = pos
+        .partner_rows
+        .iter()
+        .find(|r| r.partner_name == "أحمد")
+        .expect("Ahmad row");
+    let mohammad = pos
+        .partner_rows
+        .iter()
+        .find(|r| r.partner_name == "محمد")
+        .expect("Mohammad row");
     assert_eq!(ahmad.capital, Decimal::from(180));
     assert_eq!(mohammad.capital, Decimal::from(120));
     assert_eq!(ahmad.ownership_percent, Decimal::from(60));
@@ -674,10 +931,14 @@ async fn canonical_residual_lifecycle_two_official_entries_and_verdict_gate() {
     assert_eq!(pos.partner_capital, Decimal::from(300));
 
     // -- Report reads are pure: only the two official entries/lines exist ----
-    let entries_total: i64 =
-        sqlx::query_scalar("SELECT COUNT(*) FROM journal_entries").fetch_one(&*fx.pool).await.unwrap();
-    let lines_total: i64 =
-        sqlx::query_scalar("SELECT COUNT(*) FROM journal_lines").fetch_one(&*fx.pool).await.unwrap();
+    let entries_total: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM journal_entries")
+        .fetch_one(&*fx.pool)
+        .await
+        .unwrap();
+    let lines_total: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM journal_lines")
+        .fetch_one(&*fx.pool)
+        .await
+        .unwrap();
     assert_eq!(entries_total, 2, "only the two official entries exist");
     assert_eq!(lines_total, 12, "10 opening lines + 2 residual lines");
 }
@@ -695,21 +956,35 @@ async fn idempotent_rerun_and_restart_produce_identical_accounting() {
     let db_path = fx.db_path.clone();
 
     // Snapshot the exact accounting rows before the re-run attempts.
-    let entries_before: i64 =
-        sqlx::query_scalar("SELECT COUNT(*) FROM journal_entries").fetch_one(&*fx.pool).await.unwrap();
-    let lines_before: i64 =
-        sqlx::query_scalar("SELECT COUNT(*) FROM journal_lines").fetch_one(&*fx.pool).await.unwrap();
+    let entries_before: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM journal_entries")
+        .fetch_one(&*fx.pool)
+        .await
+        .unwrap();
+    let lines_before: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM journal_lines")
+        .fetch_one(&*fx.pool)
+        .await
+        .unwrap();
     assert_eq!(entries_before, 2);
     assert_eq!(lines_before, 12);
 
     // Re-posting the (now Locked) migration must be rejected; no second journal.
-    assert!(poster(&fx.pool).execute(fx.migration_id.clone()).await.is_err(),
-        "re-posting a posted migration must fail");
+    assert!(
+        poster(&fx.pool)
+            .execute(fx.migration_id.clone())
+            .await
+            .is_err(),
+        "re-posting a posted migration must fail"
+    );
     assert_eq!(entry_count_by_source(&fx.pool, &aggregate_source).await, 1);
 
     // Re-applying the residual must conflict; no second residual journal.
-    assert!(residual_applier(&fx.pool).execute(fx.migration_id.clone()).await.is_err(),
-        "re-applying an already-applied residual must fail");
+    assert!(
+        residual_applier(&fx.pool)
+            .execute(fx.migration_id.clone())
+            .await
+            .is_err(),
+        "re-applying an already-applied residual must fail"
+    );
     assert_eq!(entry_count_by_source(&fx.pool, &residual_source).await, 1);
 
     // App restart: drop the live pool and reopen the SAME file.
@@ -723,33 +998,55 @@ async fn idempotent_rerun_and_restart_produce_identical_accounting() {
     .execute_posted(None, None, None, None)
     .await
     .unwrap();
-    assert_eq!(feed.len(), 2, "a fresh session still sees exactly two official entries");
+    assert_eq!(
+        feed.len(),
+        2,
+        "a fresh session still sees exactly two official entries"
+    );
     let mut sources: Vec<Option<String>> = feed.iter().map(|e| e.source_id.clone()).collect();
     sources.sort();
-    let mut expected: Vec<Option<String>> =
-        vec![Some(aggregate_source.clone()), Some(residual_source.clone())];
+    let mut expected: Vec<Option<String>> = vec![
+        Some(aggregate_source.clone()),
+        Some(residual_source.clone()),
+    ];
     expected.sort();
     assert_eq!(sources, expected);
 
     // GL amounts are untouched by the restart.
     assert_eq!(gl_net(&pool2, &fx.accounts.cash).await, Decimal::from(25));
     assert_eq!(gl_net(&pool2, &fx.accounts.fa).await, Decimal::from(200));
-    assert_eq!(gl_net(&pool2, &fx.accounts.retained).await, Decimal::from(-45));
+    assert_eq!(
+        gl_net(&pool2, &fx.accounts.retained).await,
+        Decimal::from(-45)
+    );
     assert_eq!(gl_net(&pool2, &fx.accounts.obe).await, Decimal::ZERO);
 
     // The position verdict survives the restart unchanged.
-    let pos = positioner(&pool2).execute(fx.migration_id.clone()).await.expect("position after restart");
+    let pos = positioner(&pool2)
+        .execute(fx.migration_id.clone())
+        .await
+        .expect("position after restart");
     assert_eq!(pos.total_assets, Decimal::from(465));
     assert_eq!(pos.total_liabilities, Decimal::from(120));
     assert_eq!(pos.total_equity, Decimal::from(345));
     assert!(pos.is_balanced);
 
-    let entries_after: i64 =
-        sqlx::query_scalar("SELECT COUNT(*) FROM journal_entries").fetch_one(&*pool2).await.unwrap();
-    let lines_after: i64 =
-        sqlx::query_scalar("SELECT COUNT(*) FROM journal_lines").fetch_one(&*pool2).await.unwrap();
-    assert_eq!(entries_after, entries_before, "opening effects never duplicate across a restart");
-    assert_eq!(lines_after, lines_before, "opening lines never duplicate across a restart");
+    let entries_after: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM journal_entries")
+        .fetch_one(&*pool2)
+        .await
+        .unwrap();
+    let lines_after: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM journal_lines")
+        .fetch_one(&*pool2)
+        .await
+        .unwrap();
+    assert_eq!(
+        entries_after, entries_before,
+        "opening effects never duplicate across a restart"
+    );
+    assert_eq!(
+        lines_after, lines_before,
+        "opening lines never duplicate across a restart"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -770,8 +1067,18 @@ async fn temporary_prep_entry_never_survives_after_opening_completes() {
         "LEGACY-AR".to_string(),
         JournalType::AccountOpeningBalance,
         vec![
-            JournalLine::new(accounts.ar, monetary(dec!(80)), monetary(dec!(0)), "رصيد افتتاحي مدين (قديم)".into()),
-            JournalLine::new(accounts.obe, monetary(dec!(0)), monetary(dec!(80)), "رصيد افتتاحي دائن (قديم)".into()),
+            JournalLine::new(
+                accounts.ar,
+                monetary(dec!(80)),
+                monetary(dec!(0)),
+                "رصيد افتتاحي مدين (قديم)".into(),
+            ),
+            JournalLine::new(
+                accounts.obe,
+                monetary(dec!(0)),
+                monetary(dec!(80)),
+                "رصيد افتتاحي دائن (قديم)".into(),
+            ),
         ],
         chrono::Utc::now(),
         "قيد افتتاح عميل قديم".to_string(),
@@ -787,24 +1094,37 @@ async fn temporary_prep_entry_never_survives_after_opening_completes() {
     let aggregate_source = format!("opening_balance:{}", fx.migration_id);
 
     // The legacy original is Reversed and its contra is linked back to it.
-    let (legacy_status, contra_link, contra_type): (String, Option<String>, String) = sqlx::query_as(
-        "SELECT je.status, r.reversal_of_entry_id, r.journal_type
+    let (legacy_status, contra_link, contra_type): (String, Option<String>, String) =
+        sqlx::query_as(
+            "SELECT je.status, r.reversal_of_entry_id, r.journal_type
          FROM journal_entries je
          LEFT JOIN journal_entries r ON r.reversal_of_entry_id = je.id
          WHERE je.source_id = 'legacy_customer_opening'",
-    )
-    .fetch_one(&*fx.pool)
-    .await
-    .unwrap();
-    assert_eq!(legacy_status, "Reversed", "legacy prep entry must be auto-reversed");
+        )
+        .fetch_one(&*fx.pool)
+        .await
+        .unwrap();
+    assert_eq!(
+        legacy_status, "Reversed",
+        "legacy prep entry must be auto-reversed"
+    );
     assert!(contra_link.is_some(), "reversal contra must exist");
-    assert_eq!(contra_type, "AccountOpeningBalance", "contra inherits the original's type");
+    assert_eq!(
+        contra_type, "AccountOpeningBalance",
+        "contra inherits the original's type"
+    );
 
     // AR nets exactly the single canonical effect (80): 80 − 80 + 80 = 80.
-    assert_eq!(gl_net(&fx.pool, &accounts.ar).await, Decimal::from(80),
-        "AR GL = 80 exactly once after the auto-reversal");
-    assert_eq!(gl_net(&fx.pool, &accounts.obe).await, Decimal::ZERO,
-        "OBE 53 nets zero (legacy 80 + reversal −80 + migration 45 − residual 45)");
+    assert_eq!(
+        gl_net(&fx.pool, &accounts.ar).await,
+        Decimal::from(80),
+        "AR GL = 80 exactly once after the auto-reversal"
+    );
+    assert_eq!(
+        gl_net(&fx.pool, &accounts.obe).await,
+        Decimal::ZERO,
+        "OBE 53 nets zero (legacy 80 + reversal −80 + migration 45 − residual 45)"
+    );
 
     // Exactly the two OFFICIAL posted entries remain (the Reversed original is
     // no longer Posted; the contra is a reversal relationship, not an entry).
@@ -816,11 +1136,25 @@ async fn temporary_prep_entry_never_survives_after_opening_completes() {
     .fetch_all(&*fx.pool)
     .await
     .unwrap();
-    assert_eq!(official.len(), 2, "only the opening migration + residual classification are official");
-    assert_eq!(official[0].0, aggregate_source, "first official entry is the opening migration");
-    assert_eq!(official[1].0, residual_source, "second official entry is the residual journal");
-    assert!(official.iter().all(|e| !e.1.trim().is_empty() && !e.2.trim().is_empty()),
-        "every official entry carries non-blank metadata");
+    assert_eq!(
+        official.len(),
+        2,
+        "only the opening migration + residual classification are official"
+    );
+    assert_eq!(
+        official[0].0, aggregate_source,
+        "first official entry is the opening migration"
+    );
+    assert_eq!(
+        official[1].0, residual_source,
+        "second official entry is the residual journal"
+    );
+    assert!(
+        official
+            .iter()
+            .all(|e| !e.1.trim().is_empty() && !e.2.trim().is_empty()),
+        "every official entry carries non-blank metadata"
+    );
 
     // The posted feed applies the POSTED-LEDGER policy (ReversalScope): the
     // reversal contra is excluded SERVER-SIDE — only the two official entries
@@ -832,9 +1166,15 @@ async fn temporary_prep_entry_never_survives_after_opening_completes() {
     .execute_posted(None, None, None, None)
     .await
     .unwrap();
-    assert_eq!(feed.len(), 2, "only the two official entries reach the posted feed");
-    assert!(feed.iter().all(|e| e.reversal_of_entry_id.is_none()),
-        "the reversal contra is excluded from the posted feed (the audit archive keeps it)");
+    assert_eq!(
+        feed.len(),
+        2,
+        "only the two official entries reach the posted feed"
+    );
+    assert!(
+        feed.iter().all(|e| e.reversal_of_entry_id.is_none()),
+        "the reversal contra is excluded from the posted feed (the audit archive keeps it)"
+    );
 
     // Report surface: the AR ledger shows ONLY the aggregate movement.
     let queries = AccountQueries::new(
@@ -842,7 +1182,11 @@ async fn temporary_prep_entry_never_survives_after_opening_completes() {
         Arc::new(SqliteJournalEntryRepository::new(fx.pool.clone())),
     );
     let ar_ledger = queries.get_ledger(&[accounts.ar]).await.expect("AR ledger");
-    assert_eq!(ar_ledger.lines.len(), 1, "report surface hides the reversal pair");
+    assert_eq!(
+        ar_ledger.lines.len(),
+        1,
+        "report surface hides the reversal pair"
+    );
 
     // The FULL register (the source the Audit archive reads —
     // `execute` with ReversalScope::All): it carries the COMPLETE
@@ -856,17 +1200,43 @@ async fn temporary_prep_entry_never_survives_after_opening_completes() {
     .execute(None, None, None, None, None, None)
     .await
     .unwrap();
-    assert_eq!(full.len(), 4, "full register = 2 official + legacy original + its contra");
-    assert_eq!(full.iter().filter(|e| e.reversal_of_entry_id.is_some()).count(), 1,
-        "exactly the contra carries the reversal link");
-    assert_eq!(full.iter().filter(|e| e.status == "Reversed").count(), 1,
-        "the Reversed legacy original stays in the archive (records never deleted)");
-    assert_eq!(full.iter().filter(|e| e.status == "Posted").count(), 3,
-        "2 official + the Posted contra");
-    assert_eq!(full.iter().filter(|e| e.reversal_of_entry_id.is_none() && e.status == "Posted").count(), 2,
-        "the two official entries are the only operational rows");
-    let ata_contra = full.iter().find(|e| e.reversal_of_entry_id.is_some()).expect("contra present");
+    assert_eq!(
+        full.len(),
+        4,
+        "full register = 2 official + legacy original + its contra"
+    );
+    assert_eq!(
+        full.iter()
+            .filter(|e| e.reversal_of_entry_id.is_some())
+            .count(),
+        1,
+        "exactly the contra carries the reversal link"
+    );
+    assert_eq!(
+        full.iter().filter(|e| e.status == "Reversed").count(),
+        1,
+        "the Reversed legacy original stays in the archive (records never deleted)"
+    );
+    assert_eq!(
+        full.iter().filter(|e| e.status == "Posted").count(),
+        3,
+        "2 official + the Posted contra"
+    );
+    assert_eq!(
+        full.iter()
+            .filter(|e| e.reversal_of_entry_id.is_none() && e.status == "Posted")
+            .count(),
+        2,
+        "the two official entries are the only operational rows"
+    );
+    let ata_contra = full
+        .iter()
+        .find(|e| e.reversal_of_entry_id.is_some())
+        .expect("contra present");
     let legacy_id = legacy.id.0.to_string();
-    assert_eq!(ata_contra.reversal_of_entry_id.as_deref(), Some(legacy_id.as_str()),
-        "the contra points back at the legacy original — the audit archive keeps the pair linked");
+    assert_eq!(
+        ata_contra.reversal_of_entry_id.as_deref(),
+        Some(legacy_id.as_str()),
+        "the contra points back at the legacy original — the audit archive keeps the pair linked"
+    );
 }

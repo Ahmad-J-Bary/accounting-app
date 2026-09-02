@@ -1,15 +1,15 @@
-use async_trait::async_trait;
-use sqlx::SqlitePool;
 use application::errors::AppError;
 use application::ports::audit_log_repository::AuditLogRepository;
+use async_trait::async_trait;
 use domain::audit::AuditLog;
-use domain::shared::ids::{AuditLogId};
+use domain::shared::ids::AuditLogId;
+use sqlx::SqlitePool;
 use std::sync::Arc;
 
-mod models;
-mod mappers;
-mod queries;
 mod commands;
+mod mappers;
+mod models;
+mod queries;
 
 pub struct SqliteAuditLogRepository {
     pool: Arc<SqlitePool>,
@@ -35,7 +35,11 @@ impl AuditLogRepository for SqliteAuditLogRepository {
         queries::list_all(&self.pool, limit).await
     }
 
-    async fn list_by_entity(&self, entity_type: &str, entity_id: &str) -> Result<Vec<AuditLog>, AppError> {
+    async fn list_by_entity(
+        &self,
+        entity_type: &str,
+        entity_id: &str,
+    ) -> Result<Vec<AuditLog>, AppError> {
         queries::list_by_entity(&self.pool, entity_type, entity_id).await
     }
 }

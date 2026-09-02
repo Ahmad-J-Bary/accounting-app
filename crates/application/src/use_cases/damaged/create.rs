@@ -14,7 +14,7 @@ use domain::inventory::stock_movement::{MovementType, StockMovement};
 use domain::inventory::{DamageFinancialSnapshot, DamagedItem};
 use domain::shared::exchange_rate::RateType;
 use domain::shared::ids::MaterialId;
-use domain::shared::{Currency, Money, MonetaryAmount};
+use domain::shared::{Currency, MonetaryAmount, Money};
 use rust_decimal::Decimal;
 use rust_decimal::RoundingStrategy;
 use std::sync::Arc;
@@ -189,10 +189,9 @@ pub async fn build_damaged_journal_entry(
     entry_date: DateTime<Utc>,
     base_currency: &Currency,
 ) -> Result<JournalEntry, AppError> {
-    let loss_account = account_repo
-        .find_by_code("45")
-        .await?
-        .ok_or_else(|| AppError::NotFound("حساب خسائر المواد التالفة والتسويات غير موجود: 45".into()))?;
+    let loss_account = account_repo.find_by_code("45").await?.ok_or_else(|| {
+        AppError::NotFound("حساب خسائر المواد التالفة والتسويات غير موجود: 45".into())
+    })?;
     let inventory_account = account_repo
         .find_by_code("1241")
         .await?
@@ -273,15 +272,9 @@ pub async fn resolve_fx_rate(
             RateType::Middle,
         )
         .await?
-        .or(
-            exchange_rate_repo
-                .find_latest(
-                    &base_currency.code,
-                    &currency.code,
-                    RateType::Middle,
-                )
-                .await?,
-        )
+        .or(exchange_rate_repo
+            .find_latest(&base_currency.code, &currency.code, RateType::Middle)
+            .await?)
         .ok_or_else(|| {
             AppError::Invalid(format!(
                 "لا يوجد سعر صرف محفوظ للعملة {} بتاريخ العملية {}",
@@ -290,7 +283,9 @@ pub async fn resolve_fx_rate(
             ))
         })?;
     if rate.rate <= Decimal::ZERO {
-        return Err(AppError::Invalid("سعر الصرف يجب أن يكون أكبر من صفر".into()));
+        return Err(AppError::Invalid(
+            "سعر الصرف يجب أن يكون أكبر من صفر".into(),
+        ));
     }
     Ok(rate.rate)
 }
@@ -315,7 +310,9 @@ pub async fn compute_carrying_cost_base(
         .unwrap_or_else(|_| "Average".to_string());
 
     if costing_method == "FIFO" {
-        let lots = lot_repo.find_available_by_material(&material_id.to_string()).await?;
+        let lots = lot_repo
+            .find_available_by_material(&material_id.to_string())
+            .await?;
         if !lots.is_empty() {
             let total_available: Decimal = lots.iter().map(|lot| lot.quantity_remaining).sum();
             if total_available < quantity {
@@ -350,5 +347,6 @@ pub async fn compute_carrying_cost_base(
         summary.last_purchase_price_base
     };
 
-    Ok((unit_cost_base * quantity).round_dp_with_strategy(4, RoundingStrategy::MidpointAwayFromZero))
+    Ok((unit_cost_base * quantity)
+        .round_dp_with_strategy(4, RoundingStrategy::MidpointAwayFromZero))
 }

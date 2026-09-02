@@ -1,15 +1,15 @@
-use async_trait::async_trait;
-use sqlx::SqlitePool;
 use application::errors::AppError;
 use application::ports::purchase_return_repository::PurchaseReturnRepository;
+use async_trait::async_trait;
 use domain::returns::PurchaseReturn;
 use domain::shared::ids::PurchaseReturnId;
+use sqlx::SqlitePool;
 use std::sync::Arc;
 
-mod models;
-mod mappers;
-mod queries;
 mod commands;
+mod mappers;
+mod models;
+mod queries;
 
 pub struct SqlitePurchaseReturnRepository {
     pool: Arc<SqlitePool>,
@@ -41,7 +41,7 @@ impl PurchaseReturnRepository for SqlitePurchaseReturnRepository {
 
     async fn get_next_return_number(&self) -> Result<String, AppError> {
         let row: Option<(String,)> = sqlx::query_as(
-            "SELECT return_number FROM purchase_returns ORDER BY created_at DESC LIMIT 1"
+            "SELECT return_number FROM purchase_returns ORDER BY created_at DESC LIMIT 1",
         )
         .fetch_optional(self.pool.as_ref())
         .await
@@ -49,7 +49,12 @@ impl PurchaseReturnRepository for SqlitePurchaseReturnRepository {
 
         match row {
             Some((last,)) => {
-                let num: u64 = last.chars().skip_while(|c| !c.is_ascii_digit()).collect::<String>().parse().unwrap_or(0);
+                let num: u64 = last
+                    .chars()
+                    .skip_while(|c| !c.is_ascii_digit())
+                    .collect::<String>()
+                    .parse()
+                    .unwrap_or(0);
                 Ok((num + 1).to_string())
             }
             None => Ok("1".to_string()),

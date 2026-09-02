@@ -4,14 +4,16 @@ use std::sync::Arc;
 use application::ports::customer_repository::CustomerRepository;
 use application::ports::supplier_repository::SupplierRepository;
 use chrono::Utc;
-use domain::accounting::account::{Account, AccountCategory, AccountType, AccountPurpose};
-use domain::accounting::journal_entry::{JournalEntry, JournalLine, JournalType, JournalEntryStatus};
+use domain::accounting::account::{Account, AccountCategory, AccountPurpose, AccountType};
+use domain::accounting::journal_entry::{
+    JournalEntry, JournalEntryStatus, JournalLine, JournalType,
+};
 use domain::customers::Customer;
-use domain::suppliers::Supplier;
 use domain::shared::currency::Currency;
 use domain::shared::ids::AccountId;
 use domain::shared::monetary_amount::MonetaryAmount;
 use domain::shared::money::Money;
+use domain::suppliers::Supplier;
 use infrastructure::db::pool::run_migrations;
 use infrastructure::repositories::{SqliteCustomerRepository, SqliteSupplierRepository};
 use rust_decimal::Decimal;
@@ -23,7 +25,10 @@ fn test_currency() -> Currency {
 
 async fn build_pool() -> Arc<sqlx::SqlitePool> {
     let mut path = std::env::temp_dir();
-    path.push(format!("acc_cs_atomic_test_{}.sqlite", uuid::Uuid::new_v4()));
+    path.push(format!(
+        "acc_cs_atomic_test_{}.sqlite",
+        uuid::Uuid::new_v4()
+    ));
     let options = SqliteConnectOptions::from_str(path.to_str().unwrap())
         .unwrap()
         .create_if_missing(true);
@@ -41,18 +46,14 @@ async fn build_pool() -> Arc<sqlx::SqlitePool> {
 /// (00000000-...-1230, level 3) and "223" A/P (00000000-...-2230, level 3).
 /// Codes "1203"/"2203" were renamed to "123"/"223" in migration 015.
 async fn parent_ids(pool: &sqlx::SqlitePool) -> (AccountId, AccountId) {
-    let ar = sqlx::query_scalar::<_, String>(
-        "SELECT id FROM accounts WHERE code = '123' LIMIT 1",
-    )
-    .fetch_one(pool)
-    .await
-    .unwrap();
-    let ap = sqlx::query_scalar::<_, String>(
-        "SELECT id FROM accounts WHERE code = '223' LIMIT 1",
-    )
-    .fetch_one(pool)
-    .await
-    .unwrap();
+    let ar = sqlx::query_scalar::<_, String>("SELECT id FROM accounts WHERE code = '123' LIMIT 1")
+        .fetch_one(pool)
+        .await
+        .unwrap();
+    let ap = sqlx::query_scalar::<_, String>("SELECT id FROM accounts WHERE code = '223' LIMIT 1")
+        .fetch_one(pool)
+        .await
+        .unwrap();
     (
         AccountId::from_str(&ar).unwrap(),
         AccountId::from_str(&ap).unwrap(),
@@ -90,7 +91,12 @@ fn partner_account(
     .unwrap()
 }
 
-fn opening_entry(account_id: AccountId, partner_id: &str, entry_number: &str, amount: Decimal) -> JournalEntry {
+fn opening_entry(
+    account_id: AccountId,
+    partner_id: &str,
+    entry_number: &str,
+    amount: Decimal,
+) -> JournalEntry {
     let ma = MonetaryAmount::new(Money::new(amount, test_currency()), Decimal::ONE);
     let zero = MonetaryAmount::zero(test_currency());
     let lines = vec![
@@ -100,12 +106,7 @@ fn opening_entry(account_id: AccountId, partner_id: &str, entry_number: &str, am
             zero.clone(),
             "رصيد افتتاحي".to_string(),
         ),
-        JournalLine::new(
-            account_id,
-            zero,
-            ma,
-            "رصيد افتتاحي مقابل".to_string(),
-        ),
+        JournalLine::new(account_id, zero, ma, "رصيد افتتاحي مقابل".to_string()),
     ];
     JournalEntry::new(
         entry_number.to_string(),
@@ -161,9 +162,15 @@ async fn customer_save_with_accounting_persists_customer_account_and_entry_atomi
     customer.link_account(account.id);
     let entry = opening_entry(account.id, "1", "JE-ATOMIC-1", Decimal::from(500));
 
-    repo.save_with_accounting(&customer, &account, &[entry]).await.unwrap();
+    repo.save_with_accounting(&customer, &account, &[entry])
+        .await
+        .unwrap();
 
-    let stored = repo.find_by_id(&customer.id).await.unwrap().expect("customer persisted");
+    let stored = repo
+        .find_by_id(&customer.id)
+        .await
+        .unwrap()
+        .expect("customer persisted");
     assert_eq!(stored.name, "عميل اختبار ١");
     assert_eq!(stored.account_id, Some(account.id));
 
@@ -241,13 +248,16 @@ async fn customer_delete_with_accounting_rejects_posted_entries_and_rolls_back()
     // A posted entry must block deletion (immutability guard inside delete_tx).
     let mut posted_entry = opening_entry(account.id, "3", "JE-ATOMIC-3", Decimal::from(500));
     posted_entry.status = JournalEntryStatus::Posted;
-    repo.save_with_accounting(&customer, &account, &[posted_entry]).await.unwrap();
-
-    let d_ids = sqlx::query_scalar::<_, String>("SELECT id FROM journal_entries WHERE source_id = ?")
-        .bind("3")
-        .fetch_all(&*pool)
+    repo.save_with_accounting(&customer, &account, &[posted_entry])
         .await
         .unwrap();
+
+    let d_ids =
+        sqlx::query_scalar::<_, String>("SELECT id FROM journal_entries WHERE source_id = ?")
+            .bind("3")
+            .fetch_all(&*pool)
+            .await
+            .unwrap();
     let entry_ids = d_ids
         .iter()
         .map(|s| domain::shared::ids::JournalEntryId::from_str(s).unwrap())
@@ -289,19 +299,24 @@ async fn customer_delete_with_accounting_removes_drafts_atomically() {
     let acc2 = partner_account("12039996", "عميل اختبار ٤", ar, AccountPurpose::Receivable);
     c2.link_account(acc2.id);
     let draft_entry = opening_entry(acc2.id, "4", "JE-ATOMIC-4", Decimal::from(500));
-    repo.save_with_accounting(&c2, &acc2, &[draft_entry]).await.unwrap();
-
-    let d_ids = sqlx::query_scalar::<_, String>("SELECT id FROM journal_entries WHERE source_id = ?")
-        .bind("4")
-        .fetch_all(&*pool)
+    repo.save_with_accounting(&c2, &acc2, &[draft_entry])
         .await
         .unwrap();
+
+    let d_ids =
+        sqlx::query_scalar::<_, String>("SELECT id FROM journal_entries WHERE source_id = ?")
+            .bind("4")
+            .fetch_all(&*pool)
+            .await
+            .unwrap();
     let d_entry_ids = d_ids
         .iter()
         .map(|s| domain::shared::ids::JournalEntryId::from_str(s).unwrap())
         .collect::<Vec<_>>();
 
-    repo.delete_with_accounting(&c2.id, Some(&acc2.id), &d_entry_ids).await.unwrap();
+    repo.delete_with_accounting(&c2.id, Some(&acc2.id), &d_entry_ids)
+        .await
+        .unwrap();
 
     let c2_rows: i64 = sqlx::query_scalar("SELECT count(*) FROM customers WHERE id = ?")
         .bind(c2.id.to_string())
@@ -313,11 +328,12 @@ async fn customer_delete_with_accounting_removes_drafts_atomically() {
         .fetch_one(&*pool)
         .await
         .unwrap();
-    let j2_rows: i64 = sqlx::query_scalar("SELECT count(*) FROM journal_entries WHERE source_id = ?")
-        .bind("4")
-        .fetch_one(&*pool)
-        .await
-        .unwrap();
+    let j2_rows: i64 =
+        sqlx::query_scalar("SELECT count(*) FROM journal_entries WHERE source_id = ?")
+            .bind("4")
+            .fetch_one(&*pool)
+            .await
+            .unwrap();
     assert_eq!(c2_rows, 0, "العميل يجب أن يحذف نهائياً");
     assert_eq!(a2_rows, 0, "حساب العميل يجب أن يحذف معه");
     assert_eq!(j2_rows, 0, "قيد العميل المسودة يجب أن يحذف معه");
@@ -335,8 +351,14 @@ async fn supplier_save_with_accounting_persists_atomically_and_rolls_back_on_con
     supplier.link_account(account.id);
     let entry = opening_entry(account.id, "5", "JE-ATOMIC-5", Decimal::from(700));
 
-    repo.save_with_accounting(&supplier, &account, &[entry]).await.unwrap();
-    let stored = repo.find_by_id(&supplier.id).await.unwrap().expect("supplier persisted");
+    repo.save_with_accounting(&supplier, &account, &[entry])
+        .await
+        .unwrap();
+    let stored = repo
+        .find_by_id(&supplier.id)
+        .await
+        .unwrap()
+        .expect("supplier persisted");
     assert_eq!(stored.account_id, Some(account.id));
 
     // Conflict: occupy the account code and confirm full rollback.
@@ -357,7 +379,9 @@ async fn supplier_save_with_accounting_persists_atomically_and_rolls_back_on_con
     supplier2.link_account(dup.id);
     let dup_entry = opening_entry(dup.id, "6", "JE-ATOMIC-6", Decimal::from(700));
 
-    let err = repo.save_with_accounting(&supplier2, &dup, &[dup_entry]).await;
+    let err = repo
+        .save_with_accounting(&supplier2, &dup, &[dup_entry])
+        .await;
     assert!(err.is_err(), "العملية يجب أن تفشل عند تضارب كود الحساب");
 
     let sup: i64 = sqlx::query_scalar("SELECT count(*) FROM suppliers WHERE id = ?")
@@ -391,19 +415,24 @@ async fn supplier_delete_with_accounting_removes_customer_proof_variant() {
     let account = partner_account("22039995", "مورد اختبار ٣", ap, AccountPurpose::Payable);
     supplier.link_account(account.id);
     let draft = opening_entry(account.id, "7", "JE-ATOMIC-7", Decimal::from(700));
-    repo.save_with_accounting(&supplier, &account, &[draft]).await.unwrap();
-
-    let d_ids = sqlx::query_scalar::<_, String>("SELECT id FROM journal_entries WHERE source_id = ?")
-        .bind("7")
-        .fetch_all(&*pool)
+    repo.save_with_accounting(&supplier, &account, &[draft])
         .await
         .unwrap();
+
+    let d_ids =
+        sqlx::query_scalar::<_, String>("SELECT id FROM journal_entries WHERE source_id = ?")
+            .bind("7")
+            .fetch_all(&*pool)
+            .await
+            .unwrap();
     let d_entry_ids = d_ids
         .iter()
         .map(|s| domain::shared::ids::JournalEntryId::from_str(s).unwrap())
         .collect::<Vec<_>>();
 
-    repo.delete_with_accounting(&supplier.id, Some(&account.id), &d_entry_ids).await.unwrap();
+    repo.delete_with_accounting(&supplier.id, Some(&account.id), &d_entry_ids)
+        .await
+        .unwrap();
 
     let sup: i64 = sqlx::query_scalar("SELECT count(*) FROM suppliers WHERE id = ?")
         .bind(supplier.id.to_string())

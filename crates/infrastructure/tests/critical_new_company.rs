@@ -15,8 +15,8 @@
 use std::str::FromStr;
 use std::sync::Arc;
 
-use application::dto::invoice_dto::{CreateInvoiceRequest, InvoiceLineDto};
 use application::dto::customer_dto::CreateCustomerRequest;
+use application::dto::invoice_dto::{CreateInvoiceRequest, InvoiceLineDto};
 use application::ports::account_repository::AccountRepository;
 use application::ports::currency_repository::CurrencyRepository;
 use application::ports::journal_entry_repository::JournalEntryRepository;
@@ -230,7 +230,12 @@ async fn register_partner(pool: &Arc<sqlx::SqlitePool>) -> (String, AccountId) {
         .await
         .unwrap()
         .expect("partner exists");
-    (id, partner.linked_account_id.expect("partner has capital account"))
+    (
+        id,
+        partner
+            .linked_account_id
+            .expect("partner has capital account"),
+    )
 }
 
 // ---------------------------------------------------------------------------
@@ -245,9 +250,14 @@ async fn new_company_partner_registration_is_not_a_ledger_event() {
 
     let (_, cap_id) = register_partner(&pool).await;
 
-    let journal_count: i64 =
-        sqlx::query_scalar("SELECT COUNT(*) FROM journal_entries").fetch_one(&*pool).await.unwrap();
-    assert_eq!(journal_count, 0, "partner master-data registration must post no journal");
+    let journal_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM journal_entries")
+        .fetch_one(&*pool)
+        .await
+        .unwrap();
+    assert_eq!(
+        journal_count, 0,
+        "partner master-data registration must post no journal"
+    );
     assert!(
         close_enough(ledger_balance(&pool, &cap_id).await, 0.0),
         "no capital journal until a real contribution"
@@ -283,22 +293,45 @@ async fn new_company_capital_contribution_posts_real_balanced_event() {
     );
 
     let first = uc
-        .execute(partner_id.clone(), cash.to_string(), Decimal::from(1000), false, Some("evt-1".into()))
+        .execute(
+            partner_id.clone(),
+            cash.to_string(),
+            Decimal::from(1000),
+            false,
+            Some("evt-1".into()),
+        )
         .await
         .expect("contribution posts");
     let replay = uc
-        .execute(partner_id, cash.to_string(), Decimal::from(1000), false, Some("evt-1".into()))
+        .execute(
+            partner_id,
+            cash.to_string(),
+            Decimal::from(1000),
+            false,
+            Some("evt-1".into()),
+        )
         .await
         .expect("replay resolves to same journal");
-    assert_eq!(first, replay, "re-submitting the same event must not double-post");
-
-    assert!(close_enough(ledger_balance(&pool, &cash).await, 1000.0), "cash +1000");
-    assert!(close_enough(ledger_balance(&pool, &cap_id).await, -1000.0), "capital credit −1000");
     assert_eq!(
-        sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM journal_entries WHERE journal_type = 'CapitalContribution'")
-            .fetch_one(&*pool)
-            .await
-            .unwrap(),
+        first, replay,
+        "re-submitting the same event must not double-post"
+    );
+
+    assert!(
+        close_enough(ledger_balance(&pool, &cash).await, 1000.0),
+        "cash +1000"
+    );
+    assert!(
+        close_enough(ledger_balance(&pool, &cap_id).await, -1000.0),
+        "capital credit −1000"
+    );
+    assert_eq!(
+        sqlx::query_scalar::<_, i64>(
+            "SELECT COUNT(*) FROM journal_entries WHERE journal_type = 'CapitalContribution'"
+        )
+        .fetch_one(&*pool)
+        .await
+        .unwrap(),
         1,
         "exactly one capital contribution journal"
     );
@@ -370,17 +403,34 @@ async fn new_company_customer_supplier_opening_balance_posts_their_journals() {
     })
     .await
     .expect("create supplier");
-    let supplier_account = supplier_dto.account_id.expect("supplier has linked account");
+    let supplier_account = supplier_dto
+        .account_id
+        .expect("supplier has linked account");
     let supplier_account = AccountId(uuid::Uuid::parse_str(&supplier_account).unwrap());
 
     let obe = account_id_by_code(&pool, "53").await;
 
-    assert!(close_enough(ledger_balance(&pool, &customer_account).await, 700.0), "AR +700");
-    assert!(close_enough(ledger_balance(&pool, &supplier_account).await, -500.0), "AP −500");
-    assert!(close_enough(ledger_balance(&pool, &obe).await, -200.0), "OBE nets 700−500 = −200 (credit)");
+    assert!(
+        close_enough(ledger_balance(&pool, &customer_account).await, 700.0),
+        "AR +700"
+    );
+    assert!(
+        close_enough(ledger_balance(&pool, &supplier_account).await, -500.0),
+        "AP −500"
+    );
+    assert!(
+        close_enough(ledger_balance(&pool, &obe).await, -200.0),
+        "OBE nets 700−500 = −200 (credit)"
+    );
 
-    let lines: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM journal_lines").fetch_one(&*pool).await.unwrap();
-    assert_eq!(lines, 4, "customer + supplier opening journals = 2 balanced entries (4 legs)");
+    let lines: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM journal_lines")
+        .fetch_one(&*pool)
+        .await
+        .unwrap();
+    assert_eq!(
+        lines, 4,
+        "customer + supplier opening journals = 2 balanced entries (4 legs)"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -512,7 +562,10 @@ async fn new_company_cash_sale_posts_one_balanced_journal_and_stock_movement() {
     .fetch_one(&*pool)
     .await
     .unwrap();
-    assert!(close_enough(d, c), "full ledger must balance (debit {d} vs credit {c})");
+    assert!(
+        close_enough(d, c),
+        "full ledger must balance (debit {d} vs credit {c})"
+    );
 
     let (sd, sc): (f64, f64) = sqlx::query_as(
         "SELECT COALESCE(SUM(CAST(jl.debit_base AS REAL)),0), COALESCE(SUM(CAST(jl.credit_base AS REAL)),0)
@@ -523,6 +576,12 @@ async fn new_company_cash_sale_posts_one_balanced_journal_and_stock_movement() {
     .fetch_one(&*pool)
     .await
     .unwrap();
-    assert!(close_enough(sd, sc), "sale journal must balance (debit {sd} vs credit {sc})");
-    assert!(close_enough(sd, 400.0), "sale journal total is the invoice total (400), got {sd}");
+    assert!(
+        close_enough(sd, sc),
+        "sale journal must balance (debit {sd} vs credit {sc})"
+    );
+    assert!(
+        close_enough(sd, 400.0),
+        "sale journal total is the invoice total (400), got {sd}"
+    );
 }

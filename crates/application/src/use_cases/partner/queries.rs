@@ -1,8 +1,8 @@
-use std::sync::Arc;
-use domain::accounting::partner::{Partner, ProfitSharingType};
-use crate::ports::partner_repository::PartnerRepository;
 use crate::errors::AppError;
+use crate::ports::partner_repository::PartnerRepository;
+use domain::accounting::partner::{Partner, ProfitSharingType};
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PartnerDto {

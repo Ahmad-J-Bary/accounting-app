@@ -1,17 +1,17 @@
-use std::sync::Arc;
-use std::str::FromStr;
-use rust_decimal::Decimal;
-use crate::ports::currency_repository::CurrencyRepository;
-use crate::ports::exchange_rate_repository::ExchangeRateRepository;
-use crate::ports::payment_repository::PaymentRepository;
-use domain::sales::unified_invoice::{InvoiceType, InvoiceStatus};
-use domain::shared::ids::{InvoiceId};
-use crate::ports::unified_invoice_repository::UnifiedInvoiceRepository;
-use crate::ports::stock_movement_repository::StockMovementRepository;
-use crate::ports::journal_entry_repository::JournalEntryRepository;
-use crate::ports::customer_repository::CustomerRepository;
-use crate::ports::supplier_repository::SupplierRepository;
 use crate::errors::AppError;
+use crate::ports::currency_repository::CurrencyRepository;
+use crate::ports::customer_repository::CustomerRepository;
+use crate::ports::exchange_rate_repository::ExchangeRateRepository;
+use crate::ports::journal_entry_repository::JournalEntryRepository;
+use crate::ports::payment_repository::PaymentRepository;
+use crate::ports::stock_movement_repository::StockMovementRepository;
+use crate::ports::supplier_repository::SupplierRepository;
+use crate::ports::unified_invoice_repository::UnifiedInvoiceRepository;
+use domain::sales::unified_invoice::{InvoiceStatus, InvoiceType};
+use domain::shared::ids::InvoiceId;
+use rust_decimal::Decimal;
+use std::str::FromStr;
+use std::sync::Arc;
 
 /// Compute the net supplier credit that was actually recorded during posting
 /// for a Purchase invoice, mirroring PostInvoiceUseCase logic exactly.
@@ -23,9 +23,21 @@ fn purchase_net_supplier_credit(
     extra_costs: Decimal,
     amount_paid: Decimal,
 ) -> Decimal {
-    let subtotal = if total > extra_costs { total - extra_costs } else { Decimal::ZERO };
-    let main_paid = if amount_paid > subtotal { subtotal } else { amount_paid };
-    if subtotal > main_paid { subtotal - main_paid } else { Decimal::ZERO }
+    let subtotal = if total > extra_costs {
+        total - extra_costs
+    } else {
+        Decimal::ZERO
+    };
+    let main_paid = if amount_paid > subtotal {
+        subtotal
+    } else {
+        amount_paid
+    };
+    if subtotal > main_paid {
+        subtotal - main_paid
+    } else {
+        Decimal::ZERO
+    }
 }
 
 pub struct DeleteInvoiceUseCase {
@@ -64,8 +76,12 @@ impl DeleteInvoiceUseCase {
     }
 
     pub async fn execute(&self, id: String) -> Result<(), AppError> {
-        let invoice_id = InvoiceId::from_str(&id).map_err(|_| AppError::Invalid("معرف فاتورة غير صالح".into()))?;
-        let invoice = self.repo.find_by_id(&invoice_id).await?
+        let invoice_id = InvoiceId::from_str(&id)
+            .map_err(|_| AppError::Invalid("معرف فاتورة غير صالح".into()))?;
+        let invoice = self
+            .repo
+            .find_by_id(&invoice_id)
+            .await?
             .ok_or_else(|| AppError::NotFound("الفاتورة غير موجودة".into()))?;
 
         // 1. If posted, we need to reverse everything first (similar to reopen)
@@ -90,13 +106,16 @@ impl DeleteInvoiceUseCase {
                                     &customer.currency.code,
                                     &self.currency_repo,
                                     &self.exchange_rate_repo,
-                                ).await?;
-                                customer.decrease_debit(converted).map_err(|e| AppError::Invalid(e.to_string()))?;
+                                )
+                                .await?;
+                                customer
+                                    .decrease_debit(converted)
+                                    .map_err(|e| AppError::Invalid(e.to_string()))?;
                                 self.customer_repo.update(&customer).await?;
                             }
                         }
                     }
-                },
+                }
                 InvoiceType::Purchase => {
                     let net_credit = purchase_net_supplier_credit(total, extra_costs, amount_paid);
                     if net_credit > Decimal::ZERO {
@@ -109,21 +128,29 @@ impl DeleteInvoiceUseCase {
                                     &supplier.currency.code,
                                     &self.currency_repo,
                                     &self.exchange_rate_repo,
-                                ).await?;
-                                supplier.decrease_credit(converted).map_err(|e| AppError::Invalid(e.to_string()))?;
+                                )
+                                .await?;
+                                supplier
+                                    .decrease_credit(converted)
+                                    .map_err(|e| AppError::Invalid(e.to_string()))?;
                                 self.supplier_repo.update(&supplier).await?;
                             }
                         }
                     }
-                },
+                }
                 _ => {}
             }
 
             // Delete all payment records linked to this invoice
-            self.payment_repo.delete_by_invoice_id(&invoice.id.to_string()).await?;
+            self.payment_repo
+                .delete_by_invoice_id(&invoice.id.to_string())
+                .await?;
 
             // Delete all journal entries linked to this invoice
-            let entries = self.journal_repo.find_all_by_source_id(&invoice.id.to_string()).await?;
+            let entries = self
+                .journal_repo
+                .find_all_by_source_id(&invoice.id.to_string())
+                .await?;
             for entry in entries {
                 self.journal_repo.delete(&entry.id).await?;
             }
@@ -134,7 +161,9 @@ impl DeleteInvoiceUseCase {
                 InvoiceType::Purchase | InvoiceType::PurchaseCosts => "Purchase",
                 InvoiceType::OpeningBalance => "OpeningBalance",
             };
-            self.movement_repo.delete_by_reference(&invoice.invoice_number, mov_type).await?;
+            self.movement_repo
+                .delete_by_reference(&invoice.invoice_number, mov_type)
+                .await?;
         }
 
         // 2. Finally delete the invoice itself

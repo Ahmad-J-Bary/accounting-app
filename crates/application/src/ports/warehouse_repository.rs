@@ -1,6 +1,6 @@
-use async_trait::async_trait;
+use crate::dto::warehouse_dto::{CreateWarehouseRequest, UpdateWarehouseRequest, WarehouseDto};
 use crate::errors::AppError;
-use crate::dto::warehouse_dto::{WarehouseDto, CreateWarehouseRequest, UpdateWarehouseRequest};
+use async_trait::async_trait;
 use domain::shared::ids::WarehouseId;
 
 #[async_trait]

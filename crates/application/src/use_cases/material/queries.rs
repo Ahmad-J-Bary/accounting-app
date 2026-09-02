@@ -1,10 +1,10 @@
-use std::sync::Arc;
+use crate::dto::material_dto::MaterialDto;
+use crate::errors::AppError;
+use crate::ports::inventory_lot_repository::InventoryLotRepository;
 use crate::ports::material_repository::MaterialRepository;
 use crate::ports::stock_movement_repository::StockMovementRepository;
 use crate::ports::unified_invoice_repository::UnifiedInvoiceRepository;
-use crate::ports::inventory_lot_repository::InventoryLotRepository;
-use crate::dto::material_dto::{MaterialDto};
-use crate::errors::AppError;
+use std::sync::Arc;
 
 pub struct MaterialQueries {
     repo: Arc<dyn MaterialRepository>,
@@ -19,7 +19,12 @@ impl MaterialQueries {
         movement_repo: Arc<dyn StockMovementRepository>,
         invoice_repo: Arc<dyn UnifiedInvoiceRepository>,
     ) -> Self {
-        Self { repo, movement_repo, invoice_repo, lot_repo: None }
+        Self {
+            repo,
+            movement_repo,
+            invoice_repo,
+            lot_repo: None,
+        }
     }
 
     pub fn with_lot_repo(mut self, lot_repo: Arc<dyn InventoryLotRepository>) -> Self {
@@ -27,7 +32,11 @@ impl MaterialQueries {
         self
     }
 
-    async fn populate_lot_info(&self, dto: &mut MaterialDto, material_id: &str) -> Result<(), AppError> {
+    async fn populate_lot_info(
+        &self,
+        dto: &mut MaterialDto,
+        material_id: &str,
+    ) -> Result<(), AppError> {
         if let Some(ref lot_repo) = self.lot_repo {
             dto.costing_method = lot_repo.get_costing_method(material_id).await?;
             dto.active_lots_count = lot_repo.count_active_by_material(material_id).await?;
@@ -54,7 +63,10 @@ impl MaterialQueries {
             dto.average_cost_base = summary.average_cost_base.to_string();
             dto.average_raw_price_base = summary.average_raw_price_base.to_string();
 
-            let (last_p_orig, last_s_orig) = self.invoice_repo.get_last_original_prices(&mid.to_string()).await?;
+            let (last_p_orig, last_s_orig) = self
+                .invoice_repo
+                .get_last_original_prices(&mid.to_string())
+                .await?;
             dto.last_purchase_price_original = last_p_orig;
             dto.last_sale_price_original = last_s_orig;
 
@@ -66,8 +78,13 @@ impl MaterialQueries {
     }
 
     pub async fn get_by_id(&self, id: String) -> Result<MaterialDto, AppError> {
-        let mid = id.parse().map_err(|_| AppError::NotFound("معرف المادة غير صالح".into()))?;
-        let material = self.repo.find_by_id(&mid).await?
+        let mid = id
+            .parse()
+            .map_err(|_| AppError::NotFound("معرف المادة غير صالح".into()))?;
+        let material = self
+            .repo
+            .find_by_id(&mid)
+            .await?
             .ok_or_else(|| AppError::NotFound("المادة غير موجودة".into()))?;
 
         let mut dto = MaterialDto::from(material);
@@ -84,7 +101,10 @@ impl MaterialQueries {
         dto.average_cost_base = summary.average_cost_base.to_string();
         dto.average_raw_price_base = summary.average_raw_price_base.to_string();
 
-        let (last_p_orig, last_s_orig) = self.invoice_repo.get_last_original_prices(&mid.to_string()).await?;
+        let (last_p_orig, last_s_orig) = self
+            .invoice_repo
+            .get_last_original_prices(&mid.to_string())
+            .await?;
         dto.last_purchase_price_original = last_p_orig;
         dto.last_sale_price_original = last_s_orig;
 

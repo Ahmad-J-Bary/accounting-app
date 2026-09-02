@@ -1,16 +1,20 @@
-use sqlx::SqlitePool;
+use super::mappers::row_to_adjustment;
+use super::models::AdjustmentRow;
 use application::errors::AppError;
 use domain::inventory::StockAdjustment;
-use domain::shared::ids::{StockAdjustmentId};
-use super::models::AdjustmentRow;
-use super::mappers::row_to_adjustment;
+use domain::shared::ids::StockAdjustmentId;
+use sqlx::SqlitePool;
 
 const COLUMNS: &str = "id, material_id, system_quantity, actual_quantity, difference, reason, unit_cost, notes, reference, adjustment_date, created_at";
 
-pub async fn find_by_id(pool: &SqlitePool, id: &StockAdjustmentId) -> Result<Option<StockAdjustment>, AppError> {
-    let row = sqlx::query_as::<_, AdjustmentRow>(
-        &format!("SELECT {} FROM stock_adjustments WHERE id = ?", COLUMNS)
-    )
+pub async fn find_by_id(
+    pool: &SqlitePool,
+    id: &StockAdjustmentId,
+) -> Result<Option<StockAdjustment>, AppError> {
+    let row = sqlx::query_as::<_, AdjustmentRow>(&format!(
+        "SELECT {} FROM stock_adjustments WHERE id = ?",
+        COLUMNS
+    ))
     .bind(id.to_string())
     .fetch_optional(pool)
     .await
@@ -37,9 +41,10 @@ pub async fn get_next_reference(pool: &SqlitePool) -> Result<String, AppError> {
 }
 
 pub async fn list_all(pool: &SqlitePool) -> Result<Vec<StockAdjustment>, AppError> {
-    let rows = sqlx::query_as::<_, AdjustmentRow>(
-        &format!("SELECT {} FROM stock_adjustments ORDER BY adjustment_date DESC", COLUMNS)
-    )
+    let rows = sqlx::query_as::<_, AdjustmentRow>(&format!(
+        "SELECT {} FROM stock_adjustments ORDER BY adjustment_date DESC",
+        COLUMNS
+    ))
     .fetch_all(pool)
     .await
     .map_err(|e| AppError::Infrastructure(e.to_string()))?;

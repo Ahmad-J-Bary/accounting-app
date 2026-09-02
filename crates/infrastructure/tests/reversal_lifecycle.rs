@@ -1,17 +1,19 @@
-use std::sync::Arc;
-use std::str::FromStr;
-use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
-use chrono::Utc;
-use domain::accounting::journal_entry::{JournalEntry, JournalEntryStatus, JournalLine, JournalType};
-use domain::shared::{AccountId};
-use domain::shared::currency::Currency;
-use domain::shared::money::Money;
-use domain::shared::monetary_amount::MonetaryAmount;
 use application::ports::journal_entry_repository::JournalEntryRepository;
+use chrono::Utc;
+use domain::accounting::journal_entry::{
+    JournalEntry, JournalEntryStatus, JournalLine, JournalType,
+};
+use domain::shared::currency::Currency;
+use domain::shared::monetary_amount::MonetaryAmount;
+use domain::shared::money::Money;
+use domain::shared::AccountId;
 use infrastructure::db::pool::run_migrations;
 use infrastructure::repositories::SqliteJournalEntryRepository;
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
+use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+use std::str::FromStr;
+use std::sync::Arc;
 
 fn test_currency() -> Currency {
     Currency::new("BASE", "عملة أساسية", "Base Currency", "B", 2, true)
@@ -53,12 +55,10 @@ async fn build_pool() -> Arc<sqlx::SqlitePool> {
 
 /// Two real account ids from the seeded chart of accounts (FK-safe for journal_lines).
 async fn real_accounts(pool: &sqlx::SqlitePool) -> (AccountId, AccountId) {
-    let ids: Vec<String> = sqlx::query_scalar(
-        "SELECT id FROM accounts ORDER BY code LIMIT 2",
-    )
-    .fetch_all(pool)
-    .await
-    .unwrap();
+    let ids: Vec<String> = sqlx::query_scalar("SELECT id FROM accounts ORDER BY code LIMIT 2")
+        .fetch_all(pool)
+        .await
+        .unwrap();
     assert!(ids.len() >= 2, "chart of accounts must be seeded");
     (
         AccountId(uuid::Uuid::parse_str(&ids[0]).unwrap()),
@@ -68,7 +68,7 @@ async fn real_accounts(pool: &sqlx::SqlitePool) -> (AccountId, AccountId) {
 
 #[tokio::test]
 async fn full_reversal_lifecycle_persists_metadata() {
-let pool = build_pool().await;
+    let pool = build_pool().await;
     let repo = SqliteJournalEntryRepository::new(pool.clone());
     let (acc_a, acc_b) = real_accounts(pool.as_ref()).await;
 
@@ -84,7 +84,7 @@ let pool = build_pool().await;
     original.post().unwrap();
     repo.save(&original).await.unwrap();
 
-let mut reversal = JournalEntry::create_reversal(
+    let mut reversal = JournalEntry::create_reversal(
         &original,
         "CR-1001".to_string(),
         Utc::now(),
@@ -104,14 +104,21 @@ let mut reversal = JournalEntry::create_reversal(
         .unwrap()
         .expect("original must exist");
     assert_eq!(stored_original.status, JournalEntryStatus::Reversed);
-    assert!(stored_original.reversed_at.is_some(), "reversed_at must persist");
+    assert!(
+        stored_original.reversed_at.is_some(),
+        "reversed_at must persist"
+    );
 
     let stored_reversal = repo
         .find_by_id(&reversal.id)
         .await
         .unwrap()
         .expect("reversal must exist");
-assert_eq!(stored_reversal.journal_type, JournalType::CashReceipt, "a reversal is a relationship, not a type — the contra keeps the original's type");
+    assert_eq!(
+        stored_reversal.journal_type,
+        JournalType::CashReceipt,
+        "a reversal is a relationship, not a type — the contra keeps the original's type"
+    );
     assert_eq!(stored_reversal.reversal_of_entry_id, Some(original.id));
     assert_eq!(stored_reversal.source_type.as_deref(), Some("cash_receipt"));
     assert_eq!(stored_reversal.status, JournalEntryStatus::Posted);
@@ -130,7 +137,7 @@ assert_eq!(stored_reversal.journal_type, JournalType::CashReceipt, "a reversal i
 
 #[tokio::test]
 async fn draft_entry_has_no_reversal_metadata() {
-let pool = build_pool().await;
+    let pool = build_pool().await;
     let repo = SqliteJournalEntryRepository::new(pool.clone());
     let (acc_a, acc_b) = real_accounts(pool.as_ref()).await;
 
@@ -150,7 +157,7 @@ let pool = build_pool().await;
         .await
         .unwrap()
         .expect("entry must exist");
-assert_eq!(stored.status, JournalEntryStatus::Draft);
+    assert_eq!(stored.status, JournalEntryStatus::Draft);
     assert!(stored.reversal_of_entry_id.is_none());
     assert_eq!(stored.source_type.as_deref(), Some("general_journal"));
     assert!(stored.reversed_at.is_none());
@@ -159,10 +166,10 @@ assert_eq!(stored.status, JournalEntryStatus::Draft);
 
 #[tokio::test]
 async fn use_case_rejects_reversing_an_already_reversed_entry() {
-    use std::sync::Arc as StdArc;
     use application::use_cases::journal::ReverseJournalEntryUseCase;
+    use std::sync::Arc as StdArc;
 
-let pool = build_pool().await;
+    let pool = build_pool().await;
     let repo: StdArc<dyn JournalEntryRepository> =
         StdArc::new(SqliteJournalEntryRepository::new(pool.clone()));
     let use_case = ReverseJournalEntryUseCase::new(repo.clone());
@@ -183,21 +190,27 @@ let pool = build_pool().await;
     let err = use_case.execute(original.id.0.to_string()).await;
     assert!(err.is_ok(), "first reversal should succeed");
 
-let again = use_case.execute(original.id.0.to_string()).await;
-    assert!(again.is_err(), "reversing a Reversed entry must be rejected");
+    let again = use_case.execute(original.id.0.to_string()).await;
+    assert!(
+        again.is_err(),
+        "reversing a Reversed entry must be rejected"
+    );
 }
 
 #[tokio::test]
 async fn migration_schema_is_forward_complete() {
     let pool = build_pool().await;
-    let cols: Vec<String> = sqlx::query_scalar(
-        "SELECT name FROM pragma_table_info('journal_entries')"
-    )
-    .fetch_all(pool.as_ref())
-    .await
-    .unwrap();
+    let cols: Vec<String> =
+        sqlx::query_scalar("SELECT name FROM pragma_table_info('journal_entries')")
+            .fetch_all(pool.as_ref())
+            .await
+            .unwrap();
     assert!(cols.contains(&"source_type".to_string()), "cols={:?}", cols);
-    assert!(cols.contains(&"reversal_of_entry_id".to_string()), "cols={:?}", cols);
+    assert!(
+        cols.contains(&"reversal_of_entry_id".to_string()),
+        "cols={:?}",
+        cols
+    );
     assert!(cols.contains(&"reversed_at".to_string()), "cols={:?}", cols);
 }
 
@@ -265,21 +278,24 @@ async fn orphan_cleanup_removes_dangling_reversals_and_resets_reversed_originals
         .unwrap();
     assert_eq!(orphan_count, 0, "dangling reversal must be removed");
 
-    let stranded: (String, Option<String>) = sqlx::query_as(
-        "SELECT status, reversed_at FROM journal_entries WHERE id = ?",
-    )
-    .bind(&ghost_original_id)
-    .fetch_one(pool.as_ref())
-    .await
-    .unwrap();
-    assert_eq!(stranded.0, "Posted", "stranded 'Reversed' original must be reset");
-    assert!(stranded.1.is_none(), "reversed_at must be cleared");
-
-    // No-op on the unchanged ghost row: count still zero.
-    let remaining: i64 =
-        sqlx::query_scalar("SELECT COUNT(*) FROM journal_entries WHERE reversal_of_entry_id IS NOT NULL")
+    let stranded: (String, Option<String>) =
+        sqlx::query_as("SELECT status, reversed_at FROM journal_entries WHERE id = ?")
+            .bind(&ghost_original_id)
             .fetch_one(pool.as_ref())
             .await
             .unwrap();
+    assert_eq!(
+        stranded.0, "Posted",
+        "stranded 'Reversed' original must be reset"
+    );
+    assert!(stranded.1.is_none(), "reversed_at must be cleared");
+
+    // No-op on the unchanged ghost row: count still zero.
+    let remaining: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM journal_entries WHERE reversal_of_entry_id IS NOT NULL",
+    )
+    .fetch_one(pool.as_ref())
+    .await
+    .unwrap();
     assert_eq!(remaining, 0);
 }

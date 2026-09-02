@@ -1,11 +1,12 @@
-use tauri::State;
 use std::str::FromStr;
+use tauri::State;
 use uuid::Uuid;
 
 use crate::bootstrap::container::AppState;
 use application::dto::account_dto::{AccountDto, AccountLedgerDto};
 use application::use_cases::account::{
-    CreateAccountUseCase, UpdateAccountUseCase, DeleteAccountUseCase, AccountQueries, CreateAccountCommand
+    AccountQueries, CreateAccountCommand, CreateAccountUseCase, DeleteAccountUseCase,
+    UpdateAccountUseCase,
 };
 use domain::shared::AccountId;
 
@@ -37,12 +38,12 @@ pub async fn get_account_ledger(
             Ok(AccountId(uuid))
         })
         .collect::<Result<Vec<_>, String>>()?;
-    
+
     let ledger = AccountQueries::new(state.account_repo.clone(), state.journal_entry_repo.clone())
         .get_ledger(&aids)
         .await
         .map_err(|e| e.to_string())?;
-        
+
     Ok(AccountLedgerDto::from(ledger))
 }
 

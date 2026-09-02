@@ -1,16 +1,16 @@
-use async_trait::async_trait;
-use sqlx::SqlitePool;
 use application::errors::AppError;
 use application::ports::stock_movement_repository::StockMovementRepository;
-use domain::inventory::stock_movement::{StockMovement};
-use domain::shared::ids::{StockMovementId, MaterialId};
+use async_trait::async_trait;
+use domain::inventory::stock_movement::StockMovement;
+use domain::shared::ids::{MaterialId, StockMovementId};
 use rust_decimal::Decimal;
+use sqlx::SqlitePool;
 use std::sync::Arc;
 
-mod models;
-mod mappers;
-mod queries;
 mod commands;
+mod mappers;
+mod models;
+mod queries;
 
 pub(crate) use commands::insert_movement_tx;
 
@@ -73,7 +73,10 @@ impl StockMovementRepository for SqliteStockMovementRepository {
         queries::list_all(&self.pool).await
     }
 
-    async fn list_by_material(&self, material_id: &MaterialId) -> Result<Vec<StockMovement>, AppError> {
+    async fn list_by_material(
+        &self,
+        material_id: &MaterialId,
+    ) -> Result<Vec<StockMovement>, AppError> {
         queries::list_by_material(&self.pool, material_id).await
     }
 
@@ -81,11 +84,18 @@ impl StockMovementRepository for SqliteStockMovementRepository {
         queries::get_stock_balance(&self.pool, material_id).await
     }
 
-    async fn get_material_summary(&self, material_id: &MaterialId) -> Result<application::ports::stock_movement_repository::MaterialInventorySummary, AppError> {
+    async fn get_material_summary(
+        &self,
+        material_id: &MaterialId,
+    ) -> Result<application::ports::stock_movement_repository::MaterialInventorySummary, AppError>
+    {
         queries::get_material_summary(&self.pool, material_id).await
     }
 
-    async fn list_detailed_by_material(&self, material_id: &MaterialId) -> Result<Vec<application::dto::stock_dto::StockMovementDetailDto>, AppError> {
+    async fn list_detailed_by_material(
+        &self,
+        material_id: &MaterialId,
+    ) -> Result<Vec<application::dto::stock_dto::StockMovementDetailDto>, AppError> {
         queries::list_detailed_by_material(&self.pool, material_id).await
     }
 
@@ -93,15 +103,27 @@ impl StockMovementRepository for SqliteStockMovementRepository {
         queries::list_by_reference(&self.pool, reference).await
     }
 
-    async fn list_by_document_number(&self, document_number: &str, movement_type: Option<&str>) -> Result<Vec<StockMovement>, AppError> {
+    async fn list_by_document_number(
+        &self,
+        document_number: &str,
+        movement_type: Option<&str>,
+    ) -> Result<Vec<StockMovement>, AppError> {
         queries::list_by_document_number(&self.pool, document_number, movement_type).await
     }
 
-    async fn delete_by_reference(&self, reference: &str, movement_type: &str) -> Result<(), AppError> {
+    async fn delete_by_reference(
+        &self,
+        reference: &str,
+        movement_type: &str,
+    ) -> Result<(), AppError> {
         commands::delete_by_reference(&self.pool, reference, movement_type).await
     }
 
-    async fn delete_by_document_number(&self, document_number: &str, movement_type: &str) -> Result<(), AppError> {
+    async fn delete_by_document_number(
+        &self,
+        document_number: &str,
+        movement_type: &str,
+    ) -> Result<(), AppError> {
         commands::delete_by_document_number(&self.pool, document_number, movement_type).await
     }
 

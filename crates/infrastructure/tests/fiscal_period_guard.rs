@@ -8,8 +8,8 @@ use chrono::{DateTime, Utc};
 use domain::accounting::fiscal_period::{FiscalPeriod, FiscalPeriodStatus};
 use domain::accounting::journal_entry::{JournalEntry, JournalLine, JournalType};
 use domain::shared::currency::Currency;
-use domain::shared::money::Money;
 use domain::shared::monetary_amount::MonetaryAmount;
+use domain::shared::money::Money;
 use domain::shared::AccountId;
 use infrastructure::db::pool::run_migrations;
 use infrastructure::repositories::{SqliteFiscalPeriodRepository, SqliteJournalEntryRepository};
@@ -20,7 +20,11 @@ fn test_currency() -> Currency {
     Currency::new("BASE", "عملة أساسية", "Base Currency", "B", 2, true)
 }
 
-fn balanced_lines(amount: rust_decimal::Decimal, acc_a: AccountId, acc_b: AccountId) -> Vec<JournalLine> {
+fn balanced_lines(
+    amount: rust_decimal::Decimal,
+    acc_a: AccountId,
+    acc_b: AccountId,
+) -> Vec<JournalLine> {
     let c = test_currency();
     vec![
         JournalLine::new(
@@ -66,7 +70,9 @@ async fn real_accounts(pool: &sqlx::SqlitePool) -> (AccountId, AccountId) {
 }
 
 fn utc(rfc3339: &str) -> DateTime<Utc> {
-    DateTime::parse_from_rfc3339(rfc3339).unwrap().with_timezone(&Utc)
+    DateTime::parse_from_rfc3339(rfc3339)
+        .unwrap()
+        .with_timezone(&Utc)
 }
 
 fn period_2026() -> FiscalPeriod {
@@ -110,8 +116,18 @@ async fn new_company_period_accepts_posting_inside() {
     let journal_repo = SqliteJournalEntryRepository::new(pool.clone());
 
     period_repo.create(&period_2026()).await.unwrap();
-    let res = post_dated(&journal_repo, &pool, JournalType::CashReceipt, utc("2026-06-15T10:00:00Z")).await;
-    assert!(res.is_ok(), "posting inside an Open period must be accepted: {:?}", res);
+    let res = post_dated(
+        &journal_repo,
+        &pool,
+        JournalType::CashReceipt,
+        utc("2026-06-15T10:00:00Z"),
+    )
+    .await;
+    assert!(
+        res.is_ok(),
+        "posting inside an Open period must be accepted: {:?}",
+        res
+    );
 }
 
 /// Once periods exist, a journal dated outside every period is rejected.
@@ -122,8 +138,18 @@ async fn journal_outside_all_periods_is_rejected_when_periods_exist() {
     let journal_repo = SqliteJournalEntryRepository::new(pool.clone());
 
     period_repo.create(&period_2026()).await.unwrap();
-    let res = post_dated(&journal_repo, &pool, JournalType::CashReceipt, utc("2025-12-31T10:00:00Z")).await;
-    assert!(matches!(res, Err(AppError::Forbidden(_))), "expected Forbidden, got {:?}", res);
+    let res = post_dated(
+        &journal_repo,
+        &pool,
+        JournalType::CashReceipt,
+        utc("2025-12-31T10:00:00Z"),
+    )
+    .await;
+    assert!(
+        matches!(res, Err(AppError::Forbidden(_))),
+        "expected Forbidden, got {:?}",
+        res
+    );
 }
 
 /// A closed period rejects posting inside its window.
@@ -138,8 +164,18 @@ async fn closed_period_rejects_transactions() {
     period.close("admin", FiscalPeriodStatus::Closed).unwrap();
     period_repo.update(&period).await.unwrap();
 
-    let res = post_dated(&journal_repo, &pool, JournalType::CashReceipt, utc("2026-06-15T10:00:00Z")).await;
-    assert!(matches!(res, Err(AppError::Forbidden(_))), "expected Forbidden, got {:?}", res);
+    let res = post_dated(
+        &journal_repo,
+        &pool,
+        JournalType::CashReceipt,
+        utc("2026-06-15T10:00:00Z"),
+    )
+    .await;
+    assert!(
+        matches!(res, Err(AppError::Forbidden(_))),
+        "expected Forbidden, got {:?}",
+        res
+    );
 }
 
 /// A locked period rejects posting inside its window.
@@ -154,8 +190,18 @@ async fn locked_period_rejects_transactions() {
     period.lock("admin").unwrap();
     period_repo.update(&period).await.unwrap();
 
-    let res = post_dated(&journal_repo, &pool, JournalType::CashReceipt, utc("2026-06-15T10:00:00Z")).await;
-    assert!(matches!(res, Err(AppError::Forbidden(_))), "expected Forbidden, got {:?}", res);
+    let res = post_dated(
+        &journal_repo,
+        &pool,
+        JournalType::CashReceipt,
+        utc("2026-06-15T10:00:00Z"),
+    )
+    .await;
+    assert!(
+        matches!(res, Err(AppError::Forbidden(_))),
+        "expected Forbidden, got {:?}",
+        res
+    );
 }
 
 /// Reopening a closed period returns it to posting.
@@ -172,8 +218,18 @@ async fn reopened_period_accepts_posting_again() {
     period.reopen().unwrap();
     period_repo.update(&period).await.unwrap();
 
-    let res = post_dated(&journal_repo, &pool, JournalType::CashReceipt, utc("2026-06-15T10:00:00Z")).await;
-    assert!(res.is_ok(), "Reopened period must accept posting: {:?}", res);
+    let res = post_dated(
+        &journal_repo,
+        &pool,
+        JournalType::CashReceipt,
+        utc("2026-06-15T10:00:00Z"),
+    )
+    .await;
+    assert!(
+        res.is_ok(),
+        "Reopened period must accept posting: {:?}",
+        res
+    );
 }
 
 /// A reversal contra (linked via `reversal_of_entry_id`) is allowed inside a
@@ -241,7 +297,11 @@ async fn opening_balance_entry_bypasses_period_gating() {
         utc("2025-11-30T00:00:00Z"),
     )
     .await;
-    assert!(res.is_ok(), "opening balance must bypass period gating: {:?}", res);
+    assert!(
+        res.is_ok(),
+        "opening balance must bypass period gating: {:?}",
+        res
+    );
 }
 
 /// No periods at all -> legacy mode, posting allowed.
@@ -251,7 +311,11 @@ async fn no_periods_allows_legacy_posting() {
     let journal_repo = SqliteJournalEntryRepository::new(pool.clone());
 
     let res = post_dated(&journal_repo, &pool, JournalType::CashReceipt, Utc::now()).await;
-    assert!(res.is_ok(), "legacy posting with no periods must be allowed: {:?}", res);
+    assert!(
+        res.is_ok(),
+        "legacy posting with no periods must be allowed: {:?}",
+        res
+    );
 }
 
 /// A draft may be saved inside a closed period, but posting it is rejected:
@@ -284,5 +348,9 @@ async fn draft_can_be_saved_but_not_posted_in_closed_period() {
     // Posting it inside the closed period must now be rejected.
     entry.post().unwrap();
     let res = journal_repo.save(&entry).await;
-    assert!(matches!(res, Err(AppError::Forbidden(_))), "expected Forbidden on post, got {:?}", res);
+    assert!(
+        matches!(res, Err(AppError::Forbidden(_))),
+        "expected Forbidden on post, got {:?}",
+        res
+    );
 }

@@ -1,9 +1,10 @@
-use tauri::State;
 use crate::bootstrap::container::AppState;
-use application::dto::invoice_dto::{CreateInvoiceRequest, UpdateInvoiceRequest, InvoiceDto};
+use application::dto::invoice_dto::{CreateInvoiceRequest, InvoiceDto, UpdateInvoiceRequest};
 use application::use_cases::unified_invoice::{
-    CreateInvoiceUseCase, UpdateInvoiceUseCase, InvoiceQueries, PostInvoiceUseCase, PostInvoiceDependencies, ReopenInvoiceUseCase, ReopenInvoiceDependencies, DeleteInvoiceUseCase
+    CreateInvoiceUseCase, DeleteInvoiceUseCase, InvoiceQueries, PostInvoiceDependencies,
+    PostInvoiceUseCase, ReopenInvoiceDependencies, ReopenInvoiceUseCase, UpdateInvoiceUseCase,
 };
+use tauri::State;
 
 #[tauri::command]
 pub async fn create_unified_invoice(
@@ -20,7 +21,9 @@ pub async fn create_unified_invoice(
         state.journal_entry_repo.clone(),
         state.opening_migration_repo.clone(),
     )
-    .execute(request).await.map_err(|e| e.to_string())
+    .execute(request)
+    .await
+    .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -28,18 +31,19 @@ pub async fn update_unified_invoice(
     state: State<'_, AppState>,
     request: UpdateInvoiceRequest,
 ) -> Result<InvoiceDto, String> {
-    use std::str::FromStr;
-    use domain::shared::ids::InvoiceId;
     use domain::sales::unified_invoice::InvoiceStatus;
+    use domain::shared::ids::InvoiceId;
+    use std::str::FromStr;
 
     // A Posted unified invoice is auditable financial history. It may not be
     // silently reopened + re-posted; changing it requires the reversal flow.
     // Editing a Posted invoice in place is hard-blocked so stale amounts can
     // never overwrite already-posted partner balances / journals (Sec 10/45).
-    let invoice_id = InvoiceId::from_str(&request.id)
-        .map_err(|_| "معرف فاتورة غير صالح".to_string())?;
+    let invoice_id =
+        InvoiceId::from_str(&request.id).map_err(|_| "معرف فاتورة غير صالح".to_string())?;
 
-    if let Some(existing) = state.unified_invoice_repo
+    if let Some(existing) = state
+        .unified_invoice_repo
         .find_by_id(&invoice_id)
         .await
         .map_err(|e| e.to_string())?
@@ -61,7 +65,9 @@ pub async fn update_unified_invoice(
         state.journal_entry_repo.clone(),
         state.opening_migration_repo.clone(),
     )
-    .execute(request).await.map_err(|e| e.to_string())
+    .execute(request)
+    .await
+    .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -70,7 +76,7 @@ pub async fn post_unified_invoice(
     id: String,
 ) -> Result<InvoiceDto, String> {
     PostInvoiceUseCase::new(PostInvoiceDependencies {
-        repo: state.unified_invoice_repo.clone(), 
+        repo: state.unified_invoice_repo.clone(),
         movement_repo: state.stock_movement_repo.clone(),
         lot_repo: state.inventory_lot_repo.clone(),
         journal_repo: state.journal_entry_repo.clone(),
@@ -83,7 +89,9 @@ pub async fn post_unified_invoice(
         exchange_rate_repo: state.exchange_rate_repo.clone(),
         opening_migration_repo: state.opening_migration_repo.clone(),
     })
-    .execute(id).await.map_err(|e| e.to_string())
+    .execute(id)
+    .await
+    .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -97,7 +105,10 @@ pub async fn list_unified_invoices_by_type(
         state.customer_repo.clone(),
         state.supplier_repo.clone(),
         state.category_repo.clone(),
-    ).list_by_type(invoice_type).await.map_err(|e| e.to_string())
+    )
+    .list_by_type(invoice_type)
+    .await
+    .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -111,7 +122,10 @@ pub async fn get_unified_invoice_by_id(
         state.customer_repo.clone(),
         state.supplier_repo.clone(),
         state.category_repo.clone(),
-    ).get_by_id(id).await.map_err(|e| e.to_string())
+    )
+    .get_by_id(id)
+    .await
+    .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -124,7 +138,10 @@ pub async fn list_all_unified_invoices(
         state.customer_repo.clone(),
         state.supplier_repo.clone(),
         state.category_repo.clone(),
-    ).list_all().await.map_err(|e| e.to_string())
+    )
+    .list_all()
+    .await
+    .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -144,7 +161,9 @@ pub async fn reopen_unified_invoice(
         payment_repo: state.payment_repo.clone(),
     };
     ReopenInvoiceUseCase::new(reopen_deps)
-    .execute(id).await.map_err(|e| e.to_string())
+        .execute(id)
+        .await
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -158,14 +177,14 @@ pub async fn get_next_invoice_number(
         state.customer_repo.clone(),
         state.supplier_repo.clone(),
         state.category_repo.clone(),
-    ).get_next_invoice_number(invoice_type).await.map_err(|e| e.to_string())
+    )
+    .get_next_invoice_number(invoice_type)
+    .await
+    .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
-pub async fn delete_unified_invoice(
-    state: State<'_, AppState>,
-    id: String,
-) -> Result<(), String> {
+pub async fn delete_unified_invoice(state: State<'_, AppState>, id: String) -> Result<(), String> {
     DeleteInvoiceUseCase::new(
         state.unified_invoice_repo.clone(),
         state.stock_movement_repo.clone(),
@@ -176,5 +195,7 @@ pub async fn delete_unified_invoice(
         state.exchange_rate_repo.clone(),
         state.payment_repo.clone(),
     )
-    .execute(id).await.map_err(|e| e.to_string())
+    .execute(id)
+    .await
+    .map_err(|e| e.to_string())
 }

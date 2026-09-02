@@ -1,14 +1,14 @@
-use std::sync::Arc;
-use rust_decimal::Decimal;
 use chrono::Utc;
+use domain::accounting::account::{Account, AccountCategory, AccountType};
 use domain::accounting::partner::{Partner, ProfitSharingType};
-use domain::accounting::account::{Account, AccountType, AccountCategory};
 use domain::settings::START_MODE_EXISTING;
+use rust_decimal::Decimal;
+use std::sync::Arc;
 
+use crate::errors::AppError;
+use crate::ports::account_repository::AccountRepository;
 use crate::ports::currency_repository::CurrencyRepository;
 use crate::ports::partner_repository::PartnerRepository;
-use crate::ports::account_repository::AccountRepository;
-use crate::errors::AppError;
 
 pub struct CreatePartnerUseCase {
     repo: Arc<dyn PartnerRepository>,
@@ -22,7 +22,11 @@ impl CreatePartnerUseCase {
         account_repo: Arc<dyn AccountRepository>,
         currency_repo: Arc<dyn CurrencyRepository>,
     ) -> Self {
-        Self { repo, account_repo, currency_repo }
+        Self {
+            repo,
+            account_repo,
+            currency_repo,
+        }
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -55,10 +59,15 @@ impl CreatePartnerUseCase {
 
         let code = format!("P{}", numeric_part);
 
-        let base_currency = self.currency_repo.get_base_currency().await?
+        let base_currency = self
+            .currency_repo
+            .get_base_currency()
+            .await?
             .ok_or_else(|| AppError::Invalid("لم يتم تعيين العملة الأساسية".into()))?;
         let partner_currency = if is_amount_in_original {
-            self.currency_repo.find_by_code(&currency_code).await?
+            self.currency_repo
+                .find_by_code(&currency_code)
+                .await?
                 .ok_or_else(|| AppError::Invalid(format!("العملة {} غير موجودة", currency_code)))?
         } else {
             base_currency.clone()
@@ -74,12 +83,16 @@ impl CreatePartnerUseCase {
             sharing_enum,
             manual_ratio,
             notes,
-        ).map_err(AppError::Domain)?;
+        )
+        .map_err(AppError::Domain)?;
 
-        let capital_parent = self.account_repo.find_by_code("51").await?
+        let capital_parent = self
+            .account_repo
+            .find_by_code("51")
+            .await?
             .ok_or_else(|| AppError::Invalid("حساب رأس المال العام (51) غير موجود".into()))?;
-        
-        let cap_code = format!("51{}", &code[1..]); 
+
+        let cap_code = format!("51{}", &code[1..]);
         let cap_account_id = domain::shared::ids::AccountId::new();
 
         // For an existing-company migration the partner capital is recorded as
@@ -117,8 +130,11 @@ impl CreatePartnerUseCase {
             created_at: Utc::now(),
             updated_at: Utc::now(),
         };
-        
-        let drawings_parent = self.account_repo.find_by_code("44").await?
+
+        let drawings_parent = self
+            .account_repo
+            .find_by_code("44")
+            .await?
             .ok_or_else(|| AppError::Invalid("حساب المسحوبات العام (44) غير موجود".into()))?;
 
         let draw_code = format!("44{}", &code[1..]);
@@ -157,7 +173,10 @@ impl CreatePartnerUseCase {
         // accumulated profit allocations live here, separate from registered
         // capital, so the equity statement can show (capital + current −
         // drawings) without deriving profit as ledger − registered capital.
-        let current_parent = self.account_repo.find_by_code("54").await?
+        let current_parent = self
+            .account_repo
+            .find_by_code("54")
+            .await?
             .ok_or_else(|| AppError::Invalid("حساب الجارية للشركاء (54) غير موجود".into()))?;
 
         let current_code = format!("54{}", &code[1..]);
@@ -193,7 +212,14 @@ impl CreatePartnerUseCase {
         partner.link_current_account(current_account.id);
 
         // Partner + its three accounts persist in ONE transaction (Sec 14 / Sec 29).
-        self.repo.save_with_accounts(&partner, &cap_account, &draw_account, Some(&current_account)).await?;
+        self.repo
+            .save_with_accounts(
+                &partner,
+                &cap_account,
+                &draw_account,
+                Some(&current_account),
+            )
+            .await?;
 
         Ok(partner.id.to_string())
     }

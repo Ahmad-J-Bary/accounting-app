@@ -43,7 +43,10 @@ use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 
 async fn build_pool() -> Arc<sqlx::SqlitePool> {
     let mut path = std::env::temp_dir();
-    path.push(format!("acc_opening_gl_movement_{}.sqlite", uuid::Uuid::new_v4()));
+    path.push(format!(
+        "acc_opening_gl_movement_{}.sqlite",
+        uuid::Uuid::new_v4()
+    ));
     let options = SqliteConnectOptions::from_str(path.to_str().unwrap())
         .unwrap()
         .create_if_missing(true);
@@ -100,7 +103,10 @@ async fn register_partner(pool: &Arc<sqlx::SqlitePool>, name: &str, amount: i64)
         .expect("create partner")
 }
 
-async fn run_opening_lifecycle(pool: &Arc<sqlx::SqlitePool>, lines: Vec<OpeningLineInput>) -> String {
+async fn run_opening_lifecycle(
+    pool: &Arc<sqlx::SqlitePool>,
+    lines: Vec<OpeningLineInput>,
+) -> String {
     let migration_repo: Arc<dyn OpeningMigrationRepository> =
         Arc::new(SqliteOpeningMigrationRepository::new(pool.clone()));
     let account_repo: Arc<dyn AccountRepository> =
@@ -116,13 +122,15 @@ async fn run_opening_lifecycle(pool: &Arc<sqlx::SqlitePool>, lines: Vec<OpeningL
         account_repo.clone(),
         settings_repo.clone(),
     )
-    .execute(application::use_cases::opening_balance::types::CreateOpeningBalanceMigrationCommand {
-        cutover_date: Utc::now().to_rfc3339(),
-        notes: None,
-        source_system: Some("Legacy".into()),
-        source_reference: Some("PARTNERS-2025".into()),
-        lines,
-    })
+    .execute(
+        application::use_cases::opening_balance::types::CreateOpeningBalanceMigrationCommand {
+            cutover_date: Utc::now().to_rfc3339(),
+            notes: None,
+            source_system: Some("Legacy".into()),
+            source_reference: Some("PARTNERS-2025".into()),
+            lines,
+        },
+    )
     .await
     .expect("create draft migration");
     let id = draft.0.id.clone();
@@ -197,11 +205,26 @@ async fn posted_opening_appears_exactly_once_in_gl_with_begin_end_math() {
     let cash = account_id_by_code(&pool, "122").await;
 
     // POST + LOCK: cash 300 (Dr) against partner capitals (Cr 180 + 120).
-    run_opening_lifecycle(&pool, vec![
-        OpeningLineInput { account_id: cash.to_string(), amount: "300".into(), description: None },
-        OpeningLineInput { account_id: ahmad_cap.to_string(), amount: "180".into(), description: None },
-        OpeningLineInput { account_id: mohammad_cap.to_string(), amount: "120".into(), description: None },
-    ])
+    run_opening_lifecycle(
+        &pool,
+        vec![
+            OpeningLineInput {
+                account_id: cash.to_string(),
+                amount: "300".into(),
+                description: None,
+            },
+            OpeningLineInput {
+                account_id: ahmad_cap.to_string(),
+                amount: "180".into(),
+                description: None,
+            },
+            OpeningLineInput {
+                account_id: mohammad_cap.to_string(),
+                amount: "120".into(),
+                description: None,
+            },
+        ],
+    )
     .await;
 
     let account_repo: Arc<dyn AccountRepository> =
@@ -214,8 +237,15 @@ async fn posted_opening_appears_exactly_once_in_gl_with_begin_end_math() {
     // journal line Dr 300. No synthetic row, no second appearance of the
     // opening amount.
     let ledger_cash = queries.get_ledger(&[cash]).await.expect("cash ledger");
-    assert_eq!(ledger_cash.lines.len(), 1, "cash opening must be exactly one GL line");
-    assert!(ledger_cash.opening_entries.is_empty(), "opening_entries must be empty (no synthetic rows)");
+    assert_eq!(
+        ledger_cash.lines.len(),
+        1,
+        "cash opening must be exactly one GL line"
+    );
+    assert!(
+        ledger_cash.opening_entries.is_empty(),
+        "opening_entries must be empty (no synthetic rows)"
+    );
     assert_eq!(ledger_cash.lines[0].debit_base, Decimal::from(300));
     assert_eq!(ledger_cash.lines[0].credit_base, Decimal::ZERO);
     assert_eq!(ledger_cash.lines[0].balance_base, Decimal::from(300));
@@ -224,8 +254,15 @@ async fn posted_opening_appears_exactly_once_in_gl_with_begin_end_math() {
 
     // CAPITAL (Equity, credit-normal): the SAME single movement, Cr 180.
     let ledger_ahmad = queries.get_ledger(&[ahmad_cap]).await.expect("أحمد ledger");
-    assert_eq!(ledger_ahmad.lines.len(), 1, "أحمد capital opening must be exactly one GL line");
-    assert!(ledger_ahmad.opening_entries.is_empty(), "opening_entries must be empty (no synthetic rows)");
+    assert_eq!(
+        ledger_ahmad.lines.len(),
+        1,
+        "أحمد capital opening must be exactly one GL line"
+    );
+    assert!(
+        ledger_ahmad.opening_entries.is_empty(),
+        "opening_entries must be empty (no synthetic rows)"
+    );
     assert_eq!(ledger_ahmad.lines[0].debit_base, Decimal::ZERO);
     assert_eq!(ledger_ahmad.lines[0].credit_base, Decimal::from(180));
     assert_eq!(ledger_ahmad.lines[0].balance_base, Decimal::from(-180));
@@ -239,7 +276,10 @@ async fn posted_opening_appears_exactly_once_in_gl_with_begin_end_math() {
     .fetch_one(&*pool)
     .await
     .unwrap();
-    assert_eq!(opening_type_count, 1, "exactly one posted AccountOpeningBalance journal");
+    assert_eq!(
+        opening_type_count, 1,
+        "exactly one posted AccountOpeningBalance journal"
+    );
 }
 
 #[tokio::test]
@@ -267,11 +307,26 @@ async fn gl_running_balances_follow_beginning_plus_period_movements() {
 
     let cash = account_id_by_code(&pool, "122").await;
 
-    run_opening_lifecycle(&pool, vec![
-        OpeningLineInput { account_id: cash.to_string(), amount: "300".into(), description: None },
-        OpeningLineInput { account_id: ahmad_cap.to_string(), amount: "180".into(), description: None },
-        OpeningLineInput { account_id: mohammad_cap.to_string(), amount: "120".into(), description: None },
-    ])
+    run_opening_lifecycle(
+        &pool,
+        vec![
+            OpeningLineInput {
+                account_id: cash.to_string(),
+                amount: "300".into(),
+                description: None,
+            },
+            OpeningLineInput {
+                account_id: ahmad_cap.to_string(),
+                amount: "180".into(),
+                description: None,
+            },
+            OpeningLineInput {
+                account_id: mohammad_cap.to_string(),
+                amount: "120".into(),
+                description: None,
+            },
+        ],
+    )
     .await;
 
     // A LATER period movement: capital withdrawal — cash Cr 100 against أحمد's
@@ -310,7 +365,11 @@ async fn gl_running_balances_follow_beginning_plus_period_movements() {
 
     // CASH: opening Dr 300 (balance 300) THEN withdrawal Cr 100 (balance 200).
     let ledger_cash = queries.get_ledger(&[cash]).await.expect("cash ledger");
-    assert_eq!(ledger_cash.lines.len(), 2, "cash must have opening + withdrawal");
+    assert_eq!(
+        ledger_cash.lines.len(),
+        2,
+        "cash must have opening + withdrawal"
+    );
     assert_eq!(ledger_cash.lines[0].credit_base, Decimal::ZERO);
     assert_eq!(ledger_cash.lines[0].balance_base, Decimal::from(300));
     assert_eq!(ledger_cash.lines[1].credit_base, Decimal::from(100));
@@ -321,7 +380,11 @@ async fn gl_running_balances_follow_beginning_plus_period_movements() {
 
     // CAPITAL: opening Cr 180 (-180) THEN withdrawal Dr 100 (-80).
     let ledger_ahmad = queries.get_ledger(&[ahmad_cap]).await.expect("أحمد ledger");
-    assert_eq!(ledger_ahmad.lines.len(), 2, "capital must have opening + withdrawal");
+    assert_eq!(
+        ledger_ahmad.lines.len(),
+        2,
+        "capital must have opening + withdrawal"
+    );
     assert_eq!(ledger_ahmad.lines[0].credit_base, Decimal::from(180));
     assert_eq!(ledger_ahmad.lines[0].balance_base, Decimal::from(-180));
     assert_eq!(ledger_ahmad.lines[1].debit_base, Decimal::from(100));

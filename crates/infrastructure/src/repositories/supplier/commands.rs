@@ -1,10 +1,10 @@
-use sqlx::SqlitePool;
 use application::errors::AppError;
 use domain::accounting::account::Account;
 use domain::accounting::journal_entry::JournalEntry;
-use domain::suppliers::Supplier;
 use domain::shared::ids::SupplierId;
 use domain::shared::{AccountId, JournalEntryId};
+use domain::suppliers::Supplier;
+use sqlx::SqlitePool;
 
 pub async fn save(pool: &SqlitePool, supplier: &Supplier) -> Result<(), AppError> {
     upsert_tx_free(pool, supplier).await

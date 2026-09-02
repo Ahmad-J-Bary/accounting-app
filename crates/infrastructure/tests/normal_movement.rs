@@ -39,7 +39,10 @@ use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 
 async fn build_pool() -> Arc<sqlx::SqlitePool> {
     let mut path = std::env::temp_dir();
-    path.push(format!("acc_normal_movement_{}.sqlite", uuid::Uuid::new_v4()));
+    path.push(format!(
+        "acc_normal_movement_{}.sqlite",
+        uuid::Uuid::new_v4()
+    ));
     let options = SqliteConnectOptions::from_str(path.to_str().unwrap())
         .unwrap()
         .create_if_missing(true);
@@ -199,7 +202,10 @@ async fn post_invoice(pool: &Arc<sqlx::SqlitePool>, spec: InvoiceSpec<'_>) -> St
     .expect("create invoice");
 
     let invoice_id = invoice.id.clone();
-    PostInvoiceUseCase::new(invoice_deps(pool)).execute(invoice.id).await.expect("post invoice");
+    PostInvoiceUseCase::new(invoice_deps(pool))
+        .execute(invoice.id)
+        .await
+        .expect("post invoice");
     invoice_id
 }
 
@@ -245,25 +251,31 @@ async fn credit_sale_to_registered_customer_reconciles_ar_subledger() {
     // Stock the material (OpeningBalance invoice), then a Deferred credit sale
     // of 5 @ 80 = 400 to the registered customer.
     let material = create_material(&pool).await;
-    post_invoice(&pool, InvoiceSpec {
-        invoice_type: "OpeningBalance",
-        customer_id: None,
-        payment_method: "Deferred",
-        amount_paid: "0",
-        material: &material,
-        quantity: "10",
-        unit_price: "50",
-    })
+    post_invoice(
+        &pool,
+        InvoiceSpec {
+            invoice_type: "OpeningBalance",
+            customer_id: None,
+            payment_method: "Deferred",
+            amount_paid: "0",
+            material: &material,
+            quantity: "10",
+            unit_price: "50",
+        },
+    )
     .await;
-    post_invoice(&pool, InvoiceSpec {
-        invoice_type: "Sales",
-        customer_id: Some(customer.id.clone()),
-        payment_method: "Deferred",
-        amount_paid: "0",
-        material: &material,
-        quantity: "5",
-        unit_price: "80",
-    })
+    post_invoice(
+        &pool,
+        InvoiceSpec {
+            invoice_type: "Sales",
+            customer_id: Some(customer.id.clone()),
+            payment_method: "Deferred",
+            amount_paid: "0",
+            material: &material,
+            quantity: "5",
+            unit_price: "80",
+        },
+    )
     .await;
 
     // Exactly one Sale stock movement for the credit sale.
@@ -272,7 +284,10 @@ async fn credit_sale_to_registered_customer_reconciles_ar_subledger() {
             .fetch_one(&*pool)
             .await
             .unwrap();
-    assert_eq!(sale_movements, 1, "the credit sale created exactly one Sale movement");
+    assert_eq!(
+        sale_movements, 1,
+        "the credit sale created exactly one Sale movement"
+    );
 
     // The CreditSalesJournal is balanced and its total is the invoice total (400).
     let (d, c): (f64, f64) = sqlx::query_as(
@@ -283,8 +298,14 @@ async fn credit_sale_to_registered_customer_reconciles_ar_subledger() {
     .fetch_one(&*pool)
     .await
     .unwrap();
-    assert!(close_enough(d, c), "CreditSalesJournal must balance ({d} vs {c})");
-    assert!(close_enough(d, 400.0), "CreditSalesJournal total is 400, got {d}");
+    assert!(
+        close_enough(d, c),
+        "CreditSalesJournal must balance ({d} vs {c})"
+    );
+    assert!(
+        close_enough(d, 400.0),
+        "CreditSalesJournal total is 400, got {d}"
+    );
 
     // The customer AR sub-ledger carries exactly the receivable → reconciles to GL.
     assert!(
@@ -302,12 +323,18 @@ async fn credit_sale_to_registered_customer_reconciles_ar_subledger() {
     .fetch_all(&*pool)
     .await
     .unwrap();
-    assert!(touched.contains(&ar_account.0.to_string()), "CreditSalesJournal must debit the AR account");
+    assert!(
+        touched.contains(&ar_account.0.to_string()),
+        "CreditSalesJournal must debit the AR account"
+    );
     let revenue = sqlx::query_scalar::<_, String>("SELECT id FROM accounts WHERE code = '312'")
         .fetch_one(&*pool)
         .await
         .unwrap();
-    assert!(touched.contains(&revenue), "CreditSalesJournal must credit the deferred-sales revenue account");
+    assert!(
+        touched.contains(&revenue),
+        "CreditSalesJournal must credit the deferred-sales revenue account"
+    );
 
     // The whole ledger stays balanced (opening stock + sale).
     let (td, tc): (f64, f64) = sqlx::query_as(
@@ -317,5 +344,8 @@ async fn credit_sale_to_registered_customer_reconciles_ar_subledger() {
     .fetch_one(&*pool)
     .await
     .unwrap();
-    assert!(close_enough(td, tc), "whole ledger must balance ({td} vs {tc})");
+    assert!(
+        close_enough(td, tc),
+        "whole ledger must balance ({td} vs {tc})"
+    );
 }

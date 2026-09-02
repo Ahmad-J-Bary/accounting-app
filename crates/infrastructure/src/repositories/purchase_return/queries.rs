@@ -1,11 +1,14 @@
-use sqlx::SqlitePool;
+use super::mappers::row_to_purchase_return;
+use super::models::{PurchaseReturnLineRow, PurchaseReturnRow};
 use application::errors::AppError;
 use domain::returns::PurchaseReturn;
 use domain::shared::ids::PurchaseReturnId;
-use super::models::{PurchaseReturnRow, PurchaseReturnLineRow};
-use super::mappers::row_to_purchase_return;
+use sqlx::SqlitePool;
 
-pub async fn find_by_id(pool: &SqlitePool, id: &PurchaseReturnId) -> Result<Option<PurchaseReturn>, AppError> {
+pub async fn find_by_id(
+    pool: &SqlitePool,
+    id: &PurchaseReturnId,
+) -> Result<Option<PurchaseReturn>, AppError> {
     let row = sqlx::query_as::<_, PurchaseReturnRow>(
         "SELECT id, return_number, supplier_id, return_date, total_amount, notes, created_at, updated_at
          FROM purchase_returns WHERE id = ?"

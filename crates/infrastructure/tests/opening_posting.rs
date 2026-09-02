@@ -1,6 +1,7 @@
 use std::str::FromStr;
 use std::sync::Arc;
 
+use application::ports::opening_posting_repository::OpeningPostingRepository;
 use chrono::Utc;
 use domain::accounting::journal_entry::{JournalEntry, JournalLine, JournalType};
 use domain::accounting::opening_balance::{OpeningBalanceLine, OpeningBalanceMigration};
@@ -8,7 +9,6 @@ use domain::shared::currency::Currency;
 use domain::shared::monetary_amount::MonetaryAmount;
 use domain::shared::money::Money;
 use domain::shared::AccountId;
-use application::ports::opening_posting_repository::OpeningPostingRepository;
 use infrastructure::db::pool::run_migrations;
 use infrastructure::repositories::SqliteOpeningPostingRepository;
 use rust_decimal::Decimal;
@@ -39,7 +39,10 @@ fn balanced_lines(amount: Decimal, account_a: AccountId, account_b: AccountId) -
 
 async fn build_pool() -> Arc<sqlx::SqlitePool> {
     let mut path = std::env::temp_dir();
-    path.push(format!("acc_obposting_test_{}.sqlite", uuid::Uuid::new_v4()));
+    path.push(format!(
+        "acc_obposting_test_{}.sqlite",
+        uuid::Uuid::new_v4()
+    ));
     let options = SqliteConnectOptions::from_str(path.to_str().unwrap())
         .unwrap()
         .create_if_missing(true);
@@ -55,11 +58,10 @@ async fn build_pool() -> Arc<sqlx::SqlitePool> {
 
 /// Two real account ids from the seeded chart of accounts (FK-safe for journal_lines).
 async fn real_accounts(pool: &sqlx::SqlitePool) -> (AccountId, AccountId) {
-    let ids: Vec<String> =
-        sqlx::query_scalar("SELECT id FROM accounts ORDER BY code LIMIT 2")
-            .fetch_all(pool)
-            .await
-            .unwrap();
+    let ids: Vec<String> = sqlx::query_scalar("SELECT id FROM accounts ORDER BY code LIMIT 2")
+        .fetch_all(pool)
+        .await
+        .unwrap();
     assert!(ids.len() >= 2, "chart of accounts must be seeded");
     (
         AccountId(uuid::Uuid::parse_str(&ids[0]).unwrap()),
@@ -93,7 +95,11 @@ async fn opening_posting_persists_canonical_source_type() {
         migration_id.clone(),
         Utc::now(),
         None,
-        vec![OpeningBalanceLine { account_id: acc_a, amount: dec!(500), description: None }],
+        vec![OpeningBalanceLine {
+            account_id: acc_a,
+            amount: dec!(500),
+            description: None,
+        }],
     )
     .unwrap();
     migration.validate("tester").unwrap();
@@ -113,13 +119,12 @@ async fn opening_posting_persists_canonical_source_type() {
 
     repo.post(&migration, &entry).await.unwrap();
 
-    let stored: (String, Option<String>) = sqlx::query_as(
-        "SELECT journal_type, source_type FROM journal_entries WHERE id = ?",
-    )
-    .bind(entry.id.0.to_string())
-    .fetch_one(pool.as_ref())
-    .await
-    .unwrap();
+    let stored: (String, Option<String>) =
+        sqlx::query_as("SELECT journal_type, source_type FROM journal_entries WHERE id = ?")
+            .bind(entry.id.0.to_string())
+            .fetch_one(pool.as_ref())
+            .await
+            .unwrap();
     assert_eq!(stored.0, "AccountOpeningBalance");
     assert_eq!(
         stored.1.as_deref(),
@@ -127,13 +132,12 @@ async fn opening_posting_persists_canonical_source_type() {
         "opening journal must persist its canonical source_type"
     );
 
-    let status: String = sqlx::query_scalar(
-        "SELECT status FROM opening_balance_migrations WHERE id = ?",
-    )
-    .bind(&migration_id)
-    .fetch_one(pool.as_ref())
-    .await
-    .unwrap();
+    let status: String =
+        sqlx::query_scalar("SELECT status FROM opening_balance_migrations WHERE id = ?")
+            .bind(&migration_id)
+            .fetch_one(pool.as_ref())
+            .await
+            .unwrap();
     assert_eq!(status, "Posted", "posting must mark the migration Posted");
 }
 
@@ -150,7 +154,11 @@ async fn opening_cancel_persists_canonical_source_type() {
         migration_id.clone(),
         Utc::now(),
         None,
-        vec![OpeningBalanceLine { account_id: acc_a, amount: dec!(300), description: None }],
+        vec![OpeningBalanceLine {
+            account_id: acc_a,
+            amount: dec!(300),
+            description: None,
+        }],
     )
     .unwrap();
 
@@ -194,26 +202,27 @@ async fn opening_cancel_persists_canonical_source_type() {
 
     repo.cancel(&migration, &reversal, &original).await.unwrap();
 
-    let stored: (String, Option<String>) = sqlx::query_as(
-        "SELECT journal_type, source_type FROM journal_entries WHERE id = ?",
-    )
-    .bind(reversal.id.0.to_string())
-    .fetch_one(pool.as_ref())
-    .await
-    .unwrap();
-    assert_eq!(stored.0, "AccountOpeningBalance", "a reversal is a relationship, not a type");
+    let stored: (String, Option<String>) =
+        sqlx::query_as("SELECT journal_type, source_type FROM journal_entries WHERE id = ?")
+            .bind(reversal.id.0.to_string())
+            .fetch_one(pool.as_ref())
+            .await
+            .unwrap();
+    assert_eq!(
+        stored.0, "AccountOpeningBalance",
+        "a reversal is a relationship, not a type"
+    );
     assert_eq!(
         stored.1.as_deref(),
         Some("opening_balance_reversal"),
         "opening reversal journal must persist its canonical source_type"
     );
 
-    let status: String = sqlx::query_scalar(
-        "SELECT status FROM opening_balance_migrations WHERE id = ?",
-    )
-    .bind(&migration_id)
-    .fetch_one(pool.as_ref())
-    .await
-    .unwrap();
+    let status: String =
+        sqlx::query_scalar("SELECT status FROM opening_balance_migrations WHERE id = ?")
+            .bind(&migration_id)
+            .fetch_one(pool.as_ref())
+            .await
+            .unwrap();
     assert_eq!(status, "Cancelled");
 }

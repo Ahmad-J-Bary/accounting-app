@@ -1,6 +1,6 @@
+use std::path::{Path, PathBuf};
 use tauri::{AppHandle, Emitter, Manager, State};
 use tauri_plugin_opener::OpenerExt;
-use std::path::{Path, PathBuf};
 
 use crate::bootstrap::container::AppState;
 use infrastructure::db::backup::{
@@ -25,10 +25,14 @@ impl BackupProgress {
         BackupProgress { phase: "exporting" }
     }
     fn snapshotting_original() -> Self {
-        BackupProgress { phase: "snapshotting_original" }
+        BackupProgress {
+            phase: "snapshotting_original",
+        }
     }
     fn validating() -> Self {
-        BackupProgress { phase: "validating" }
+        BackupProgress {
+            phase: "validating",
+        }
     }
     fn copying() -> Self {
         BackupProgress { phase: "copying" }
@@ -65,15 +69,33 @@ async fn resolve_backup_dir(app: &AppHandle, state: &AppState) -> Result<PathBuf
         .await
         .map(|v| v.map(|s| s == "true").unwrap_or(true))?;
     let custom_path = backup::get_config(&state.pool, "backup_custom_path").await?;
-    Ok(backup::resolve_backup_dir(&db_path, use_same_location, custom_path.as_deref()))
+    Ok(backup::resolve_backup_dir(
+        &db_path,
+        use_same_location,
+        custom_path.as_deref(),
+    ))
 }
 
 async fn read_policy(state: &AppState) -> Result<RetentionPolicy, String> {
     Ok(RetentionPolicy {
-        daily: config_value(&state.pool, "backup_keep_daily", RetentionPolicy::default().daily).await,
-        weekly: config_value(&state.pool, "backup_keep_weekly", RetentionPolicy::default().weekly).await,
-        monthly: config_value(&state.pool, "backup_keep_monthly", RetentionPolicy::default().monthly)
-            .await,
+        daily: config_value(
+            &state.pool,
+            "backup_keep_daily",
+            RetentionPolicy::default().daily,
+        )
+        .await,
+        weekly: config_value(
+            &state.pool,
+            "backup_keep_weekly",
+            RetentionPolicy::default().weekly,
+        )
+        .await,
+        monthly: config_value(
+            &state.pool,
+            "backup_keep_monthly",
+            RetentionPolicy::default().monthly,
+        )
+        .await,
     })
 }
 
@@ -202,17 +224,17 @@ pub async fn get_backup_config(
     let legacy_days = backup::get_config(&state.pool, "backup_retention_days")
         .await?
         .and_then(|s| s.parse::<u32>().ok());
-    let (daily, weekly, monthly) = if policy == RetentionPolicy::default()
-        && legacy_days.is_some()
-        && legacy_days != Some(30)
-    {
-        (0u32, legacy_days.unwrap_or(0) / 7, 0u32)
-    } else {
-        (policy.daily, policy.weekly, policy.monthly)
-    };
+    let (daily, weekly, monthly) =
+        if policy == RetentionPolicy::default() && legacy_days.is_some() && legacy_days != Some(30)
+        {
+            (0u32, legacy_days.unwrap_or(0) / 7, 0u32)
+        } else {
+            (policy.daily, policy.weekly, policy.monthly)
+        };
 
     let db_path = resolve_db_path(&app)?;
-    let backup_dir = backup::resolve_backup_dir(&db_path, use_same_location, custom_path.as_deref());
+    let backup_dir =
+        backup::resolve_backup_dir(&db_path, use_same_location, custom_path.as_deref());
     let last_restore_status = backup::get_config(&state.pool, "backup_last_restore_status").await?;
 
     Ok(serde_json::json!({
@@ -298,8 +320,7 @@ pub async fn export_database(
     dest_path: String,
 ) -> Result<(), String> {
     let dest = Path::new(&dest_path);
-    if !dest_path.to_lowercase().ends_with(".sqlite")
-        && !dest_path.to_lowercase().ends_with(".db")
+    if !dest_path.to_lowercase().ends_with(".sqlite") && !dest_path.to_lowercase().ends_with(".db")
     {
         return Err("فشل التصدير: يجب أن يكون الملف بصيغة .sqlite أو .db".into());
     }
@@ -335,9 +356,7 @@ pub async fn export_database_to_bytes(
 /// Read-only metadata about a candidate import file (shown to the user before
 /// import so they can confirm what they're restoring).
 #[tauri::command]
-pub async fn inspect_database_file(
-    source_path: String,
-) -> Result<DatabaseInspection, String> {
+pub async fn inspect_database_file(source_path: String) -> Result<DatabaseInspection, String> {
     let source = Path::new(&source_path);
     if !source.exists() {
         return Err("ملف النسخة الاحتياطية غير موجود".into());
@@ -383,8 +402,7 @@ async fn stage_restore(
     let data_dir = resolve_data_dir(app)?;
     let pending = data_dir.join("almowakeb.pending.sqlite");
     let _ = std::fs::remove_file(&pending);
-    std::fs::copy(source, &pending)
-        .map_err(|e| format!("Failed to copy restore file: {e}"))?;
+    std::fs::copy(source, &pending).map_err(|e| format!("Failed to copy restore file: {e}"))?;
 
     let marker = PendingRestore {
         pending_db: pending.to_string_lossy().to_string(),
@@ -518,8 +536,7 @@ pub async fn get_database_info(
     state: State<'_, AppState>,
 ) -> Result<serde_json::Value, String> {
     let db_path = resolve_db_path(&app)?;
-    let db_size_bytes =
-        std::fs::metadata(&db_path).map(|m| m.len()).unwrap_or(0);
+    let db_size_bytes = std::fs::metadata(&db_path).map(|m| m.len()).unwrap_or(0);
 
     let schema_version = backup::get_schema_version(&state.pool).await;
     let company_name = backup::company_scope(&state.pool).await;
@@ -529,15 +546,13 @@ pub async fn get_database_info(
             .fetch_one(&*state.pool)
             .await
             .unwrap_or(0);
-    let account_count: i64 =
-        infrastructure::sqlx::query_scalar("SELECT COUNT(*) FROM accounts")
-            .fetch_one(&*state.pool)
-            .await
-            .unwrap_or(0);
+    let account_count: i64 = infrastructure::sqlx::query_scalar("SELECT COUNT(*) FROM accounts")
+        .fetch_one(&*state.pool)
+        .await
+        .unwrap_or(0);
 
     let last_auto_backup = backup::get_config(&state.pool, "backup_last_auto").await?;
-    let last_restore_status =
-        backup::get_config(&state.pool, "backup_last_restore_status").await?;
+    let last_restore_status = backup::get_config(&state.pool, "backup_last_restore_status").await?;
     let auto_backup_enabled = backup::get_config(&state.pool, "backup_auto_enabled")
         .await
         .map(|v| v.map(|s| s == "true").unwrap_or(true))?;
@@ -578,7 +593,8 @@ pub async fn copy_backup_file(
         return Err("ملف النسخة الاحتياطية غير موجود".into());
     }
     let dest = PathBuf::from(&dest_path);
-    std::fs::create_dir_all(dest.parent().unwrap_or(&dest)).map_err(|e| format!("Failed to prepare destination: {e}"))?;
+    std::fs::create_dir_all(dest.parent().unwrap_or(&dest))
+        .map_err(|e| format!("Failed to prepare destination: {e}"))?;
     std::fs::copy(&source, &dest).map_err(|e| format!("فشل نسخ الملف: {e}"))?;
 
     // Verify the copy actually matches the source before reporting success.

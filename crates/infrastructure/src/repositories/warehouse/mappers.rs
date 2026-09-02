@@ -1,6 +1,6 @@
-use application::errors::AppError;
-use application::dto::warehouse_dto::WarehouseDto;
 use super::models::WarehouseRow;
+use application::dto::warehouse_dto::WarehouseDto;
+use application::errors::AppError;
 
 pub fn row_to_dto(row: WarehouseRow) -> Result<WarehouseDto, AppError> {
     Ok(WarehouseDto {

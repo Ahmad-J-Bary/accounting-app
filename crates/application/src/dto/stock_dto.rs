@@ -67,4 +67,3 @@ pub struct StockBalanceDto {
     pub minimum_stock: String,
     pub is_low_stock: bool,
 }
-

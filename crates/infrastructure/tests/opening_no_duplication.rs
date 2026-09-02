@@ -29,7 +29,9 @@ use application::use_cases::account::CreateAccountUseCase;
 use application::use_cases::opening_balance::create::START_MODE_EXISTING;
 use application::use_cases::opening_balance::types::OpeningLineInput;
 use application::use_cases::opening_balance::CreateOpeningBalanceUseCase;
-use application::use_cases::unified_invoice::{CreateInvoiceUseCase, PostInvoiceDependencies, PostInvoiceUseCase};
+use application::use_cases::unified_invoice::{
+    CreateInvoiceUseCase, PostInvoiceDependencies, PostInvoiceUseCase,
+};
 use domain::accounting::account::{AccountCategory, AccountType};
 use domain::inventory::material::Material;
 use domain::shared::ids::AccountId;
@@ -46,7 +48,10 @@ use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 
 async fn build_pool() -> Arc<sqlx::SqlitePool> {
     let mut path = std::env::temp_dir();
-    path.push(format!("acc_opening_no_duplication_{}.sqlite", uuid::Uuid::new_v4()));
+    path.push(format!(
+        "acc_opening_no_duplication_{}.sqlite",
+        uuid::Uuid::new_v4()
+    ));
     let options = SqliteConnectOptions::from_str(path.to_str().unwrap())
         .unwrap()
         .create_if_missing(true);
@@ -89,16 +94,26 @@ async fn create_draft_migration(pool: &Arc<sqlx::SqlitePool>) -> String {
     let settings_repo = Arc::new(SqliteSettingsRepository::new(pool.clone()));
     let case = CreateOpeningBalanceUseCase::new(migration_repo, account_repo, settings_repo);
     let result = case
-        .execute(application::use_cases::opening_balance::types::CreateOpeningBalanceMigrationCommand {
-            cutover_date: chrono::Utc::now().to_rfc3339(),
-            notes: None,
-            source_system: None,
-            source_reference: None,
-            lines: vec![
-                OpeningLineInput { account_id: cash.to_string(), amount: "1000".into(), description: None },
-                OpeningLineInput { account_id: equity.to_string(), amount: "1000".into(), description: None },
-            ],
-        })
+        .execute(
+            application::use_cases::opening_balance::types::CreateOpeningBalanceMigrationCommand {
+                cutover_date: chrono::Utc::now().to_rfc3339(),
+                notes: None,
+                source_system: None,
+                source_reference: None,
+                lines: vec![
+                    OpeningLineInput {
+                        account_id: cash.to_string(),
+                        amount: "1000".into(),
+                        description: None,
+                    },
+                    OpeningLineInput {
+                        account_id: equity.to_string(),
+                        amount: "1000".into(),
+                        description: None,
+                    },
+                ],
+            },
+        )
         .await
         .expect("create migration");
     result.0.id
@@ -225,15 +240,25 @@ async fn inventory_opening_posts_one_movement_and_one_journal_via_existing_modul
     post_opening_balance_invoice(&pool, &material).await;
 
     // Exactly one stock movement, of the opening-movement type, on the real material.
-    let movement_rows: Vec<(String, String)> = sqlx::query_as(
-        "SELECT material_id, movement_type FROM stock_movements",
-    )
-    .fetch_all(&*pool)
-    .await
-    .unwrap();
-    assert_eq!(movement_rows.len(), 1, "exactly one stock movement for the opening");
-    assert_eq!(movement_rows[0].0, material.id.to_string(), "movement belongs to the real material");
-    assert_eq!(movement_rows[0].1, "OpeningBalance", "opening carries the OpeningBalance movement type");
+    let movement_rows: Vec<(String, String)> =
+        sqlx::query_as("SELECT material_id, movement_type FROM stock_movements")
+            .fetch_all(&*pool)
+            .await
+            .unwrap();
+    assert_eq!(
+        movement_rows.len(),
+        1,
+        "exactly one stock movement for the opening"
+    );
+    assert_eq!(
+        movement_rows[0].0,
+        material.id.to_string(),
+        "movement belongs to the real material"
+    );
+    assert_eq!(
+        movement_rows[0].1, "OpeningBalance",
+        "opening carries the OpeningBalance movement type"
+    );
 
     // Exactly one MaterialOpeningBalance journal (no duplicate service journal).
     let opening_journal_count: i64 = sqlx::query_scalar(
@@ -243,7 +268,10 @@ async fn inventory_opening_posts_one_movement_and_one_journal_via_existing_modul
     .fetch_one(&*pool)
     .await
     .unwrap();
-    assert_eq!(opening_journal_count, 1, "exactly one opening journal, no second posting path");
+    assert_eq!(
+        opening_journal_count, 1,
+        "exactly one opening journal, no second posting path"
+    );
 
     let material_opening_journals: i64 = sqlx::query_scalar(
         "SELECT COUNT(*) FROM journal_entries WHERE journal_type = 'MaterialOpeningBalance'",
@@ -258,7 +286,10 @@ async fn inventory_opening_posts_one_movement_and_one_journal_via_existing_modul
         .fetch_one(&*pool)
         .await
         .unwrap();
-    assert_eq!(lot_count, 1, "opening creates its lot through the existing inventory module");
+    assert_eq!(
+        lot_count, 1,
+        "opening creates its lot through the existing inventory module"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -315,13 +346,21 @@ async fn account_create_defers_opening_journal_while_window_open() {
     .await
     .expect("create account during window");
 
-    assert_eq!(during.opening_balance, Decimal::ZERO, "account must be static zero during the window");
-    let during_lines: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM journal_lines WHERE account_id = ?")
-        .bind(during.id.0.to_string())
-        .fetch_one(&*pool)
-        .await
-        .unwrap();
-    assert_eq!(during_lines, 0, "per-account opening journal must be deferred to the migration");
+    assert_eq!(
+        during.opening_balance,
+        Decimal::ZERO,
+        "account must be static zero during the window"
+    );
+    let during_lines: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM journal_lines WHERE account_id = ?")
+            .bind(during.id.0.to_string())
+            .fetch_one(&*pool)
+            .await
+            .unwrap();
+    assert_eq!(
+        during_lines, 0,
+        "per-account opening journal must be deferred to the migration"
+    );
 
     // ---- Window closed (NewCompany): the same use case posts the journal as before.
     let pool2 = build_pool().await;
@@ -367,11 +406,19 @@ async fn account_create_defers_opening_journal_while_window_open() {
     .await
     .expect("create account outside window");
 
-    assert_eq!(after.opening_balance, Decimal::from(1000), "opening stays static outside the window");
-    let after_lines: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM journal_lines WHERE account_id = ?")
-        .bind(after.id.0.to_string())
-        .fetch_one(&*pool2)
-        .await
-        .unwrap();
-    assert_eq!(after_lines, 1, "per-account opening journal posts once the window is closed");
+    assert_eq!(
+        after.opening_balance,
+        Decimal::from(1000),
+        "opening stays static outside the window"
+    );
+    let after_lines: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM journal_lines WHERE account_id = ?")
+            .bind(after.id.0.to_string())
+            .fetch_one(&*pool2)
+            .await
+            .unwrap();
+    assert_eq!(
+        after_lines, 1,
+        "per-account opening journal posts once the window is closed"
+    );
 }

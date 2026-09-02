@@ -1,5 +1,5 @@
 use crate::shared::errors::DomainError;
-use crate::shared::ids::{StockAdjustmentId, MaterialId};
+use crate::shared::ids::{MaterialId, StockAdjustmentId};
 use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};

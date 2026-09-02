@@ -1,18 +1,18 @@
-use async_trait::async_trait;
-use sqlx::SqlitePool;
 use application::errors::AppError;
 use application::ports::supplier_repository::SupplierRepository;
+use async_trait::async_trait;
 use domain::accounting::account::Account;
 use domain::accounting::journal_entry::JournalEntry;
-use domain::suppliers::Supplier;
 use domain::shared::ids::SupplierId;
 use domain::shared::{AccountId, JournalEntryId};
+use domain::suppliers::Supplier;
+use sqlx::SqlitePool;
 use std::sync::Arc;
 
-mod models;
-mod mappers;
-mod queries;
 mod commands;
+mod mappers;
+mod models;
+mod queries;
 
 pub struct SqliteSupplierRepository {
     pool: Arc<SqlitePool>,
@@ -34,7 +34,10 @@ impl SupplierRepository for SqliteSupplierRepository {
         queries::find_by_id(&self.pool, id).await
     }
 
-    async fn find_by_account_id(&self, account_id: &AccountId) -> Result<Option<Supplier>, AppError> {
+    async fn find_by_account_id(
+        &self,
+        account_id: &AccountId,
+    ) -> Result<Option<Supplier>, AppError> {
         queries::find_by_account_id(&self.pool, account_id).await
     }
 

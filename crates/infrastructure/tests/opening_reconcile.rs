@@ -20,10 +20,11 @@ use application::ports::customer_repository::CustomerRepository;
 use application::ports::settings_repository::SettingsRepository;
 use application::use_cases::opening_balance::create::START_MODE_EXISTING;
 use application::use_cases::opening_balance::types::{
-    CreateOpeningBalanceMigrationCommand, OpeningItemInput, OpeningLineInput, SaveOpeningItemsCommand,
+    CreateOpeningBalanceMigrationCommand, OpeningItemInput, OpeningLineInput,
+    SaveOpeningItemsCommand,
 };
 use application::use_cases::opening_balance::{
-    CreateOpeningBalanceUseCase, GetOpeningReconciliationUseCase, KIND_AR, SaveOpeningItemsUseCase,
+    CreateOpeningBalanceUseCase, GetOpeningReconciliationUseCase, SaveOpeningItemsUseCase, KIND_AR,
 };
 use domain::accounting::account::{Account, AccountCategory, AccountPurpose, AccountType};
 use domain::customers::Customer;
@@ -41,7 +42,10 @@ use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 
 async fn build_pool() -> Arc<sqlx::SqlitePool> {
     let mut path = std::env::temp_dir();
-    path.push(format!("acc_opening_reconcile_{}.sqlite", uuid::Uuid::new_v4()));
+    path.push(format!(
+        "acc_opening_reconcile_{}.sqlite",
+        uuid::Uuid::new_v4()
+    ));
     let options = SqliteConnectOptions::from_str(path.to_str().unwrap())
         .unwrap()
         .create_if_missing(true);
@@ -90,26 +94,51 @@ async fn save_account(
     .unwrap()
     .with_purpose(purpose);
     let id = account.id;
-    SqliteAccountRepository::new(pool.clone()).save(&account).await.unwrap();
+    SqliteAccountRepository::new(pool.clone())
+        .save(&account)
+        .await
+        .unwrap();
     id
 }
 
 async fn create_draft(pool: &Arc<sqlx::SqlitePool>, with_ar_gl_line: bool) -> String {
     // A dedicated AR account (purpose receivable) + a credit-normal equity leg,
     // both created directly so the sub-ledger classification is explicit.
-    let ar = save_account(pool, "1907", AccountPurpose::Receivable, AccountType::Assets).await;
+    let ar = save_account(
+        pool,
+        "1907",
+        AccountPurpose::Receivable,
+        AccountType::Assets,
+    )
+    .await;
     let equity = save_account(pool, "1909", AccountPurpose::General, AccountType::Equity).await;
     let mut lines = vec![];
     if with_ar_gl_line {
         // Dr AR 700 / Cr Equity 700 → AR GL bucket = 700, balanced.
-        lines.push(OpeningLineInput { account_id: ar.to_string(), amount: "700".into(), description: None });
-        lines.push(OpeningLineInput { account_id: equity.to_string(), amount: "700".into(), description: None });
+        lines.push(OpeningLineInput {
+            account_id: ar.to_string(),
+            amount: "700".into(),
+            description: None,
+        });
+        lines.push(OpeningLineInput {
+            account_id: equity.to_string(),
+            amount: "700".into(),
+            description: None,
+        });
     } else {
         // Non-reconciled GL: no receivable line on the AR account at all —
         // Dr a general asset 500 / Cr Equity 500 (balanced, AR GL bucket = 0).
         let asset = save_account(pool, "1908", AccountPurpose::General, AccountType::Assets).await;
-        lines.push(OpeningLineInput { account_id: asset.to_string(), amount: "500".into(), description: None });
-        lines.push(OpeningLineInput { account_id: equity.to_string(), amount: "500".into(), description: None });
+        lines.push(OpeningLineInput {
+            account_id: asset.to_string(),
+            amount: "500".into(),
+            description: None,
+        });
+        lines.push(OpeningLineInput {
+            account_id: equity.to_string(),
+            amount: "500".into(),
+            description: None,
+        });
     }
     let draft = CreateOpeningBalanceUseCase::new(
         Arc::new(SqliteOpeningMigrationRepository::new(pool.clone())),
@@ -142,7 +171,10 @@ async fn save_ar_item(pool: &Arc<sqlx::SqlitePool>, migration_id: &str, amount: 
         None,
     )
     .unwrap();
-    SqliteCustomerRepository::new(pool.clone()).save(&customer).await.unwrap();
+    SqliteCustomerRepository::new(pool.clone())
+        .save(&customer)
+        .await
+        .unwrap();
 
     let customer_repo: Arc<dyn CustomerRepository> =
         Arc::new(SqliteCustomerRepository::new(pool.clone()));
@@ -189,12 +221,26 @@ async fn reconciled_migration_reports_matching_rows_and_all_reconciled() {
     let id = create_draft(&pool, true).await;
     save_ar_item(&pool, &id, "700").await;
 
-    let dto = reconciler(&pool).execute(id).await.expect("reconciliation computes");
+    let dto = reconciler(&pool)
+        .execute(id)
+        .await
+        .expect("reconciliation computes");
 
-    assert!(dto.all_reconciled, "balanced reconciled migration must reconcile");
-    let ar_row = dto.rows.iter().find(|r| r.key == "AR").expect("AR row present");
+    assert!(
+        dto.all_reconciled,
+        "balanced reconciled migration must reconcile"
+    );
+    let ar_row = dto
+        .rows
+        .iter()
+        .find(|r| r.key == "AR")
+        .expect("AR row present");
     assert_eq!(ar_row.subledger, dec!(700), "AR sub-ledger total is 700");
-    assert_eq!(ar_row.general_ledger, dec!(700), "GL receivable line is 700");
+    assert_eq!(
+        ar_row.general_ledger,
+        dec!(700),
+        "GL receivable line is 700"
+    );
     assert!(ar_row.reconciled);
     assert!(dto.debit_equals_credit, "reconciled migration is balanced");
 }
@@ -211,10 +257,20 @@ async fn unreconciled_migration_reports_ar_mismatch_and_blocker() {
     let id = create_draft(&pool, false).await;
     save_ar_item(&pool, &id, "700").await;
 
-    let dto = reconciler(&pool).execute(id).await.expect("reconciliation computes");
+    let dto = reconciler(&pool)
+        .execute(id)
+        .await
+        .expect("reconciliation computes");
 
-    assert!(!dto.all_reconciled, "mismatched sub-ledger must not reconcile");
-    let ar_row = dto.rows.iter().find(|r| r.key == "AR").expect("AR row present");
+    assert!(
+        !dto.all_reconciled,
+        "mismatched sub-ledger must not reconcile"
+    );
+    let ar_row = dto
+        .rows
+        .iter()
+        .find(|r| r.key == "AR")
+        .expect("AR row present");
     assert_eq!(ar_row.subledger, dec!(700));
     assert_eq!(ar_row.general_ledger, dec!(0), "no GL receivable line");
     assert!(!ar_row.reconciled);

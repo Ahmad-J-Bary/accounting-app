@@ -1,6 +1,6 @@
-use tauri::State;
 use crate::bootstrap::container::AppState;
 use serde::{Deserialize, Serialize};
+use tauri::State;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ReceivablesPayablesSummary {
@@ -19,17 +19,25 @@ pub struct ReceivablesPayablesSummary {
 pub async fn get_receivables_payables_summary(
     state: State<'_, AppState>,
 ) -> Result<ReceivablesPayablesSummary, String> {
-    let customers = state.customer_repo.list_all().await
+    let customers = state
+        .customer_repo
+        .list_all()
+        .await
         .map_err(|e| e.to_string())?;
-    let suppliers = state.supplier_repo.list_all().await
+    let suppliers = state
+        .supplier_repo
+        .list_all()
+        .await
         .map_err(|e| e.to_string())?;
 
-    let total_receivables: rust_decimal::Decimal = customers.iter()
+    let total_receivables: rust_decimal::Decimal = customers
+        .iter()
         .filter(|c| c.is_debtor())
         .map(|c| c.effective_balance())
         .sum();
 
-    let total_payables: rust_decimal::Decimal = suppliers.iter()
+    let total_payables: rust_decimal::Decimal = suppliers
+        .iter()
         .filter(|s| s.is_payable())
         .map(|s| s.effective_balance())
         .sum();

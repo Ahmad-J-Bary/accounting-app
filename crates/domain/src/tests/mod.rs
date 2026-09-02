@@ -67,8 +67,8 @@ mod stock_movement_domain_tests {
 
 #[cfg(test)]
 mod accounting_domain_tests {
-    use crate::shared::currency::Currency;
     use crate::accounting::journal_entry::{JournalEntry, JournalLine, JournalType};
+    use crate::shared::currency::Currency;
     use crate::shared::ids::AccountId;
     use crate::shared::monetary_amount::MonetaryAmount;
     use crate::shared::money::Money;
@@ -174,8 +174,9 @@ mod accounting_domain_tests {
             Utc::now(),
             "سند قبض تجريبي".to_string(),
             None,
-        ).unwrap();
-        
+        )
+        .unwrap();
+
         assert_eq!(entry.journal_type, JournalType::CashReceipt);
         assert!(entry.is_balanced());
     }
@@ -186,7 +187,7 @@ mod accounting_domain_tests {
         // Verify line 0 is Debit and line 1 is Credit
         assert!(lines[0].base_debit() > Decimal::ZERO);
         assert_eq!(lines[0].base_credit(), Decimal::ZERO);
-        
+
         assert!(lines[1].base_credit() > Decimal::ZERO);
         assert_eq!(lines[1].base_debit(), Decimal::ZERO);
     }
@@ -200,7 +201,8 @@ mod accounting_domain_tests {
             Utc::now(),
             "مبيعات".to_string(),
             None,
-        ).unwrap();
+        )
+        .unwrap();
         assert_eq!(entry_sales.journal_type, JournalType::CashSalesJournal);
 
         let entry_purchase = JournalEntry::new(
@@ -210,9 +212,10 @@ mod accounting_domain_tests {
             Utc::now(),
             "مشتريات".to_string(),
             None,
-        ).unwrap();
+        )
+        .unwrap();
         assert_eq!(entry_purchase.journal_type, JournalType::PurchaseJournal);
-        
+
         let entry_costs = JournalEntry::new(
             "PCJ-001".to_string(),
             JournalType::PurchaseCostsJournal,
@@ -220,7 +223,8 @@ mod accounting_domain_tests {
             Utc::now(),
             "تكاليف إضافية".to_string(),
             None,
-        ).unwrap();
+        )
+        .unwrap();
         assert_eq!(entry_costs.journal_type, JournalType::PurchaseCostsJournal);
     }
 }

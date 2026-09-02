@@ -10,31 +10,31 @@ use rust_decimal::Decimal;
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 pub enum JournalType {
-    CashReceipt,          // سند قبض
-    CashPayment,          // سند دفع
-    SupplierReceiptJournal,// سند قبض من مورد
-    CustomerPaymentJournal,// سند دفع لعميل
-    ExpenseVoucher,       // سند مصاريف
-    DrawingsVoucher,      // سند مسحوبات
-    CashOpeningBalance,   // رصيد افتتاحي للخزينة
-    AccountOpeningBalance,// رصيد افتتاحي لحساب
-    CashJournal,          // يومية الصندوق
-    CashSalesJournal,     // يومية المبيعات النقدية
-    CreditSalesJournal,   // يومية المبيعات الآجلة
-    PurchaseJournal,      // يومية المشتريات
-    PurchaseCostsJournal, // يومية التكاليف الإضافية للمشتريات
-    MaterialOpeningBalance,// رصيد افتتاحي للمواد
-    GeneralJournal,       // اليومية العامة
-    SalesReturnJournal,   // مرتجع مبيعات
-    PurchaseReturnJournal,// مرتجع مشتريات
-    DamagedJournal,       // خسائر المواد التالفة
-    AdjustmentJournal,    // تسوية جرد (فائض/عجز)
-    DiscountEarnedJournal,// حسم مكتسب
-    DiscountGrantedJournal,// حسم ممنوح
-    CapitalContribution,// مساهمة رأس مال
-    ProfitDistribution,// توزيع أرباح على الشركاء
-    PartnerDrawing,   // سحب شريك (مسحوبات)
-    Capitalization,   // رسملة الأرباح المبقاة إلى رأس المال
+    CashReceipt,            // سند قبض
+    CashPayment,            // سند دفع
+    SupplierReceiptJournal, // سند قبض من مورد
+    CustomerPaymentJournal, // سند دفع لعميل
+    ExpenseVoucher,         // سند مصاريف
+    DrawingsVoucher,        // سند مسحوبات
+    CashOpeningBalance,     // رصيد افتتاحي للخزينة
+    AccountOpeningBalance,  // رصيد افتتاحي لحساب
+    CashJournal,            // يومية الصندوق
+    CashSalesJournal,       // يومية المبيعات النقدية
+    CreditSalesJournal,     // يومية المبيعات الآجلة
+    PurchaseJournal,        // يومية المشتريات
+    PurchaseCostsJournal,   // يومية التكاليف الإضافية للمشتريات
+    MaterialOpeningBalance, // رصيد افتتاحي للمواد
+    GeneralJournal,         // اليومية العامة
+    SalesReturnJournal,     // مرتجع مبيعات
+    PurchaseReturnJournal,  // مرتجع مشتريات
+    DamagedJournal,         // خسائر المواد التالفة
+    AdjustmentJournal,      // تسوية جرد (فائض/عجز)
+    DiscountEarnedJournal,  // حسم مكتسب
+    DiscountGrantedJournal, // حسم ممنوح
+    CapitalContribution,    // مساهمة رأس مال
+    ProfitDistribution,     // توزيع أرباح على الشركاء
+    PartnerDrawing,         // سحب شريك (مسحوبات)
+    Capitalization,         // رسملة الأرباح المبقاة إلى رأس المال
 }
 
 impl std::fmt::Display for JournalType {
@@ -213,7 +213,7 @@ impl JournalEntry {
         for line in &lines {
             let has_debit = line.base_debit() > Decimal::ZERO;
             let has_credit = line.base_credit() > Decimal::ZERO;
-            
+
             if has_debit && has_credit {
                 return Err(DomainError::Invalid("لا يمكن أن يكون السطر مديناً ودائناً في نفس الوقت. يجب تفصيل القيد المركب إلى سطور مستقلة.".into()));
             }
@@ -267,9 +267,7 @@ impl JournalEntry {
         description: String,
     ) -> Result<Self, DomainError> {
         if original.status != JournalEntryStatus::Posted {
-            return Err(DomainError::Forbidden(
-                "يمكن عكس القيود المرحلة فقط".into(),
-            ));
+            return Err(DomainError::Forbidden("يمكن عكس القيود المرحلة فقط".into()));
         }
 
         let lines: Vec<JournalLine> = original
@@ -313,9 +311,7 @@ impl JournalEntry {
 
     pub fn post(&mut self) -> Result<(), DomainError> {
         if self.status != JournalEntryStatus::Draft {
-            return Err(DomainError::Invalid(
-                "يمكن ترحيل القيود المسودة فقط".into(),
-            ));
+            return Err(DomainError::Invalid("يمكن ترحيل القيود المسودة فقط".into()));
         }
 
         if !self.is_balanced() {
@@ -334,9 +330,7 @@ impl JournalEntry {
 
     pub fn reverse(&mut self) -> Result<(), DomainError> {
         if self.status != JournalEntryStatus::Posted {
-            return Err(DomainError::Forbidden(
-                "يمكن عكس القيود المرحلة فقط".into(),
-            ));
+            return Err(DomainError::Forbidden("يمكن عكس القيود المرحلة فقط".into()));
         }
 
         self.status = JournalEntryStatus::Reversed;
@@ -369,7 +363,8 @@ impl JournalEntry {
                 MonetaryAmount::zero(amount.currency().clone()),
                 amount,
                 description.clone(),
-            ).with_partner(supplier_id),
+            )
+            .with_partner(supplier_id),
         ];
 
         Self::new(
@@ -399,7 +394,9 @@ impl JournalEntry {
             MonetaryAmount::zero(amount.currency().clone()),
             description.clone(),
         );
-        if let Some(pid) = partner_id { line1 = line1.with_partner(pid); }
+        if let Some(pid) = partner_id {
+            line1 = line1.with_partner(pid);
+        }
 
         let mut line2 = JournalLine::new(
             credit_account_id,
@@ -407,7 +404,9 @@ impl JournalEntry {
             amount,
             description.clone(),
         );
-        if let Some(pid) = partner_id { line2 = line2.with_partner(pid); }
+        if let Some(pid) = partner_id {
+            line2 = line2.with_partner(pid);
+        }
 
         let lines = vec![line1, line2];
 
@@ -474,7 +473,10 @@ mod tests {
         let lines = vec![
             JournalLine::new(
                 AccountId(Uuid::new_v4()),
-                MonetaryAmount::new(Money::new(dec!(150000), secondary_currency.clone()), fx_rate),
+                MonetaryAmount::new(
+                    Money::new(dec!(150000), secondary_currency.clone()),
+                    fx_rate,
+                ),
                 MonetaryAmount::zero(secondary_currency.clone()),
                 "مدين بعملة ثانوية".to_string(),
             ),
@@ -506,7 +508,10 @@ mod tests {
         let lines = vec![
             JournalLine::new(
                 AccountId(Uuid::new_v4()),
-                MonetaryAmount::new(Money::new(dec!(150000), secondary_currency.clone()), fx_rate),
+                MonetaryAmount::new(
+                    Money::new(dec!(150000), secondary_currency.clone()),
+                    fx_rate,
+                ),
                 MonetaryAmount::zero(secondary_currency.clone()),
                 "مدين".to_string(),
             ),
@@ -543,7 +548,10 @@ mod tests {
             ),
             JournalLine::new(
                 AccountId(Uuid::new_v4()),
-                MonetaryAmount::new(Money::new(dec!(150000), secondary_currency.clone()), dec!(15000)),
+                MonetaryAmount::new(
+                    Money::new(dec!(150000), secondary_currency.clone()),
+                    dec!(15000),
+                ),
                 MonetaryAmount::zero(secondary_currency.clone()),
                 "مدين بعملة ثانوية".to_string(),
             ),
@@ -598,7 +606,11 @@ mod tests {
         )
         .unwrap();
 
-        assert_eq!(reversal.journal_type, JournalType::CashReceipt, "a reversal is a relationship, not a type — the contra keeps the original's type");
+        assert_eq!(
+            reversal.journal_type,
+            JournalType::CashReceipt,
+            "a reversal is a relationship, not a type — the contra keeps the original's type"
+        );
         assert_eq!(reversal.reversal_of_entry_id, Some(original.id));
         assert_eq!(reversal.source_type.as_deref(), Some("cash_receipt"));
         assert!(reversal.is_balanced());
@@ -694,7 +706,10 @@ mod tests {
         }
         // Reversals are not an accounting type at all — period exemption for a
         // contra is decided from the reversal_of_entry_id relationship.
-        assert!(!JournalType::GeneralJournal.is_period_exempt(), "GeneralJournal is not an opening type");
+        assert!(
+            !JournalType::GeneralJournal.is_period_exempt(),
+            "GeneralJournal is not an opening type"
+        );
         assert!(!JournalType::CashReceipt.is_period_exempt());
         assert!(!JournalType::PurchaseJournal.is_period_exempt());
         assert!(!JournalType::ProfitDistribution.is_period_exempt());

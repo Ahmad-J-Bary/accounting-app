@@ -1,7 +1,7 @@
-use sqlx::SqlitePool;
 use application::errors::AppError;
-use domain::auth::{User, Role};
-use domain::shared::ids::{UserId, RoleId};
+use domain::auth::{Role, User};
+use domain::shared::ids::{RoleId, UserId};
+use sqlx::SqlitePool;
 
 pub async fn save(_pool: &SqlitePool, _user: &User) -> Result<(), AppError> {
     Ok(())

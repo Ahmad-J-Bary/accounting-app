@@ -20,7 +20,10 @@ impl ReopenOpeningBalanceUseCase {
     }
 
     pub async fn execute(&self, id: String) -> Result<OpeningMigrationDto, AppError> {
-        let migration = self.migration_repo.find_by_id(&id).await?
+        let migration = self
+            .migration_repo
+            .find_by_id(&id)
+            .await?
             .ok_or_else(|| AppError::NotFound("ترحيل الرصيد الافتتاحي غير موجود".into()))?;
 
         // The opening lifecycle is a one-way door — once any migration

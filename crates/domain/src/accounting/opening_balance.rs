@@ -232,7 +232,12 @@ impl OpeningBalanceMigration {
 
     /// Optional metadata used to trace the migration back to its source
     /// (e.g. the prior accounting system and a local reference number).
-    pub fn set_source(&mut self, company_id: Option<String>, source_system: Option<String>, source_reference: Option<String>) {
+    pub fn set_source(
+        &mut self,
+        company_id: Option<String>,
+        source_system: Option<String>,
+        source_reference: Option<String>,
+    ) {
         self.company_id = company_id;
         self.source_system = source_system;
         self.source_reference = source_reference;
@@ -274,7 +279,10 @@ impl OpeningBalanceMigration {
     }
 
     pub fn validate(&mut self, by: &str) -> Result<(), DomainError> {
-        self.require_status(&[MigrationStatus::Draft], "لا يمكن التحقق من ترحيل غير مسودة")?;
+        self.require_status(
+            &[MigrationStatus::Draft],
+            "لا يمكن التحقق من ترحيل غير مسودة",
+        )?;
         self.status = MigrationStatus::Validated;
         self.validated_by = Some(by.to_string());
         self.validated_at = Some(Utc::now());
@@ -283,7 +291,10 @@ impl OpeningBalanceMigration {
     }
 
     pub fn approve(&mut self, by: &str) -> Result<(), DomainError> {
-        self.require_status(&[MigrationStatus::Validated], "يجب التحقق من الترحيل قبل اعتماده")?;
+        self.require_status(
+            &[MigrationStatus::Validated],
+            "يجب التحقق من الترحيل قبل اعتماده",
+        )?;
         self.status = MigrationStatus::Approved;
         self.approved_by = Some(by.to_string());
         self.approved_at = Some(Utc::now());
@@ -292,7 +303,10 @@ impl OpeningBalanceMigration {
     }
 
     pub fn mark_posted(&mut self) -> Result<(), DomainError> {
-        self.require_status(&[MigrationStatus::Approved], "يجب اعتماد الترحيل قبل ترحيله")?;
+        self.require_status(
+            &[MigrationStatus::Approved],
+            "يجب اعتماد الترحيل قبل ترحيله",
+        )?;
         self.status = MigrationStatus::Posted;
         self.posted_at = Some(Utc::now());
         self.updated_at = Utc::now();
@@ -308,7 +322,10 @@ impl OpeningBalanceMigration {
     }
 
     pub fn unlock(&mut self) -> Result<(), DomainError> {
-        self.require_status(&[MigrationStatus::Locked], "لا يمكن إلغاء القفل إلا لترحيل مقفول")?;
+        self.require_status(
+            &[MigrationStatus::Locked],
+            "لا يمكن إلغاء القفل إلا لترحيل مقفول",
+        )?;
         self.status = MigrationStatus::Posted;
         self.locked_at = None;
         self.updated_at = Utc::now();
@@ -337,7 +354,11 @@ impl OpeningBalanceMigration {
     /// Cancels a migration that has not yet been posted.
     pub fn cancel(&mut self) -> Result<(), DomainError> {
         self.require_status(
-            &[MigrationStatus::Draft, MigrationStatus::Validated, MigrationStatus::Approved],
+            &[
+                MigrationStatus::Draft,
+                MigrationStatus::Validated,
+                MigrationStatus::Approved,
+            ],
             "لا يمكن إلغاء الترحيل بعد ترحيله",
         )?;
         self.status = MigrationStatus::Cancelled;
@@ -382,13 +403,8 @@ mod tests {
             amount,
             description: None,
         };
-        OpeningBalanceMigration::new(
-            "mig-1".into(),
-            Utc::now(),
-            None,
-            vec![line],
-        )
-        .expect("valid migration")
+        OpeningBalanceMigration::new("mig-1".into(), Utc::now(), None, vec![line])
+            .expect("valid migration")
     }
 
     #[test]
@@ -521,7 +537,10 @@ mod tests {
             Some(ResidualClassification::RetainedEarnings),
             Some(account_id),
         );
-        assert_eq!(m.residual_classification, Some(ResidualClassification::RetainedEarnings));
+        assert_eq!(
+            m.residual_classification,
+            Some(ResidualClassification::RetainedEarnings)
+        );
         assert_eq!(m.residual_account_id, Some(account_id));
     }
 
@@ -614,7 +633,10 @@ mod tests {
             ResidualClassification::OtherEquity,
             ResidualClassification::UnresolvedDifference,
         ] {
-            assert!(!c.requires_confirmation(), "{c:?} must not require confirmation");
+            assert!(
+                !c.requires_confirmation(),
+                "{c:?} must not require confirmation"
+            );
         }
     }
 
@@ -627,7 +649,9 @@ mod tests {
             ResidualClassification::PriorPeriodAdjustment,
             ResidualClassification::OtherEquity,
         ] {
-            let purpose = c.account_purpose().expect("real classification has a purpose");
+            let purpose = c
+                .account_purpose()
+                .expect("real classification has a purpose");
             // The mapped purpose is always equity-family and passive.
             assert!(purpose.is_equity(), "{c:?} → {purpose:?} must be equity");
             for forbidden in [

@@ -1,4 +1,4 @@
-﻿#![allow(clippy::too_many_arguments)]
+#![allow(clippy::too_many_arguments)]
 use crate::shared::currency::Currency;
 use crate::shared::errors::DomainError;
 use crate::shared::ids::{AccountId, PartnerId};
@@ -8,9 +8,9 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 pub enum ProfitSharingType {
-    BasedOnCapitalLocal, // نسبة المشاركة بالأرباح = نسبة المشاركة برأس المال
-    BasedOnCapitalOriginal,   // نسبة المشاركة بالأرباح = نسبة المشاركة برأس المال الأصلي
-    Manual,              // تحديد نسبة المشاركة بالأرباح بشكل يدوي
+    BasedOnCapitalLocal,    // نسبة المشاركة بالأرباح = نسبة المشاركة برأس المال
+    BasedOnCapitalOriginal, // نسبة المشاركة بالأرباح = نسبة المشاركة برأس المال الأصلي
+    Manual,                 // تحديد نسبة المشاركة بالأرباح بشكل يدوي
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

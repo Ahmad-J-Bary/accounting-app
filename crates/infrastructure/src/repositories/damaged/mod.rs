@@ -1,15 +1,15 @@
-use async_trait::async_trait;
-use sqlx::SqlitePool;
 use application::errors::AppError;
 use application::ports::damaged_item_repository::DamagedItemRepository;
+use async_trait::async_trait;
 use domain::inventory::DamagedItem;
-use domain::shared::ids::{DamagedItemId};
+use domain::shared::ids::DamagedItemId;
+use sqlx::SqlitePool;
 use std::sync::Arc;
 
-mod models;
-mod mappers;
-mod queries;
 mod commands;
+mod mappers;
+mod models;
+mod queries;
 
 pub struct SqliteDamagedItemRepository {
     pool: Arc<SqlitePool>,
@@ -35,7 +35,15 @@ impl DamagedItemRepository for SqliteDamagedItemRepository {
         delete_movement_reference: Option<&str>,
         delete_entries: &[domain::shared::ids::JournalEntryId],
     ) -> Result<(), AppError> {
-        commands::save_with_accounting(&self.pool, item, movements, entries, delete_movement_reference, delete_entries).await
+        commands::save_with_accounting(
+            &self.pool,
+            item,
+            movements,
+            entries,
+            delete_movement_reference,
+            delete_entries,
+        )
+        .await
     }
 
     async fn find_by_id(&self, id: &DamagedItemId) -> Result<Option<DamagedItem>, AppError> {

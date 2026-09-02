@@ -1,10 +1,10 @@
-use std::sync::Arc;
-use async_trait::async_trait;
-use sqlx::SqlitePool;
 use application::errors::AppError;
 use application::ports::opening_posting_repository::OpeningPostingRepository;
+use async_trait::async_trait;
 use domain::accounting::journal_entry::JournalEntry;
 use domain::accounting::OpeningBalanceMigration;
+use sqlx::SqlitePool;
+use std::sync::Arc;
 
 /// Persists an opening-balance journal entry and marks the migration as Posted
 /// inside a single SQLite transaction (atomicity).
@@ -20,7 +20,11 @@ impl SqliteOpeningPostingRepository {
 
 #[async_trait]
 impl OpeningPostingRepository for SqliteOpeningPostingRepository {
-    async fn post(&self, migration: &OpeningBalanceMigration, entry: &JournalEntry) -> Result<(), AppError> {
+    async fn post(
+        &self,
+        migration: &OpeningBalanceMigration,
+        entry: &JournalEntry,
+    ) -> Result<(), AppError> {
         let mut tx = self
             .pool
             .begin()
@@ -87,7 +91,11 @@ impl OpeningPostingRepository for SqliteOpeningPostingRepository {
         Ok(())
     }
 
-    async fn apply_residual(&self, migration: &OpeningBalanceMigration, entry: &JournalEntry) -> Result<(), AppError> {
+    async fn apply_residual(
+        &self,
+        migration: &OpeningBalanceMigration,
+        entry: &JournalEntry,
+    ) -> Result<(), AppError> {
         let mut tx = self
             .pool
             .begin()

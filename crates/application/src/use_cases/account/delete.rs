@@ -1,13 +1,13 @@
-use std::sync::Arc;
 use chrono::Utc;
-use domain::accounting::account::{Account};
-use domain::shared::ids::AccountId;
+use domain::accounting::account::Account;
 use domain::accounting::journal_entry::JournalEntryStatus;
+use domain::shared::ids::AccountId;
+use std::sync::Arc;
 
 use crate::ports::account_repository::AccountRepository;
 use crate::ports::customer_repository::CustomerRepository;
-use crate::ports::supplier_repository::SupplierRepository;
 use crate::ports::journal_entry_repository::JournalEntryRepository;
+use crate::ports::supplier_repository::SupplierRepository;
 
 use super::error::AccountUseCaseError;
 
@@ -50,15 +50,19 @@ impl DeleteAccountUseCase {
         let has_children = all_accounts
             .iter()
             .any(|a| a.parent_id.as_ref() == Some(&id));
-        
+
         let is_root = account.parent_id.is_none();
 
         if is_root {
-            return Err(AccountUseCaseError::Forbidden("لا يمكن حذف الحسابات الجذرية".into()));
+            return Err(AccountUseCaseError::Forbidden(
+                "لا يمكن حذف الحسابات الجذرية".into(),
+            ));
         }
 
         if has_children {
-            return Err(AccountUseCaseError::Forbidden("لا يمكن حذف حساب لديه حسابات فرعية".into()));
+            return Err(AccountUseCaseError::Forbidden(
+                "لا يمكن حذف حساب لديه حسابات فرعية".into(),
+            ));
         }
 
         // Cascade: delete all journal entries referencing this account.
@@ -145,7 +149,9 @@ impl DeleteAccountUseCase {
         account: &Account,
     ) -> Result<(), AccountUseCaseError> {
         if account.parent_id.is_none() && matches!(account.code.as_str(), "1" | "2" | "3" | "4") {
-            return Err(AccountUseCaseError::Forbidden("لا يمكن تعطيل الحسابات الجذرية الأساسية".into()));
+            return Err(AccountUseCaseError::Forbidden(
+                "لا يمكن تعطيل الحسابات الجذرية الأساسية".into(),
+            ));
         }
 
         let entries = self
@@ -159,7 +165,9 @@ impl DeleteAccountUseCase {
             .any(|e| e.status == JournalEntryStatus::Draft);
 
         if has_open_posting {
-            return Err(AccountUseCaseError::Forbidden("لا يمكن تعطيل حساب مستخدم في قيد مسودة/مفتوح".into()));
+            return Err(AccountUseCaseError::Forbidden(
+                "لا يمكن تعطيل حساب مستخدم في قيد مسودة/مفتوح".into(),
+            ));
         }
 
         Ok(())
@@ -175,10 +183,11 @@ impl DeleteAccountUseCase {
                 .ok_or(AccountUseCaseError::ParentNotFound)?;
 
             if !parent.is_active {
-                return Err(AccountUseCaseError::Forbidden("لا يمكن تفعيل الحساب لأن الحساب الأب معطل".into()));
+                return Err(AccountUseCaseError::Forbidden(
+                    "لا يمكن تفعيل الحساب لأن الحساب الأب معطل".into(),
+                ));
             }
         }
         Ok(())
     }
-
 }

@@ -1,4 +1,3 @@
-use sqlx::SqlitePool;
 use application::errors::AppError;
 use domain::accounting::account::Account;
 use domain::accounting::journal_entry::JournalEntry;
@@ -6,6 +5,7 @@ use domain::customers::Customer;
 use domain::inventory::stock_movement::StockMovement;
 use domain::payments::Payment;
 use domain::suppliers::Supplier;
+use sqlx::SqlitePool;
 
 /// Writes a full accounting event in ONE transaction: stock movements,
 /// journal entries, an optional payment voucher and any customer / supplier /
@@ -123,7 +123,7 @@ async fn update_account_tx<'a>(
     account: &Account,
 ) -> Result<(), AppError> {
     sqlx::query(
-        "UPDATE accounts SET debit = ?, credit = ?, balance = ?, updated_at = ? WHERE id = ?"
+        "UPDATE accounts SET debit = ?, credit = ?, balance = ?, updated_at = ? WHERE id = ?",
     )
     .bind(account.debit.to_string())
     .bind(account.credit.to_string())

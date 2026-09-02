@@ -54,7 +54,10 @@ use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 
 async fn build_pool() -> Arc<sqlx::SqlitePool> {
     let mut path = std::env::temp_dir();
-    path.push(format!("acc_partner_reporting_{}.sqlite", uuid::Uuid::new_v4()));
+    path.push(format!(
+        "acc_partner_reporting_{}.sqlite",
+        uuid::Uuid::new_v4()
+    ));
     let options = SqliteConnectOptions::from_str(path.to_str().unwrap())
         .unwrap()
         .create_if_missing(true);
@@ -90,7 +93,10 @@ async fn account_id_by_code(pool: &sqlx::SqlitePool, code: &str) -> AccountId {
 
 /// Runs the opening lifecycle (Draft → Validated → Approved → Posted → Locked)
 /// with the provided GL lines and returns the migration id.
-async fn run_opening_lifecycle(pool: &Arc<sqlx::SqlitePool>, lines: Vec<OpeningLineInput>) -> String {
+async fn run_opening_lifecycle(
+    pool: &Arc<sqlx::SqlitePool>,
+    lines: Vec<OpeningLineInput>,
+) -> String {
     let migration_repo: Arc<dyn OpeningMigrationRepository> =
         Arc::new(SqliteOpeningMigrationRepository::new(pool.clone()));
     let account_repo: Arc<dyn AccountRepository> =
@@ -106,13 +112,15 @@ async fn run_opening_lifecycle(pool: &Arc<sqlx::SqlitePool>, lines: Vec<OpeningL
         account_repo.clone(),
         settings_repo.clone(),
     )
-    .execute(application::use_cases::opening_balance::types::CreateOpeningBalanceMigrationCommand {
-        cutover_date: chrono::Utc::now().to_rfc3339(),
-        notes: None,
-        source_system: Some("Legacy".into()),
-        source_reference: Some("PARTNERS-2025".into()),
-        lines,
-    })
+    .execute(
+        application::use_cases::opening_balance::types::CreateOpeningBalanceMigrationCommand {
+            cutover_date: chrono::Utc::now().to_rfc3339(),
+            notes: None,
+            source_system: Some("Legacy".into()),
+            source_reference: Some("PARTNERS-2025".into()),
+            lines,
+        },
+    )
     .await
     .expect("create draft migration");
     let id = draft.0.id.clone();
@@ -161,11 +169,7 @@ async fn run_opening_lifecycle(pool: &Arc<sqlx::SqlitePool>, lines: Vec<OpeningL
     id
 }
 
-async fn register_partner(
-    pool: &Arc<sqlx::SqlitePool>,
-    name: &str,
-    amount: i64,
-) -> String {
+async fn register_partner(pool: &Arc<sqlx::SqlitePool>, name: &str, amount: i64) -> String {
     let partner_repo: Arc<dyn PartnerRepository> =
         Arc::new(SqlitePartnerRepository::new(pool.clone()));
     let account_repo: Arc<dyn AccountRepository> =
@@ -221,16 +225,35 @@ async fn existing_company_partners_survive_post_lock_and_ledger_exposes_single_o
     // partner capital accounts (Cr 180 + 120), exactly like the wizard posts
     // the derived partner-equity lines.
     let cash = account_id_by_code(&pool, "122").await;
-    run_opening_lifecycle(&pool, vec![
-        OpeningLineInput { account_id: cash.to_string(), amount: "300".into(), description: None },
-        OpeningLineInput { account_id: ahmad_cap.to_string(), amount: "180".into(), description: None },
-        OpeningLineInput { account_id: mohammad_cap.to_string(), amount: "120".into(), description: None },
-    ])
+    run_opening_lifecycle(
+        &pool,
+        vec![
+            OpeningLineInput {
+                account_id: cash.to_string(),
+                amount: "300".into(),
+                description: None,
+            },
+            OpeningLineInput {
+                account_id: ahmad_cap.to_string(),
+                amount: "180".into(),
+                description: None,
+            },
+            OpeningLineInput {
+                account_id: mohammad_cap.to_string(),
+                amount: "120".into(),
+                description: None,
+            },
+        ],
+    )
     .await;
 
     // The reports' partner source (list_partners → list_all) returns both.
     let listed = partner_repo.list_all(false).await.expect("list partners");
-    assert_eq!(listed.len(), 2, "both partners must be listed after POST+LOCK");
+    assert_eq!(
+        listed.len(),
+        2,
+        "both partners must be listed after POST+LOCK"
+    );
     let names: Vec<&str> = listed.iter().map(|p| p.name.as_str()).collect();
     assert!(names.contains(&"أحمد"), "أحمد must be listed");
     assert!(names.contains(&"محمد"), "محمد must be listed");
@@ -246,18 +269,35 @@ async fn existing_company_partners_survive_post_lock_and_ledger_exposes_single_o
     let queries = AccountQueries::new(account_repo.clone(), journal_repo.clone());
 
     let ledger_ahmad = queries.get_ledger(&[ahmad_cap]).await.expect("أحمد ledger");
-    assert_eq!(ledger_ahmad.lines.len(), 1, "أحمد ledger must expose exactly one posted opening journal line");
+    assert_eq!(
+        ledger_ahmad.lines.len(),
+        1,
+        "أحمد ledger must expose exactly one posted opening journal line"
+    );
     assert_eq!(ledger_ahmad.lines[0].debit_base, Decimal::ZERO);
     assert_eq!(ledger_ahmad.lines[0].credit_base, Decimal::from(180));
-    assert!(ledger_ahmad.opening_entries.is_empty(), "opening_entries must carry no synthetic rows");
+    assert!(
+        ledger_ahmad.opening_entries.is_empty(),
+        "opening_entries must carry no synthetic rows"
+    );
     assert!(ledger_ahmad.opening_entry.is_none());
     assert_eq!(ledger_ahmad.opening_balance_base, Decimal::from(180));
 
-    let ledger_mohammad = queries.get_ledger(&[mohammad_cap]).await.expect("محمد ledger");
-    assert_eq!(ledger_mohammad.lines.len(), 1, "محمد ledger must expose exactly one posted opening journal line");
+    let ledger_mohammad = queries
+        .get_ledger(&[mohammad_cap])
+        .await
+        .expect("محمد ledger");
+    assert_eq!(
+        ledger_mohammad.lines.len(),
+        1,
+        "محمد ledger must expose exactly one posted opening journal line"
+    );
     assert_eq!(ledger_mohammad.lines[0].debit_base, Decimal::ZERO);
     assert_eq!(ledger_mohammad.lines[0].credit_base, Decimal::from(120));
-    assert!(ledger_mohammad.opening_entries.is_empty(), "opening_entries must carry no synthetic rows");
+    assert!(
+        ledger_mohammad.opening_entries.is_empty(),
+        "opening_entries must carry no synthetic rows"
+    );
     assert_eq!(ledger_mohammad.opening_balance_base, Decimal::from(120));
 
     // The opening journal is persisted exactly once (no duplicate partner lines).
@@ -267,7 +307,10 @@ async fn existing_company_partners_survive_post_lock_and_ledger_exposes_single_o
     .fetch_one(&*pool)
     .await
     .unwrap();
-    assert_eq!(opening_type_count, 1, "exactly one AccountOpeningBalance journal");
+    assert_eq!(
+        opening_type_count, 1,
+        "exactly one AccountOpeningBalance journal"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -323,9 +366,21 @@ async fn update_partner_re_syncs_capital_opening_balance_in_existing_mode() {
     assert_eq!(partner.amount_local, Decimal::from(220));
     assert_eq!(partner.amount_local, partner.amount_original);
 
-    let cap = account_repo.find_by_id(&cap_id).await.unwrap().expect("capital account exists");
-    assert_eq!(cap.opening_balance, Decimal::from(220), "capital opening balance must follow the registered amount");
-    assert_eq!(cap.balance, Decimal::from(220), "capital balance must follow the registered amount");
+    let cap = account_repo
+        .find_by_id(&cap_id)
+        .await
+        .unwrap()
+        .expect("capital account exists");
+    assert_eq!(
+        cap.opening_balance,
+        Decimal::from(220),
+        "capital opening balance must follow the registered amount"
+    );
+    assert_eq!(
+        cap.balance,
+        Decimal::from(220),
+        "capital balance must follow the registered amount"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -355,8 +410,10 @@ async fn update_partner_renames_capital_drawings_and_current_accounts() {
     let cap_id = partner.linked_account_id.expect("capital account");
     let drawings_id = partner.drawings_account_id.expect("drawings account");
     let current_id = partner.current_account_id.expect("current account");
-    assert!(current_id != cap_id && current_id != drawings_id && cap_id != drawings_id,
-        "three distinct linked accounts");
+    assert!(
+        current_id != cap_id && current_id != drawings_id && cap_id != drawings_id,
+        "three distinct linked accounts"
+    );
 
     UpdatePartnerUseCase::new(partner_repo.clone(), account_repo.clone(), currency_repo)
         .execute(
@@ -383,8 +440,16 @@ async fn update_partner_renames_capital_drawings_and_current_accounts() {
         .expect("partner still exists");
     assert_eq!(renamed.name, "اسم جديد");
 
-    for (id, what) in [(cap_id, "capital"), (drawings_id, "drawings"), (current_id, "current")] {
-        let account = account_repo.find_by_id(&id).await.unwrap().expect("account exists");
+    for (id, what) in [
+        (cap_id, "capital"),
+        (drawings_id, "drawings"),
+        (current_id, "current"),
+    ] {
+        let account = account_repo
+            .find_by_id(&id)
+            .await
+            .unwrap()
+            .expect("account exists");
         assert!(
             account.name_ar.contains("اسم جديد"),
             "{what} account must carry the new partner name, got: {}",

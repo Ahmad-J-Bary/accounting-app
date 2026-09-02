@@ -39,7 +39,10 @@ use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 
 async fn build_pool() -> Arc<sqlx::SqlitePool> {
     let mut path = std::env::temp_dir();
-    path.push(format!("acc_company_lifecycle_{}.sqlite", uuid::Uuid::new_v4()));
+    path.push(format!(
+        "acc_company_lifecycle_{}.sqlite",
+        uuid::Uuid::new_v4()
+    ));
     let options = SqliteConnectOptions::from_str(path.to_str().unwrap())
         .unwrap()
         .create_if_missing(true);
@@ -89,13 +92,11 @@ async fn ledger_balance(pool: &sqlx::SqlitePool, account_id: &AccountId) -> f64 
 }
 
 async fn journal_lines_for_account_count(pool: &sqlx::SqlitePool, account_id: &AccountId) -> i64 {
-    sqlx::query_scalar(
-        "SELECT COUNT(*) FROM journal_lines WHERE account_id = ?",
-    )
-    .bind(account_id.0.to_string())
-    .fetch_one(pool)
-    .await
-    .unwrap()
+    sqlx::query_scalar("SELECT COUNT(*) FROM journal_lines WHERE account_id = ?")
+        .bind(account_id.0.to_string())
+        .fetch_one(pool)
+        .await
+        .unwrap()
 }
 
 async fn account_opening_balance(pool: &sqlx::SqlitePool, account_id: &AccountId) -> f64 {
@@ -144,7 +145,9 @@ async fn capital_account_id(pool: &Arc<sqlx::SqlitePool>, partner_id: &str) -> A
         .await
         .unwrap()
         .expect("partner exists");
-    partner.linked_account_id.expect("partner has capital account")
+    partner
+        .linked_account_id
+        .expect("partner has capital account")
 }
 
 async fn create_draft_migration(pool: &Arc<sqlx::SqlitePool>) -> String {
@@ -156,16 +159,26 @@ async fn create_draft_migration(pool: &Arc<sqlx::SqlitePool>) -> String {
     let settings_repo = Arc::new(SqliteSettingsRepository::new(pool.clone()));
     let case = CreateOpeningBalanceUseCase::new(migration_repo, account_repo, settings_repo);
     let result = case
-        .execute(application::use_cases::opening_balance::types::CreateOpeningBalanceMigrationCommand {
-            cutover_date: chrono::Utc::now().to_rfc3339(),
-            notes: None,
-            source_system: None,
-            source_reference: None,
-            lines: vec![
-                OpeningLineInput { account_id: cash.to_string(), amount: "1000".into(), description: None },
-                OpeningLineInput { account_id: equity.to_string(), amount: "1000".into(), description: None },
-            ],
-        })
+        .execute(
+            application::use_cases::opening_balance::types::CreateOpeningBalanceMigrationCommand {
+                cutover_date: chrono::Utc::now().to_rfc3339(),
+                notes: None,
+                source_system: None,
+                source_reference: None,
+                lines: vec![
+                    OpeningLineInput {
+                        account_id: cash.to_string(),
+                        amount: "1000".into(),
+                        description: None,
+                    },
+                    OpeningLineInput {
+                        account_id: equity.to_string(),
+                        amount: "1000".into(),
+                        description: None,
+                    },
+                ],
+            },
+        )
         .await
         .expect("create migration");
     result.0.id
@@ -197,14 +210,26 @@ async fn new_company_contribution_increases_cash_and_capital() {
         journal_repo.clone(),
         migration_repo,
     )
-    .execute(partner_id.clone(), cash_id.to_string(), Decimal::from(500), false, Some("n1".into()))
+    .execute(
+        partner_id.clone(),
+        cash_id.to_string(),
+        Decimal::from(500),
+        false,
+        Some("n1".into()),
+    )
     .await
     .expect("contribution posts");
 
     // Cash increased by exactly the contribution.
-    assert!(close_enough(ledger_balance(&pool, &cash_id).await, 500.0), "cash must increase by 500");
+    assert!(
+        close_enough(ledger_balance(&pool, &cash_id).await, 500.0),
+        "cash must increase by 500"
+    );
     // Capital ledger balance increased by exactly the contribution (credit side).
-    assert!(close_enough(ledger_balance(&pool, &cap_id).await, -500.0), "capital ledger must increase by 500 (credit)");
+    assert!(
+        close_enough(ledger_balance(&pool, &cap_id).await, -500.0),
+        "capital ledger must increase by 500 (credit)"
+    );
     // Master data is NOT mutated by the event (ledger is the truth).
     let master: String = sqlx::query_scalar("SELECT amount_local FROM partners WHERE id = ?")
         .bind(&partner_id)
@@ -233,15 +258,24 @@ async fn existing_company_opening_capital_does_not_increase_cash() {
         .fetch_one(&*pool)
         .await
         .unwrap();
-    assert_eq!(journal_count, 0, "partner registration must post no journal");
+    assert_eq!(
+        journal_count, 0,
+        "partner registration must post no journal"
+    );
 
-    assert!(close_enough(ledger_balance(&pool, &cash_id).await, 0.0), "cash must NOT increase");
+    assert!(
+        close_enough(ledger_balance(&pool, &cash_id).await, 0.0),
+        "cash must NOT increase"
+    );
     // Historical capital is carried as the capital account's static opening.
     assert!(
         close_enough(account_opening_balance(&pool, &cap_id).await, 1000.0),
         "capital account must carry static opening balance"
     );
-    assert!(close_enough(ledger_balance(&pool, &cap_id).await, 0.0), "no capital journal yet");
+    assert!(
+        close_enough(ledger_balance(&pool, &cap_id).await, 0.0),
+        "no capital journal yet"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -272,7 +306,13 @@ async fn capital_contribution_blocked_while_migration_window_open() {
         journal_repo,
         migration_repo,
     )
-    .execute(partner_id, cash_id.to_string(), Decimal::from(500), false, Some("blocked".into()))
+    .execute(
+        partner_id,
+        cash_id.to_string(),
+        Decimal::from(500),
+        false,
+        Some("blocked".into()),
+    )
     .await
     .expect_err("contribution must be rejected while the window is open");
     assert!(
@@ -297,16 +337,26 @@ async fn migration_create_blocked_for_new_company() {
     let settings_repo = Arc::new(SqliteSettingsRepository::new(pool.clone()));
 
     let err = CreateOpeningBalanceUseCase::new(migration_repo, account_repo, settings_repo)
-        .execute(application::use_cases::opening_balance::types::CreateOpeningBalanceMigrationCommand {
-            cutover_date: chrono::Utc::now().to_rfc3339(),
-            notes: None,
-            source_system: None,
-            source_reference: None,
-            lines: vec![
-                OpeningLineInput { account_id: cash.to_string(), amount: "100".into(), description: None },
-                OpeningLineInput { account_id: equity.to_string(), amount: "100".into(), description: None },
-            ],
-        })
+        .execute(
+            application::use_cases::opening_balance::types::CreateOpeningBalanceMigrationCommand {
+                cutover_date: chrono::Utc::now().to_rfc3339(),
+                notes: None,
+                source_system: None,
+                source_reference: None,
+                lines: vec![
+                    OpeningLineInput {
+                        account_id: cash.to_string(),
+                        amount: "100".into(),
+                        description: None,
+                    },
+                    OpeningLineInput {
+                        account_id: equity.to_string(),
+                        amount: "100".into(),
+                        description: None,
+                    },
+                ],
+            },
+        )
         .await
         .expect_err("NewCompany must not create a migration");
     assert!(
@@ -357,12 +407,18 @@ async fn same_create_customer_use_case_in_both_lifecycles() {
     .await
     .expect("create customer during window");
 
-    let customer_account_id_str = customer.account_id.as_ref().expect("customer must be linked to an account");
+    let customer_account_id_str = customer
+        .account_id
+        .as_ref()
+        .expect("customer must be linked to an account");
     let customer_account_id = AccountId(uuid::Uuid::parse_str(customer_account_id_str).unwrap());
     // Real linked entity: the account is a receivable detail account linked to
     // the customer (not a free-text "Opening Customer" store).
     assert!(
-        close_enough(account_opening_balance(&pool, &customer_account_id).await, 0.0),
+        close_enough(
+            account_opening_balance(&pool, &customer_account_id).await,
+            0.0
+        ),
         "during the window the linked account must carry a static zero opening"
     );
     assert_eq!(
@@ -404,7 +460,10 @@ async fn same_create_customer_use_case_in_both_lifecycles() {
     .await
     .expect("create customer in new company");
 
-    let customer_account_id2_str = customer2.account_id.as_ref().expect("customer must be linked to an account");
+    let customer_account_id2_str = customer2
+        .account_id
+        .as_ref()
+        .expect("customer must be linked to an account");
     let customer_account_id2 = AccountId(uuid::Uuid::parse_str(customer_account_id2_str).unwrap());
     assert_eq!(
         journal_lines_for_account_count(&pool2, &customer_account_id2).await,

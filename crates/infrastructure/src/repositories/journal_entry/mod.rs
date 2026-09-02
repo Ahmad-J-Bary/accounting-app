@@ -1,17 +1,17 @@
-use async_trait::async_trait;
-use sqlx::SqlitePool;
 use application::errors::AppError;
 use application::ports::journal_entry_repository::{JournalEntryRepository, ReversalScope};
-use domain::accounting::journal_entry::{JournalEntry};
-use domain::shared::{JournalEntryId, AccountId};
+use async_trait::async_trait;
+use domain::accounting::journal_entry::JournalEntry;
+use domain::shared::{AccountId, JournalEntryId};
+use sqlx::SqlitePool;
 use std::sync::Arc;
 
-mod models;
-mod mappers;
-mod queries;
 mod commands;
+mod mappers;
+mod models;
+mod queries;
 
-pub(crate) use commands::{insert_entry, delete_tx};
+pub(crate) use commands::{delete_tx, insert_entry};
 
 pub struct SqliteJournalEntryRepository {
     pool: Arc<SqlitePool>,
@@ -53,7 +53,10 @@ impl JournalEntryRepository for SqliteJournalEntryRepository {
         queries::list_by_account(&self.pool, account_id).await
     }
 
-    async fn list_by_accounts(&self, account_ids: &[AccountId]) -> Result<Vec<JournalEntry>, AppError> {
+    async fn list_by_accounts(
+        &self,
+        account_ids: &[AccountId],
+    ) -> Result<Vec<JournalEntry>, AppError> {
         queries::list_by_accounts(&self.pool, account_ids).await
     }
 

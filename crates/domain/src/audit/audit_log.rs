@@ -39,13 +39,6 @@ impl AuditLog {
     }
 
     pub fn system(action: String, entity_type: String, entity_id: Option<String>) -> Self {
-        Self::new(
-            None,
-            "النظام".into(),
-            action,
-            entity_type,
-            entity_id,
-            None,
-        )
+        Self::new(None, "النظام".into(), action, entity_type, entity_id, None)
     }
 }

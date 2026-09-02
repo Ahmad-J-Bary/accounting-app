@@ -1,6 +1,6 @@
-use sqlx::SqlitePool;
 use application::errors::AppError;
 use domain::settings::CompanySettings;
+use sqlx::SqlitePool;
 
 pub async fn save(pool: &SqlitePool, settings: &CompanySettings) -> Result<(), AppError> {
     sqlx::query(

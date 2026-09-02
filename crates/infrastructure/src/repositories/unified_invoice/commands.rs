@@ -1,18 +1,21 @@
-use sqlx::SqlitePool;
 use application::errors::AppError;
-use domain::sales::unified_invoice::{UnifiedInvoice, InvoiceType, InvoiceStatus, PaymentMethod};
 use domain::accounting::journal_entry::JournalEntry;
-use domain::inventory::stock_movement::StockMovement;
+use domain::customers::Customer;
 use domain::inventory::inventory_lot::InventoryLot;
 use domain::inventory::material::Material;
+use domain::inventory::stock_movement::StockMovement;
 use domain::payments::Payment;
-use domain::customers::Customer;
+use domain::sales::unified_invoice::{InvoiceStatus, InvoiceType, PaymentMethod, UnifiedInvoice};
+use domain::shared::ids::InvoiceId;
 use domain::suppliers::Supplier;
-use domain::shared::ids::{InvoiceId};
+use sqlx::SqlitePool;
 use uuid::Uuid;
 
 pub async fn save(pool: &SqlitePool, invoice: &UnifiedInvoice) -> Result<(), AppError> {
-    let mut tx = pool.begin().await.map_err(|e| AppError::Infrastructure(e.to_string()))?;
+    let mut tx = pool
+        .begin()
+        .await
+        .map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
     let itype = match invoice.invoice_type {
         InvoiceType::Sales => "Sales",
@@ -96,7 +99,9 @@ pub async fn save(pool: &SqlitePool, invoice: &UnifiedInvoice) -> Result<(), App
         .map_err(|e| AppError::Infrastructure(e.to_string()))?;
     }
 
-    tx.commit().await.map_err(|e| AppError::Infrastructure(e.to_string()))?;
+    tx.commit()
+        .await
+        .map_err(|e| AppError::Infrastructure(e.to_string()))?;
     Ok(())
 }
 
@@ -119,7 +124,10 @@ pub async fn post_with_accounting(
     customers: &[Customer],
     suppliers: &[Supplier],
 ) -> Result<(), AppError> {
-    let mut tx = pool.begin().await.map_err(|e| AppError::Infrastructure(e.to_string()))?;
+    let mut tx = pool
+        .begin()
+        .await
+        .map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
     update_header_tx(&mut tx, invoice).await?;
 
@@ -130,7 +138,8 @@ pub async fn post_with_accounting(
         crate::repositories::inventory_lot::insert_lot_tx(&mut tx, lot).await?;
     }
     for (lot_id, new_remaining) in lot_updates {
-        crate::repositories::inventory_lot::update_remaining_tx(&mut tx, lot_id, new_remaining).await?;
+        crate::repositories::inventory_lot::update_remaining_tx(&mut tx, lot_id, new_remaining)
+            .await?;
     }
     for material in material_updates {
         crate::repositories::material::update_tx(&mut tx, material).await?;
@@ -148,7 +157,9 @@ pub async fn post_with_accounting(
         crate::repositories::atomic::update_supplier_tx(&mut tx, supplier).await?;
     }
 
-    tx.commit().await.map_err(|e| AppError::Infrastructure(e.to_string()))?;
+    tx.commit()
+        .await
+        .map_err(|e| AppError::Infrastructure(e.to_string()))?;
     Ok(())
 }
 
@@ -202,7 +213,10 @@ pub(crate) async fn update_header_tx<'a>(
 }
 
 pub async fn update(pool: &SqlitePool, invoice: &UnifiedInvoice) -> Result<(), AppError> {
-    let mut tx = pool.begin().await.map_err(|e| AppError::Infrastructure(e.to_string()))?;
+    let mut tx = pool
+        .begin()
+        .await
+        .map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
     update_header_tx(&mut tx, invoice).await?;
 
@@ -243,7 +257,9 @@ pub async fn update(pool: &SqlitePool, invoice: &UnifiedInvoice) -> Result<(), A
         }
     }
 
-    tx.commit().await.map_err(|e| AppError::Infrastructure(e.to_string()))?;
+    tx.commit()
+        .await
+        .map_err(|e| AppError::Infrastructure(e.to_string()))?;
     Ok(())
 }
 

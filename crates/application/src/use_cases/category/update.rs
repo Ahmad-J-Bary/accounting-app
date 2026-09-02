@@ -1,8 +1,8 @@
-use std::sync::Arc;
-use domain::inventory::category::{DEFAULT_CATEGORY_NAME};
-use crate::ports::category_repository::CategoryRepository;
 use crate::dto::category_dto::{CategoryDto, UpdateCategoryRequest};
 use crate::errors::AppError;
+use crate::ports::category_repository::CategoryRepository;
+use domain::inventory::category::DEFAULT_CATEGORY_NAME;
+use std::sync::Arc;
 
 pub struct UpdateCategoryUseCase {
     repo: Arc<dyn CategoryRepository>,
@@ -29,11 +29,23 @@ impl UpdateCategoryUseCase {
         let trimmed = req.name.trim();
         if !category.is_default() && category.name != trimmed {
             if category.is_root() {
-                if all_cats.iter().any(|c| c.is_root() && c.name == trimmed && c.id != cid) {
-                    return Err(AppError::Invalid(format!("يوجد تصنيف أساسي بنفس الاسم «{}»", trimmed)));
+                if all_cats
+                    .iter()
+                    .any(|c| c.is_root() && c.name == trimmed && c.id != cid)
+                {
+                    return Err(AppError::Invalid(format!(
+                        "يوجد تصنيف أساسي بنفس الاسم «{}»",
+                        trimmed
+                    )));
                 }
-            } else if all_cats.iter().any(|c| c.parent_id == category.parent_id && c.name == trimmed && c.id != cid) {
-                return Err(AppError::Invalid(format!("يوجد تصنيف فرعي بنفس الاسم «{}» ضمن نفس التصنيف الأساسي", trimmed)));
+            } else if all_cats
+                .iter()
+                .any(|c| c.parent_id == category.parent_id && c.name == trimmed && c.id != cid)
+            {
+                return Err(AppError::Invalid(format!(
+                    "يوجد تصنيف فرعي بنفس الاسم «{}» ضمن نفس التصنيف الأساسي",
+                    trimmed
+                )));
             }
         }
 
@@ -54,7 +66,9 @@ impl UpdateCategoryUseCase {
 
         if let Some(ref p) = category.code_prefix {
             if !category.is_hybrid && p.chars().count() > 1 {
-                return Err(AppError::Invalid("بادئة التصنيف العادي يجب أن تكون محرفاً واحداً فقط".into()));
+                return Err(AppError::Invalid(
+                    "بادئة التصنيف العادي يجب أن تكون محرفاً واحداً فقط".into(),
+                ));
             }
         }
 

@@ -9,7 +9,7 @@ use crate::errors::AppError;
 use crate::ports::account_repository::AccountRepository;
 use crate::ports::journal_entry_repository::{JournalEntryRepository, ReversalScope};
 use crate::use_cases::fiscal_period::types::{
-    AUTH_ALLOCATION_SOURCE_PREFIX, DistributableProfitDto,
+    DistributableProfitDto, AUTH_ALLOCATION_SOURCE_PREFIX,
 };
 
 /// Computes the distributable profit for a window (Sec 18 / Sec 22):
@@ -69,8 +69,10 @@ impl GetDistributableProfitUseCase {
             )
             .await?;
 
-        let totals =
-            crate::use_cases::opening_balance::net_profit::compute_ledger_totals(&accounts, &period_entries);
+        let totals = crate::use_cases::opening_balance::net_profit::compute_ledger_totals(
+            &accounts,
+            &period_entries,
+        );
 
         // Retained earnings balance: the retained-earnings (52) account balance
         // derived from the ledger, NOT the stored/registered balance.
@@ -202,7 +204,11 @@ mod tests {
         entry
     }
 
-    fn posted_entry(account_id: AccountId, debit: i64, credit: i64) -> domain::accounting::JournalEntry {
+    fn posted_entry(
+        account_id: AccountId,
+        debit: i64,
+        credit: i64,
+    ) -> domain::accounting::JournalEntry {
         posted_entry_with_source(account_id, debit, credit, None)
     }
 
@@ -218,7 +224,10 @@ mod tests {
             // non-retained accounts are ignored
             posted_entry(other.id, 0, 999),
         ];
-        assert_eq!(retained_earnings_balance(&[retained, other], &entries), Decimal::new(300, 0));
+        assert_eq!(
+            retained_earnings_balance(&[retained, other], &entries),
+            Decimal::new(300, 0)
+        );
     }
 
     #[test]
@@ -226,7 +235,10 @@ mod tests {
         let retained = account("5201", AccountPurpose::RetainedEarnings);
         let mut entry = posted_entry(retained.id, 0, 500);
         entry.status = JournalEntryStatus::Draft;
-        assert_eq!(retained_earnings_balance(&[retained], &[entry]), Decimal::ZERO);
+        assert_eq!(
+            retained_earnings_balance(&[retained], &[entry]),
+            Decimal::ZERO
+        );
     }
 
     #[test]
@@ -237,14 +249,13 @@ mod tests {
         // Entry within the current period
         let new_entry = posted_entry(retained.id, 0, 500);
         // A distribution that debited retained earnings
-        let distribution = posted_entry_with_source(
-            retained.id,
-            200,
-            0,
-            Some("profit_distribution:prev".into()),
-        );
+        let distribution =
+            posted_entry_with_source(retained.id, 200, 0, Some("profit_distribution:prev".into()));
         let all_entries = vec![old_entry, new_entry, distribution];
         // retained_earnings_balance must include ALL posted entries: 1000 + 500 - 200 = 1300
-        assert_eq!(retained_earnings_balance(&[retained], &all_entries), Decimal::new(1300, 0));
+        assert_eq!(
+            retained_earnings_balance(&[retained], &all_entries),
+            Decimal::new(1300, 0)
+        );
     }
 }

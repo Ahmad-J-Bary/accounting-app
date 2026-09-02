@@ -17,7 +17,11 @@ impl DeleteDamagedItemUseCase {
         movement_repo: Arc<dyn StockMovementRepository>,
         journal_repo: Arc<dyn JournalEntryRepository>,
     ) -> Self {
-        Self { repo, movement_repo, journal_repo }
+        Self {
+            repo,
+            movement_repo,
+            journal_repo,
+        }
     }
 
     pub async fn execute(&self, id: &str) -> Result<(), AppError> {
@@ -31,7 +35,10 @@ impl DeleteDamagedItemUseCase {
             .await?
             .ok_or_else(|| AppError::NotFound("سجل التالف غير موجود".into()))?;
 
-        let reference = item.reference.clone().unwrap_or_else(|| format!("DAM-{}", id));
+        let reference = item
+            .reference
+            .clone()
+            .unwrap_or_else(|| format!("DAM-{}", id));
 
         // Delete journal entry — drafts only; posted entries are immutable.
         let entry = self.journal_repo.find_by_source_id(&reference).await?;
@@ -40,7 +47,9 @@ impl DeleteDamagedItemUseCase {
             self.journal_repo.delete(&entry.id).await?;
         }
 
-        self.movement_repo.delete_by_document_number(&reference, "Damaged").await?;
+        self.movement_repo
+            .delete_by_document_number(&reference, "Damaged")
+            .await?;
 
         self.repo.delete(&damaged_id).await?;
 

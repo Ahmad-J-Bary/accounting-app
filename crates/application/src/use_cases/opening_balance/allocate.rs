@@ -1,11 +1,11 @@
-use std::collections::HashMap;
-use std::sync::Arc;
-use rust_decimal::Decimal;
-use std::str::FromStr;
 use domain::accounting::journal_entry::{JournalEntry, JournalLine, JournalType};
 use domain::accounting::partner::ProfitSharingType;
 use domain::accounting::{JournalEntryStatus, MigrationStatus};
 use domain::shared::{AccountId, Currency, MonetaryAmount};
+use rust_decimal::Decimal;
+use std::collections::HashMap;
+use std::str::FromStr;
+use std::sync::Arc;
 
 use crate::errors::AppError;
 use crate::ports::account_repository::AccountRepository;
@@ -114,7 +114,9 @@ fn validate_ratio_list(ratios: &[(String, Decimal)]) -> Result<Decimal, AppError
     let mut total = Decimal::ZERO;
     for (name, ratio) in ratios {
         if ratio.is_sign_negative() {
-            return Err(AppError::Invalid(format!("نسبة توزيع أرباح الشريك {name} سالبة")));
+            return Err(AppError::Invalid(format!(
+                "نسبة توزيع أرباح الشريك {name} سالبة"
+            )));
         }
         total += ratio;
     }
@@ -176,7 +178,13 @@ fn project_shares(
     // configuration before an allocation journal is created.
     let sharing_config: Vec<(String, ProfitSharingType, Option<Decimal>)> = partners
         .iter()
-        .map(|p| (p.name.clone(), p.profit_sharing_type, p.profit_sharing_ratio))
+        .map(|p| {
+            (
+                p.name.clone(),
+                p.profit_sharing_type,
+                p.profit_sharing_ratio,
+            )
+        })
         .collect();
     ensure_manual_ratios(&sharing_config)?;
 
@@ -209,7 +217,9 @@ fn project_shares(
 
     let shares = adjust_shares_to_sum(pendings.iter().map(|p| p.raw_share).collect(), net_profit);
     if shares.iter().all(|s| s.is_zero()) {
-        return Err(AppError::Invalid("نسب توزيع الأرباح تساوي صفراً؛ تحقق من نسب الشركاء".into()));
+        return Err(AppError::Invalid(
+            "نسب توزيع الأرباح تساوي صفراً؛ تحقق من نسب الشركاء".into(),
+        ));
     }
 
     let dto_shares: Vec<PartnerAllocationShare> = pendings
@@ -242,10 +252,19 @@ impl AllocateNetProfitUseCase {
         journal_repo: Arc<dyn JournalEntryRepository>,
         fiscal_period_repo: Arc<dyn FiscalPeriodRepository>,
     ) -> Self {
-        Self { migration_repo, partner_repo, account_repo, journal_repo, fiscal_period_repo }
+        Self {
+            migration_repo,
+            partner_repo,
+            account_repo,
+            journal_repo,
+            fiscal_period_repo,
+        }
     }
 
-    pub async fn execute(&self, cmd: DistributeProfitCommand) -> Result<NetProfitAllocationDto, AppError> {
+    pub async fn execute(
+        &self,
+        cmd: DistributeProfitCommand,
+    ) -> Result<NetProfitAllocationDto, AppError> {
         let net_profit = Decimal::from_str(&cmd.net_profit)
             .map_err(|_| AppError::Invalid("قيمة صافي الربح غير صالحة".into()))?;
 
@@ -254,10 +273,18 @@ impl AllocateNetProfitUseCase {
         // ClosedPeriod: distributes profits from a closed/locked fiscal period.
         let (source_id_prefix, window_end, journal_date, legacy_source_id) = match &cmd.source {
             ProfitDistributionSource::OpeningMigration { migration_id } => {
-                let migration = self.migration_repo.find_by_id(migration_id).await?
+                let migration = self
+                    .migration_repo
+                    .find_by_id(migration_id)
+                    .await?
                     .ok_or_else(|| AppError::NotFound("ترحيل الرصيد الافتتاحي غير موجود".into()))?;
-                if !matches!(migration.status, MigrationStatus::Posted | MigrationStatus::Locked) {
-                    return Err(AppError::Forbidden("يجب ترحيل الرصيد الافتتاحي قبل توزيع الأرباح".into()));
+                if !matches!(
+                    migration.status,
+                    MigrationStatus::Posted | MigrationStatus::Locked
+                ) {
+                    return Err(AppError::Forbidden(
+                        "يجب ترحيل الرصيد الافتتاحي قبل توزيع الأرباح".into(),
+                    ));
                 }
                 (
                     format!("{AUTH_ALLOCATION_SOURCE_PREFIX}{migration_id}"),
@@ -267,11 +294,22 @@ impl AllocateNetProfitUseCase {
                 )
             }
             ProfitDistributionSource::ClosedPeriod { period_id } => {
-                let fiscal_id: FiscalPeriodId = period_id.parse().map_err(|_| AppError::Invalid(format!("معرف الفترة المالية غير صالح: {period_id}")))?;
-                let period = self.fiscal_period_repo.find_by_id(&fiscal_id).await?
+                let fiscal_id: FiscalPeriodId = period_id.parse().map_err(|_| {
+                    AppError::Invalid(format!("معرف الفترة المالية غير صالح: {period_id}"))
+                })?;
+                let period = self
+                    .fiscal_period_repo
+                    .find_by_id(&fiscal_id)
+                    .await?
                     .ok_or_else(|| AppError::NotFound("الفترة المالية غير موجودة".into()))?;
-                if !matches!(period.status, domain::accounting::fiscal_period::FiscalPeriodStatus::Closed | domain::accounting::fiscal_period::FiscalPeriodStatus::Locked) {
-                    return Err(AppError::Forbidden("يجب إغلاق أو قفل الفترة المالية قبل توزيع الأرباح".into()));
+                if !matches!(
+                    period.status,
+                    domain::accounting::fiscal_period::FiscalPeriodStatus::Closed
+                        | domain::accounting::fiscal_period::FiscalPeriodStatus::Locked
+                ) {
+                    return Err(AppError::Forbidden(
+                        "يجب إغلاق أو قفل الفترة المالية قبل توزيع الأرباح".into(),
+                    ));
                 }
                 let window_end = cutover_end_of_day(period.end_date);
                 let journal_date = period.end_date;
@@ -290,7 +328,10 @@ impl AllocateNetProfitUseCase {
         // distributions keyed only by the migration (`profit_distribution:{id}`)
         // are still resolved so an existing distribution is never duplicated.
         let event_source_id = format!("{source_id_prefix}:{}", cmd.idempotency_key);
-        for source_id in [legacy_source_id.as_ref(), Some(&event_source_id)].into_iter().flatten() {
+        for source_id in [legacy_source_id.as_ref(), Some(&event_source_id)]
+            .into_iter()
+            .flatten()
+        {
             if let Some(existing) = self.journal_repo.find_by_source_id(source_id).await? {
                 return self.dto_from_existing(&existing, net_profit).await;
             }
@@ -352,10 +393,15 @@ impl AllocateNetProfitUseCase {
             })
             .collect::<Result<_, _>>()?;
 
-        let equity = self.account_repo.find_by_code(RETAINED_EARNINGS_ACCOUNT_CODE).await?
-            .ok_or_else(|| AppError::NotFound(
-                format!("حساب الأرباح المبقاة غير موجود: {RETAINED_EARNINGS_ACCOUNT_CODE}")
-            ))?;
+        let equity = self
+            .account_repo
+            .find_by_code(RETAINED_EARNINGS_ACCOUNT_CODE)
+            .await?
+            .ok_or_else(|| {
+                AppError::NotFound(format!(
+                    "حساب الأرباح المبقاة غير موجود: {RETAINED_EARNINGS_ACCOUNT_CODE}"
+                ))
+            })?;
 
         let zero = MonetaryAmount::zero(base_currency.clone());
         let zero_net = MonetaryAmount::zero(base_currency.clone());
@@ -385,9 +431,25 @@ impl AllocateNetProfitUseCase {
         // retained earnings (52) and credits each partner's current account.
         let net_amount = MonetaryAmount::from_base(net_profit.abs(), base_currency.clone());
         if net_profit < Decimal::ZERO {
-            lines.insert(0, JournalLine::new(equity.id, zero_net, net_amount, "توزيع خسارة على الشركاء".to_string()));
+            lines.insert(
+                0,
+                JournalLine::new(
+                    equity.id,
+                    zero_net,
+                    net_amount,
+                    "توزيع خسارة على الشركاء".to_string(),
+                ),
+            );
         } else {
-            lines.insert(0, JournalLine::new(equity.id, net_amount, zero_net, "توزيع أرباح على الشركاء".to_string()));
+            lines.insert(
+                0,
+                JournalLine::new(
+                    equity.id,
+                    net_amount,
+                    zero_net,
+                    "توزيع أرباح على الشركاء".to_string(),
+                ),
+            );
         }
 
         let entry_number = self.journal_repo.get_next_entry_number().await?;
@@ -398,7 +460,8 @@ impl AllocateNetProfitUseCase {
             journal_date,
             "توزيع صافي أرباح على الشركاء".to_string(),
             Some(event_source_id),
-        ).map_err(|e| AppError::Invalid(e.to_string()))?;
+        )
+        .map_err(|e| AppError::Invalid(e.to_string()))?;
 
         entry.post().map_err(|e| AppError::Invalid(e.to_string()))?;
         self.journal_repo.save(&entry).await?;
@@ -423,7 +486,8 @@ impl AllocateNetProfitUseCase {
         requested_net_profit: Decimal,
     ) -> Result<NetProfitAllocationDto, AppError> {
         let partners = self.partner_repo.list_all(false).await?;
-        let mut by_account: HashMap<AccountId, &domain::accounting::partner::Partner> = HashMap::new();
+        let mut by_account: HashMap<AccountId, &domain::accounting::partner::Partner> =
+            HashMap::new();
         for p in &partners {
             if let Some(aid) = p.current_account_id {
                 by_account.insert(aid, p);
@@ -436,7 +500,9 @@ impl AllocateNetProfitUseCase {
             if line.base_debit().is_zero() && line.base_credit().is_zero() {
                 continue;
             }
-            let Some(p) = by_account.get(&line.account_id) else { continue };
+            let Some(p) = by_account.get(&line.account_id) else {
+                continue;
+            };
             let share = if line.base_credit().is_zero() {
                 -line.base_debit()
             } else {
@@ -486,28 +552,56 @@ impl PreviewProfitDistributionUseCase {
         journal_repo: Arc<dyn JournalEntryRepository>,
         fiscal_period_repo: Arc<dyn FiscalPeriodRepository>,
     ) -> Self {
-        Self { migration_repo, partner_repo, account_repo, journal_repo, fiscal_period_repo }
+        Self {
+            migration_repo,
+            partner_repo,
+            account_repo,
+            journal_repo,
+            fiscal_period_repo,
+        }
     }
 
-    pub async fn execute(&self, cmd: PreviewProfitDistributionCommand) -> Result<NetProfitAllocationDto, AppError> {
+    pub async fn execute(
+        &self,
+        cmd: PreviewProfitDistributionCommand,
+    ) -> Result<NetProfitAllocationDto, AppError> {
         let net_profit = Decimal::from_str(&cmd.net_profit)
             .map_err(|_| AppError::Invalid("قيمة صافي الربح غير صالحة".into()))?;
 
         let window_end = match &cmd.source {
             ProfitDistributionSource::OpeningMigration { migration_id } => {
-                let migration = self.migration_repo.find_by_id(migration_id).await?
+                let migration = self
+                    .migration_repo
+                    .find_by_id(migration_id)
+                    .await?
                     .ok_or_else(|| AppError::NotFound("ترحيل الرصيد الافتتاحي غير موجود".into()))?;
-                if !matches!(migration.status, MigrationStatus::Posted | MigrationStatus::Locked) {
-                    return Err(AppError::Forbidden("يجب ترحيل الرصيد الافتتاحي قبل توزيع الأرباح".into()));
+                if !matches!(
+                    migration.status,
+                    MigrationStatus::Posted | MigrationStatus::Locked
+                ) {
+                    return Err(AppError::Forbidden(
+                        "يجب ترحيل الرصيد الافتتاحي قبل توزيع الأرباح".into(),
+                    ));
                 }
                 cutover_end_of_day(migration.cutover_date)
             }
             ProfitDistributionSource::ClosedPeriod { period_id } => {
-                let fiscal_id: FiscalPeriodId = period_id.parse().map_err(|_| AppError::Invalid(format!("معرف الفترة المالية غير صالح: {period_id}")))?;
-                let period = self.fiscal_period_repo.find_by_id(&fiscal_id).await?
+                let fiscal_id: FiscalPeriodId = period_id.parse().map_err(|_| {
+                    AppError::Invalid(format!("معرف الفترة المالية غير صالح: {period_id}"))
+                })?;
+                let period = self
+                    .fiscal_period_repo
+                    .find_by_id(&fiscal_id)
+                    .await?
                     .ok_or_else(|| AppError::NotFound("الفترة المالية غير موجودة".into()))?;
-                if !matches!(period.status, domain::accounting::fiscal_period::FiscalPeriodStatus::Closed | domain::accounting::fiscal_period::FiscalPeriodStatus::Locked) {
-                    return Err(AppError::Forbidden("يجب إغلاق أو قفل الفترة المالية قبل توزيع الأرباح".into()));
+                if !matches!(
+                    period.status,
+                    domain::accounting::fiscal_period::FiscalPeriodStatus::Closed
+                        | domain::accounting::fiscal_period::FiscalPeriodStatus::Locked
+                ) {
+                    return Err(AppError::Forbidden(
+                        "يجب إغلاق أو قفل الفترة المالية قبل توزيع الأرباح".into(),
+                    ));
                 }
                 cutover_end_of_day(period.end_date)
             }
@@ -639,15 +733,24 @@ mod tests {
     #[test]
     fn manual_partner_requires_explicit_ratio() {
         let ok = ensure_manual_ratios(&[
-            ("A".into(), ProfitSharingType::Manual, Some(Decimal::new(60, 0))),
-            ("B".into(), ProfitSharingType::Manual, Some(Decimal::new(40, 0))),
+            (
+                "A".into(),
+                ProfitSharingType::Manual,
+                Some(Decimal::new(60, 0)),
+            ),
+            (
+                "B".into(),
+                ProfitSharingType::Manual,
+                Some(Decimal::new(40, 0)),
+            ),
         ]);
         assert!(ok.is_ok());
 
-        let missing = ensure_manual_ratios(&[
-            ("A".into(), ProfitSharingType::Manual, None),
-        ]);
-        assert!(missing.is_err(), "manual partner without ratio must be rejected");
+        let missing = ensure_manual_ratios(&[("A".into(), ProfitSharingType::Manual, None)]);
+        assert!(
+            missing.is_err(),
+            "manual partner without ratio must be rejected"
+        );
     }
 
     #[test]
@@ -666,12 +769,14 @@ mod tests {
         assert!(validate_ratio_list(&[
             ("A".into(), Decimal::new(60, 0)),
             ("B".into(), Decimal::new(3950, 2)),
-        ]).is_err());
+        ])
+        .is_err());
         // 101% — rejected.
         assert!(validate_ratio_list(&[
             ("A".into(), Decimal::new(60, 0)),
             ("B".into(), Decimal::new(41, 0)),
-        ]).is_err());
+        ])
+        .is_err());
     }
 
     #[test]
@@ -679,7 +784,8 @@ mod tests {
         assert!(validate_ratio_list(&[
             ("A".into(), Decimal::new(-5, 0)),
             ("B".into(), Decimal::new(105, 0)),
-        ]).is_err());
+        ])
+        .is_err());
     }
 
     #[test]
@@ -766,13 +872,23 @@ mod tests {
     #[test]
     fn available_nets_allocated_once_not_twice() {
         let retained = cap_account("52", AccountPurpose::RetainedEarnings, AccountType::Equity);
-        let partner_current = cap_account("549999", AccountPurpose::PartnerCurrent, AccountType::Equity);
+        let partner_current = cap_account(
+            "549999",
+            AccountPurpose::PartnerCurrent,
+            AccountType::Equity,
+        );
         let revenue = cap_account("4001", AccountPurpose::General, AccountType::Revenue);
         let expenses = cap_account("5001", AccountPurpose::General, AccountType::Expenses);
 
         let entries = vec![
             // Historical retained from the residual classification: +500 credit.
-            cap_posted(retained.id, 0, 500, Some("residual_classification:1".into()), JournalType::AccountOpeningBalance),
+            cap_posted(
+                retained.id,
+                0,
+                500,
+                Some("residual_classification:1".into()),
+                JournalType::AccountOpeningBalance,
+            ),
             // Current-period profit: revenue 1000 − expenses 300 → +700.
             cap_posted(revenue.id, 0, 1000, None, JournalType::GeneralJournal),
             cap_posted(expenses.id, 300, 0, None, JournalType::GeneralJournal),
@@ -785,13 +901,22 @@ mod tests {
                 JournalType::ProfitDistribution,
             ),
             // Retained leg of that distribution is balanced by the partner leg.
-            cap_posted(partner_current.id, 0, 200, None, JournalType::ProfitDistribution),
+            cap_posted(
+                partner_current.id,
+                0,
+                200,
+                None,
+                JournalType::ProfitDistribution,
+            ),
         ];
 
         // The retained account already nets the 200 allocation (500 − 200 = 300),
         // so available = 700 (net) + 300 (retained) = 1000. Subtracting the 200
         // AGAIN would undercount the pool and break partial distributions.
-        assert_eq!(available_for_distribution(&[retained, partner_current, revenue, expenses], &entries), Decimal::new(1000, 0));
+        assert_eq!(
+            available_for_distribution(&[retained, partner_current, revenue, expenses], &entries),
+            Decimal::new(1000, 0)
+        );
     }
 
     #[test]
@@ -801,22 +926,25 @@ mod tests {
 
         // A draft journal hitting retained earnings: excluded by the posted-ledger
         // policy, so it must not inflate the pool.
-        let mut draft_profit = cap_posted(
-            retained.id,
-            0,
-            999,
-            None,
-            JournalType::GeneralJournal,
-        );
+        let mut draft_profit = cap_posted(retained.id, 0, 999, None, JournalType::GeneralJournal);
         draft_profit.status = JournalEntryStatus::Draft;
 
         let entries = vec![
             // A capital credit must NOT count toward retained earnings.
-            cap_posted(capital.id, 0, 5000, None, JournalType::AccountOpeningBalance),
+            cap_posted(
+                capital.id,
+                0,
+                5000,
+                None,
+                JournalType::AccountOpeningBalance,
+            ),
             draft_profit,
         ];
 
-        assert_eq!(available_for_distribution(&[retained, capital], &entries), Decimal::ZERO);
+        assert_eq!(
+            available_for_distribution(&[retained, capital], &entries),
+            Decimal::ZERO
+        );
     }
 
     #[test]

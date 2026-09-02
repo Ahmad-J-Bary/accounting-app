@@ -1,15 +1,15 @@
-use async_trait::async_trait;
-use sqlx::SqlitePool;
 use application::errors::AppError;
 use application::ports::opening_migration_repository::OpeningMigrationRepository;
+use async_trait::async_trait;
 use domain::accounting::OpeningBalanceMigration;
+use sqlx::SqlitePool;
 use std::sync::Arc;
 
-mod models;
-mod mappers;
-mod queries;
-mod posting;
 mod items;
+mod mappers;
+mod models;
+mod posting;
+mod queries;
 
 pub use items::SqliteOpeningItemRepository;
 pub use posting::SqliteOpeningPostingRepository;
@@ -38,7 +38,10 @@ impl OpeningMigrationRepository for SqliteOpeningMigrationRepository {
         queries::find_by_id(&self.pool, id).await
     }
 
-    async fn find_by_cutover_date(&self, cutover_date: &str) -> Result<Vec<OpeningBalanceMigration>, AppError> {
+    async fn find_by_cutover_date(
+        &self,
+        cutover_date: &str,
+    ) -> Result<Vec<OpeningBalanceMigration>, AppError> {
         queries::find_by_cutover_date(&self.pool, cutover_date).await
     }
 

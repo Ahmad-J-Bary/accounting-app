@@ -1,8 +1,8 @@
-use domain::accounting::{JournalEntry, JournalEntryId, JournalType};
-use domain::shared::AccountId;
-use chrono::{DateTime, Utc};
 use crate::errors::AppError;
 use async_trait::async_trait;
+use chrono::{DateTime, Utc};
+use domain::accounting::{JournalEntry, JournalEntryId, JournalType};
+use domain::shared::AccountId;
 
 /**
  * How a journal listing relates to REVERSAL PAIRS. Reports must name this
@@ -36,7 +36,10 @@ pub trait JournalEntryRepository: Send + Sync {
     async fn find_by_number(&self, number: &str) -> Result<Option<JournalEntry>, AppError>;
     async fn list_all(&self) -> Result<Vec<JournalEntry>, AppError>;
     async fn list_by_account(&self, account_id: &AccountId) -> Result<Vec<JournalEntry>, AppError>;
-    async fn list_by_accounts(&self, account_ids: &[AccountId]) -> Result<Vec<JournalEntry>, AppError>;
+    async fn list_by_accounts(
+        &self,
+        account_ids: &[AccountId],
+    ) -> Result<Vec<JournalEntry>, AppError>;
     #[allow(clippy::too_many_arguments)]
     async fn list_with_filters(
         &self,

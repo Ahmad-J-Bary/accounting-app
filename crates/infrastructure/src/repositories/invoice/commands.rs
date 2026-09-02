@@ -1,11 +1,13 @@
-use sqlx::SqlitePool;
 use application::errors::AppError;
+use chrono::Utc;
 use domain::sales::Invoice;
 use domain::shared::ids::InvoiceId;
-use chrono::Utc;
+use sqlx::SqlitePool;
 
 pub async fn save(pool: &SqlitePool, invoice: &Invoice) -> Result<(), AppError> {
-    let mut tx = pool.begin().await
+    let mut tx = pool
+        .begin()
+        .await
         .map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
     sqlx::query(
@@ -18,7 +20,7 @@ pub async fn save(pool: &SqlitePool, invoice: &Invoice) -> Result<(), AppError> 
         ON CONFLICT(id) DO UPDATE SET
             status = excluded.status,
             updated_at = excluded.updated_at
-        "#
+        "#,
     )
     .bind(invoice.id.0.to_string())
     .bind(&invoice.invoice_number)
@@ -47,7 +49,7 @@ pub async fn save(pool: &SqlitePool, invoice: &Invoice) -> Result<(), AppError> 
             INSERT INTO sales_invoice_items (
                 id, sales_invoice_id, material_id, quantity, unit_price, line_total
             ) VALUES (?, ?, ?, ?, ?, ?)
-            "#
+            "#,
         )
         .bind(uuid::Uuid::new_v4().to_string())
         .bind(invoice.id.0.to_string())
@@ -60,9 +62,10 @@ pub async fn save(pool: &SqlitePool, invoice: &Invoice) -> Result<(), AppError> 
         .map_err(|e| AppError::Infrastructure(e.to_string()))?;
     }
 
-    tx.commit().await
+    tx.commit()
+        .await
         .map_err(|e| AppError::Infrastructure(e.to_string()))?;
-    
+
     Ok(())
 }
 

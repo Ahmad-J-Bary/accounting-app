@@ -41,7 +41,10 @@ fn test_currency() -> Currency {
 
 async fn build_pool() -> Arc<sqlx::SqlitePool> {
     let mut path = std::env::temp_dir();
-    path.push(format!("acc_opening_lifecycle_{}.sqlite", uuid::Uuid::new_v4()));
+    path.push(format!(
+        "acc_opening_lifecycle_{}.sqlite",
+        uuid::Uuid::new_v4()
+    ));
     let options = SqliteConnectOptions::from_str(path.to_str().unwrap())
         .unwrap()
         .create_if_missing(true);
@@ -104,11 +107,10 @@ async fn real_account(pool: &sqlx::SqlitePool) -> AccountId {
 
 /// Two real account ids (FK-safe for journal_lines), like the gate tests.
 async fn real_accounts(pool: &sqlx::SqlitePool) -> (AccountId, AccountId) {
-    let ids: Vec<String> =
-        sqlx::query_scalar("SELECT id FROM accounts ORDER BY code LIMIT 2")
-            .fetch_all(pool)
-            .await
-            .unwrap();
+    let ids: Vec<String> = sqlx::query_scalar("SELECT id FROM accounts ORDER BY code LIMIT 2")
+        .fetch_all(pool)
+        .await
+        .unwrap();
     assert!(ids.len() >= 2, "chart of accounts must be seeded");
     (
         AccountId(uuid::Uuid::parse_str(&ids[0]).unwrap()),
@@ -161,7 +163,10 @@ async fn create_migration_rejected_for_new_company() {
         .execute(create_cmd(&account))
         .await
         .expect_err("a NEW company must never create an opening migration");
-    assert!(matches!(err, AppError::Forbidden(_)), "expected Forbidden, got {err:?}");
+    assert!(
+        matches!(err, AppError::Forbidden(_)),
+        "expected Forbidden, got {err:?}"
+    );
 }
 
 #[tokio::test]
@@ -174,14 +179,22 @@ async fn create_migration_rejected_once_lifecycle_locked() {
         .execute(create_cmd(&account))
         .await
         .expect_err("once Locked, the lifecycle is sealed — no new migrations");
-    assert!(matches!(err, AppError::Forbidden(_)), "expected Forbidden, got {err:?}");
+    assert!(
+        matches!(err, AppError::Forbidden(_)),
+        "expected Forbidden, got {err:?}"
+    );
 }
 
 #[tokio::test]
 async fn create_migration_allowed_after_only_cancelled() {
     let pool = build_pool().await;
     let account = real_account(pool.as_ref()).await;
-    insert_migration(pool.as_ref(), &uuid::Uuid::new_v4().to_string(), "Cancelled").await;
+    insert_migration(
+        pool.as_ref(),
+        &uuid::Uuid::new_v4().to_string(),
+        "Cancelled",
+    )
+    .await;
 
     create_uc(&pool)
         .execute(create_cmd(&account))
@@ -195,10 +208,14 @@ async fn create_migration_allowed_after_only_cancelled() {
 #[tokio::test]
 async fn save_draft_allowed_mid_opening() {
     let pool = build_pool().await;
-    SaveOpeningDraftUseCase::new(draft_repo(&pool), settings_repo(&pool), migration_repo(&pool))
-        .execute(r#"{"step":2}"#)
-        .await
-        .expect("draft saves are allowed while the opening lifecycle is open");
+    SaveOpeningDraftUseCase::new(
+        draft_repo(&pool),
+        settings_repo(&pool),
+        migration_repo(&pool),
+    )
+    .execute(r#"{"step":2}"#)
+    .await
+    .expect("draft saves are allowed while the opening lifecycle is open");
 }
 
 #[tokio::test]
@@ -214,7 +231,10 @@ async fn save_draft_rejected_for_new_company() {
     .execute(r#"{"step":2}"#)
     .await
     .expect_err("a NEW company must not store an opening draft");
-    assert!(matches!(err, AppError::Forbidden(_)), "expected Forbidden, got {err:?}");
+    assert!(
+        matches!(err, AppError::Forbidden(_)),
+        "expected Forbidden, got {err:?}"
+    );
     assert_eq!(
         draft_repo(&pool).get().await.unwrap(),
         None,
@@ -235,7 +255,10 @@ async fn save_draft_rejected_once_lifecycle_locked() {
     .execute(r#"{"step":2}"#)
     .await
     .expect_err("once Locked, the opening workflow becomes read-only");
-    assert!(matches!(err, AppError::Forbidden(_)), "expected Forbidden, got {err:?}");
+    assert!(
+        matches!(err, AppError::Forbidden(_)),
+        "expected Forbidden, got {err:?}"
+    );
     assert_eq!(
         draft_repo(&pool).get().await.unwrap(),
         None,
@@ -261,12 +284,18 @@ async fn draft_read_and_clear_survive_after_lock() {
 
     // Reading is never blocked — the draft is still there (nothing deleted).
     assert_eq!(
-        GetOpeningDraftUseCase::new(drafts.clone()).execute().await.unwrap(),
+        GetOpeningDraftUseCase::new(drafts.clone())
+            .execute()
+            .await
+            .unwrap(),
         Some(snapshot),
         "the draft must remain readable after the lifecycle closes"
     );
     // Clearing residue is cleanup and stays allowed even at the lock boundary.
-    ClearOpeningDraftUseCase::new(drafts).execute().await.unwrap();
+    ClearOpeningDraftUseCase::new(drafts)
+        .execute()
+        .await
+        .unwrap();
     assert_eq!(
         draft_repo(&pool).get().await.unwrap(),
         None,
@@ -320,7 +349,10 @@ async fn opening_journal_entries_preserved_after_lock() {
     .fetch_one(pool.as_ref())
     .await
     .unwrap();
-    assert_eq!(count, 1, "locking must NEVER delete the opening journal entries");
+    assert_eq!(
+        count, 1,
+        "locking must NEVER delete the opening journal entries"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -338,7 +370,10 @@ async fn reopen_rejected_once_lifecycle_locked() {
         .execute(cancelled)
         .await
         .expect_err("reopening must be blocked once the lifecycle is sealed");
-    assert!(matches!(err, AppError::Forbidden(_)), "expected Forbidden, got {err:?}");
+    assert!(
+        matches!(err, AppError::Forbidden(_)),
+        "expected Forbidden, got {err:?}"
+    );
 }
 
 #[tokio::test]
@@ -358,7 +393,10 @@ async fn reopen_allowed_when_only_cancelled() {
             .fetch_one(pool.as_ref())
             .await
             .unwrap();
-    assert_eq!(status, "Draft", "reopen must flip the migration back to Draft");
+    assert_eq!(
+        status, "Draft",
+        "reopen must flip the migration back to Draft"
+    );
 }
 
 #[tokio::test]
@@ -376,5 +414,8 @@ async fn cancel_rejected_once_lifecycle_locked() {
     .execute(posted_id)
     .await
     .expect_err("cancelling must be blocked once the lifecycle is sealed");
-    assert!(matches!(err, AppError::Forbidden(_)), "expected Forbidden, got {err:?}");
+    assert!(
+        matches!(err, AppError::Forbidden(_)),
+        "expected Forbidden, got {err:?}"
+    );
 }

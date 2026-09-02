@@ -18,6 +18,20 @@
 use std::str::FromStr;
 use std::sync::Arc;
 
+use application::dto::journal_entry_dto::{CreateJournalEntryRequest, JournalLineDto};
+use application::ports::account_repository::AccountRepository;
+use application::ports::journal_entry_repository::JournalEntryRepository;
+use application::ports::opening_migration_repository::OpeningMigrationRepository;
+use application::ports::opening_posting_repository::OpeningPostingRepository;
+use application::use_cases::account::AccountQueries;
+use application::use_cases::journal::{
+    CreateJournalEntryUseCase, ListJournalEntriesUseCase, PostJournalEntryUseCase,
+    ReverseJournalEntryUseCase,
+};
+use application::use_cases::opening_balance::{
+    ApplyResidualToLedgerUseCase, SetResidualClassificationCommand,
+    SetResidualClassificationUseCase,
+};
 use chrono::Utc;
 use domain::accounting::journal_entry::{JournalEntry, JournalLine, JournalType};
 use domain::accounting::opening_balance::{OpeningBalanceLine, OpeningBalanceMigration};
@@ -25,16 +39,6 @@ use domain::shared::currency::Currency;
 use domain::shared::monetary_amount::MonetaryAmount;
 use domain::shared::money::Money;
 use domain::shared::AccountId;
-use application::dto::journal_entry_dto::{CreateJournalEntryRequest, JournalLineDto};
-use application::ports::account_repository::AccountRepository;
-use application::ports::journal_entry_repository::JournalEntryRepository;
-use application::ports::opening_migration_repository::OpeningMigrationRepository;
-use application::ports::opening_posting_repository::OpeningPostingRepository;
-use application::use_cases::journal::{CreateJournalEntryUseCase, ListJournalEntriesUseCase, PostJournalEntryUseCase, ReverseJournalEntryUseCase};
-use application::use_cases::opening_balance::{
-    ApplyResidualToLedgerUseCase, SetResidualClassificationCommand, SetResidualClassificationUseCase,
-};
-use application::use_cases::account::AccountQueries;
 use infrastructure::db::pool::run_migrations;
 use infrastructure::repositories::{
     SqliteAccountRepository, SqliteJournalEntryRepository, SqliteOpeningMigrationRepository,
@@ -50,7 +54,10 @@ fn test_currency() -> Currency {
 
 async fn build_pool() -> Arc<sqlx::SqlitePool> {
     let mut path = std::env::temp_dir();
-    path.push(format!("acc_reporting_integrity_{}.sqlite", uuid::Uuid::new_v4()));
+    path.push(format!(
+        "acc_reporting_integrity_{}.sqlite",
+        uuid::Uuid::new_v4()
+    ));
     let options = SqliteConnectOptions::from_str(path.to_str().unwrap())
         .unwrap()
         .create_if_missing(true);
@@ -166,10 +173,26 @@ async fn exact_opening_with_residual_is_balanced_and_appears_once() {
         cutover,
         None,
         vec![
-            OpeningBalanceLine { account_id: asset, amount: dec!(150), description: None },
-            OpeningBalanceLine { account_id: liability, amount: dec!(50), description: None },
-            OpeningBalanceLine { account_id: capital, amount: dec!(70), description: None },
-            OpeningBalanceLine { account_id: obe, amount: dec!(30), description: None },
+            OpeningBalanceLine {
+                account_id: asset,
+                amount: dec!(150),
+                description: None,
+            },
+            OpeningBalanceLine {
+                account_id: liability,
+                amount: dec!(50),
+                description: None,
+            },
+            OpeningBalanceLine {
+                account_id: capital,
+                amount: dec!(70),
+                description: None,
+            },
+            OpeningBalanceLine {
+                account_id: obe,
+                amount: dec!(30),
+                description: None,
+            },
         ],
     )
     .unwrap();
@@ -188,7 +211,11 @@ async fn exact_opening_with_residual_is_balanced_and_appears_once() {
         .await
         .unwrap();
 
-    let mut posted = migration_repo.find_by_id(&migration_id).await.unwrap().unwrap();
+    let mut posted = migration_repo
+        .find_by_id(&migration_id)
+        .await
+        .unwrap()
+        .unwrap();
     posted.mark_posted().unwrap();
     migration_repo.update(&posted).await.unwrap();
 
@@ -220,14 +247,16 @@ async fn exact_opening_with_residual_is_balanced_and_appears_once() {
     .await
     .unwrap();
 
-    let residual_count: i64 = sqlx::query_scalar(
-        "SELECT COUNT(*) FROM journal_entries WHERE source_id = ?",
-    )
-    .bind(format!("residual_classification:{migration_id}"))
-    .fetch_one(pool.as_ref())
-    .await
-    .unwrap();
-    assert_eq!(residual_count, 1, "exactly one residual reclassification journal");
+    let residual_count: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM journal_entries WHERE source_id = ?")
+            .bind(format!("residual_classification:{migration_id}"))
+            .fetch_one(pool.as_ref())
+            .await
+            .unwrap();
+    assert_eq!(
+        residual_count, 1,
+        "exactly one residual reclassification journal"
+    );
 
     // Trial balance: total Debit == total Credit across all posted lines.
     let (total_dr, total_cr): (f64, f64) = sqlx::query_as(
@@ -239,7 +268,10 @@ async fn exact_opening_with_residual_is_balanced_and_appears_once() {
     .fetch_one(pool.as_ref())
     .await
     .unwrap();
-    assert_eq!(Decimal::from_f64_retain(total_dr).unwrap(), Decimal::from_f64_retain(total_cr).unwrap());
+    assert_eq!(
+        Decimal::from_f64_retain(total_dr).unwrap(),
+        Decimal::from_f64_retain(total_cr).unwrap()
+    );
 
     // Balance sheet invariant A = L + E on the posted GL nets.
     let asset_net = net_of(pool.as_ref(), &asset).await;
@@ -247,14 +279,26 @@ async fn exact_opening_with_residual_is_balanced_and_appears_once() {
     let liab_net = -net_of(pool.as_ref(), &liability).await;
     let capital_net = -net_of(pool.as_ref(), &capital).await;
     let obe_net = -net_of(pool.as_ref(), &obe).await;
-    assert_eq!(obe_net, dec!(0), "OBE 53 nets to zero after reclassification");
+    assert_eq!(
+        obe_net,
+        dec!(0),
+        "OBE 53 nets to zero after reclassification"
+    );
 
     let residual = account_id_by_code(pool.as_ref(), "52").await;
     let residual_net = -net_of(pool.as_ref(), &residual).await;
-    assert_eq!(residual_net, dec!(30), "designated account credited exactly once");
+    assert_eq!(
+        residual_net,
+        dec!(30),
+        "designated account credited exactly once"
+    );
 
     let equity = capital_net + obe_net + residual_net;
-    assert_eq!(asset_net, liab_net + equity, "A = L + E must hold exactly (150 = 50 + 100)");
+    assert_eq!(
+        asset_net,
+        liab_net + equity,
+        "A = L + E must hold exactly (150 = 50 + 100)"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -327,7 +371,11 @@ async fn reversed_entry_is_neutral_in_ledger_and_report_feed() {
 
     let queries = AccountQueries::new(account_repo.clone(), journal_repo.clone());
     let before = queries.get_ledger(&[asset]).await.unwrap();
-    assert_eq!(before.lines.len(), 1, "before reversal the ledger has one line");
+    assert_eq!(
+        before.lines.len(),
+        1,
+        "before reversal the ledger has one line"
+    );
     assert_eq!(before.closing_balance_base, dec!(100));
 
     // Reverse → the original flips to Reversed, a Posted contra lands in the feed.
@@ -335,11 +383,22 @@ async fn reversed_entry_is_neutral_in_ledger_and_report_feed() {
         .execute(entry_id.clone())
         .await
         .unwrap();
-    assert_eq!(reversal.reversal_of_entry_id.as_deref(), Some(entry_id.as_str()));
+    assert_eq!(
+        reversal.reversal_of_entry_id.as_deref(),
+        Some(entry_id.as_str())
+    );
 
     let after = queries.get_ledger(&[asset]).await.unwrap();
-    assert_eq!(after.lines.len(), 0, "the ledger surfaces NEITHER side of the pair");
-    assert_eq!(after.closing_balance_base, dec!(0), "reversal is mathematically neutral");
+    assert_eq!(
+        after.lines.len(),
+        0,
+        "the ledger surfaces NEITHER side of the pair"
+    );
+    assert_eq!(
+        after.closing_balance_base,
+        dec!(0),
+        "reversal is mathematically neutral"
+    );
 
     // The posted report feed carries the POSTED-LEDGER policy (ReversalScope
     // on `execute_posted`): the contra row is ALSO excluded server-side, so
@@ -351,6 +410,10 @@ async fn reversed_entry_is_neutral_in_ledger_and_report_feed() {
         .execute_posted(None, None, None, None)
         .await
         .unwrap();
-    assert_eq!(feed.len(), 0, "the report feed carries NEITHER side of the pair");
+    assert_eq!(
+        feed.len(),
+        0,
+        "the report feed carries NEITHER side of the pair"
+    );
     assert!(feed.iter().all(|e| e.reversal_of_entry_id.is_none()));
 }

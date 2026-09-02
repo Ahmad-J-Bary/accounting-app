@@ -1,7 +1,7 @@
-use sqlx::SqlitePool;
 use application::errors::AppError;
 use domain::inventory::ProductionOrder;
 use domain::shared::ids::ProductionOrderId;
+use sqlx::SqlitePool;
 
 pub async fn save(_pool: &SqlitePool, _order: &ProductionOrder) -> Result<(), AppError> {
     Ok(())

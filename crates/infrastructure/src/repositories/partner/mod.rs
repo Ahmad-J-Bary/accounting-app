@@ -1,16 +1,16 @@
-use async_trait::async_trait;
-use sqlx::SqlitePool;
 use application::errors::AppError;
 use application::ports::partner_repository::PartnerRepository;
+use async_trait::async_trait;
 use domain::accounting::account::Account;
-use domain::accounting::partner::{Partner};
-use domain::shared::ids::{PartnerId};
+use domain::accounting::partner::Partner;
+use domain::shared::ids::PartnerId;
+use sqlx::SqlitePool;
 use std::sync::Arc;
 
-mod models;
-mod mappers;
-mod queries;
 mod commands;
+mod mappers;
+mod models;
+mod queries;
 
 pub struct SqlitePartnerRepository {
     pool: Arc<SqlitePool>,
@@ -43,7 +43,14 @@ impl PartnerRepository for SqlitePartnerRepository {
         drawings_account: &Account,
         current_account: Option<&Account>,
     ) -> Result<(), AppError> {
-        commands::save_with_accounts(&self.pool, partner, capital_account, drawings_account, current_account).await
+        commands::save_with_accounts(
+            &self.pool,
+            partner,
+            capital_account,
+            drawings_account,
+            current_account,
+        )
+        .await
     }
 
     async fn update(&self, partner: &Partner) -> Result<(), AppError> {
@@ -57,7 +64,14 @@ impl PartnerRepository for SqlitePartnerRepository {
         drawings_replacement: Option<&Account>,
         current_replacement: Option<&Account>,
     ) -> Result<(), AppError> {
-        commands::update_with_accounts(&self.pool, partner, capital_replacement, drawings_replacement, current_replacement).await
+        commands::update_with_accounts(
+            &self.pool,
+            partner,
+            capital_replacement,
+            drawings_replacement,
+            current_replacement,
+        )
+        .await
     }
 
     async fn delete(&self, id: &PartnerId) -> Result<(), AppError> {

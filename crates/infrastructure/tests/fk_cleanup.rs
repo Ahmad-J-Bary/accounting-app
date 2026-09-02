@@ -1,6 +1,6 @@
-use std::str::FromStr;
-use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use infrastructure::db::pool::run_migrations;
+use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+use std::str::FromStr;
 
 fn sqlite_url(path: &str) -> String {
     format!("sqlite://{path}?mode=rwc")
@@ -66,7 +66,10 @@ async fn cleanup_purges_injected_orphans_across_child_tables() {
     let pool = build_pool().await;
 
     // Turn FK off for this connection so orphaned rows can be inserted.
-    sqlx::query("PRAGMA foreign_keys = OFF").execute(&pool).await.unwrap();
+    sqlx::query("PRAGMA foreign_keys = OFF")
+        .execute(&pool)
+        .await
+        .unwrap();
 
     let ghost_id = "00000000-0000-0000-0000-000000000099";
 
@@ -138,7 +141,10 @@ async fn cleanup_purges_injected_orphans_across_child_tables() {
     .await
     .unwrap();
 
-    sqlx::query("PRAGMA foreign_keys = ON").execute(&pool).await.unwrap();
+    sqlx::query("PRAGMA foreign_keys = ON")
+        .execute(&pool)
+        .await
+        .unwrap();
 
     // Sanity: every orphan was inserted.
     let pre: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM journal_lines WHERE account_id = ?")
@@ -157,18 +163,20 @@ async fn cleanup_purges_injected_orphans_across_child_tables() {
         .unwrap();
     assert_eq!(lines, 0, "orphan journal line purged");
 
-    let inv: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM unified_invoice_lines WHERE material_id = ?")
-        .bind(ghost_id)
-        .fetch_one(&pool)
-        .await
-        .unwrap();
+    let inv: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM unified_invoice_lines WHERE material_id = ?")
+            .bind(ghost_id)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
     assert_eq!(inv, 0, "orphan invoice line purged");
 
-    let stock: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM stock_movements WHERE material_id = ?")
-        .bind(ghost_id)
-        .fetch_one(&pool)
-        .await
-        .unwrap();
+    let stock: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM stock_movements WHERE material_id = ?")
+            .bind(ghost_id)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
     assert_eq!(stock, 0, "orphan stock movement purged");
 
     let lots: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM inventory_lots WHERE material_id = ?")
@@ -186,13 +194,12 @@ async fn cleanup_purges_injected_orphans_across_child_tables() {
     assert_eq!(assets, 0, "orphan fixed asset purged");
 
     // Re-rooted account survives with NULL parent and level reset.
-    let re_rooted: (Option<String>, Option<i64>) = sqlx::query_as(
-        "SELECT parent_id, level FROM accounts WHERE id = ?",
-    )
-    .bind(account_id)
-    .fetch_one(&pool)
-    .await
-    .unwrap();
+    let re_rooted: (Option<String>, Option<i64>) =
+        sqlx::query_as("SELECT parent_id, level FROM accounts WHERE id = ?")
+            .bind(account_id)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
     assert_eq!(re_rooted.0, None, "account parent must be detached");
     assert_eq!(re_rooted.1, Some(1), "re-rooted account resets level to 1");
 }

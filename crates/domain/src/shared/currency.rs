@@ -14,7 +14,14 @@ pub struct Currency {
 }
 
 impl Currency {
-    pub fn new(code: &str, name_ar: &str, name_en: &str, symbol: &str, decimals: i32, is_base: bool) -> Self {
+    pub fn new(
+        code: &str,
+        name_ar: &str,
+        name_en: &str,
+        symbol: &str,
+        decimals: i32,
+        is_base: bool,
+    ) -> Self {
         Self {
             code: code.to_string(),
             name_ar: name_ar.to_string(),

@@ -23,11 +23,12 @@ use application::ports::settings_repository::SettingsRepository;
 use application::use_cases::asset::fixed_asset::{CreateAssetRequest, FixedAssetUseCases};
 use application::use_cases::opening_balance::create::START_MODE_EXISTING;
 use application::use_cases::opening_balance::types::{
-    CreateOpeningBalanceMigrationCommand, OpeningItemInput, OpeningLineInput, SaveOpeningItemsCommand,
+    CreateOpeningBalanceMigrationCommand, OpeningItemInput, OpeningLineInput,
+    SaveOpeningItemsCommand,
 };
 use application::use_cases::opening_balance::{
-    ApproveOpeningBalanceUseCase, CreateOpeningBalanceUseCase, KIND_FIXED_ASSET,
-    PostOpeningBalanceUseCase, SaveOpeningItemsUseCase, ValidateOpeningBalanceUseCase,
+    ApproveOpeningBalanceUseCase, CreateOpeningBalanceUseCase, PostOpeningBalanceUseCase,
+    SaveOpeningItemsUseCase, ValidateOpeningBalanceUseCase, KIND_FIXED_ASSET,
 };
 use domain::accounting::account::{AccountCategory, AccountType};
 use domain::shared::ids::AccountId;
@@ -46,7 +47,10 @@ use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 
 async fn build_pool() -> Arc<sqlx::SqlitePool> {
     let mut path = std::env::temp_dir();
-    path.push(format!("acc_fix_fa_opening_{}.sqlite", uuid::Uuid::new_v4()));
+    path.push(format!(
+        "acc_fix_fa_opening_{}.sqlite",
+        uuid::Uuid::new_v4()
+    ));
     let options = SqliteConnectOptions::from_str(path.to_str().unwrap())
         .unwrap()
         .create_if_missing(true);
@@ -106,7 +110,10 @@ async fn create_leaf_account(
     .unwrap()
     .with_purpose(purpose);
     let id = account.id;
-    SqliteAccountRepository::new(pool.clone()).save(&account).await.unwrap();
+    SqliteAccountRepository::new(pool.clone())
+        .save(&account)
+        .await
+        .unwrap();
     id
 }
 
@@ -154,8 +161,7 @@ async fn opening_fixed_assets_book_gl_exactly_once_150_plus_50_equals_200() {
 
     let account_repo: Arc<dyn AccountRepository> =
         Arc::new(SqliteAccountRepository::new(pool.clone()));
-    let asset_repo: Arc<dyn AssetRepository> =
-        Arc::new(SqliteAssetRepository::new(pool.clone()));
+    let asset_repo: Arc<dyn AssetRepository> = Arc::new(SqliteAssetRepository::new(pool.clone()));
     let journal_repo: Arc<dyn JournalEntryRepository> =
         Arc::new(SqliteJournalEntryRepository::new(pool.clone()));
     let migration_repo: Arc<dyn OpeningMigrationRepository> =
@@ -193,8 +199,16 @@ async fn opening_fixed_assets_book_gl_exactly_once_150_plus_50_equals_200() {
         source_system: None,
         source_reference: None,
         lines: vec![
-            OpeningLineInput { account_id: fa_account.to_string(), amount: "200".into(), description: None },
-            OpeningLineInput { account_id: equity.to_string(), amount: "200".into(), description: None },
+            OpeningLineInput {
+                account_id: fa_account.to_string(),
+                amount: "200".into(),
+                description: None,
+            },
+            OpeningLineInput {
+                account_id: equity.to_string(),
+                amount: "200".into(),
+                description: None,
+            },
         ],
     })
     .await
@@ -202,8 +216,12 @@ async fn opening_fixed_assets_book_gl_exactly_once_150_plus_50_equals_200() {
     let migration_id = draft.0.id.clone();
 
     // 2) Create the two opening fixed assets (Option B): subledger-only.
-    let category = domain::assets::AssetCategory::new("أصول ثابتة".into(), domain::assets::AssetType::Fixed);
-    asset_repo.save_category(&category).await.expect("save category");
+    let category =
+        domain::assets::AssetCategory::new("أصول ثابتة".into(), domain::assets::AssetType::Fixed);
+    asset_repo
+        .save_category(&category)
+        .await
+        .expect("save category");
 
     let uc = FixedAssetUseCases::new(
         asset_repo.clone(),
@@ -262,20 +280,28 @@ async fn opening_fixed_assets_book_gl_exactly_once_150_plus_50_equals_200() {
 
     // 3) During the opening window NO GeneralJournal and NO account-balance
     //    mutation may exist — the subledger is the only record so far.
-    assert_eq!(fixed_asset_journal_count(&pool, &car_id.0.to_string()).await, 0,
-        "car must not write a GL journal during opening preparation");
-    assert_eq!(fixed_asset_journal_count(&pool, &equipment_id.0.to_string()).await, 0,
-        "equipment must not write a GL journal during opening preparation");
-    assert_eq!(gl_net(&pool, &fa_account).await, Decimal::ZERO,
-        "FA account GL must be untouched before the migration posts");
+    assert_eq!(
+        fixed_asset_journal_count(&pool, &car_id.0.to_string()).await,
+        0,
+        "car must not write a GL journal during opening preparation"
+    );
+    assert_eq!(
+        fixed_asset_journal_count(&pool, &equipment_id.0.to_string()).await,
+        0,
+        "equipment must not write a GL journal during opening preparation"
+    );
+    assert_eq!(
+        gl_net(&pool, &fa_account).await,
+        Decimal::ZERO,
+        "FA account GL must be untouched before the migration posts"
+    );
 
-    let (debit, credit): (String, String) = sqlx::query_as(
-        "SELECT debit, credit FROM accounts WHERE id = ?",
-    )
-    .bind(fa_account.0.to_string())
-    .fetch_one(&*pool)
-    .await
-    .unwrap();
+    let (debit, credit): (String, String) =
+        sqlx::query_as("SELECT debit, credit FROM accounts WHERE id = ?")
+            .bind(fa_account.0.to_string())
+            .fetch_one(&*pool)
+            .await
+            .unwrap();
     assert_eq!(Decimal::from_str(&debit).unwrap(), Decimal::ZERO);
     assert_eq!(Decimal::from_str(&credit).unwrap(), Decimal::ZERO);
 
@@ -343,20 +369,31 @@ async fn opening_fixed_assets_book_gl_exactly_once_150_plus_50_equals_200() {
 
     // 7) GL Fixed Asset = 200 exactly once; the subledger still equals 200;
     //    the FA assets still own no standalone journal.
-    assert_eq!(gl_net(&pool, &fa_account).await, Decimal::from(200),
-        "GL fixed-asset opening = 200 exactly once");
+    assert_eq!(
+        gl_net(&pool, &fa_account).await,
+        Decimal::from(200),
+        "GL fixed-asset opening = 200 exactly once"
+    );
     assert_eq!(subledger_total(&pool).await, Decimal::from(200));
-    assert_eq!(fixed_asset_journal_count(&pool, &car_id.0.to_string()).await, 0);
-    assert_eq!(fixed_asset_journal_count(&pool, &equipment_id.0.to_string()).await, 0);
+    assert_eq!(
+        fixed_asset_journal_count(&pool, &car_id.0.to_string()).await,
+        0
+    );
+    assert_eq!(
+        fixed_asset_journal_count(&pool, &equipment_id.0.to_string()).await,
+        0
+    );
 
-    let migration_journals: i64 = sqlx::query_scalar(
-        "SELECT COUNT(*) FROM journal_entries WHERE source_id = ?",
-    )
-    .bind(format!("opening_balance:{migration_id}"))
-    .fetch_one(&*pool)
-    .await
-    .unwrap();
-    assert_eq!(migration_journals, 1, "exactly one migration aggregate journal");
+    let migration_journals: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM journal_entries WHERE source_id = ?")
+            .bind(format!("opening_balance:{migration_id}"))
+            .fetch_one(&*pool)
+            .await
+            .unwrap();
+    assert_eq!(
+        migration_journals, 1,
+        "exactly one migration aggregate journal"
+    );
 
     // 8) Idempotency: posting a second time is rejected — the GL can never be
     //    booked twice.
@@ -369,7 +406,13 @@ async fn opening_fixed_assets_book_gl_exactly_once_150_plus_50_equals_200() {
     )
     .execute(migration_id.clone())
     .await;
-    assert!(second_post.is_err(), "a second migration post must be rejected");
-    assert_eq!(gl_net(&pool, &fa_account).await, Decimal::from(200),
-        "second post must not double-book the GL");
+    assert!(
+        second_post.is_err(),
+        "a second migration post must be rejected"
+    );
+    assert_eq!(
+        gl_net(&pool, &fa_account).await,
+        Decimal::from(200),
+        "second post must not double-book the GL"
+    );
 }

@@ -1,8 +1,8 @@
-use std::sync::Arc;
-use domain::shared::ids::CustomerId;
-use crate::ports::customer_repository::CustomerRepository;
 use crate::dto::customer_dto::CustomerDto;
 use crate::errors::AppError;
+use crate::ports::customer_repository::CustomerRepository;
+use domain::shared::ids::CustomerId;
+use std::sync::Arc;
 
 pub struct CustomerQueries {
     repo: Arc<dyn CustomerRepository>,
@@ -19,8 +19,13 @@ impl CustomerQueries {
     }
 
     pub async fn get_by_id(&self, id: String) -> Result<CustomerDto, AppError> {
-        let cid = id.parse::<CustomerId>().map_err(|_| AppError::NotFound("معرف العميل غير صالح".into()))?;
-        let customer = self.repo.find_by_id(&cid).await?
+        let cid = id
+            .parse::<CustomerId>()
+            .map_err(|_| AppError::NotFound("معرف العميل غير صالح".into()))?;
+        let customer = self
+            .repo
+            .find_by_id(&cid)
+            .await?
             .ok_or_else(|| AppError::NotFound("العميل غير موجود".into()))?;
 
         Ok(CustomerDto::from(customer))

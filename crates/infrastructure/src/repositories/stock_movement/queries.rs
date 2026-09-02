@@ -1,18 +1,22 @@
-use sqlx::SqlitePool;
-use application::errors::AppError;
-use application::dto::stock_dto::StockMovementDetailDto;
-use domain::inventory::stock_movement::StockMovement;
-use domain::shared::ids::{StockMovementId, MaterialId};
-use rust_decimal::Decimal;
-use super::models::StockMovementRow;
 use super::mappers::row_to_movement;
+use super::models::StockMovementRow;
+use application::dto::stock_dto::StockMovementDetailDto;
+use application::errors::AppError;
+use domain::inventory::stock_movement::StockMovement;
+use domain::shared::ids::{MaterialId, StockMovementId};
+use rust_decimal::Decimal;
+use sqlx::SqlitePool;
 
 const COLUMNS: &str = "id, material_id, quantity, unit_cost, unit_cost_base, total_cost, total_cost_base, raw_total_cost_base, original_currency, fx_rate, movement_type, reason, reference, document_number, warehouse_id, movement_date, created_at, signed_quantity";
 
-pub async fn find_by_id(pool: &SqlitePool, id: &StockMovementId) -> Result<Option<StockMovement>, AppError> {
-    let row = sqlx::query_as::<_, StockMovementRow>(
-        &format!("SELECT {} FROM stock_movements WHERE id = ?", COLUMNS)
-    )
+pub async fn find_by_id(
+    pool: &SqlitePool,
+    id: &StockMovementId,
+) -> Result<Option<StockMovement>, AppError> {
+    let row = sqlx::query_as::<_, StockMovementRow>(&format!(
+        "SELECT {} FROM stock_movements WHERE id = ?",
+        COLUMNS
+    ))
     .bind(id.to_string())
     .fetch_optional(pool)
     .await
@@ -22,9 +26,10 @@ pub async fn find_by_id(pool: &SqlitePool, id: &StockMovementId) -> Result<Optio
 }
 
 pub async fn list_all(pool: &SqlitePool) -> Result<Vec<StockMovement>, AppError> {
-    let rows = sqlx::query_as::<_, StockMovementRow>(
-        &format!("SELECT {} FROM stock_movements ORDER BY movement_date DESC", COLUMNS)
-    )
+    let rows = sqlx::query_as::<_, StockMovementRow>(&format!(
+        "SELECT {} FROM stock_movements ORDER BY movement_date DESC",
+        COLUMNS
+    ))
     .fetch_all(pool)
     .await
     .map_err(|e| AppError::Infrastructure(e.to_string()))?;
@@ -32,10 +37,14 @@ pub async fn list_all(pool: &SqlitePool) -> Result<Vec<StockMovement>, AppError>
     rows.into_iter().map(row_to_movement).collect()
 }
 
-pub async fn list_by_material(pool: &SqlitePool, material_id: &MaterialId) -> Result<Vec<StockMovement>, AppError> {
-    let rows = sqlx::query_as::<_, StockMovementRow>(
-        &format!("SELECT {} FROM stock_movements WHERE material_id = ? ORDER BY movement_date DESC", COLUMNS)
-    )
+pub async fn list_by_material(
+    pool: &SqlitePool,
+    material_id: &MaterialId,
+) -> Result<Vec<StockMovement>, AppError> {
+    let rows = sqlx::query_as::<_, StockMovementRow>(&format!(
+        "SELECT {} FROM stock_movements WHERE material_id = ? ORDER BY movement_date DESC",
+        COLUMNS
+    ))
     .bind(material_id.to_string())
     .fetch_all(pool)
     .await
@@ -44,7 +53,10 @@ pub async fn list_by_material(pool: &SqlitePool, material_id: &MaterialId) -> Re
     rows.into_iter().map(row_to_movement).collect()
 }
 
-pub async fn list_by_reference(pool: &SqlitePool, reference: &str) -> Result<Vec<StockMovement>, AppError> {
+pub async fn list_by_reference(
+    pool: &SqlitePool,
+    reference: &str,
+) -> Result<Vec<StockMovement>, AppError> {
     let rows = sqlx::query_as::<_, StockMovementRow>(
         &format!("SELECT {} FROM stock_movements WHERE reference = ? OR document_number = ? ORDER BY movement_date ASC", COLUMNS)
     )
@@ -90,7 +102,10 @@ pub async fn list_by_document_number(
     rows.into_iter().map(row_to_movement).collect()
 }
 
-pub async fn get_stock_balance(pool: &SqlitePool, material_id: &MaterialId) -> Result<Decimal, AppError> {
+pub async fn get_stock_balance(
+    pool: &SqlitePool,
+    material_id: &MaterialId,
+) -> Result<Decimal, AppError> {
     let movements = list_by_material(pool, material_id).await?;
     let mut balance = Decimal::ZERO;
     for m in movements {
@@ -105,9 +120,12 @@ pub async fn get_stock_balance(pool: &SqlitePool, material_id: &MaterialId) -> R
     Ok(balance)
 }
 
-pub async fn get_material_summary(pool: &SqlitePool, material_id: &MaterialId) -> Result<application::ports::stock_movement_repository::MaterialInventorySummary, AppError> {
+pub async fn get_material_summary(
+    pool: &SqlitePool,
+    material_id: &MaterialId,
+) -> Result<application::ports::stock_movement_repository::MaterialInventorySummary, AppError> {
     let movements = list_by_material(pool, material_id).await?;
-    
+
     let mut total_received = Decimal::ZERO;
     let mut total_sold = Decimal::ZERO;
     let mut total_damaged = Decimal::ZERO;
@@ -115,7 +133,7 @@ pub async fn get_material_summary(pool: &SqlitePool, material_id: &MaterialId) -
     let mut total_inflow_cost = Decimal::ZERO;
     let mut total_inflow_cost_base = Decimal::ZERO;
     let mut total_raw_inflow_cost_base = Decimal::ZERO;
-    
+
     let mut last_purchase_price = Decimal::ZERO;
     let mut last_purchase_price_base = Decimal::ZERO;
     let mut last_sale_price = Decimal::ZERO;
@@ -134,7 +152,10 @@ pub async fn get_material_summary(pool: &SqlitePool, material_id: &MaterialId) -
             }
             total_available += sq;
         } else if m.is_inflow() {
-            if matches!(m.movement_type, domain::inventory::stock_movement::MovementType::SalesReturn) {
+            if matches!(
+                m.movement_type,
+                domain::inventory::stock_movement::MovementType::SalesReturn
+            ) {
                 total_available += m.quantity;
             } else {
                 total_available += m.quantity;
@@ -143,29 +164,45 @@ pub async fn get_material_summary(pool: &SqlitePool, material_id: &MaterialId) -
                 total_inflow_cost_base += m.total_cost_base;
                 total_raw_inflow_cost_base += m.raw_total_cost_base;
             }
-            
-            if !found_last_purchase && (
-                matches!(m.movement_type, domain::inventory::stock_movement::MovementType::Purchase) || 
-                matches!(m.movement_type, domain::inventory::stock_movement::MovementType::In) ||
-                matches!(m.movement_type, domain::inventory::stock_movement::MovementType::OpeningBalance)
-            ) {
+
+            if !found_last_purchase
+                && (matches!(
+                    m.movement_type,
+                    domain::inventory::stock_movement::MovementType::Purchase
+                ) || matches!(
+                    m.movement_type,
+                    domain::inventory::stock_movement::MovementType::In
+                ) || matches!(
+                    m.movement_type,
+                    domain::inventory::stock_movement::MovementType::OpeningBalance
+                ))
+            {
                 last_purchase_price = m.unit_cost;
                 last_purchase_price_base = m.unit_cost_base;
                 found_last_purchase = true;
             }
         } else if m.is_outflow() {
             total_available -= m.quantity;
-            
-            if matches!(m.movement_type, domain::inventory::stock_movement::MovementType::Sale) {
+
+            if matches!(
+                m.movement_type,
+                domain::inventory::stock_movement::MovementType::Sale
+            ) {
                 total_sold += m.quantity;
                 if !found_last_sale {
                     last_sale_price = m.unit_cost;
                     last_sale_price_base = m.unit_cost_base;
                     found_last_sale = true;
                 }
-            } else if matches!(m.movement_type, domain::inventory::stock_movement::MovementType::Damaged) {
+            } else if matches!(
+                m.movement_type,
+                domain::inventory::stock_movement::MovementType::Damaged
+            ) {
                 total_damaged += m.quantity;
-            } else if matches!(m.movement_type, domain::inventory::stock_movement::MovementType::PurchaseReturn) {
+            } else if matches!(
+                m.movement_type,
+                domain::inventory::stock_movement::MovementType::PurchaseReturn
+            ) {
                 total_received -= m.quantity;
                 total_inflow_cost -= m.total_cost;
                 total_inflow_cost_base -= m.total_cost_base;
@@ -192,19 +229,21 @@ pub async fn get_material_summary(pool: &SqlitePool, material_id: &MaterialId) -
         Decimal::ZERO
     };
 
-    Ok(application::ports::stock_movement_repository::MaterialInventorySummary {
-        total_received,
-        total_sold,
-        total_available,
-        total_damaged,
-        last_purchase_price,
-        last_purchase_price_base,
-        last_sale_price,
-        last_sale_price_base,
-        average_cost,
-        average_cost_base,
-        average_raw_price_base,
-    })
+    Ok(
+        application::ports::stock_movement_repository::MaterialInventorySummary {
+            total_received,
+            total_sold,
+            total_available,
+            total_damaged,
+            last_purchase_price,
+            last_purchase_price_base,
+            last_sale_price,
+            last_sale_price_base,
+            average_cost,
+            average_cost_base,
+            average_raw_price_base,
+        },
+    )
 }
 
 #[derive(sqlx::FromRow)]
@@ -235,12 +274,12 @@ pub struct MovementDetailRow {
 fn movement_type_label(t: &str) -> String {
     match t {
         "Purchase" | "MovementType::Purchase" => "شراء".to_string(),
-        "Sale"     | "MovementType::Sale"     => "بيع".to_string(),
+        "Sale" | "MovementType::Sale" => "بيع".to_string(),
         "OpeningBalance" | "MovementType::OpeningBalance" => "بضاعة أول المدة".to_string(),
-        "In"       | "MovementType::In"       => "إدخال".to_string(),
-        "Out"      | "MovementType::Out"      => "إخراج".to_string(),
-        "Damaged"  | "MovementType::Damaged"  => "تالف".to_string(),
-        "Adjustment"| "MovementType::Adjustment" => "تسوية".to_string(),
+        "In" | "MovementType::In" => "إدخال".to_string(),
+        "Out" | "MovementType::Out" => "إخراج".to_string(),
+        "Damaged" | "MovementType::Damaged" => "تالف".to_string(),
+        "Adjustment" | "MovementType::Adjustment" => "تسوية".to_string(),
         "Transfer" | "MovementType::Transfer" => "تحويل".to_string(),
         "SalesReturn" | "MovementType::SalesReturn" => "مرتجع مبيعات".to_string(),
         "PurchaseReturn" | "MovementType::PurchaseReturn" => "مرتجع مشتريات".to_string(),
@@ -249,11 +288,19 @@ fn movement_type_label(t: &str) -> String {
 }
 
 fn movement_type_is_inflow(t: &str) -> bool {
-    matches!(t, "Purchase" | "MovementType::Purchase"
-             | "In" | "MovementType::In"
-             | "OpeningBalance" | "MovementType::OpeningBalance"
-             | "Transfer" | "MovementType::Transfer"
-             | "SalesReturn" | "MovementType::SalesReturn")
+    matches!(
+        t,
+        "Purchase"
+            | "MovementType::Purchase"
+            | "In"
+            | "MovementType::In"
+            | "OpeningBalance"
+            | "MovementType::OpeningBalance"
+            | "Transfer"
+            | "MovementType::Transfer"
+            | "SalesReturn"
+            | "MovementType::SalesReturn"
+    )
 }
 
 pub async fn list_detailed_by_material(
@@ -355,7 +402,7 @@ pub async fn list_detailed_by_material(
 
 pub async fn get_next_inventory_reference(pool: &SqlitePool) -> Result<String, AppError> {
     let row: Option<(Option<i64>,)> = sqlx::query_as(
-        "SELECT MAX(CAST(reference AS INTEGER)) FROM stock_movements WHERE reference GLOB '[0-9]*'"
+        "SELECT MAX(CAST(reference AS INTEGER)) FROM stock_movements WHERE reference GLOB '[0-9]*'",
     )
     .fetch_optional(pool)
     .await

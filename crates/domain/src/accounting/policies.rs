@@ -1,8 +1,8 @@
 // Accounting policies and business rules
 // This module will contain validation rules for accounting operations
 
-use crate::shared::errors::DomainError;
 use crate::accounting::journal_entry::JournalLine;
+use crate::shared::errors::DomainError;
 use rust_decimal::Decimal;
 
 pub struct DoubleEntryPolicy;

@@ -1,7 +1,7 @@
-use sqlx::SqlitePool;
 use application::errors::AppError;
 use domain::returns::SalesReturn;
 use domain::shared::ids::SalesReturnId;
+use sqlx::SqlitePool;
 
 pub async fn save(pool: &SqlitePool, ret: &SalesReturn) -> Result<(), AppError> {
     sqlx::query(

@@ -1,8 +1,8 @@
-use sqlx::SqlitePool;
 use application::errors::AppError;
-use domain::assets::{FixedAsset, AssetCategory, AssetMovement, DepreciationSchedule};
-use domain::accounting::journal_entry::JournalEntry;
 use domain::accounting::account::Account;
+use domain::accounting::journal_entry::JournalEntry;
+use domain::assets::{AssetCategory, AssetMovement, DepreciationSchedule, FixedAsset};
+use sqlx::SqlitePool;
 
 async fn save_asset_tx(
     tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
@@ -69,7 +69,7 @@ async fn update_account_tx(
     account: &Account,
 ) -> Result<(), AppError> {
     sqlx::query(
-        "UPDATE accounts SET debit = ?, credit = ?, balance = ?, updated_at = ? WHERE id = ?"
+        "UPDATE accounts SET debit = ?, credit = ?, balance = ?, updated_at = ? WHERE id = ?",
     )
     .bind(account.debit.to_string())
     .bind(account.credit.to_string())
@@ -92,7 +92,10 @@ pub async fn save_asset_with_accounting(
     entries: &[JournalEntry],
     accounts: &[Account],
 ) -> Result<(), AppError> {
-    let mut tx = pool.begin().await.map_err(|e| AppError::Infrastructure(e.to_string()))?;
+    let mut tx = pool
+        .begin()
+        .await
+        .map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
     save_asset_tx(&mut tx, asset).await?;
     for movement in movements {
@@ -105,7 +108,9 @@ pub async fn save_asset_with_accounting(
         update_account_tx(&mut tx, account).await?;
     }
 
-    tx.commit().await.map_err(|e| AppError::Infrastructure(e.to_string()))?;
+    tx.commit()
+        .await
+        .map_err(|e| AppError::Infrastructure(e.to_string()))?;
     Ok(())
 }
 
@@ -116,7 +121,10 @@ pub async fn delete_asset_with_accounting(
     id: &domain::assets::FixedAssetId,
     entries: &[domain::shared::ids::JournalEntryId],
 ) -> Result<(), AppError> {
-    let mut tx = pool.begin().await.map_err(|e| AppError::Infrastructure(e.to_string()))?;
+    let mut tx = pool
+        .begin()
+        .await
+        .map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
     for entry_id in entries {
         sqlx::query("DELETE FROM journal_lines WHERE journal_entry_id = ?")
@@ -141,7 +149,9 @@ pub async fn delete_asset_with_accounting(
         .await
         .map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
-    tx.commit().await.map_err(|e| AppError::Infrastructure(e.to_string()))?;
+    tx.commit()
+        .await
+        .map_err(|e| AppError::Infrastructure(e.to_string()))?;
     Ok(())
 }
 
@@ -210,7 +220,10 @@ pub async fn save_movement(pool: &SqlitePool, movement: &AssetMovement) -> Resul
     Ok(())
 }
 
-pub async fn save_depreciation_schedule(pool: &SqlitePool, schedule: &DepreciationSchedule) -> Result<(), AppError> {
+pub async fn save_depreciation_schedule(
+    pool: &SqlitePool,
+    schedule: &DepreciationSchedule,
+) -> Result<(), AppError> {
     sqlx::query(
         "INSERT OR REPLACE INTO depreciation_schedules (id, fixed_asset_id, period_date, depreciation_amount, accumulated_depreciation, remaining_value, currency, status, journal_entry_id) 
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"

@@ -1,8 +1,8 @@
-use std::sync::Arc;
-use domain::inventory::category::{MaterialCategory, DEFAULT_CATEGORY_NAME};
-use crate::ports::category_repository::CategoryRepository;
 use crate::dto::category_dto::{CategoryDto, CreateCategoryRequest};
 use crate::errors::AppError;
+use crate::ports::category_repository::CategoryRepository;
+use domain::inventory::category::{MaterialCategory, DEFAULT_CATEGORY_NAME};
+use std::sync::Arc;
 
 pub struct CreateCategoryUseCase {
     repo: Arc<dyn CategoryRepository>,
@@ -42,7 +42,7 @@ impl CreateCategoryUseCase {
         }
 
         let is_hybrid = req.is_hybrid.unwrap_or(false);
-        
+
         let actual_prefix = if parent_id.is_none() && !is_hybrid {
             None
         } else {
@@ -51,7 +51,9 @@ impl CreateCategoryUseCase {
 
         if let Some(ref p) = actual_prefix {
             if !is_hybrid && p.chars().count() > 1 {
-                return Err(AppError::Invalid("بادئة التصنيف العادي يجب أن تكون محرفاً واحداً فقط".into()));
+                return Err(AppError::Invalid(
+                    "بادئة التصنيف العادي يجب أن تكون محرفاً واحداً فقط".into(),
+                ));
             }
         }
 
@@ -59,20 +61,24 @@ impl CreateCategoryUseCase {
         let all_cats = self.repo.list_all().await?;
         let trimmed = req.name.trim();
         if let Some(ref pid) = parent_id {
-            if all_cats.iter().any(|c| c.parent_id.as_ref() == Some(pid) && c.name == trimmed) {
-                return Err(AppError::Invalid(format!("يوجد تصنيف فرعي بنفس الاسم «{}» ضمن نفس التصنيف الأساسي", trimmed)));
+            if all_cats
+                .iter()
+                .any(|c| c.parent_id.as_ref() == Some(pid) && c.name == trimmed)
+            {
+                return Err(AppError::Invalid(format!(
+                    "يوجد تصنيف فرعي بنفس الاسم «{}» ضمن نفس التصنيف الأساسي",
+                    trimmed
+                )));
             }
         } else if all_cats.iter().any(|c| c.is_root() && c.name == trimmed) {
-            return Err(AppError::Invalid(format!("يوجد تصنيف أساسي بنفس الاسم «{}»", trimmed)));
+            return Err(AppError::Invalid(format!(
+                "يوجد تصنيف أساسي بنفس الاسم «{}»",
+                trimmed
+            )));
         }
 
-        let category = MaterialCategory::new(
-            req.name.clone(),
-            parent_id,
-            is_hybrid,
-            actual_prefix,
-        )
-        .map_err(|e| AppError::Invalid(e.to_string()))?;
+        let category = MaterialCategory::new(req.name.clone(), parent_id, is_hybrid, actual_prefix)
+            .map_err(|e| AppError::Invalid(e.to_string()))?;
 
         self.repo.save(&category).await?;
 

@@ -38,7 +38,10 @@ pub async fn obe_control_net(
         return Ok(Decimal::ZERO);
     };
     let mut balance = Decimal::ZERO;
-    for source_id in [opening_source_id(migration_id), residual_source_id(migration_id)] {
+    for source_id in [
+        opening_source_id(migration_id),
+        residual_source_id(migration_id),
+    ] {
         if let Some(entry) = journal_repo.find_by_source_id(&source_id).await? {
             for line in &entry.lines {
                 if line.account_id == obe_account_id {
@@ -102,7 +105,10 @@ mod tests {
         posting.status = JournalEntryStatus::Posted;
         repo.save(&posting).await.unwrap();
 
-        assert_eq!(obe_control_net(&repo, Some(obe), mig).await.unwrap(), dec!(-45));
+        assert_eq!(
+            obe_control_net(&repo, Some(obe), mig).await.unwrap(),
+            dec!(-45)
+        );
 
         // Residual journal cancels the OBE leg: Dr 53 45 / Cr target 45.
         let residual = JournalEntry::new(

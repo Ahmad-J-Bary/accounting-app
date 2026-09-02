@@ -1,8 +1,8 @@
-use sqlx::SqlitePool;
 use application::errors::AppError;
 use domain::accounting::account::{Account, AccountCategory};
 use domain::accounting::partner::{Partner, ProfitSharingType};
 use domain::shared::ids::PartnerId;
+use sqlx::SqlitePool;
 
 pub async fn save(pool: &SqlitePool, partner: &Partner) -> Result<(), AppError> {
     sqlx::query(
@@ -107,7 +107,7 @@ async fn insert_partner_tx<'a>(
     tx: &mut sqlx::Transaction<'a, sqlx::Sqlite>,
     partner: &Partner,
 ) -> Result<(), AppError> {
-sqlx::query(
+    sqlx::query(
         "INSERT INTO partners (id, code, name, currency, exchange_rate, amount_local, amount_original, is_amount_in_original, profit_sharing_ratio, profit_sharing_type, linked_account_id, drawings_account_id, current_account_id, notes, created_at, updated_at)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
     )
@@ -323,4 +323,3 @@ async fn upsert_account_tx<'a>(
     .map_err(|e| AppError::Infrastructure(e.to_string()))?;
     Ok(())
 }
-

@@ -1,8 +1,8 @@
-use std::sync::Arc;
-use domain::inventory::category::{DEFAULT_CATEGORY_NAME, MaterialCategory};
-use domain::shared::ids::MaterialCategoryId;
-use crate::ports::category_repository::CategoryRepository;
 use crate::errors::AppError;
+use crate::ports::category_repository::CategoryRepository;
+use domain::inventory::category::{MaterialCategory, DEFAULT_CATEGORY_NAME};
+use domain::shared::ids::MaterialCategoryId;
+use std::sync::Arc;
 
 pub struct DeleteCategoryUseCase {
     repo: Arc<dyn CategoryRepository>,

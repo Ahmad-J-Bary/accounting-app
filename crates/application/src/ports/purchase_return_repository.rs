@@ -1,3 +1,4 @@
+use crate::errors::AppError;
 use async_trait::async_trait;
 use domain::accounting::journal_entry::JournalEntry;
 use domain::customers::Customer;
@@ -6,7 +7,6 @@ use domain::payments::Payment;
 use domain::returns::PurchaseReturn;
 use domain::shared::ids::PurchaseReturnId;
 use domain::suppliers::Supplier;
-use crate::errors::AppError;
 
 #[async_trait]
 pub trait PurchaseReturnRepository: Send + Sync {

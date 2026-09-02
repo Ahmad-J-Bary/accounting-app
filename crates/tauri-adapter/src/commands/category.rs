@@ -1,8 +1,9 @@
 use crate::bootstrap::container::AppState;
-use application::dto::category_dto::{CreateCategoryRequest, UpdateCategoryRequest, CategoryDto};
+use application::dto::category_dto::{CategoryDto, CreateCategoryRequest, UpdateCategoryRequest};
 use application::use_cases::category::{
-    CreateCategoryUseCase, CategoryQueries, UpdateCategoryUseCase, DeleteCategoryUseCase,
-    DeleteCategoryCascadeUseCase, DeleteCategoryCascadeResult, HybridCategoryUseCase,
+    CategoryQueries, CreateCategoryUseCase, DeleteCategoryCascadeResult,
+    DeleteCategoryCascadeUseCase, DeleteCategoryUseCase, HybridCategoryUseCase,
+    UpdateCategoryUseCase,
 };
 use tauri::State;
 
@@ -12,15 +13,17 @@ pub async fn create_category(
     request: CreateCategoryRequest,
 ) -> Result<CategoryDto, String> {
     CreateCategoryUseCase::new(state.category_repo.clone())
-        .execute(request).await.map_err(|e| e.to_string())
+        .execute(request)
+        .await
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
-pub async fn list_categories(
-    state: State<'_, AppState>,
-) -> Result<Vec<CategoryDto>, String> {
+pub async fn list_categories(state: State<'_, AppState>) -> Result<Vec<CategoryDto>, String> {
     CategoryQueries::new(state.category_repo.clone())
-        .list_all().await.map_err(|e| e.to_string())
+        .list_all()
+        .await
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -29,16 +32,17 @@ pub async fn update_category(
     request: UpdateCategoryRequest,
 ) -> Result<CategoryDto, String> {
     UpdateCategoryUseCase::new(state.category_repo.clone())
-        .execute(request).await.map_err(|e| e.to_string())
+        .execute(request)
+        .await
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
-pub async fn delete_category(
-    state: State<'_, AppState>,
-    id: String,
-) -> Result<(), String> {
+pub async fn delete_category(state: State<'_, AppState>, id: String) -> Result<(), String> {
     DeleteCategoryUseCase::new(state.category_repo.clone())
-        .execute(id).await.map_err(|e| e.to_string())
+        .execute(id)
+        .await
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -48,7 +52,9 @@ pub async fn delete_category_with_reassignment(
     reassign_materials_to: String,
 ) -> Result<DeleteCategoryCascadeResult, String> {
     DeleteCategoryCascadeUseCase::new(state.category_repo.clone())
-        .execute(id, reassign_materials_to).await.map_err(|e| e.to_string())
+        .execute(id, reassign_materials_to)
+        .await
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -57,5 +63,7 @@ pub async fn get_or_create_hybrid_category(
     prefixes: Vec<String>,
 ) -> Result<CategoryDto, String> {
     HybridCategoryUseCase::new(state.category_repo.clone())
-        .execute(prefixes).await.map_err(|e| e.to_string())
+        .execute(prefixes)
+        .await
+        .map_err(|e| e.to_string())
 }

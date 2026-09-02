@@ -1,12 +1,12 @@
-use std::sync::Arc;
-use rust_decimal::Decimal;
-use crate::ports::stock_adjustment_repository::StockAdjustmentRepository;
-use crate::ports::material_repository::MaterialRepository;
-use crate::ports::stock_movement_repository::StockMovementRepository;
-use crate::dto::adjustment_dto::{StockAdjustmentDto};
-use crate::errors::AppError;
-use domain::shared::ids::StockAdjustmentId;
 use super::create::to_dto;
+use crate::dto::adjustment_dto::StockAdjustmentDto;
+use crate::errors::AppError;
+use crate::ports::material_repository::MaterialRepository;
+use crate::ports::stock_adjustment_repository::StockAdjustmentRepository;
+use crate::ports::stock_movement_repository::StockMovementRepository;
+use domain::shared::ids::StockAdjustmentId;
+use rust_decimal::Decimal;
+use std::sync::Arc;
 
 pub struct StockAdjustmentQueries {
     repo: Arc<dyn StockAdjustmentRepository>,
@@ -20,7 +20,11 @@ impl StockAdjustmentQueries {
         material_repo: Arc<dyn MaterialRepository>,
         movement_repo: Arc<dyn StockMovementRepository>,
     ) -> Self {
-        Self { repo, material_repo, movement_repo }
+        Self {
+            repo,
+            material_repo,
+            movement_repo,
+        }
     }
 
     /// Resolve the currency + fx rate recorded on the adjustment's stock
@@ -31,24 +35,39 @@ impl StockAdjustmentQueries {
         let Some(ref_code) = reference else {
             return (super::create::BASE_CURRENCY.to_string(), Decimal::ONE);
         };
-        let movements = self.movement_repo.list_by_reference(ref_code).await.unwrap_or_default();
-        let m = movements.iter().find(|m| matches!(m.movement_type, domain::inventory::stock_movement::MovementType::Adjustment));
+        let movements = self
+            .movement_repo
+            .list_by_reference(ref_code)
+            .await
+            .unwrap_or_default();
+        let m = movements.iter().find(|m| {
+            matches!(
+                m.movement_type,
+                domain::inventory::stock_movement::MovementType::Adjustment
+            )
+        });
         let Some(m) = m else {
             return (super::create::BASE_CURRENCY.to_string(), Decimal::ONE);
         };
         (
-            m.original_currency.clone().unwrap_or_else(|| super::create::BASE_CURRENCY.to_string()),
+            m.original_currency
+                .clone()
+                .unwrap_or_else(|| super::create::BASE_CURRENCY.to_string()),
             m.fx_rate,
         )
     }
 
     pub async fn find_by_id(&self, id: &str) -> Result<Option<StockAdjustmentDto>, AppError> {
-        let adj_id = id.parse::<StockAdjustmentId>()
+        let adj_id = id
+            .parse::<StockAdjustmentId>()
             .map_err(|_| AppError::Invalid("معرف التسوية غير صالح".into()))?;
         let adjustment = self.repo.find_by_id(&adj_id).await?;
         match adjustment {
             Some(adj) => {
-                let material_name = self.material_repo.find_by_id(&adj.material_id).await
+                let material_name = self
+                    .material_repo
+                    .find_by_id(&adj.material_id)
+                    .await
                     .ok()
                     .flatten()
                     .map(|m| m.name)
@@ -64,7 +83,10 @@ impl StockAdjustmentQueries {
         let adjustments = self.repo.list_all().await?;
         let mut dtos = Vec::new();
         for adj in adjustments {
-            let material_name = self.material_repo.find_by_id(&adj.material_id).await
+            let material_name = self
+                .material_repo
+                .find_by_id(&adj.material_id)
+                .await
                 .ok()
                 .flatten()
                 .map(|m| m.name)

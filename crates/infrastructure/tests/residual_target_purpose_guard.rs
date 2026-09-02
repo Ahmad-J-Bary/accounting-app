@@ -15,7 +15,8 @@ use application::ports::journal_entry_repository::JournalEntryRepository;
 use application::ports::opening_migration_repository::OpeningMigrationRepository;
 use application::ports::opening_posting_repository::OpeningPostingRepository;
 use application::use_cases::opening_balance::{
-    ApplyResidualToLedgerUseCase, SetResidualClassificationCommand, SetResidualClassificationUseCase,
+    ApplyResidualToLedgerUseCase, SetResidualClassificationCommand,
+    SetResidualClassificationUseCase,
 };
 use domain::accounting::journal_entry::{JournalEntry, JournalLine, JournalType};
 use domain::accounting::opening_balance::{OpeningBalanceLine, OpeningBalanceMigration};
@@ -39,7 +40,10 @@ fn test_currency() -> Currency {
 
 async fn build_pool() -> Arc<sqlx::SqlitePool> {
     let mut path = std::env::temp_dir();
-    path.push(format!("acc_obresidual_purpose_test_{}.sqlite", uuid::Uuid::new_v4()));
+    path.push(format!(
+        "acc_obresidual_purpose_test_{}.sqlite",
+        uuid::Uuid::new_v4()
+    ));
     let options = SqliteConnectOptions::from_str(path.to_str().unwrap())
         .unwrap()
         .create_if_missing(true);
@@ -121,13 +125,24 @@ async fn classify_rejects_non_equity_target() {
     let account_repo: Arc<dyn AccountRepository> =
         Arc::new(SqliteAccountRepository::new(pool.clone()));
 
-    let asset = seed_account(pool.as_ref(), "1209", "أصل غير قابلة للتصنيف", "Assets", "12", "receivable")
-        .await;
+    let asset = seed_account(
+        pool.as_ref(),
+        "1209",
+        "أصل غير قابلة للتصنيف",
+        "Assets",
+        "12",
+        "receivable",
+    )
+    .await;
     let migration = OpeningBalanceMigration::new(
         uuid::Uuid::new_v4().to_string(),
         chrono::Utc::now(),
         None,
-        vec![OpeningBalanceLine { account_id: asset, amount: dec!(100), description: None }],
+        vec![OpeningBalanceLine {
+            account_id: asset,
+            amount: dec!(100),
+            description: None,
+        }],
     )
     .unwrap();
     migration_repo.create(&migration).await.unwrap();
@@ -154,13 +169,24 @@ async fn classify_rejects_partner_capital_target() {
     let account_repo: Arc<dyn AccountRepository> =
         Arc::new(SqliteAccountRepository::new(pool.clone()));
 
-    let capital = seed_account(pool.as_ref(), "519999", "رأس مال مسجل", "Equity", "51", "partner_capital")
-        .await;
+    let capital = seed_account(
+        pool.as_ref(),
+        "519999",
+        "رأس مال مسجل",
+        "Equity",
+        "51",
+        "partner_capital",
+    )
+    .await;
     let migration = OpeningBalanceMigration::new(
         uuid::Uuid::new_v4().to_string(),
         chrono::Utc::now(),
         None,
-        vec![OpeningBalanceLine { account_id: capital, amount: dec!(100), description: None }],
+        vec![OpeningBalanceLine {
+            account_id: capital,
+            amount: dec!(100),
+            description: None,
+        }],
     )
     .unwrap();
     migration_repo.create(&migration).await.unwrap();
@@ -173,7 +199,10 @@ async fn classify_rejects_partner_capital_target() {
         })
         .await
         .expect_err("profit/residual must never silently change registered capital");
-    assert!(err.to_string().contains("حقوق الملكية"), "unexpected error: {err}");
+    assert!(
+        err.to_string().contains("حقوق الملكية"),
+        "unexpected error: {err}"
+    );
 }
 
 #[tokio::test]
@@ -189,7 +218,11 @@ async fn classify_accepts_retained_earnings_target() {
         uuid::Uuid::new_v4().to_string(),
         chrono::Utc::now(),
         None,
-        vec![OpeningBalanceLine { account_id: retained, amount: dec!(100), description: None }],
+        vec![OpeningBalanceLine {
+            account_id: retained,
+            amount: dec!(100),
+            description: None,
+        }],
     )
     .unwrap();
     migration_repo.create(&migration).await.unwrap();
@@ -219,10 +252,33 @@ async fn apply_rejects_pre_guard_misclassified_target() {
     let posting_repo: Arc<dyn OpeningPostingRepository> =
         Arc::new(SqliteOpeningPostingRepository::new(pool.clone()));
 
-    let asset = seed_account(pool.as_ref(), "1210", "أصل خاطئ", "Assets", "12", "receivable").await;
-    let liability = seed_account(pool.as_ref(), "2210", "التزام", "Liabilities", "22", "payable").await;
-    let capital = seed_account(pool.as_ref(), "519998", "رأس مال", "Equity", "51", "partner_capital")
-        .await;
+    let asset = seed_account(
+        pool.as_ref(),
+        "1210",
+        "أصل خاطئ",
+        "Assets",
+        "12",
+        "receivable",
+    )
+    .await;
+    let liability = seed_account(
+        pool.as_ref(),
+        "2210",
+        "التزام",
+        "Liabilities",
+        "22",
+        "payable",
+    )
+    .await;
+    let capital = seed_account(
+        pool.as_ref(),
+        "519998",
+        "رأس مال",
+        "Equity",
+        "51",
+        "partner_capital",
+    )
+    .await;
     let obe = account_id_by_code(pool.as_ref(), "53").await;
 
     let migration_id = uuid::Uuid::new_v4().to_string();
@@ -231,10 +287,26 @@ async fn apply_rejects_pre_guard_misclassified_target() {
         chrono::Utc::now(),
         None,
         vec![
-            OpeningBalanceLine { account_id: asset, amount: dec!(150), description: None },
-            OpeningBalanceLine { account_id: liability, amount: dec!(50), description: None },
-            OpeningBalanceLine { account_id: capital, amount: dec!(55), description: None },
-            OpeningBalanceLine { account_id: obe, amount: dec!(45), description: None },
+            OpeningBalanceLine {
+                account_id: asset,
+                amount: dec!(150),
+                description: None,
+            },
+            OpeningBalanceLine {
+                account_id: liability,
+                amount: dec!(50),
+                description: None,
+            },
+            OpeningBalanceLine {
+                account_id: capital,
+                amount: dec!(55),
+                description: None,
+            },
+            OpeningBalanceLine {
+                account_id: obe,
+                amount: dec!(45),
+                description: None,
+            },
         ],
     )
     .unwrap();
@@ -263,7 +335,11 @@ async fn apply_rejects_pre_guard_misclassified_target() {
     posting_repo.post(&migration, &entry).await.unwrap();
 
     // Simulate a pre-guard record: residual classified into an ASSET account.
-    let mut stored = migration_repo.find_by_id(&migration_id).await.unwrap().unwrap();
+    let mut stored = migration_repo
+        .find_by_id(&migration_id)
+        .await
+        .unwrap()
+        .unwrap();
     stored.set_residual_classification(Some(ResidualClassification::RetainedEarnings), Some(asset));
     migration_repo.update(&stored).await.unwrap();
 
@@ -276,10 +352,17 @@ async fn apply_rejects_pre_guard_misclassified_target() {
     .execute(migration_id.clone())
     .await
     .expect_err("apply must refuse a misclassified residual target");
-    assert!(err.to_string().contains("حقوق الملكية"), "unexpected error: {err}");
+    assert!(
+        err.to_string().contains("حقوق الملكية"),
+        "unexpected error: {err}"
+    );
 
     // The migration stays Posted and un-applied.
-    let after = migration_repo.find_by_id(&migration_id).await.unwrap().unwrap();
+    let after = migration_repo
+        .find_by_id(&migration_id)
+        .await
+        .unwrap()
+        .unwrap();
     assert_eq!(after.status, MigrationStatus::Posted);
     assert!(after.residual_applied_at.is_none());
 }

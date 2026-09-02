@@ -11,7 +11,10 @@ use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 
 async fn build_pool() -> Arc<sqlx::SqlitePool> {
     let mut path = std::env::temp_dir();
-    path.push(format!("acc_fiscal_period_test_{}.sqlite", uuid::Uuid::new_v4()));
+    path.push(format!(
+        "acc_fiscal_period_test_{}.sqlite",
+        uuid::Uuid::new_v4()
+    ));
     let options = SqliteConnectOptions::from_str(path.to_str().unwrap())
         .unwrap()
         .create_if_missing(true);
@@ -117,9 +120,15 @@ async fn reopen_after_close_persists() {
 async fn unknown_id_returns_none() {
     let pool = build_pool().await;
     let repo = SqliteFiscalPeriodRepository::new(pool);
-    assert!(repo.find_by_id(&FiscalPeriodId::new()).await.unwrap().is_none());
+    assert!(repo
+        .find_by_id(&FiscalPeriodId::new())
+        .await
+        .unwrap()
+        .is_none());
 }
 
 fn utils_utc(rfc3339: &str) -> DateTime<Utc> {
-    DateTime::parse_from_rfc3339(rfc3339).unwrap().with_timezone(&Utc)
+    DateTime::parse_from_rfc3339(rfc3339)
+        .unwrap()
+        .with_timezone(&Utc)
 }

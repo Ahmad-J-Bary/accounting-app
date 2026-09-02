@@ -88,7 +88,9 @@ impl Role {
         permissions: Vec<Permission>,
     ) -> Result<Self, DomainError> {
         if name.trim().is_empty() {
-            return Err(DomainError::Invalid("اسم الدور لا يمكن أن يكون فارغًا".into()));
+            return Err(DomainError::Invalid(
+                "اسم الدور لا يمكن أن يكون فارغًا".into(),
+            ));
         }
         let now = Utc::now();
         Ok(Self {
@@ -116,8 +118,7 @@ impl Role {
     }
 
     pub fn has_permission(&self, permission: &Permission) -> bool {
-        self.permissions.contains(&Permission::Admin)
-            || self.permissions.contains(permission)
+        self.permissions.contains(&Permission::Admin) || self.permissions.contains(permission)
     }
 
     pub fn add_permission(&mut self, permission: Permission) {

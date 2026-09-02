@@ -12,13 +12,13 @@ use std::sync::Arc;
 use application::errors::AppError;
 use application::ports::journal_entry_repository::JournalEntryRepository;
 use application::ports::settings_repository::SettingsRepository;
+use application::use_cases::opening_balance::create::START_MODE_EXISTING;
 use chrono::Utc;
 use domain::accounting::journal_entry::{JournalEntry, JournalLine, JournalType};
 use domain::shared::currency::Currency;
 use domain::shared::monetary_amount::MonetaryAmount;
 use domain::shared::money::Money;
 use domain::shared::AccountId;
-use application::use_cases::opening_balance::create::START_MODE_EXISTING;
 use infrastructure::db::pool::run_migrations;
 use infrastructure::repositories::{SqliteJournalEntryRepository, SqliteSettingsRepository};
 use rust_decimal::Decimal;
@@ -72,11 +72,10 @@ async fn set_start_mode(pool: &Arc<sqlx::SqlitePool>, mode: &str) {
 
 /// Two real account ids from the seeded chart of accounts (FK-safe for journal_lines).
 async fn real_accounts(pool: &sqlx::SqlitePool) -> (AccountId, AccountId) {
-    let ids: Vec<String> =
-        sqlx::query_scalar("SELECT id FROM accounts ORDER BY code LIMIT 2")
-            .fetch_all(pool)
-            .await
-            .unwrap();
+    let ids: Vec<String> = sqlx::query_scalar("SELECT id FROM accounts ORDER BY code LIMIT 2")
+        .fetch_all(pool)
+        .await
+        .unwrap();
     assert!(ids.len() >= 2, "chart of accounts must be seeded");
     (
         AccountId(uuid::Uuid::parse_str(&ids[0]).unwrap()),
@@ -124,7 +123,9 @@ async fn post_normal_journal(
     )
     .unwrap();
     entry.post().unwrap();
-    SqliteJournalEntryRepository::new(pool.clone()).save(&entry).await
+    SqliteJournalEntryRepository::new(pool.clone())
+        .save(&entry)
+        .await
 }
 
 // ---------------------------------------------------------------------------
@@ -139,7 +140,10 @@ async fn gate_rejects_normal_journal_while_draft_migration_pending() {
     let err = post_normal_journal(&pool, "9001", None, JournalType::GeneralJournal)
         .await
         .expect_err("normal journal must be blocked while a Draft migration exists");
-    assert!(matches!(err, AppError::Forbidden(_)), "expected Forbidden, got {err:?}");
+    assert!(
+        matches!(err, AppError::Forbidden(_)),
+        "expected Forbidden, got {err:?}"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -154,7 +158,10 @@ async fn gate_rejects_normal_journal_while_posted_migration_pending() {
     let err = post_normal_journal(&pool, "9002", None, JournalType::GeneralJournal)
         .await
         .expect_err("normal journal must be blocked until the migration is Locked");
-    assert!(matches!(err, AppError::Forbidden(_)), "expected Forbidden, got {err:?}");
+    assert!(
+        matches!(err, AppError::Forbidden(_)),
+        "expected Forbidden, got {err:?}"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -212,7 +219,12 @@ async fn gate_allows_normal_journal_once_migration_locked() {
 async fn gate_allows_when_only_cancelled_migration() {
     let pool = build_pool().await;
     set_start_mode(&pool, START_MODE_EXISTING).await;
-    insert_migration(pool.as_ref(), &uuid::Uuid::new_v4().to_string(), "Cancelled").await;
+    insert_migration(
+        pool.as_ref(),
+        &uuid::Uuid::new_v4().to_string(),
+        "Cancelled",
+    )
+    .await;
 
     post_normal_journal(&pool, "9006", None, JournalType::GeneralJournal)
         .await

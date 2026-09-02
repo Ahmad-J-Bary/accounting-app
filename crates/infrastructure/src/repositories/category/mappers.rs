@@ -1,15 +1,14 @@
+use super::models::CategoryRow;
 use application::errors::AppError;
+use chrono::{DateTime, Utc};
 use domain::inventory::category::MaterialCategory;
 use domain::shared::ids::MaterialCategoryId;
 use uuid::Uuid;
-use chrono::{DateTime, Utc};
-use super::models::CategoryRow;
 
 pub fn row_to_category(row: CategoryRow) -> Result<MaterialCategory, AppError> {
     Ok(MaterialCategory {
         id: MaterialCategoryId(
-            Uuid::parse_str(&row.id)
-                .map_err(|e| AppError::Infrastructure(e.to_string()))?,
+            Uuid::parse_str(&row.id).map_err(|e| AppError::Infrastructure(e.to_string()))?,
         ),
         name: row.name,
         parent_id: row

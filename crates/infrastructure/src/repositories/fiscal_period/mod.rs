@@ -1,18 +1,42 @@
-use async_trait::async_trait;
-use sqlx::SqlitePool;
 use application::errors::AppError;
 use application::ports::fiscal_period_repository::FiscalPeriodRepository;
+use async_trait::async_trait;
+use chrono::{DateTime, Utc};
 use domain::accounting::fiscal_period::{FiscalPeriod, FiscalPeriodStatus};
 use domain::shared::ids::FiscalPeriodId;
-use chrono::{DateTime, Utc};
+use sqlx::SqlitePool;
 use std::sync::Arc;
 
 const PERIOD_COLUMNS: &str = "id, company_id, start_date, end_date, status, closed_at, closed_by, locked_at, locked_by, created_at, updated_at";
 
-type PeriodRow = (String, Option<String>, String, String, String, Option<String>, Option<String>, Option<String>, Option<String>, String, String);
+type PeriodRow = (
+    String,
+    Option<String>,
+    String,
+    String,
+    String,
+    Option<String>,
+    Option<String>,
+    Option<String>,
+    Option<String>,
+    String,
+    String,
+);
 
 fn row_to_period(row: PeriodRow) -> Result<FiscalPeriod, AppError> {
-    let (id, company_id, start_date, end_date, status, closed_at, closed_by, locked_at, locked_by, created_at, updated_at) = row;
+    let (
+        id,
+        company_id,
+        start_date,
+        end_date,
+        status,
+        closed_at,
+        closed_by,
+        locked_at,
+        locked_by,
+        created_at,
+        updated_at,
+    ) = row;
     let parse = |s: &str| -> Result<DateTime<Utc>, AppError> {
         DateTime::parse_from_rfc3339(s)
             .map(|d| d.with_timezone(&Utc))
@@ -71,8 +95,23 @@ impl FiscalPeriodRepository for SqliteFiscalPeriodRepository {
     }
 
     async fn find_by_id(&self, id: &FiscalPeriodId) -> Result<Option<FiscalPeriod>, AppError> {
-        let row = sqlx::query_as::<_, (String, Option<String>, String, String, String, Option<String>, Option<String>, Option<String>, Option<String>, String, String)>(
-            format!("SELECT {PERIOD_COLUMNS} FROM fiscal_periods WHERE id = ?").as_str(),
+        let row = sqlx::query_as::<
+            _,
+            (
+                String,
+                Option<String>,
+                String,
+                String,
+                String,
+                Option<String>,
+                Option<String>,
+                Option<String>,
+                Option<String>,
+                String,
+                String,
+            ),
+        >(
+            format!("SELECT {PERIOD_COLUMNS} FROM fiscal_periods WHERE id = ?").as_str()
         )
         .bind(id.to_string())
         .fetch_optional(&*self.pool)
@@ -83,7 +122,22 @@ impl FiscalPeriodRepository for SqliteFiscalPeriodRepository {
     }
 
     async fn list(&self) -> Result<Vec<FiscalPeriod>, AppError> {
-        let rows = sqlx::query_as::<_, (String, Option<String>, String, String, String, Option<String>, Option<String>, Option<String>, Option<String>, String, String)>(
+        let rows = sqlx::query_as::<
+            _,
+            (
+                String,
+                Option<String>,
+                String,
+                String,
+                String,
+                Option<String>,
+                Option<String>,
+                Option<String>,
+                Option<String>,
+                String,
+                String,
+            ),
+        >(
             format!("SELECT {PERIOD_COLUMNS} FROM fiscal_periods ORDER BY start_date").as_str(),
         )
         .fetch_all(&*self.pool)

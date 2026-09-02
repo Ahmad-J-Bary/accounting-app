@@ -37,7 +37,11 @@ impl SaveOpeningDraftUseCase {
         settings_repo: Arc<dyn SettingsRepository>,
         migration_repo: Arc<dyn OpeningMigrationRepository>,
     ) -> Self {
-        Self { repo, settings_repo, migration_repo }
+        Self {
+            repo,
+            settings_repo,
+            migration_repo,
+        }
     }
 
     pub async fn execute(&self, data: &str) -> Result<(), AppError> {

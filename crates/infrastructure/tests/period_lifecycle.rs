@@ -26,8 +26,8 @@ use application::use_cases::fiscal_period::{
 use chrono::{DateTime, Utc};
 use domain::accounting::journal_entry::{JournalEntry, JournalLine, JournalType};
 use domain::shared::currency::Currency;
-use domain::shared::money::Money;
 use domain::shared::monetary_amount::MonetaryAmount;
+use domain::shared::money::Money;
 use domain::shared::AccountId;
 use infrastructure::db::pool::run_migrations;
 use infrastructure::repositories::{SqliteFiscalPeriodRepository, SqliteJournalEntryRepository};
@@ -36,7 +36,10 @@ use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 
 async fn build_pool() -> Arc<sqlx::SqlitePool> {
     let mut path = std::env::temp_dir();
-    path.push(format!("acc_period_lifecycle_{}.sqlite", uuid::Uuid::new_v4()));
+    path.push(format!(
+        "acc_period_lifecycle_{}.sqlite",
+        uuid::Uuid::new_v4()
+    ));
     let options = SqliteConnectOptions::from_str(path.to_str().unwrap())
         .unwrap()
         .create_if_missing(true);
@@ -55,7 +58,9 @@ fn test_currency() -> Currency {
 }
 
 fn utc(rfc3339: &str) -> DateTime<Utc> {
-    DateTime::parse_from_rfc3339(rfc3339).unwrap().with_timezone(&Utc)
+    DateTime::parse_from_rfc3339(rfc3339)
+        .unwrap()
+        .with_timezone(&Utc)
 }
 
 async fn real_accounts(pool: &sqlx::SqlitePool) -> (AccountId, AccountId) {
@@ -127,7 +132,11 @@ async fn period_close_reopen_lock_lifecycle_via_use_cases() {
     assert_eq!(created.status, "Open", "a new period is born Open");
 
     // Open period accepts posting inside its window.
-    assert!(post_dated_in_2026(&journal_repo, &pool, JournalType::CashReceipt).await.is_ok());
+    assert!(
+        post_dated_in_2026(&journal_repo, &pool, JournalType::CashReceipt)
+            .await
+            .is_ok()
+    );
 
     // Close it via the use case (finalize immediately to Closed).
     let closed = CloseFiscalPeriodUseCase::new(period_repo.clone())
@@ -143,31 +152,51 @@ async fn period_close_reopen_lock_lifecycle_via_use_cases() {
 
     // A posting dated inside the closed window is rejected.
     let err = post_dated_in_2026(&journal_repo, &pool, JournalType::CashReceipt).await;
-    assert!(matches!(err, Err(AppError::Forbidden(_))), "closed period must reject posting: {err:?}");
+    assert!(
+        matches!(err, Err(AppError::Forbidden(_))),
+        "closed period must reject posting: {err:?}"
+    );
 
     // Reopen via the use case: status Reopened, posting accepted again.
     let reopened = ReopenFiscalPeriodUseCase::new(period_repo.clone())
-        .execute(ReopenFiscalPeriodCommand { period_id: created.id.clone() })
+        .execute(ReopenFiscalPeriodCommand {
+            period_id: created.id.clone(),
+        })
         .await
         .expect("reopen period");
     assert_eq!(reopened.status, "Reopened");
-    assert!(post_dated_in_2026(&journal_repo, &pool, JournalType::CashReceipt).await.is_ok());
+    assert!(
+        post_dated_in_2026(&journal_repo, &pool, JournalType::CashReceipt)
+            .await
+            .is_ok()
+    );
 
     // Lock via the use case: status Locked, posting rejected.
     let locked = LockFiscalPeriodUseCase::new(period_repo.clone())
-        .execute(LockFiscalPeriodCommand { period_id: created.id.clone(), locked_by: "admin".into() })
+        .execute(LockFiscalPeriodCommand {
+            period_id: created.id.clone(),
+            locked_by: "admin".into(),
+        })
         .await
         .expect("lock period");
     assert_eq!(locked.status, "Locked");
     assert_eq!(locked.locked_by.as_deref(), Some("admin"));
 
     let err = post_dated_in_2026(&journal_repo, &pool, JournalType::CashReceipt).await;
-    assert!(matches!(err, Err(AppError::Forbidden(_))), "locked period must reject posting: {err:?}");
+    assert!(
+        matches!(err, Err(AppError::Forbidden(_))),
+        "locked period must reject posting: {err:?}"
+    );
 
     // A Locked period cannot be reopened.
     let reopen_err = ReopenFiscalPeriodUseCase::new(period_repo.clone())
-        .execute(ReopenFiscalPeriodCommand { period_id: created.id })
+        .execute(ReopenFiscalPeriodCommand {
+            period_id: created.id,
+        })
         .await
         .unwrap_err();
-    assert!(matches!(reopen_err, AppError::Domain(_)), "locked period must reject reopen: {reopen_err:?}");
+    assert!(
+        matches!(reopen_err, AppError::Domain(_)),
+        "locked period must reject reopen: {reopen_err:?}"
+    );
 }

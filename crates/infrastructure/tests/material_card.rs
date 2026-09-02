@@ -17,15 +17,11 @@
 use std::str::FromStr;
 use std::sync::Arc;
 
-use application::dto::material_dto::{
-    CreateMaterialRequest, CreateMaterialUnitRequest,
-};
+use application::dto::material_dto::{CreateMaterialRequest, CreateMaterialUnitRequest};
 use application::ports::material_repository::MaterialRepository;
 use application::use_cases::material::CreateMaterialUseCase;
 use infrastructure::db::pool::run_migrations;
-use infrastructure::repositories::{
-    SqliteCategoryRepository, SqliteMaterialRepository,
-};
+use infrastructure::repositories::{SqliteCategoryRepository, SqliteMaterialRepository};
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 
 async fn build_pool() -> Arc<sqlx::SqlitePool> {
@@ -92,19 +88,29 @@ async fn create_material_with_named_default_units_persists() {
     assert!(!dto.id.is_empty());
 
     // The default ids must be resolved to genuine unit ids (name -> fresh UUID).
-    let purchase_default = dto.default_purchase_unit_id.clone().expect("purchase default");
+    let purchase_default = dto
+        .default_purchase_unit_id
+        .clone()
+        .expect("purchase default");
     let sale_default = dto.default_sale_unit_id.clone().expect("sale default");
-    assert!(dto.units.iter().any(|u| u.id == purchase_default), "purchase default must be a real unit");
-    assert!(dto.units.iter().any(|u| u.id == sale_default), "sale default must be a real unit");
+    assert!(
+        dto.units.iter().any(|u| u.id == purchase_default),
+        "purchase default must be a real unit"
+    );
+    assert!(
+        dto.units.iter().any(|u| u.id == sale_default),
+        "sale default must be a real unit"
+    );
     assert_eq!(purchase_default, sale_default);
 
     // The materials row must reference material_units rows that exist (code 787
     // regression: previously the INSERT bound fresh UUIDs before units existed).
-    let unit_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM material_units WHERE material_id = ?")
-        .bind(&dto.id)
-        .fetch_one(&*pool)
-        .await
-        .unwrap();
+    let unit_count: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM material_units WHERE material_id = ?")
+            .bind(&dto.id)
+            .fetch_one(&*pool)
+            .await
+            .unwrap();
     assert_eq!(unit_count, 2);
 
     let default_unit_id: String =
@@ -113,13 +119,15 @@ async fn create_material_with_named_default_units_persists() {
             .fetch_one(&*pool)
             .await
             .unwrap();
-    let referenced: i64 =
-        sqlx::query_scalar("SELECT COUNT(*) FROM material_units WHERE id = ?")
-            .bind(&default_unit_id)
-            .fetch_one(&*pool)
-            .await
-            .unwrap();
-    assert_eq!(referenced, 1, "default unit FK must point at an existing unit");
+    let referenced: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM material_units WHERE id = ?")
+        .bind(&default_unit_id)
+        .fetch_one(&*pool)
+        .await
+        .unwrap();
+    assert_eq!(
+        referenced, 1,
+        "default unit FK must point at an existing unit"
+    );
 }
 
 #[tokio::test]
@@ -187,13 +195,15 @@ async fn updating_replace_units_keeps_default_unit_valid() {
             .fetch_one(&*pool)
             .await
             .unwrap();
-    let referenced: i64 =
-        sqlx::query_scalar("SELECT COUNT(*) FROM material_units WHERE id = ?")
-            .bind(&default_unit_id)
-            .fetch_one(&*pool)
-            .await
-            .unwrap();
-    assert_eq!(referenced, 1, "default unit must stay valid after unit replacement");
+    let referenced: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM material_units WHERE id = ?")
+        .bind(&default_unit_id)
+        .fetch_one(&*pool)
+        .await
+        .unwrap();
+    assert_eq!(
+        referenced, 1,
+        "default unit must stay valid after unit replacement"
+    );
 }
 
 fn material_id(id: &str) -> domain::shared::ids::MaterialId {

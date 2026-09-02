@@ -1,4 +1,6 @@
-use domain::sales::{Invoice, UnifiedInvoice, InvoiceLine, InvoiceType, InvoiceStatus, PaymentMethod};
+use domain::sales::{
+    Invoice, InvoiceLine, InvoiceStatus, InvoiceType, PaymentMethod, UnifiedInvoice,
+};
 use domain::shared::monetary_amount::MonetaryAmount;
 use serde::{Deserialize, Serialize};
 
@@ -134,7 +136,11 @@ impl From<Invoice> for InvoiceDto {
             customer_name: None,
             supplier_id: None,
             supplier_name: None,
-            lines: invoice.lines.into_iter().map(InvoiceLineDto::from).collect(),
+            lines: invoice
+                .lines
+                .into_iter()
+                .map(InvoiceLineDto::from)
+                .collect(),
             tax_amount: invoice.tax_amount.amount().to_string(),
             tax_amount_v2: None,
             discount_amount: invoice.discount_amount.amount().to_string(),
@@ -183,7 +189,11 @@ impl From<UnifiedInvoice> for InvoiceDto {
 
         let amount_paid = invoice.amount_paid.clone();
         let code = &invoice.currency_code;
-        let remaining = (total.clone() - amount_paid.clone()).unwrap_or_else(|_| MonetaryAmount::zero(domain::shared::currency::Currency::new(code, code, code, "", 2, false)));
+        let remaining = (total.clone() - amount_paid.clone()).unwrap_or_else(|_| {
+            MonetaryAmount::zero(domain::shared::currency::Currency::new(
+                code, code, code, "", 2, false,
+            ))
+        });
 
         Self {
             id: invoice.id.0.to_string(),
@@ -193,7 +203,11 @@ impl From<UnifiedInvoice> for InvoiceDto {
             customer_name: invoice.customer_name,
             supplier_id: invoice.supplier_id.map(|id| id.0.to_string()),
             supplier_name: invoice.supplier_name,
-            lines: invoice.lines.into_iter().map(InvoiceLineDto::from).collect(),
+            lines: invoice
+                .lines
+                .into_iter()
+                .map(InvoiceLineDto::from)
+                .collect(),
             tax_amount: invoice.tax_amount.amount().to_string(),
             tax_amount_v2: Some(MonetaryAmountDto::from(invoice.tax_amount)),
             discount_amount: invoice.discount_amount.amount().to_string(),
@@ -204,7 +218,8 @@ impl From<UnifiedInvoice> for InvoiceDto {
                 PaymentMethod::Cash => "Cash",
                 PaymentMethod::Deferred => "Deferred",
                 PaymentMethod::Partial => "Partial",
-            }.to_string(),
+            }
+            .to_string(),
             amount_paid: invoice.amount_paid.amount().to_string(),
             amount_paid_v2: Some(MonetaryAmountDto::from(invoice.amount_paid)),
             status: status.to_string(),
@@ -244,7 +259,10 @@ impl From<InvoiceLine> for InvoiceLineDto {
             retail_price_v2: line.retail_price.map(MonetaryAmountDto::from),
             wholesale_price: line.wholesale_price.clone().map(|m| m.amount().to_string()),
             wholesale_price_v2: line.wholesale_price.map(MonetaryAmountDto::from),
-            semi_wholesale_price: line.semi_wholesale_price.clone().map(|m| m.amount().to_string()),
+            semi_wholesale_price: line
+                .semi_wholesale_price
+                .clone()
+                .map(|m| m.amount().to_string()),
             semi_wholesale_price_v2: line.semi_wholesale_price.map(MonetaryAmountDto::from),
             minimum_stock: line.minimum_stock.map(|s| s.to_string()),
             warehouse_id: line.warehouse_id,

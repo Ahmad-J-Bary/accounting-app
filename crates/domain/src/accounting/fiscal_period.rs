@@ -101,7 +101,10 @@ impl FiscalPeriod {
     /// Moves the period to `Closed`, recording who/how. The period must not
     /// already be closed or cancelled; a `Closing` period may be finalized.
     pub fn close(&mut self, by: &str, status: FiscalPeriodStatus) -> Result<(), DomainError> {
-        if !matches!(self.status, FiscalPeriodStatus::Open | FiscalPeriodStatus::Closing | FiscalPeriodStatus::Reopened) {
+        if !matches!(
+            self.status,
+            FiscalPeriodStatus::Open | FiscalPeriodStatus::Closing | FiscalPeriodStatus::Reopened
+        ) {
             return Err(DomainError::Invalid(
                 "لا يمكن إغلاق فترة سبق إغلاقها أو إلغاؤها".into(),
             ));

@@ -1,15 +1,15 @@
-use async_trait::async_trait;
-use sqlx::SqlitePool;
 use application::errors::AppError;
 use application::ports::account_repository::AccountRepository;
-use domain::accounting::account::{Account};
-use domain::shared::ids::{AccountId};
+use async_trait::async_trait;
+use domain::accounting::account::Account;
+use domain::shared::ids::AccountId;
+use sqlx::SqlitePool;
 use std::sync::Arc;
 
-mod models;
-mod mappers;
-mod queries;
 mod commands;
+mod mappers;
+mod models;
+mod queries;
 
 /// Serializes an account purpose for database storage (shared by the partner
 /// repository's atomic account inserts).
@@ -17,7 +17,7 @@ pub fn purpose_to_str(purpose: domain::accounting::account::AccountPurpose) -> &
     commands::purpose_to_str(purpose)
 }
 
-pub(crate) use commands::{insert_tx, upsert_tx, delete_tx};
+pub(crate) use commands::{delete_tx, insert_tx, upsert_tx};
 
 pub struct SqliteAccountRepository {
     pool: Arc<SqlitePool>,

@@ -1,15 +1,15 @@
-use async_trait::async_trait;
-use sqlx::SqlitePool;
 use application::errors::AppError;
 use application::ports::production_repository::ProductionRepository;
+use async_trait::async_trait;
 use domain::inventory::ProductionOrder;
 use domain::shared::ids::ProductionOrderId;
+use sqlx::SqlitePool;
 use std::sync::Arc;
 
-mod models;
-mod mappers;
-mod queries;
 mod commands;
+mod mappers;
+mod models;
+mod queries;
 
 pub struct SqliteProductionRepository {
     pool: Arc<SqlitePool>,
@@ -27,7 +27,10 @@ impl ProductionRepository for SqliteProductionRepository {
         commands::save(&self.pool, order).await
     }
 
-    async fn find_by_id(&self, id: &ProductionOrderId) -> Result<Option<ProductionOrder>, AppError> {
+    async fn find_by_id(
+        &self,
+        id: &ProductionOrderId,
+    ) -> Result<Option<ProductionOrder>, AppError> {
         queries::find_by_id(&self.pool, id).await
     }
 

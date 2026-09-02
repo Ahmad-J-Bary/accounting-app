@@ -1,13 +1,14 @@
 use crate::bootstrap::container::AppState;
 use application::use_cases::equity::GetPartnerEquityStatementUseCase;
 use application::use_cases::partner::{
-    CreatePartnerUseCase, CreateCapitalContributionUseCase, CreatePartnerDrawingUseCase,
-    CapitalizeRetainedEarningsUseCase, PartnerQueries, UpdatePartnerUseCase, UpdatePartnerRequest, DeletePartnerUseCase, PartnerDto
+    CapitalizeRetainedEarningsUseCase, CreateCapitalContributionUseCase,
+    CreatePartnerDrawingUseCase, CreatePartnerUseCase, DeletePartnerUseCase, PartnerDto,
+    PartnerQueries, UpdatePartnerRequest, UpdatePartnerUseCase,
 };
 use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
-use tauri::State;
 use std::str::FromStr;
+use tauri::State;
 
 #[tauri::command]
 #[allow(clippy::too_many_arguments)]
@@ -35,7 +36,8 @@ pub async fn add_partner(
         state.partner_repo.clone(),
         state.account_repo.clone(),
         state.currency_repo.clone(),
-    ).execute(
+    )
+    .execute(
         name,
         currency,
         rate,
@@ -45,7 +47,9 @@ pub async fn add_partner(
         ratio,
         settings.accounting_start_mode,
         notes,
-    ).await.map_err(|e| e.to_string())
+    )
+    .await
+    .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -63,9 +67,16 @@ pub async fn create_capital_contribution(
         state.account_repo.clone(),
         state.journal_entry_repo.clone(),
         state.opening_migration_repo.clone(),
-    ).execute(partner_id, funding_account_id, amt, is_amount_in_original, event_id)
-        .await
-        .map_err(|e| e.to_string())
+    )
+    .execute(
+        partner_id,
+        funding_account_id,
+        amt,
+        is_amount_in_original,
+        event_id,
+    )
+    .await
+    .map_err(|e| e.to_string())
 }
 
 /// Explicit partner-drawing event: Dr partner drawings account / Cr cash-bank
@@ -86,7 +97,14 @@ pub async fn create_partner_drawing(
         state.account_repo.clone(),
         state.journal_entry_repo.clone(),
     )
-    .execute(partner_id, funding_account_id, amt, effective_date, description, event_id)
+    .execute(
+        partner_id,
+        funding_account_id,
+        amt,
+        effective_date,
+        description,
+        event_id,
+    )
     .await
     .map_err(|e| e.to_string())
 }
@@ -113,9 +131,7 @@ pub async fn capitalize_retained_earnings(
 }
 
 #[tauri::command]
-pub async fn list_partners(
-    state: State<'_, AppState>
-) -> Result<Vec<PartnerDto>, String> {
+pub async fn list_partners(state: State<'_, AppState>) -> Result<Vec<PartnerDto>, String> {
     PartnerQueries::new(state.partner_repo.clone())
         .list_partners()
         .await
@@ -128,8 +144,12 @@ pub async fn get_partner_equity_statement(
     from_date: Option<String>,
     to_date: Option<String>,
 ) -> Result<application::use_cases::equity::PartnerEquityStatementDto, String> {
-    let from = from_date.and_then(|s| DateTime::parse_from_rfc3339(&s).ok()).map(|dt| dt.with_timezone(&Utc));
-    let to = to_date.and_then(|s| DateTime::parse_from_rfc3339(&s).ok()).map(|dt| dt.with_timezone(&Utc));
+    let from = from_date
+        .and_then(|s| DateTime::parse_from_rfc3339(&s).ok())
+        .map(|dt| dt.with_timezone(&Utc));
+    let to = to_date
+        .and_then(|s| DateTime::parse_from_rfc3339(&s).ok())
+        .map(|dt| dt.with_timezone(&Utc));
     GetPartnerEquityStatementUseCase::new(
         state.partner_repo.clone(),
         state.journal_entry_repo.clone(),
@@ -140,13 +160,11 @@ pub async fn get_partner_equity_statement(
 }
 
 #[tauri::command]
-pub async fn delete_partner(
-    state: State<'_, AppState>,
-    id: String
-) -> Result<(), String> {
-    DeletePartnerUseCase::new(
-        state.partner_repo.clone(),
-    ).execute(id).await.map_err(|e| e.to_string())
+pub async fn delete_partner(state: State<'_, AppState>, id: String) -> Result<(), String> {
+    DeletePartnerUseCase::new(state.partner_repo.clone())
+        .execute(id)
+        .await
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -176,15 +194,21 @@ pub async fn update_partner(
         state.partner_repo.clone(),
         state.account_repo.clone(),
         state.currency_repo.clone(),
-    ).execute(UpdatePartnerRequest {
-        id,
-        name,
-        currency_code: currency,
-        exchange_rate: rate,
-        amount: amt,
-        is_amount_in_original,
-        sharing_type,
-        manual_ratio: ratio,
-        notes,
-    }, settings.accounting_start_mode).await.map_err(|e| e.to_string())
+    )
+    .execute(
+        UpdatePartnerRequest {
+            id,
+            name,
+            currency_code: currency,
+            exchange_rate: rate,
+            amount: amt,
+            is_amount_in_original,
+            sharing_type,
+            manual_ratio: ratio,
+            notes,
+        },
+        settings.accounting_start_mode,
+    )
+    .await
+    .map_err(|e| e.to_string())
 }
