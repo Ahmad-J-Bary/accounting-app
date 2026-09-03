@@ -442,6 +442,10 @@ pub fn run() -> tauri::Builder<tauri::Wry> {
             commands::fiscal_period::reopen_fiscal_period,
             commands::fiscal_period::compute_period_net_profit,
             commands::fiscal_period::get_distributable_profit,
+            commands::fiscal_year::create_fiscal_year,
+            commands::fiscal_year::list_fiscal_years,
+            commands::fiscal_year::close_fiscal_year,
+            commands::fiscal_year::reopen_fiscal_year,
         ])
         .setup(|app| {
             let app_data_dir = app

@@ -13,6 +13,7 @@ pub mod damaged;
 pub mod dashboard;
 pub mod export;
 pub mod fiscal_period;
+pub mod fiscal_year;
 pub mod inventory;
 pub mod invoice;
 pub mod journal;

@@ -16,6 +16,7 @@ pub mod currency_repository;
 pub mod damaged_item_repository;
 pub mod exchange_rate_repository;
 pub mod fiscal_period_repository;
+pub mod fiscal_year_repository;
 pub mod inventory_lot_repository;
 pub mod opening_draft_repository;
 pub mod opening_item_repository;

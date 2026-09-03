@@ -14,6 +14,7 @@ pub mod currency;
 pub mod damaged;
 pub mod equity;
 pub mod fiscal_period;
+pub mod fiscal_year;
 pub mod invoice;
 pub mod opening_balance;
 pub mod partner;

@@ -2,12 +2,14 @@ use crate::errors::AppError;
 use crate::ports::account_repository::AccountRepository;
 use crate::ports::asset_repository::AssetRepository;
 use crate::ports::fiscal_period_repository::FiscalPeriodRepository;
+use crate::ports::fiscal_year_repository::FiscalYearRepository;
 use crate::ports::journal_entry_repository::{JournalEntryRepository, ReversalScope};
 use crate::ports::opening_migration_repository::OpeningMigrationRepository;
 use crate::ports::settings_repository::SettingsRepository;
 use async_trait::async_trait;
 use domain::accounting::account::Account;
 use domain::accounting::fiscal_period::FiscalPeriod;
+use domain::accounting::fiscal_year::{FiscalYear, FiscalYearCloseRun};
 use domain::accounting::opening_balance::OpeningBalanceMigration;
 use domain::accounting::{JournalEntry, JournalEntryId};
 use domain::assets::{
@@ -394,6 +396,83 @@ impl FiscalPeriodRepository for MockFiscalPeriodRepository {
         let mut periods = self.periods.lock().unwrap();
         periods.retain(|p| p.id != period.id);
         periods.push(period.clone());
+        Ok(())
+    }
+}
+
+pub struct MockFiscalYearRepository {
+    pub fiscal_years: Mutex<Vec<FiscalYear>>,
+    pub close_runs: Mutex<Vec<FiscalYearCloseRun>>,
+}
+
+impl MockFiscalYearRepository {
+    pub fn new() -> Self {
+        Self::default()
+    }
+}
+
+impl Default for MockFiscalYearRepository {
+    fn default() -> Self {
+        Self {
+            fiscal_years: Mutex::new(Vec::new()),
+            close_runs: Mutex::new(Vec::new()),
+        }
+    }
+}
+
+#[async_trait]
+impl FiscalYearRepository for MockFiscalYearRepository {
+    async fn create(&self, fiscal_year: &FiscalYear) -> Result<(), AppError> {
+        self.fiscal_years.lock().unwrap().push(fiscal_year.clone());
+        Ok(())
+    }
+
+    async fn find_by_id(&self, id: &domain::shared::ids::FiscalYearId) -> Result<Option<FiscalYear>, AppError> {
+        Ok(self
+            .fiscal_years
+            .lock()
+            .unwrap()
+            .iter()
+            .find(|year| year.id == *id)
+            .cloned())
+    }
+
+    async fn list(&self) -> Result<Vec<FiscalYear>, AppError> {
+        Ok(self.fiscal_years.lock().unwrap().clone())
+    }
+
+    async fn update(&self, fiscal_year: &FiscalYear) -> Result<(), AppError> {
+        let mut fiscal_years = self.fiscal_years.lock().unwrap();
+        fiscal_years.retain(|year| year.id != fiscal_year.id);
+        fiscal_years.push(fiscal_year.clone());
+        Ok(())
+    }
+
+    async fn find_close_run(
+        &self,
+        fiscal_year_id: &domain::shared::ids::FiscalYearId,
+        operation_key: &str,
+    ) -> Result<Option<FiscalYearCloseRun>, AppError> {
+        Ok(self
+            .close_runs
+            .lock()
+            .unwrap()
+            .iter()
+            .find(|run| run.fiscal_year_id == *fiscal_year_id && run.operation_key == operation_key)
+            .cloned())
+    }
+
+    async fn create_close_run(&self, run: &FiscalYearCloseRun) -> Result<(), AppError> {
+        self.close_runs.lock().unwrap().push(run.clone());
+        Ok(())
+    }
+
+    async fn update_close_run(&self, run: &FiscalYearCloseRun) -> Result<(), AppError> {
+        let mut close_runs = self.close_runs.lock().unwrap();
+        close_runs.retain(|item| {
+            !(item.fiscal_year_id == run.fiscal_year_id && item.operation_key == run.operation_key)
+        });
+        close_runs.push(run.clone());
         Ok(())
     }
 }

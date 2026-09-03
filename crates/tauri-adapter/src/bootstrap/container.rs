@@ -10,6 +10,7 @@ use application::ports::customer_repository::CustomerRepository;
 use application::ports::damaged_item_repository::DamagedItemRepository;
 use application::ports::exchange_rate_repository::ExchangeRateRepository;
 use application::ports::fiscal_period_repository::FiscalPeriodRepository;
+use application::ports::fiscal_year_repository::FiscalYearRepository;
 use application::ports::inventory_lot_repository::InventoryLotRepository;
 use application::ports::invoice_repository::InvoiceRepository;
 use application::ports::journal_entry_repository::JournalEntryRepository;
@@ -38,6 +39,7 @@ use application::use_cases::currency::setup::CurrencySetupUseCase;
 use application::use_cases::material::MaterialCodeUseCases;
 use infrastructure::db::backup;
 use infrastructure::repositories::SqliteFiscalPeriodRepository;
+use infrastructure::repositories::SqliteFiscalYearRepository;
 use infrastructure::repositories::SqliteInvoiceRepository;
 use infrastructure::repositories::SqliteOpeningDraftRepository;
 use infrastructure::repositories::SqliteOpeningItemRepository;
@@ -95,6 +97,7 @@ pub struct AppState {
     pub opening_item_repo: Arc<dyn OpeningItemRepository>,
     pub opening_draft_repo: Arc<dyn OpeningDraftRepository>,
     pub fiscal_period_repo: Arc<dyn FiscalPeriodRepository>,
+    pub fiscal_year_repo: Arc<dyn FiscalYearRepository>,
     pub app_config_repo: Arc<dyn AppConfigRepository>,
     pub search_providers: Vec<Arc<dyn SearchProvider>>,
     pub material_code_use_cases: Arc<MaterialCodeUseCases>,
@@ -203,6 +206,8 @@ pub async fn build_app_state(database_url: &str) -> Result<AppState, String> {
             as Arc<dyn OpeningDraftRepository>,
         fiscal_period_repo: Arc::new(SqliteFiscalPeriodRepository::new(pool.clone()))
             as Arc<dyn FiscalPeriodRepository>,
+        fiscal_year_repo: Arc::new(SqliteFiscalYearRepository::new(pool.clone()))
+            as Arc<dyn FiscalYearRepository>,
         app_config_repo: app_config_repo.clone() as Arc<dyn AppConfigRepository>,
         search_providers,
         material_code_use_cases: Arc::new(MaterialCodeUseCases::new(

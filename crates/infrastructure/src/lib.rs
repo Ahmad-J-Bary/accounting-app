@@ -19,6 +19,7 @@ pub use repositories::SqliteCustomerRepository;
 pub use repositories::SqliteDamagedItemRepository;
 pub use repositories::SqliteExchangeRateRepository;
 pub use repositories::SqliteFiscalPeriodRepository;
+pub use repositories::SqliteFiscalYearRepository;
 pub use repositories::SqliteInventoryLotRepository;
 pub use repositories::SqliteInvoiceRepository;
 pub use repositories::SqliteJournalEntryRepository;
