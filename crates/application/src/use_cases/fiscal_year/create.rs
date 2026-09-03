@@ -6,6 +6,7 @@ use domain::shared::ids::FiscalYearId;
 
 use crate::errors::AppError;
 use crate::ports::fiscal_year_repository::FiscalYearRepository;
+use crate::use_cases::shared::fiscal_lifecycle::windows_overlap;
 
 use super::types::{CreateFiscalYearCommand, FiscalYearDto};
 
@@ -38,6 +39,25 @@ impl CreateFiscalYearUseCase {
             end_date,
             previous_fiscal_year_id,
         )?;
+
+        let overlaps = self.repo.list().await?;
+        for other in overlaps {
+            if other.company_id != fiscal_year.company_id {
+                continue;
+            }
+            if windows_overlap(
+                fiscal_year.start_date,
+                fiscal_year.end_date,
+                other.start_date,
+                other.end_date,
+            ) {
+                return Err(AppError::Conflict(format!(
+                    "السنة المالية تتداخل مع سنة موجودة من {} إلى {}",
+                    other.start_date.to_rfc3339(),
+                    other.end_date.to_rfc3339(),
+                )));
+            }
+        }
 
         self.repo.create(&fiscal_year).await?;
         Ok(to_dto(&fiscal_year, None))
@@ -103,5 +123,34 @@ mod tests {
 
         assert_eq!(dto.label, "FY2026");
         assert_eq!(dto.status, "Open");
+    }
+
+    #[tokio::test]
+    async fn rejects_overlapping_fiscal_year() {
+        let repo = Arc::new(MockFiscalYearRepository::new());
+        let use_case = CreateFiscalYearUseCase::new(repo.clone());
+        use_case
+            .execute(CreateFiscalYearCommand {
+                company_id: None,
+                label: "FY2026".into(),
+                start_date: "2026-01-01T00:00:00Z".into(),
+                end_date: "2026-12-31T23:59:59Z".into(),
+                previous_fiscal_year_id: None,
+            })
+            .await
+            .unwrap();
+
+        let err = use_case
+            .execute(CreateFiscalYearCommand {
+                company_id: None,
+                label: "FY overlap".into(),
+                start_date: "2026-06-01T00:00:00Z".into(),
+                end_date: "2027-05-31T23:59:59Z".into(),
+                previous_fiscal_year_id: None,
+            })
+            .await
+            .unwrap_err();
+
+        assert!(matches!(err, AppError::Conflict(_)));
     }
 }

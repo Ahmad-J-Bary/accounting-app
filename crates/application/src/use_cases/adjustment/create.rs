@@ -1,10 +1,13 @@
 use crate::dto::adjustment_dto::{CreateStockAdjustmentRequest, StockAdjustmentDto};
 use crate::errors::AppError;
 use crate::ports::account_repository::AccountRepository;
+use crate::ports::fiscal_period_repository::FiscalPeriodRepository;
+use crate::ports::fiscal_year_repository::FiscalYearRepository;
 use crate::ports::journal_entry_repository::JournalEntryRepository;
 use crate::ports::material_repository::MaterialRepository;
 use crate::ports::stock_adjustment_repository::StockAdjustmentRepository;
 use crate::ports::stock_movement_repository::StockMovementRepository;
+use crate::use_cases::shared::fiscal_lifecycle::FiscalLifecyclePolicy;
 use chrono::{DateTime, Utc};
 use domain::accounting::journal_entry::{JournalEntry, JournalLine, JournalType};
 use domain::inventory::stock_movement::{MovementType, StockMovement};
@@ -22,6 +25,8 @@ pub struct CreateStockAdjustmentUseCase {
     movement_repo: Arc<dyn StockMovementRepository>,
     account_repo: Arc<dyn AccountRepository>,
     journal_repo: Arc<dyn JournalEntryRepository>,
+    fiscal_year_repo: Arc<dyn FiscalYearRepository>,
+    fiscal_period_repo: Arc<dyn FiscalPeriodRepository>,
 }
 
 impl CreateStockAdjustmentUseCase {
@@ -31,6 +36,8 @@ impl CreateStockAdjustmentUseCase {
         movement_repo: Arc<dyn StockMovementRepository>,
         account_repo: Arc<dyn AccountRepository>,
         journal_repo: Arc<dyn JournalEntryRepository>,
+        fiscal_year_repo: Arc<dyn FiscalYearRepository>,
+        fiscal_period_repo: Arc<dyn FiscalPeriodRepository>,
     ) -> Self {
         Self {
             adjustment_repo,
@@ -38,6 +45,8 @@ impl CreateStockAdjustmentUseCase {
             movement_repo,
             account_repo,
             journal_repo,
+            fiscal_year_repo,
+            fiscal_period_repo,
         }
     }
 
@@ -81,6 +90,10 @@ impl CreateStockAdjustmentUseCase {
         let adjustment_date = DateTime::parse_from_rfc3339(&req.adjustment_date)
             .map_err(|_| AppError::Invalid("التاريخ غير صالح".into()))?
             .with_timezone(&chrono::Utc);
+
+        FiscalLifecyclePolicy::new(self.fiscal_year_repo.clone(), self.fiscal_period_repo.clone())
+            .validate_normal_operational(None, adjustment_date)
+            .await?;
 
         let mut adjustment = StockAdjustment::new(
             material_id,

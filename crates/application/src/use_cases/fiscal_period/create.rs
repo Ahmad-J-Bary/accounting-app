@@ -1,6 +1,7 @@
 use crate::errors::AppError;
 use crate::ports::fiscal_period_repository::FiscalPeriodRepository;
 use crate::use_cases::fiscal_period::types::{CreateFiscalPeriodCommand, FiscalPeriodDto};
+use crate::use_cases::shared::fiscal_lifecycle::windows_overlap;
 use chrono::{DateTime, Utc};
 use domain::accounting::fiscal_period::FiscalPeriod;
 use std::sync::Arc;
@@ -23,14 +24,14 @@ impl CreateFiscalPeriodUseCase {
 
         let period = FiscalPeriod::new(cmd.company_id.clone(), start, end)?;
 
-        // Reject overlapping periods within the same company so reporting
+        // Reject any overlapping periods within the same company so reporting
         // windows never double-count a date.
-        let overlaps = self.period_repo.find_by_date(start).await?;
+        let overlaps = self.period_repo.list().await?;
         for other in &overlaps {
             if other.company_id != cmd.company_id {
                 continue;
             }
-            if other.id != period.id {
+            if windows_overlap(period.start_date, period.end_date, other.start_date, other.end_date) {
                 return Err(AppError::Conflict(format!(
                     "الفترة المالية تتداخل مع فترة موجودة من {} إلى {}",
                     other.start_date.to_rfc3339(),
@@ -118,6 +119,21 @@ mod tests {
             .unwrap_err();
         assert!(matches!(err, AppError::Conflict(_)));
         assert_eq!(repo.list().await.unwrap().len(), 1);
+    }
+
+    #[tokio::test]
+    async fn rejects_period_that_envelops_existing_period() {
+        let repo = Arc::new(MockFiscalPeriodRepository::new());
+        let uc = CreateFiscalPeriodUseCase::new(repo.clone());
+        uc.execute(cmd("2026-03-01T00:00:00Z", "2026-05-31T00:00:00Z"))
+            .await
+            .unwrap();
+
+        let err = uc
+            .execute(cmd("2026-01-01T00:00:00Z", "2026-12-31T23:59:59Z"))
+            .await
+            .unwrap_err();
+        assert!(matches!(err, AppError::Conflict(_)));
     }
 
     #[tokio::test]

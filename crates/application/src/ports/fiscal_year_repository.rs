@@ -1,5 +1,6 @@
 use crate::errors::AppError;
 use async_trait::async_trait;
+use chrono::{DateTime, Utc};
 use domain::accounting::fiscal_year::{FiscalYear, FiscalYearCloseRun};
 use domain::shared::ids::FiscalYearId;
 
@@ -8,6 +9,7 @@ pub trait FiscalYearRepository: Send + Sync {
     async fn create(&self, fiscal_year: &FiscalYear) -> Result<(), AppError>;
     async fn find_by_id(&self, id: &FiscalYearId) -> Result<Option<FiscalYear>, AppError>;
     async fn list(&self) -> Result<Vec<FiscalYear>, AppError>;
+    async fn find_by_date(&self, date: DateTime<Utc>) -> Result<Vec<FiscalYear>, AppError>;
     async fn update(&self, fiscal_year: &FiscalYear) -> Result<(), AppError>;
 
     async fn find_close_run(

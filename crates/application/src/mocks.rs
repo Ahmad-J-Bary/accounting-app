@@ -7,6 +7,7 @@ use crate::ports::journal_entry_repository::{JournalEntryRepository, ReversalSco
 use crate::ports::opening_migration_repository::OpeningMigrationRepository;
 use crate::ports::settings_repository::SettingsRepository;
 use async_trait::async_trait;
+use chrono::{DateTime, Utc};
 use domain::accounting::account::Account;
 use domain::accounting::fiscal_period::FiscalPeriod;
 use domain::accounting::fiscal_year::{FiscalYear, FiscalYearCloseRun};
@@ -439,6 +440,17 @@ impl FiscalYearRepository for MockFiscalYearRepository {
 
     async fn list(&self) -> Result<Vec<FiscalYear>, AppError> {
         Ok(self.fiscal_years.lock().unwrap().clone())
+    }
+
+    async fn find_by_date(&self, date: DateTime<Utc>) -> Result<Vec<FiscalYear>, AppError> {
+        Ok(self
+            .fiscal_years
+            .lock()
+            .unwrap()
+            .iter()
+            .filter(|year| year.contains(date))
+            .cloned()
+            .collect())
     }
 
     async fn update(&self, fiscal_year: &FiscalYear) -> Result<(), AppError> {

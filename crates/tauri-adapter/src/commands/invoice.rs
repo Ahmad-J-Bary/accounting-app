@@ -40,6 +40,8 @@ pub async fn post_invoice(state: State<'_, AppState>, id: String) -> Result<Invo
         state.customer_repo.clone(),
         state.material_repo.clone(),
         state.stock_movement_repo.clone(),
+        state.fiscal_year_repo.clone(),
+        state.fiscal_period_repo.clone(),
     );
     use_case.execute(id).await.map_err(|e| e.to_string())
 }

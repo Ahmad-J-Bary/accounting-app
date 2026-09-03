@@ -2,10 +2,13 @@ use super::create::{build_adjustment_journal_entry, to_dto};
 use crate::dto::adjustment_dto::{StockAdjustmentDto, UpdateStockAdjustmentRequest};
 use crate::errors::AppError;
 use crate::ports::account_repository::AccountRepository;
+use crate::ports::fiscal_period_repository::FiscalPeriodRepository;
+use crate::ports::fiscal_year_repository::FiscalYearRepository;
 use crate::ports::journal_entry_repository::JournalEntryRepository;
 use crate::ports::material_repository::MaterialRepository;
 use crate::ports::stock_adjustment_repository::StockAdjustmentRepository;
 use crate::ports::stock_movement_repository::StockMovementRepository;
+use crate::use_cases::shared::fiscal_lifecycle::FiscalLifecyclePolicy;
 use chrono::DateTime;
 use domain::inventory::stock_movement::{MovementType, StockMovement};
 use domain::shared::ids::{MaterialId, StockAdjustmentId};
@@ -18,6 +21,8 @@ pub struct UpdateStockAdjustmentUseCase {
     movement_repo: Arc<dyn StockMovementRepository>,
     account_repo: Arc<dyn AccountRepository>,
     journal_repo: Arc<dyn JournalEntryRepository>,
+    fiscal_year_repo: Arc<dyn FiscalYearRepository>,
+    fiscal_period_repo: Arc<dyn FiscalPeriodRepository>,
 }
 
 impl UpdateStockAdjustmentUseCase {
@@ -27,6 +32,8 @@ impl UpdateStockAdjustmentUseCase {
         movement_repo: Arc<dyn StockMovementRepository>,
         account_repo: Arc<dyn AccountRepository>,
         journal_repo: Arc<dyn JournalEntryRepository>,
+        fiscal_year_repo: Arc<dyn FiscalYearRepository>,
+        fiscal_period_repo: Arc<dyn FiscalPeriodRepository>,
     ) -> Self {
         Self {
             adjustment_repo,
@@ -34,6 +41,8 @@ impl UpdateStockAdjustmentUseCase {
             movement_repo,
             account_repo,
             journal_repo,
+            fiscal_year_repo,
+            fiscal_period_repo,
         }
     }
 
@@ -86,6 +95,10 @@ impl UpdateStockAdjustmentUseCase {
         let adjustment_date = DateTime::parse_from_rfc3339(&req.adjustment_date)
             .map_err(|_| AppError::Invalid("التاريخ غير صالح".into()))?
             .with_timezone(&chrono::Utc);
+
+        FiscalLifecyclePolicy::new(self.fiscal_year_repo.clone(), self.fiscal_period_repo.clone())
+            .validate_normal_operational(None, adjustment_date)
+            .await?;
 
         if current_balance < Decimal::ZERO {
             return Err(AppError::Invalid("كمية النظام لا يمكن أن تكون سالبة".into()));

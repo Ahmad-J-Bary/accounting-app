@@ -70,7 +70,11 @@ pub async fn post_journal_entry(
     entry_id: String,
     state: State<'_, AppState>,
 ) -> Result<JournalEntryDto, String> {
-    PostJournalEntryUseCase::new(state.journal_entry_repo.clone())
+    PostJournalEntryUseCase::new(
+        state.journal_entry_repo.clone(),
+        state.fiscal_year_repo.clone(),
+        state.fiscal_period_repo.clone(),
+    )
         .execute(entry_id)
         .await
         .map_err(|e| e.to_string())

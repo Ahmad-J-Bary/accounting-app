@@ -7,10 +7,13 @@ use std::sync::Arc;
 
 use crate::errors::AppError;
 use crate::ports::account_repository::AccountRepository;
+use crate::ports::fiscal_period_repository::FiscalPeriodRepository;
+use crate::ports::fiscal_year_repository::FiscalYearRepository;
 use crate::ports::journal_entry_repository::JournalEntryRepository;
 use crate::ports::opening_migration_repository::OpeningMigrationRepository;
 use crate::ports::partner_repository::PartnerRepository;
 use crate::use_cases::opening_balance::opening_window_active;
+use crate::use_cases::shared::fiscal_lifecycle::FiscalLifecyclePolicy;
 use uuid::Uuid;
 
 /// Explicit capital contribution: a partner contributes funds/assets to the
@@ -28,6 +31,8 @@ pub struct CreateCapitalContributionUseCase {
     account_repo: Arc<dyn AccountRepository>,
     journal_repo: Arc<dyn JournalEntryRepository>,
     opening_migration_repo: Arc<dyn OpeningMigrationRepository>,
+    fiscal_year_repo: Arc<dyn FiscalYearRepository>,
+    fiscal_period_repo: Arc<dyn FiscalPeriodRepository>,
 }
 
 impl CreateCapitalContributionUseCase {
@@ -36,12 +41,16 @@ impl CreateCapitalContributionUseCase {
         account_repo: Arc<dyn AccountRepository>,
         journal_repo: Arc<dyn JournalEntryRepository>,
         opening_migration_repo: Arc<dyn OpeningMigrationRepository>,
+        fiscal_year_repo: Arc<dyn FiscalYearRepository>,
+        fiscal_period_repo: Arc<dyn FiscalPeriodRepository>,
     ) -> Self {
         Self {
             repo,
             account_repo,
             journal_repo,
             opening_migration_repo,
+            fiscal_year_repo,
+            fiscal_period_repo,
         }
     }
 
@@ -121,6 +130,11 @@ impl CreateCapitalContributionUseCase {
         let event_key = event_id.unwrap_or_else(|| Uuid::new_v4().to_string());
         let source_id = format!("capital_contribution:{}", event_key);
 
+        let effective_date = Utc::now();
+        FiscalLifecyclePolicy::new(self.fiscal_year_repo.clone(), self.fiscal_period_repo.clone())
+            .validate_normal_operational(None, effective_date)
+            .await?;
+
         if let Some(existing) = self.journal_repo.find_by_source_id(&source_id).await? {
             return Ok(existing.id.to_string());
         }
@@ -129,7 +143,7 @@ impl CreateCapitalContributionUseCase {
             self.journal_repo.get_next_entry_number().await?,
             JournalType::CapitalContribution,
             lines,
-            Utc::now(),
+            effective_date,
             format!("مساهمة رأس مال — الشريك {}", partner.name),
             Some(source_id),
         )

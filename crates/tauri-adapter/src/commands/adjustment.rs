@@ -19,6 +19,8 @@ pub async fn create_stock_adjustment(
         state.stock_movement_repo.clone(),
         state.account_repo.clone(),
         state.journal_entry_repo.clone(),
+        state.fiscal_year_repo.clone(),
+        state.fiscal_period_repo.clone(),
     )
     .execute(request)
     .await
@@ -66,6 +68,8 @@ pub async fn update_stock_adjustment(
         state.stock_movement_repo.clone(),
         state.account_repo.clone(),
         state.journal_entry_repo.clone(),
+        state.fiscal_year_repo.clone(),
+        state.fiscal_period_repo.clone(),
     )
     .execute(request)
     .await

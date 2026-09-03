@@ -6,9 +6,12 @@ use crate::dto::payment_dto::{CreatePaymentRequest, PaymentDto};
 use crate::errors::AppError;
 use crate::ports::account_repository::AccountRepository;
 use crate::ports::customer_repository::CustomerRepository;
+use crate::ports::fiscal_period_repository::FiscalPeriodRepository;
+use crate::ports::fiscal_year_repository::FiscalYearRepository;
 use crate::ports::journal_entry_repository::JournalEntryRepository;
 use crate::ports::payment_repository::PaymentRepository;
 use crate::ports::supplier_repository::SupplierRepository;
+use crate::use_cases::shared::fiscal_lifecycle::FiscalLifecyclePolicy;
 use chrono::DateTime;
 use domain::accounting::journal_entry::JournalEntry;
 use domain::payments::Payment;
@@ -23,6 +26,8 @@ pub struct CreatePaymentUseCase {
     supplier_repo: Arc<dyn SupplierRepository>,
     journal_repo: Arc<dyn JournalEntryRepository>,
     account_repo: Arc<dyn AccountRepository>,
+    fiscal_year_repo: Arc<dyn FiscalYearRepository>,
+    fiscal_period_repo: Arc<dyn FiscalPeriodRepository>,
 }
 
 impl CreatePaymentUseCase {
@@ -32,6 +37,8 @@ impl CreatePaymentUseCase {
         supplier_repo: Arc<dyn SupplierRepository>,
         journal_repo: Arc<dyn JournalEntryRepository>,
         account_repo: Arc<dyn AccountRepository>,
+        fiscal_year_repo: Arc<dyn FiscalYearRepository>,
+        fiscal_period_repo: Arc<dyn FiscalPeriodRepository>,
     ) -> Self {
         Self {
             repo,
@@ -39,6 +46,8 @@ impl CreatePaymentUseCase {
             supplier_repo,
             journal_repo,
             account_repo,
+            fiscal_year_repo,
+            fiscal_period_repo,
         }
     }
 
@@ -56,6 +65,10 @@ impl CreatePaymentUseCase {
         let payment_date = DateTime::parse_from_rfc3339(&req.payment_date)
             .map_err(|_| AppError::Invalid("التاريخ غير صالح".into()))?
             .with_timezone(&chrono::Utc);
+
+        FiscalLifecyclePolicy::new(self.fiscal_year_repo.clone(), self.fiscal_period_repo.clone())
+            .validate_normal_operational(None, payment_date)
+            .await?;
 
         let customer_id = req
             .customer_id

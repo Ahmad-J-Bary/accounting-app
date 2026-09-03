@@ -4,11 +4,13 @@ use crate::ports::account_repository::AccountRepository;
 use crate::ports::currency_repository::CurrencyRepository;
 use crate::ports::customer_repository::CustomerRepository;
 use crate::ports::exchange_rate_repository::ExchangeRateRepository;
+use crate::ports::fiscal_period_repository::FiscalPeriodRepository;
+use crate::ports::fiscal_year_repository::FiscalYearRepository;
 use crate::ports::journal_entry_repository::JournalEntryRepository;
 use crate::ports::material_repository::MaterialRepository;
 use crate::ports::sales_return_repository::SalesReturnRepository;
 use crate::ports::stock_movement_repository::StockMovementRepository;
-use chrono::Utc;
+use crate::use_cases::shared::fiscal_lifecycle::FiscalLifecyclePolicy;
 use domain::accounting::journal_entry::{JournalEntry, JournalLine};
 use domain::inventory::stock_movement::{MovementType, StockMovement};
 use domain::payments::{Payment, PaymentType};
@@ -29,6 +31,8 @@ pub struct PostSalesReturnUseCase {
     material_repo: Arc<dyn MaterialRepository>,
     currency_repo: Arc<dyn CurrencyRepository>,
     exchange_rate_repo: Arc<dyn ExchangeRateRepository>,
+    fiscal_year_repo: Arc<dyn FiscalYearRepository>,
+    fiscal_period_repo: Arc<dyn FiscalPeriodRepository>,
 }
 
 impl PostSalesReturnUseCase {
@@ -42,6 +46,8 @@ impl PostSalesReturnUseCase {
         material_repo: Arc<dyn MaterialRepository>,
         currency_repo: Arc<dyn CurrencyRepository>,
         exchange_rate_repo: Arc<dyn ExchangeRateRepository>,
+        fiscal_year_repo: Arc<dyn FiscalYearRepository>,
+        fiscal_period_repo: Arc<dyn FiscalPeriodRepository>,
     ) -> Self {
         Self {
             repo,
@@ -52,6 +58,8 @@ impl PostSalesReturnUseCase {
             material_repo,
             currency_repo,
             exchange_rate_repo,
+            fiscal_year_repo,
+            fiscal_period_repo,
         }
     }
 
@@ -69,6 +77,10 @@ impl PostSalesReturnUseCase {
             .find_by_id(&rid)
             .await?
             .ok_or_else(|| AppError::NotFound("مرتجع المبيعات غير موجود".into()))?;
+
+        FiscalLifecyclePolicy::new(self.fiscal_year_repo.clone(), self.fiscal_period_repo.clone())
+            .validate_normal_operational(None, ret.return_date)
+            .await?;
 
         let base_currency = self
             .currency_repo
@@ -158,7 +170,7 @@ impl PostSalesReturnUseCase {
                 total_cost,
                 ref_no,
                 movement_notes,
-                Utc::now(),
+                ret.return_date,
             )
             .map_err(|e| AppError::Invalid(e.to_string()))?;
             movement.document_number = Some(ret.return_number.clone());
@@ -218,7 +230,7 @@ impl PostSalesReturnUseCase {
                 entry_number,
                 domain::accounting::JournalType::SalesReturnJournal,
                 return_journal_lines,
-                Utc::now(),
+                ret.return_date,
                 format!("قيد آلي لمرتجع المبيعات رقم {}", ret.return_number),
                 Some(ret.id.0.to_string()),
             )
@@ -274,7 +286,7 @@ impl PostSalesReturnUseCase {
                 cash_entry_number.clone(),
                 domain::accounting::JournalType::CustomerPaymentJournal,
                 cash_journal_lines,
-                Utc::now(),
+                ret.return_date,
                 format!(
                     "سند دفع لعميل مرتبط بمرتجع المبيعات رقم {}",
                     ret.return_number
@@ -297,7 +309,7 @@ impl PostSalesReturnUseCase {
                         cash_amount,
                         base_currency.code.clone(),
                         Decimal::ONE,
-                        Utc::now(),
+                        ret.return_date,
                         Some(cust_acc_id),     // debit: customer account
                         Some(cash_account.id), // credit: cash
                         Some(ret.customer_id),

@@ -203,6 +203,22 @@ impl FiscalYearRepository for SqliteFiscalYearRepository {
         rows.into_iter().map(row_to_fiscal_year).collect()
     }
 
+    async fn find_by_date(&self, date: DateTime<Utc>) -> Result<Vec<FiscalYear>, AppError> {
+        let rows = sqlx::query_as::<_, FiscalYearRow>(
+            format!(
+                "SELECT {FISCAL_YEAR_COLUMNS} FROM fiscal_years WHERE start_date <= ? AND end_date >= ? ORDER BY start_date"
+            )
+            .as_str(),
+        )
+        .bind(date.to_rfc3339())
+        .bind(date.to_rfc3339())
+        .fetch_all(self.pool.as_ref())
+        .await
+        .map_err(|e| AppError::Infrastructure(format!("fiscal_year find_by_date: {e}")))?;
+
+        rows.into_iter().map(row_to_fiscal_year).collect()
+    }
+
     async fn update(&self, fiscal_year: &FiscalYear) -> Result<(), AppError> {
         sqlx::query(
             "UPDATE fiscal_years

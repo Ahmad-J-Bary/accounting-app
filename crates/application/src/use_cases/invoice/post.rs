@@ -1,9 +1,12 @@
 use crate::dto::invoice_dto::InvoiceDto;
 use crate::errors::AppError;
 use crate::ports::customer_repository::CustomerRepository;
+use crate::ports::fiscal_period_repository::FiscalPeriodRepository;
+use crate::ports::fiscal_year_repository::FiscalYearRepository;
 use crate::ports::invoice_repository::InvoiceRepository;
 use crate::ports::material_repository::MaterialRepository;
 use crate::ports::stock_movement_repository::StockMovementRepository;
+use crate::use_cases::shared::fiscal_lifecycle::FiscalLifecyclePolicy;
 use domain::inventory::stock_movement::{MovementType, StockMovement};
 use domain::sales::Invoice;
 use domain::shared::ids::{CustomerId, MaterialId};
@@ -16,6 +19,8 @@ pub struct PostInvoiceUseCase {
     customer_repo: Arc<dyn CustomerRepository>,
     material_repo: Arc<dyn MaterialRepository>,
     movement_repo: Arc<dyn StockMovementRepository>,
+    fiscal_year_repo: Arc<dyn FiscalYearRepository>,
+    fiscal_period_repo: Arc<dyn FiscalPeriodRepository>,
 }
 
 impl PostInvoiceUseCase {
@@ -24,12 +29,16 @@ impl PostInvoiceUseCase {
         customer_repo: Arc<dyn CustomerRepository>,
         material_repo: Arc<dyn MaterialRepository>,
         movement_repo: Arc<dyn StockMovementRepository>,
+        fiscal_year_repo: Arc<dyn FiscalYearRepository>,
+        fiscal_period_repo: Arc<dyn FiscalPeriodRepository>,
     ) -> Self {
         Self {
             repo,
             customer_repo,
             material_repo,
             movement_repo,
+            fiscal_year_repo,
+            fiscal_period_repo,
         }
     }
 
@@ -44,6 +53,10 @@ impl PostInvoiceUseCase {
             .find_by_id(&id)
             .await?
             .ok_or_else(|| AppError::NotFound("Invoice not found".into()))?;
+
+        FiscalLifecyclePolicy::new(self.fiscal_year_repo.clone(), self.fiscal_period_repo.clone())
+            .validate_normal_operational(None, invoice.issued_at)
+            .await?;
 
         invoice.post().map_err(AppError::from)?;
 
@@ -66,7 +79,7 @@ impl PostInvoiceUseCase {
                     line.line_total().amount(),
                     invoice.invoice_number.clone(),
                     movement_notes,
-                    chrono::Utc::now(),
+                    invoice.issued_at,
                 )
                 .map_err(|e| AppError::Invalid(e.to_string()))?;
                 self.movement_repo.save(&movement).await?;

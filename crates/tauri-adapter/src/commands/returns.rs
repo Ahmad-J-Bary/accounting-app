@@ -379,6 +379,8 @@ pub async fn create_sales_return(
         state.material_repo.clone(),
         state.currency_repo.clone(),
         state.exchange_rate_repo.clone(),
+        state.fiscal_year_repo.clone(),
+        state.fiscal_period_repo.clone(),
     );
     post_use_case
         .execute(dto.id.clone(), settlement_mode, settlement_amount, is_paid)
@@ -427,6 +429,8 @@ pub async fn post_sales_return(
         state.material_repo.clone(),
         state.currency_repo.clone(),
         state.exchange_rate_repo.clone(),
+        state.fiscal_year_repo.clone(),
+        state.fiscal_period_repo.clone(),
     )
     .execute(id, None, None, None)
     .await
@@ -472,6 +476,8 @@ pub async fn create_purchase_return(
         state.material_repo.clone(),
         state.currency_repo.clone(),
         state.exchange_rate_repo.clone(),
+        state.fiscal_year_repo.clone(),
+        state.fiscal_period_repo.clone(),
     );
     post_use_case
         .execute(dto.id.clone(), settlement_mode, settlement_amount, is_paid)
@@ -522,6 +528,8 @@ pub async fn post_purchase_return(
         state.material_repo.clone(),
         state.currency_repo.clone(),
         state.exchange_rate_repo.clone(),
+        state.fiscal_year_repo.clone(),
+        state.fiscal_period_repo.clone(),
     )
     .execute(id, None, None, None)
     .await

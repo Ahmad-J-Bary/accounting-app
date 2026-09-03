@@ -7,8 +7,11 @@ use std::sync::Arc;
 
 use crate::errors::AppError;
 use crate::ports::account_repository::AccountRepository;
+use crate::ports::fiscal_period_repository::FiscalPeriodRepository;
+use crate::ports::fiscal_year_repository::FiscalYearRepository;
 use crate::ports::journal_entry_repository::JournalEntryRepository;
 use crate::ports::partner_repository::PartnerRepository;
+use crate::use_cases::shared::fiscal_lifecycle::FiscalLifecyclePolicy;
 use uuid::Uuid;
 
 /// Explicit partner-drawing event: a partner withdraws cash/bank funds from the
@@ -24,6 +27,8 @@ pub struct CreatePartnerDrawingUseCase {
     repo: Arc<dyn PartnerRepository>,
     account_repo: Arc<dyn AccountRepository>,
     journal_repo: Arc<dyn JournalEntryRepository>,
+    fiscal_year_repo: Arc<dyn FiscalYearRepository>,
+    fiscal_period_repo: Arc<dyn FiscalPeriodRepository>,
 }
 
 impl CreatePartnerDrawingUseCase {
@@ -31,11 +36,15 @@ impl CreatePartnerDrawingUseCase {
         repo: Arc<dyn PartnerRepository>,
         account_repo: Arc<dyn AccountRepository>,
         journal_repo: Arc<dyn JournalEntryRepository>,
+        fiscal_year_repo: Arc<dyn FiscalYearRepository>,
+        fiscal_period_repo: Arc<dyn FiscalPeriodRepository>,
     ) -> Self {
         Self {
             repo,
             account_repo,
             journal_repo,
+            fiscal_year_repo,
+            fiscal_period_repo,
         }
     }
 
@@ -105,6 +114,15 @@ impl CreatePartnerDrawingUseCase {
         let event_key = event_id.unwrap_or_else(|| Uuid::new_v4().to_string());
         let source_id = format!("partner_drawing:{}", event_key);
 
+        let effective_date = effective_date
+            .and_then(|d| DateTime::parse_from_rfc3339(&d).ok())
+            .map(|d| d.with_timezone(&Utc))
+            .unwrap_or_else(Utc::now);
+
+        FiscalLifecyclePolicy::new(self.fiscal_year_repo.clone(), self.fiscal_period_repo.clone())
+            .validate_normal_operational(None, effective_date)
+            .await?;
+
         if let Some(existing) = self.journal_repo.find_by_source_id(&source_id).await? {
             return Ok(existing.id.to_string());
         }
@@ -113,10 +131,7 @@ impl CreatePartnerDrawingUseCase {
             self.journal_repo.get_next_entry_number().await?,
             JournalType::PartnerDrawing,
             lines,
-            effective_date
-                .and_then(|d| DateTime::parse_from_rfc3339(&d).ok())
-                .map(|d| d.with_timezone(&Utc))
-                .unwrap_or_else(Utc::now),
+            effective_date,
             description.unwrap_or_else(|| format!("سحب الشريك {}", partner.name)),
             Some(source_id),
         )
