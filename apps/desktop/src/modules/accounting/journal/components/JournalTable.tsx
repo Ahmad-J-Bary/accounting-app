@@ -33,7 +33,6 @@ interface JournalTableProps {
   search: string;
   onSearchChange: (val: string) => void;
   filters?: JournalFilters;
-  filterBar?: React.ReactNode;
   displayMode?: DisplayMode;
   onReverse?: (id: string) => void;
   reversingId?: string | null;
@@ -88,7 +87,6 @@ export function JournalTable({
   loading, 
   search, 
   onSearchChange, 
-  filterBar, 
   displayMode = "one-line",
   onReverse,
   reversingId,
@@ -202,7 +200,7 @@ export function JournalTable({
                   onClick={() => onReverse(e.id)}
                   className="h-6 px-2 text-[10px] font-bold text-red-600 hover:bg-red-50"
                 >
-                  <Undo2 className="w-3 h-3 ml-1" />
+                  <Undo2 className="w-3 h-3 ms-1" />
                   {reversingId === e.id ? "جارٍ..." : "عكس"}
                 </Button>
               )}
@@ -327,7 +325,7 @@ export function JournalTable({
                   onClick={() => onReverse(e.id)}
                   className="h-6 px-2 text-[10px] font-bold text-red-600 hover:bg-red-50"
                 >
-                  <Undo2 className="w-3 h-3 ml-1" />
+                  <Undo2 className="w-3 h-3 ms-1" />
                   {reversingId === e.id ? "جارٍ..." : "عكس"}
                 </Button>
               )}
@@ -984,10 +982,10 @@ export function JournalTable({
                 className={cn(
                   "h-3.5 rounded",
                   col.align === "left"
-                    ? "mr-auto ml-0 w-3/4"
+                    ? "me-auto ms-0 w-3/4"
                     : col.align === "center"
                     ? "mx-auto w-1/2"
-                    : "ml-auto mr-0 w-3/4",
+                    : "ms-auto me-0 w-3/4",
                 )}
               />
             </div>
@@ -1013,7 +1011,6 @@ export function JournalTable({
       onColumnsReset={resetToDefault}
       columnsModified={isModified}
       showToolbar={true}
-      filterBar={filterBar}
       actions={(
         <Button
           size="sm"
@@ -1021,7 +1018,7 @@ export function JournalTable({
           className="h-8 border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
           onClick={handleExport}
         >
-          <Download className="w-3.5 h-3.5 ml-1.5 text-slate-500" />
+          <Download className="w-3.5 h-3.5 ms-1.5 text-slate-500" />
           تصدير إكسل
         </Button>
       )}

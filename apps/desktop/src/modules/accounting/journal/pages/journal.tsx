@@ -8,6 +8,8 @@ import type { JournalEntryDto, JournalType } from "@erp/shared-types";
 import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTemplate";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
 import { DateRangePicker } from "@widgets/reports";
+import { ConfirmDialog } from "@shared/ui/confirm-dialog";
+import { ErrorBoundary } from "@shared/ui/ErrorBoundary";
 import { useReportFilters } from "@shared/hooks/useReportFilters";
 import { toLocalDateStr } from "@shared/lib/format";
 import { JOURNAL_MUTATION_KEYS, invalidateKeys } from "@shared/hooks/queryClient";
@@ -34,6 +36,8 @@ export default function Journal() {
   );
 
   const [reversingId, setReversingId] = useState<string | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [pendingReverseId, setPendingReverseId] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
   // Reporting policy: the normal posted list NEVER contains reversed
@@ -131,111 +135,127 @@ export default function Journal() {
 
   const journalTitle = JOURNAL_TYPES.find(t => t.value === (journalType || 'GeneralJournal'))?.label || 'القيود اليومية';
 
-  const handleReverse = useCallback(async (id: string) => {
-    if (!window.confirm("سيتم ترحيل قيد عكسي (معاكس) يُلغي أثر القيد ويحدد القيد الأصلي كمعكوس. هل تريد المتابعة؟")) {
-      return;
-    }
-    setReversingId(id);
+  const handleReverseRequest = useCallback((id: string) => {
+    setPendingReverseId(id);
+    setConfirmOpen(true);
+  }, []);
+
+  const handleReverseConfirm = useCallback(async () => {
+    if (!pendingReverseId) return;
+    setConfirmOpen(false);
+    setReversingId(pendingReverseId);
     try {
-      const reversal = await journalEntryService.reverseJournalEntry(id);
+      const reversal = await journalEntryService.reverseJournalEntry(pendingReverseId);
       toast.success(`تم ترحيل القيد العكسي ${reversal.entry_number}`);
       await invalidateKeys(queryClient, JOURNAL_MUTATION_KEYS);
     } catch (e) {
       toast.error("فشل عكس القيد: " + e);
     } finally {
       setReversingId(null);
+      setPendingReverseId(null);
     }
-  }, [queryClient]);
+  }, [pendingReverseId, queryClient]);
 
   return (
-    <OperationalTableTemplate
-      title={journalTitle}
-      toolbar={
-        <div className="flex items-center gap-2 flex-wrap">
-          <DateRangePicker
-            from={dateFilters.from_date}
-            to={dateFilters.to_date}
-            onFromChange={(v) => setDateFilters({ from_date: v })}
-            onToChange={(v) => setDateFilters({ to_date: v })}
-          />
-        </div>
-      }
-      tableContent={
-        <JournalTable
-          key={`journal-table-${journalType || 'GeneralJournal'}-${displayMode}`}
-          entries={operational}
-          auditEntries={showAudit ? audit : undefined}
-          loading={loading}
-          search={search}
-          onSearchChange={setSearch}
-          filters={queryFilters}
-          displayMode={displayMode}
-          onReverse={handleReverse}
-          reversingId={reversingId}
-          reversalContext={reversalContext}
-          filterBar={
-            <div className="flex flex-wrap items-center gap-2">
-              <Select 
-                value={journalType} 
-                onValueChange={(val) => setJournalType(val as JournalType)}
-              >
-                <SelectTrigger className="w-[180px] h-10 bg-white font-bold shadow-sm border-slate-200">
-                  <Filter className="w-4 h-4 ml-2 text-slate-400" />
-                  <SelectValue placeholder="نوع اليومية" />
-                </SelectTrigger>
-                <SelectContent>
-                  {JOURNAL_TYPES.map(t => (
-                    <SelectItem key={t.value} value={t.value} className="font-bold">{t.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              
-              <div className="flex items-center gap-1 ml-2">
-                <button
-                  type="button"
-                  onClick={() => setShowAudit(v => !v)}
-                  className={`px-3 py-2 rounded-lg text-sm font-bold border transition-colors ${
-                    showAudit
-                      ? "bg-slate-800 text-white border-slate-800"
-                      : "bg-white text-slate-600 border-slate-200 hover:bg-slate-100"
-                  }`}
-                  title="عرض / إخفاء أرشيف التدقيق: القيود المعكوسة والملغاة والمسودات — منفصل عن القيود التشغيلية"
-                >
-                  {showAudit ? "إخفاء أرشيف التدقيق" : "عرض أرشيف التدقيق"}
-                </button>
-              </div>
+    <ErrorBoundary>
+      <OperationalTableTemplate
+        title={journalTitle}
+        toolbar={
+          <div className="flex items-center gap-2 flex-wrap">
+            <DateRangePicker
+              from={dateFilters.from_date}
+              to={dateFilters.to_date}
+              onFromChange={(v) => setDateFilters({ from_date: v })}
+              onToChange={(v) => setDateFilters({ to_date: v })}
+            />
+          </div>
+        }
+        filterBar={
+          <div className="flex flex-wrap items-center gap-2">
+            <Select
+              value={journalType}
+              onValueChange={(val) => setJournalType(val as JournalType)}
+            >
+              <SelectTrigger className="w-[180px] h-10 bg-white font-bold shadow-sm border-slate-200">
+                <Filter className="w-4 h-4 ms-2 text-slate-400" />
+                <SelectValue placeholder="نوع اليومية" />
+              </SelectTrigger>
+              <SelectContent>
+                {JOURNAL_TYPES.map(t => (
+                  <SelectItem key={t.value} value={t.value} className="font-bold">{t.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
-              <div className="flex items-center gap-1 ml-2 border-slate-200 border rounded-lg overflow-hidden">
-                <button
-                  type="button"
-                  onClick={() => setDisplayMode("two-line")}
-                  className={`p-2 transition-colors ${
-                    displayMode === "two-line"
-                      ? "bg-blue-600 text-white"
-                      : "text-slate-500 hover:bg-slate-100"
-                  }`}
-                  title="شكل السطرين (افتراضي)"
-                >
-                  <LayoutList className="w-4 h-4" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setDisplayMode("one-line")}
-                  className={`p-2 transition-colors ${
-                    displayMode === "one-line"
-                      ? "bg-blue-600 text-white"
-                      : "text-slate-500 hover:bg-slate-100"
-                  }`}
-                  title="شكل السطر الواحد"
-                >
-                  <LayoutGrid className="w-4 h-4" />
-                </button>
-              </div>
+            <button
+              type="button"
+              onClick={() => setShowAudit(v => !v)}
+              className={`px-3 py-2 rounded-lg text-sm font-bold border transition-colors ${
+                showAudit
+                  ? "bg-slate-800 text-white border-slate-800"
+                  : "bg-white text-slate-600 border-slate-200 hover:bg-slate-100"
+              }`}
+              title="عرض / إخفاء أرشيف التدقيق: القيود المعكوسة والملغاة والمسودات — منفصل عن القيود التشغيلية"
+            >
+              {showAudit ? "إخفاء أرشيف التدقيق" : "عرض أرشيف التدقيق"}
+            </button>
+
+            <div className="flex items-center gap-1 border-slate-200 border rounded-lg overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setDisplayMode("two-line")}
+                className={`p-2 transition-colors ${
+                  displayMode === "two-line"
+                    ? "bg-blue-600 text-white"
+                    : "text-slate-500 hover:bg-slate-100"
+                }`}
+                title="شكل السطرين (افتراضي)"
+              >
+                <LayoutList className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setDisplayMode("one-line")}
+                className={`p-2 transition-colors ${
+                  displayMode === "one-line"
+                    ? "bg-blue-600 text-white"
+                    : "text-slate-500 hover:bg-slate-100"
+                }`}
+                title="شكل السطر الواحد"
+              >
+                <LayoutGrid className="w-4 h-4" />
+              </button>
             </div>
-          }
-        />
-      }
-    >
-    </OperationalTableTemplate>
+          </div>
+        }
+        tableContent={
+          <JournalTable
+            key={`journal-table-${journalType || 'GeneralJournal'}-${displayMode}`}
+            entries={operational}
+            auditEntries={showAudit ? audit : undefined}
+            loading={loading}
+            search={search}
+            onSearchChange={setSearch}
+            filters={queryFilters}
+            displayMode={displayMode}
+            onReverse={handleReverseRequest}
+            reversingId={reversingId}
+            reversalContext={reversalContext}
+          />
+        }
+      >
+      </OperationalTableTemplate>
+
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title="تأكيد عكس القيد"
+        description="سيتم ترحيل قيد عكسي (معاكس) يُلغي أثر القيد ويحدد القيد الأصلي كمعكوس. هل تريد المتابعة؟"
+        confirmLabel="عكس القيد"
+        cancelLabel="إلغاء"
+        destructive
+        onConfirm={handleReverseConfirm}
+      />
+    </ErrorBoundary>
   );
 }
