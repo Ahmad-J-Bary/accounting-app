@@ -6,6 +6,7 @@ import { TabLocationContext } from '@app/providers/TabLocationContext';
 import { cn } from '@shared/lib/utils';
 import { useKeyboardShortcuts } from '@shared/hooks/useKeyboardShortcuts';
 import { useAppearance } from '@shared/hooks/useAppearance';
+import { useResponsiveContext } from '@shared/hooks/useResponsiveContext';
 import { FloatingExchangeRateWidget } from '@modules/core/currencies/components/FloatingExchangeRateWidget';
 import { useCurrencyContext } from '@app/providers/CurrencyContext';
 import { warehouseService } from '@modules/inventory/api/warehouseService';
@@ -13,6 +14,7 @@ import { VerticalLayout } from './layouts/VerticalLayout';
 import { TopNavLayout } from './layouts/TopNavLayout';
 import { HorizontalLayout } from './layouts/HorizontalLayout';
 import { ComboLayout } from './layouts/ComboLayout';
+import { MobileNav } from './MobileNav';
 import { UpdateProvider } from '@modules/core/update/context/UpdateContext';
 import { useGlobalSearch } from '@app/providers/GlobalSearchProvider';
 import { useCommands } from '@app/providers/CommandProvider';
@@ -30,6 +32,7 @@ export function AppLayout({ title, subtitle }: AppLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const { tabs } = useTabs();
   const { activeLayout, settings } = useAppearance();
+  const { isMobile } = useResponsiveContext();
   const { hasMultipleCurrencies } = useCurrencyContext();
   const { openSearch } = useGlobalSearch();
   const { executeCommand } = useCommands();
@@ -101,6 +104,19 @@ export function AppLayout({ title, subtitle }: AppLayoutProps) {
   return <UpdateProvider>{renderLayout()}</UpdateProvider>;
 
   function renderLayout() {
+    // Mobile: simplified layout with bottom nav
+    if (isMobile) {
+      return (
+        <div className="min-h-screen bg-gray-50 overflow-hidden" dir={direction} data-tab-style={settings.tabStyle}>
+          <div className="flex flex-col h-screen">
+            {content}
+          </div>
+          <MobileNav />
+        </div>
+      );
+    }
+
+    // Desktop/Tablet: full layout with sidebar
     switch (activeLayout.shellVariant) {
       case 'topnav':
         return (

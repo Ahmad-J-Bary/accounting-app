@@ -61,6 +61,21 @@ export function Sidebar({ collapsed: _collapsed, onClose }: SidebarProps) {
     }
   }, [location.pathname, activeTabId, navGroupCollapseBehavior, activeGroup]);
 
+  // Nav entries gated by company lifecycle: NEW hides opening items;
+  // EXISTING hides transactional items until the migration is sealed, then hides
+  // the opening items once ACTIVE. Until the state resolves we stay permissive.
+  const hiddenItemIds = useMemo(
+    () => hiddenNavIds(companyTypeOf(companySettings), isReady ? initState : 'ACTIVE'),
+    [companySettings, initState, isReady],
+  );
+
+  // المجموعات المرئية مرتّبة (مع إخفاء عناصر نوع الشركة المنطبقة)
+  const visibleGroups = [...layout.groups]
+    .filter(g => g.visible)
+    .map(g => ({ ...g, items: g.items.filter(i => !hiddenItemIds.has(i.id)) }))
+    .filter(g => g.items.length > 0)
+    .sort((a, b) => a.order - b.order);
+
   // ── ملاحة مكدسة: المجموعة المحددة + تتبع المسار ──
   const [selectedStackedGroupId, setSelectedStackedGroupId] = useState<string | null>(() => {
     if (!isStacked) return null;
@@ -104,21 +119,6 @@ export function Sidebar({ collapsed: _collapsed, onClose }: SidebarProps) {
       toggleGroupCollapsed(groupId);
     }
   };
-
-  // Nav entries gated by company lifecycle: NEW hides opening items;
-  // EXISTING hides transactional items until the migration is sealed, then hides
-  // the opening items once ACTIVE. Until the state resolves we stay permissive.
-  const hiddenItemIds = useMemo(
-    () => hiddenNavIds(companyTypeOf(companySettings), isReady ? initState : 'ACTIVE'),
-    [companySettings, initState, isReady],
-  );
-
-  // المجموعات المرئية مرتّبة (مع إخفاء عناصر نوع الشركة المنطبقة)
-  const visibleGroups = [...layout.groups]
-    .filter(g => g.visible)
-    .map(g => ({ ...g, items: g.items.filter(i => !hiddenItemIds.has(i.id)) }))
-    .filter(g => g.items.length > 0)
-    .sort((a, b) => a.order - b.order);
 
   // ── الوضع المكدس: شريط أيقونات ضيق + لوحة جانبية ──
   if (isStacked) {

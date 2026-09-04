@@ -3,6 +3,12 @@ use crate::errors::AppError;
 
 pub struct PreviewVoiceIntentUseCase;
 
+impl Default for PreviewVoiceIntentUseCase {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl PreviewVoiceIntentUseCase {
     pub fn new() -> Self {
         Self
