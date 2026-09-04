@@ -7,6 +7,7 @@ import { SidebarSection } from "@widgets/sidebar-shell/SidebarSection";
 import type { AccountDto } from "@erp/shared-types";
 import { accountingService, type AccountCategory, type AccountType } from "@modules/accounting/api/accountingService";
 import type { ResolvedTreeNode } from "@shared/tree/nodeTypes";
+import { suggestChildCode, resolveLevel } from "../lib/accountCodeSuggestion";
 
 interface AccountFormProps {
   /** Whether the form panel is open */
@@ -50,36 +51,8 @@ export function AccountForm({
     return parentAccount;
   }, [mode, selected, parentAccount, allAccounts]);
 
-  const suggestChildCode = useCallback(
-    (account: AccountDto | null): string => {
-      if (!account) return "";
-      const base = account.code ?? "";
-      const baseLen = (account.level ?? 1) + 1;
-      const children = allAccounts.filter((a) => a.parent_id === account.id);
-      const existingCodes = children.map((c) => c.code ?? "");
-      const existingAtDepth = existingCodes.filter(
-        (c) => c.length === baseLen,
-      );
-
-      if (existingAtDepth.length === 0) {
-        const seed = base.length > 0 ? base + "1" : "1";
-        const res = seed.length >= baseLen ? seed : seed.padEnd(baseLen, "0");
-        return res.substring(0, baseLen);
-      }
-
-      const lastCode = existingAtDepth[existingAtDepth.length - 1];
-      const lastDigit = parseInt(lastCode.charAt(base.length), 10);
-      if (!isNaN(lastDigit) && lastDigit < 9) {
-        return `${base}${lastDigit + 1}`;
-      }
-
-      for (let i = 1; i <= 9; i++) {
-        const candidate = `${base}${i}`;
-        if (!existingAtDepth.includes(candidate)) return candidate;
-      }
-
-      return (base + "1").substring(0, baseLen);
-    },
+  const getSuggestedCode = useCallback(
+    (account: AccountDto | null): string => suggestChildCode(account, allAccounts),
     [allAccounts],
   );
 
@@ -91,7 +64,7 @@ export function AccountForm({
 
     if (mode === "create") {
       const parentCode = parentAccount?.code ?? "";
-      const fullSuggested = suggestChildCode(parentAccount);
+      const fullSuggested = getSuggestedCode(parentAccount);
       const suffix = fullSuggested.startsWith(parentCode)
         ? fullSuggested.substring(parentCode.length)
         : fullSuggested;
@@ -116,13 +89,7 @@ export function AccountForm({
       setNotes(selected.notes ?? "");
       setOpeningBalance(selected.opening_balance ?? "0");
     }
-  }, [open, mode, selected, parentAccount, formParent, suggestChildCode]);
-
-  const resolveLevel = (parent: string): number => {
-    if (parent === "null") return 1;
-    const parentAccount = allAccounts.find((a) => a.id === parent);
-    return (parentAccount?.level ?? 1) + 1;
-  };
+  }, [open, mode, selected, parentAccount, formParent, getSuggestedCode]);
 
   const handleSave = async () => {
     if (!nameAr.trim()) {
@@ -140,7 +107,7 @@ export function AccountForm({
 
     try {
       const effectiveParentId = parentId === "null" ? null : parentId;
-      const targetLevel = resolveLevel(parentId);
+      const targetLevel = resolveLevel(parentId, allAccounts);
       const targetCategory = "Detail" as AccountCategory;
       const finalCode = codeSuffix ? `${codeSuffix}${code.trim()}` : code.trim();
 
@@ -197,7 +164,7 @@ export function AccountForm({
       saveDisabled={!nameAr.trim()}
       saveLabel={mode === "edit" ? "حفظ التعديلات" : "إضافة الحساب"}
     >
-      <div className="space-y-6 text-right">
+      <div className="space-y-6 text-end">
         {error && (
           <div className="bg-red-50 text-red-700 border border-red-200 rounded-md px-3 py-2 text-sm">
             {error}

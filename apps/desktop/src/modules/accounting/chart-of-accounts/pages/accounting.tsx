@@ -10,6 +10,7 @@ import { BranchPanel, type PanelMode } from "../components/BranchPanel";
 import { HierarchicalTreeTemplate } from '@widgets/templates/HierarchicalTreeTemplate';
 import { Button } from "@shared/ui/button";
 import { ConfirmDialog } from "@shared/ui/confirm-dialog";
+import { ErrorBoundary } from "@shared/ui/ErrorBoundary";
 import { toast } from "sonner";
 import { useChartOfAccountsTree } from "@shared/hooks/queries/useAccountQueries";
 import { accountingService } from '@modules/accounting/api/accountingService';
@@ -488,6 +489,7 @@ export default function Accounting() {
   const panelSelected = isRootSelected ? null : selected;
 
   return (
+    <ErrorBoundary>
     <HierarchicalTreeTemplate
       title="دليل الحسابات"
       treePresentation={treePresentation}
@@ -510,7 +512,7 @@ export default function Accounting() {
                 disabled={action.disabled}
                 onClick={action.onClick}
               >
-                {Icon && <Icon className={`w-4 h-4 ml-2 ${action.tone === "primary" ? "" : action.tone === "danger" ? "text-rose-600" : action.key === "ledger" ? "text-blue-600" : ""}`} />}
+                {Icon && <Icon className={`w-4 h-4 ms-2 ${action.tone === "primary" ? "" : action.tone === "danger" ? "text-rose-600" : action.key === "ledger" ? "text-blue-600" : ""}`} />}
                 {action.label}
               </Button>
             );
@@ -519,7 +521,7 @@ export default function Accounting() {
       }
       treeHeaderActions={
         <>
-          <div className="ml-2 flex items-center gap-1 rounded-lg border border-slate-200 bg-white p-1">
+          <div className="ms-2 flex items-center gap-1 rounded-lg border border-slate-200 bg-white p-1">
             <button
               type="button"
               onClick={() => setTreePresentation("default")}
@@ -613,5 +615,6 @@ export default function Accounting() {
         onConfirm={() => void handleConfirmDelete()}
       />
     </HierarchicalTreeTemplate>
+    </ErrorBoundary>
   );
 }

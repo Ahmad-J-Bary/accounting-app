@@ -83,7 +83,7 @@ export function AccountTreeNodeItem({
         <>
           <div className="w-[90px]" />
           <div className="w-[100px]" />
-          <div className="w-[120px] text-left tabular-nums">
+          <div className="w-[120px] text-start tabular-nums">
             <span className={cn("text-sm font-black", bal >= 0 ? "text-slate-700" : "text-red-600")}>
               {formatCurrency(bal)}
             </span>
@@ -108,7 +108,7 @@ export function AccountTreeNodeItem({
             {TYPE_LABELS[node.account_type]?.label || node.account_type}
           </span>
         </div>
-        <div className="w-[120px] text-left tabular-nums">
+        <div className="w-[120px] text-start tabular-nums">
           {isOpeningStockAccount(node.name_ar) ? (
             <span className="text-sm font-medium text-slate-400">({formatCurrency(parseSafeNumber(node.balance))})</span>
           ) : (
