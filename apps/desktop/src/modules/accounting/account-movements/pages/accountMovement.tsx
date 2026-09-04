@@ -29,6 +29,7 @@ import { useDataTable } from "@shared/hooks";
 import { invalidateKeys, PAYMENT_RECEIPT_KEYS, queryClient } from "@shared/hooks/queryClient";
 import { toast } from "sonner";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
+import { ErrorBoundary } from "@shared/ui/ErrorBoundary";
 
 import { PaymentForm, PAYMENT_CONFIGS } from "@modules/partners/components/PaymentForm";
 import { ExpenseVoucherForm } from "@modules/expenses/components/ExpenseVoucherForm";
@@ -232,14 +233,14 @@ export default function AccountMovement() {
       case 'partner':
         return [
           <Button key="drawings" size="sm" onClick={() => setIsVoucherOpen(true)} className={TOOLBAR_CLASS_BY_TYPE.partner}>
-            <PlusCircle className="w-4 h-4 ml-2" />
+            <PlusCircle className="w-4 h-4 ms-2" />
             إنشاء سند مسحوبات جديد
           </Button>
         ];
       case 'customer':
         return [
           <Button key="receipt" size="sm" onClick={() => setIsVoucherOpen(true)} className={TOOLBAR_CLASS_BY_TYPE.customer}>
-            <PlusCircle className="w-4 h-4 ml-2" />
+            <PlusCircle className="w-4 h-4 ms-2" />
             إنشاء سند قبض جديد
           </Button>,
           commonPrint,
@@ -266,7 +267,7 @@ export default function AccountMovement() {
       case 'supplier':
         return [
           <Button key="payment" size="sm" onClick={() => setIsVoucherOpen(true)} className={TOOLBAR_CLASS_BY_TYPE.supplier}>
-            <PlusCircle className="w-4 h-4 ml-2" />
+            <PlusCircle className="w-4 h-4 ms-2" />
             إنشاء سند دفع جديد
           </Button>,
           commonPrint,
@@ -293,7 +294,7 @@ export default function AccountMovement() {
       case 'expense':
         return [
           <Button key="expense" size="sm" onClick={() => setIsVoucherOpen(true)} className={TOOLBAR_CLASS_BY_TYPE.expense}>
-            <PlusCircle className="w-4 h-4 ml-2" />
+            <PlusCircle className="w-4 h-4 ms-2" />
             إنشاء سند صرف جديد
           </Button>
         ];
@@ -303,6 +304,7 @@ export default function AccountMovement() {
   }, [accountType, linkedEntity, openTab]);
 
   return (
+    <ErrorBoundary>
     <OperationalTableTemplate
       title={accountTitle}
       toolbar={
@@ -322,7 +324,7 @@ export default function AccountMovement() {
         <div className="flex flex-col h-full">
           {/* Statistics Bar */}
           {ledger && (
-            <div className="grid grid-cols-4 gap-2 px-4 pt-4 pb-2">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 px-4 pt-4 pb-2">
               <StatCard label="افتتاحي / مدين" value={formatCurrency(openingDebitTotal, symbol)} icon={ArrowUpRight} />
               <StatCard label="افتتاحي / دائن" value={formatCurrency(openingCreditTotal, symbol)} icon={ArrowDownLeft} />
               <StatCard
@@ -404,5 +406,6 @@ export default function AccountMovement() {
       }
       isPanelOpen={isVoucherOpen}
     />
+    </ErrorBoundary>
   );
 }

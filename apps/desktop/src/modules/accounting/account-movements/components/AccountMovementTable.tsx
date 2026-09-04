@@ -566,14 +566,14 @@ export function AccountMovementTable({
               style={{ minWidth: 0 }}
             >
               <Skeleton
-                className={cn(
-                  "h-3.5 rounded",
-                  col.align === "left"
-                    ? "mr-auto ml-0 w-3/4"
-                    : col.align === "center"
-                    ? "mx-auto w-1/2"
-                    : "ml-auto mr-0 w-3/4",
-                )}
+                  className={cn(
+                    "h-3.5 rounded",
+                    col.align === "left"
+                      ? "ms-auto me-0 w-3/4"
+                      : col.align === "center"
+                      ? "mx-auto w-1/2"
+                      : "me-auto ms-0 w-3/4",
+                  )}
               />
             </div>
           ))}
@@ -695,7 +695,7 @@ export function AccountMovementTable({
           className="h-8 border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
           onClick={handleExport}
         >
-          <Download className="w-3.5 h-3.5 ml-1.5 text-slate-500" />
+          <Download className="w-3.5 h-3.5 ms-1.5 text-slate-500" />
           تصدير إكسل
         </Button>
       )}
