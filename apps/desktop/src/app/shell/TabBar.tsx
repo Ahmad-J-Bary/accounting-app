@@ -4,17 +4,23 @@ import { cn } from '@shared/lib/utils';
 import { Button } from "@shared/ui/button";
 import { useRef } from "react";
 import { useAppearance } from '@shared/hooks/useAppearance';
+import { useLocalization } from '@app/providers/LocalizationProvider';
 
 export function TabBar() {
   const { tabs, switchTab, closeTab, openDashboardTab } = useTabs();
   const { settings } = useAppearance();
+  const { direction } = useLocalization();
   const scrollRef = useRef<HTMLDivElement>(null);
+  const isRtl = direction === 'rtl';
 
   const scroll = (direction: "left" | "right") => {
     if (scrollRef.current) {
       const scrollAmount = 200;
+      const physicalDirection = isRtl
+        ? (direction === "left" ? "right" : "left")
+        : direction;
       scrollRef.current.scrollBy({
-        left: direction === "left" ? -scrollAmount : scrollAmount,
+        left: physicalDirection === "left" ? -scrollAmount : scrollAmount,
         behavior: "smooth",
       });
     }
@@ -81,8 +87,8 @@ export function TabBar() {
               getTabClassName(tab.active)
             )}
           >
-            {tab.dirty && <span className="ml-2 h-2 w-2 shrink-0 rounded-full bg-amber-500" />}
-            <span className="truncate flex-1 text-right">{tab.title}</span>
+            {tab.dirty && <span className="me-2 h-2 w-2 shrink-0 rounded-full bg-amber-500" />}
+            <span className="truncate flex-1 text-end">{tab.title}</span>
             {tab.closable && (
               <button
                 onClick={(e) => {
@@ -90,7 +96,7 @@ export function TabBar() {
                   closeTab(tab.id);
                 }}
                 className={cn(
-                  "mr-2 p-0.5 rounded-full hover:bg-slate-200 transition-colors",
+                  "ms-2 p-0.5 rounded-full hover:bg-slate-200 transition-colors",
                   tab.active ? "opacity-100" : "opacity-0 group-hover/tab:opacity-100"
                 )}
               >
@@ -100,7 +106,7 @@ export function TabBar() {
             
             {/* Divider for non-active tabs */}
             {!tab.active && settings.tabStyle === "default" && (
-              <div className="absolute left-0 top-1/4 bottom-1/4 w-[1px] bg-slate-200" />
+              <div className="absolute start-0 top-1/4 bottom-1/4 w-[1px] bg-slate-200" />
             )}
           </div>
         ))}

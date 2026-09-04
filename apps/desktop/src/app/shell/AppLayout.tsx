@@ -32,7 +32,7 @@ export function AppLayout({ title, subtitle }: AppLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const { tabs } = useTabs();
   const { activeLayout, settings } = useAppearance();
-  const { isMobile } = useResponsiveContext();
+  const { isMobile, isTablet } = useResponsiveContext();
   const { hasMultipleCurrencies } = useCurrencyContext();
   const { openSearch } = useGlobalSearch();
   const { executeCommand } = useCommands();
@@ -82,7 +82,7 @@ export function AppLayout({ title, subtitle }: AppLayoutProps) {
               tab.active ? "opacity-100 z-10" : "opacity-0 z-0 pointer-events-none"
             )}
           >
-            <div className="flex-1 p-6 overflow-auto">
+            <div className="flex-1 p-3 md:p-6 overflow-auto">
               {(title || subtitle) && tab.active && (
                 <div className="mb-6">
                   {title && <h1 className="text-2xl font-bold text-gray-900 mb-1">{title}</h1>}
@@ -108,13 +108,16 @@ export function AppLayout({ title, subtitle }: AppLayoutProps) {
     if (isMobile) {
       return (
         <div className="min-h-screen bg-gray-50 overflow-hidden" dir={direction} data-tab-style={settings.tabStyle}>
-          <div className="flex flex-col h-screen">
+          <div className="flex flex-col h-screen pb-14">
             {content}
           </div>
           <MobileNav />
         </div>
       );
     }
+
+    // Tablet: force sidebar collapsed for more content space
+    const effectiveSidebarOpen = isTablet ? false : sidebarOpen;
 
     // Desktop/Tablet: full layout with sidebar
     switch (activeLayout.shellVariant) {
@@ -137,7 +140,7 @@ export function AppLayout({ title, subtitle }: AppLayoutProps) {
       case 'combo':
         return (
           <div className="min-h-screen bg-gray-50 overflow-hidden" dir={direction} data-tab-style={settings.tabStyle}>
-            <ComboLayout sidebarOpen={sidebarOpen} onToggleSidebar={handleToggleSidebar} isExchangeVisible={isExchangeVisible} onToggleExchange={toggleExchange}>
+            <ComboLayout sidebarOpen={effectiveSidebarOpen} onToggleSidebar={handleToggleSidebar} isExchangeVisible={isExchangeVisible} onToggleExchange={toggleExchange}>
               {content}
             </ComboLayout>
           </div>
@@ -146,7 +149,7 @@ export function AppLayout({ title, subtitle }: AppLayoutProps) {
       default:
         return (
           <div className="min-h-screen bg-gray-50 overflow-hidden" dir={direction} data-tab-style={settings.tabStyle}>
-            <VerticalLayout sidebarOpen={sidebarOpen} onToggleSidebar={handleToggleSidebar} isExchangeVisible={isExchangeVisible} onToggleExchange={toggleExchange}>
+            <VerticalLayout sidebarOpen={effectiveSidebarOpen} onToggleSidebar={handleToggleSidebar} isExchangeVisible={isExchangeVisible} onToggleExchange={toggleExchange}>
               {content}
             </VerticalLayout>
           </div>

@@ -3,22 +3,25 @@ import { breakpoints } from '@shared/config/designTokens';
 
 export type ResponsiveMode = 'mobile' | 'tablet' | 'desktop';
 
+function getMode(): ResponsiveMode {
+  if (typeof window === 'undefined') return 'desktop';
+  const width = window.innerWidth;
+  if (width < parseInt(breakpoints.md)) {
+    return 'mobile';
+  } else if (width < parseInt(breakpoints.lg)) {
+    return 'tablet';
+  }
+  return 'desktop';
+}
+
 export function useResponsive(): ResponsiveMode {
-  const [mode, setMode] = useState<ResponsiveMode>('desktop');
+  const [mode, setMode] = useState<ResponsiveMode>(getMode);
 
   useEffect(() => {
     const checkMode = () => {
-      const width = window.innerWidth;
-      if (width < parseInt(breakpoints.md)) {
-        setMode('mobile');
-      } else if (width < parseInt(breakpoints.lg)) {
-        setMode('tablet');
-      } else {
-        setMode('desktop');
-      }
+      setMode(getMode());
     };
 
-    checkMode();
     window.addEventListener('resize', checkMode);
     return () => window.removeEventListener('resize', checkMode);
   }, []);
