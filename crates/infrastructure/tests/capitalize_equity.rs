@@ -25,8 +25,9 @@ use application::use_cases::partner::{CreateCapitalContributionUseCase, CreatePa
 use domain::shared::ids::AccountId;
 use infrastructure::db::pool::run_migrations;
 use infrastructure::repositories::{
-    SqliteAccountRepository, SqliteCurrencyRepository, SqliteJournalEntryRepository,
-    SqliteOpeningMigrationRepository, SqlitePartnerRepository, SqliteSettingsRepository,
+    SqliteAccountRepository, SqliteCurrencyRepository, SqliteFiscalPeriodRepository,
+    SqliteFiscalYearRepository, SqliteJournalEntryRepository, SqliteOpeningMigrationRepository,
+    SqlitePartnerRepository, SqliteSettingsRepository,
 };
 use rust_decimal::Decimal;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
@@ -111,11 +112,15 @@ async fn register_partner_with_capital(pool: &Arc<sqlx::SqlitePool>) -> (String,
 
     // Real capital contribution: cash +1000, capital −1000.
     let cash = account_id_by_code(pool, "122").await;
+    let fiscal_year_repo = Arc::new(SqliteFiscalYearRepository::new(pool.clone()));
+    let fiscal_period_repo = Arc::new(SqliteFiscalPeriodRepository::new(pool.clone()));
     let contribution = CreateCapitalContributionUseCase::new(
         partner_repo.clone(),
         account_repo.clone(),
         Arc::new(SqliteJournalEntryRepository::new(pool.clone())),
         Arc::new(SqliteOpeningMigrationRepository::new(pool.clone())),
+        fiscal_year_repo,
+        fiscal_period_repo,
     );
     contribution
         .execute(
@@ -154,8 +159,15 @@ async fn capitalization_posts_balanced_auditable_journal_and_is_idempotent() {
         Arc::new(SqliteAccountRepository::new(pool.clone()));
     let partner_repo: Arc<dyn PartnerRepository> =
         Arc::new(SqlitePartnerRepository::new(pool.clone()));
-    let uc =
-        CapitalizeRetainedEarningsUseCase::new(partner_repo, account_repo, journal_repo.clone());
+    let fiscal_year_repo = Arc::new(SqliteFiscalYearRepository::new(pool.clone()));
+    let fiscal_period_repo = Arc::new(SqliteFiscalPeriodRepository::new(pool.clone()));
+    let uc = CapitalizeRetainedEarningsUseCase::new(
+        partner_repo,
+        account_repo,
+        journal_repo.clone(),
+        fiscal_year_repo,
+        fiscal_period_repo,
+    );
 
     let first = uc
         .execute(

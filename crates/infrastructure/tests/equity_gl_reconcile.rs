@@ -19,8 +19,8 @@ use domain::shared::ids::{AccountId, PartnerId};
 use domain::shared::monetary_amount::MonetaryAmount;
 use infrastructure::db::pool::run_migrations;
 use infrastructure::repositories::{
-    SqliteAccountRepository, SqliteFiscalPeriodRepository, SqliteJournalEntryRepository,
-    SqliteOpeningMigrationRepository, SqlitePartnerRepository,
+    SqliteAccountRepository, SqliteFiscalPeriodRepository, SqliteFiscalYearRepository,
+    SqliteJournalEntryRepository, SqliteOpeningMigrationRepository, SqlitePartnerRepository,
 };
 use rust_decimal::Decimal;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
@@ -251,6 +251,9 @@ async fn equity_statement_reconciles_with_partner_ledgers() {
         .await
         .unwrap();
 
+    let fiscal_year_repo = Arc::new(SqliteFiscalYearRepository::new(pool.clone()));
+    let fiscal_period_repo = Arc::new(SqliteFiscalPeriodRepository::new(pool.clone()));
+
     // two explicit contributions feed both capital ledgers
     let contrib_a = 200;
     let contrib_b = 400;
@@ -259,6 +262,8 @@ async fn equity_statement_reconciles_with_partner_ledgers() {
         account_repo.clone(),
         journal_repo.clone(),
         Arc::new(SqliteOpeningMigrationRepository::new(pool.clone())),
+        fiscal_year_repo.clone(),
+        fiscal_period_repo.clone(),
     )
     .execute(
         a_id.to_string(),
@@ -274,6 +279,8 @@ async fn equity_statement_reconciles_with_partner_ledgers() {
         account_repo.clone(),
         journal_repo.clone(),
         Arc::new(SqliteOpeningMigrationRepository::new(pool.clone())),
+        fiscal_year_repo.clone(),
+        fiscal_period_repo.clone(),
     )
     .execute(
         b_id.to_string(),
@@ -290,6 +297,8 @@ async fn equity_statement_reconciles_with_partner_ledgers() {
         partner_repo.clone(),
         account_repo.clone(),
         journal_repo.clone(),
+        fiscal_year_repo,
+        fiscal_period_repo,
     )
     .execute(
         a_id.to_string(),
@@ -458,12 +467,17 @@ async fn equity_statement_date_range_filtering() {
         .await
         .unwrap();
 
+    let fiscal_year_repo = Arc::new(SqliteFiscalYearRepository::new(pool.clone()));
+    let fiscal_period_repo = Arc::new(SqliteFiscalPeriodRepository::new(pool.clone()));
+
     // Capital contribution
     CreateCapitalContributionUseCase::new(
         partner_repo.clone(),
         account_repo.clone(),
         journal_repo.clone(),
         Arc::new(SqliteOpeningMigrationRepository::new(pool.clone())),
+        fiscal_year_repo,
+        fiscal_period_repo,
     )
     .execute(
         a_id.to_string(),

@@ -10,8 +10,8 @@ use domain::shared::currency::Currency;
 use domain::shared::ids::AccountId;
 use infrastructure::db::pool::run_migrations;
 use infrastructure::repositories::{
-    SqliteAccountRepository, SqliteJournalEntryRepository, SqliteOpeningMigrationRepository,
-    SqlitePartnerRepository,
+    SqliteAccountRepository, SqliteFiscalPeriodRepository, SqliteFiscalYearRepository,
+    SqliteJournalEntryRepository, SqliteOpeningMigrationRepository, SqlitePartnerRepository,
 };
 use rust_decimal::Decimal;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
@@ -139,6 +139,8 @@ async fn contribution_keeps_master_static_and_ledger_is_truth() {
         Arc::new(SqliteAccountRepository::new(pool.clone())),
         Arc::new(SqliteJournalEntryRepository::new(pool.clone())),
         Arc::new(SqliteOpeningMigrationRepository::new(pool.clone())),
+        Arc::new(SqliteFiscalYearRepository::new(pool.clone())),
+        Arc::new(SqliteFiscalPeriodRepository::new(pool.clone())),
     );
     case.execute(
         partner_id.clone(),

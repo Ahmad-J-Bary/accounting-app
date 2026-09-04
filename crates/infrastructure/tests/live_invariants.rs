@@ -38,8 +38,9 @@ use domain::shared::AccountId;
 use infrastructure::db::pool::run_migrations;
 use infrastructure::repositories::{
     SqliteAccountRepository, SqliteCurrencyRepository, SqliteCustomerRepository,
-    SqliteJournalEntryRepository, SqliteOpeningMigrationRepository, SqlitePartnerRepository,
-    SqliteSettingsRepository, SqliteSupplierRepository,
+    SqliteFiscalPeriodRepository, SqliteFiscalYearRepository, SqliteJournalEntryRepository,
+    SqliteOpeningMigrationRepository, SqlitePartnerRepository, SqliteSettingsRepository,
+    SqliteSupplierRepository,
 };
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
@@ -185,11 +186,15 @@ async fn live_ledger_satisfies_debit_credit_and_accounting_equation() {
         .unwrap()
         .expect("partner exists");
     let _capital = partner.linked_account_id.expect("partner capital account");
+    let fiscal_year_repo = Arc::new(SqliteFiscalYearRepository::new(pool.clone()));
+    let fiscal_period_repo = Arc::new(SqliteFiscalPeriodRepository::new(pool.clone()));
     CreateCapitalContributionUseCase::new(
         partner_repo,
         account_repo.clone(),
         journal_repo.clone(),
         migration_repo.clone(),
+        fiscal_year_repo,
+        fiscal_period_repo,
     )
     .execute(
         partner_id,

@@ -35,9 +35,10 @@ use domain::accounting::MigrationStatus;
 use domain::shared::ids::AccountId;
 use infrastructure::db::pool::run_migrations;
 use infrastructure::repositories::{
-    SqliteAccountRepository, SqliteCurrencyRepository, SqliteJournalEntryRepository,
-    SqliteOpeningItemRepository, SqliteOpeningMigrationRepository, SqliteOpeningPostingRepository,
-    SqlitePartnerRepository, SqliteSettingsRepository,
+    SqliteAccountRepository, SqliteCurrencyRepository, SqliteFiscalPeriodRepository,
+    SqliteFiscalYearRepository, SqliteJournalEntryRepository, SqliteOpeningItemRepository,
+    SqliteOpeningMigrationRepository, SqliteOpeningPostingRepository, SqlitePartnerRepository,
+    SqliteSettingsRepository,
 };
 use rust_decimal::Decimal;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
@@ -311,7 +312,16 @@ async fn after_lock_company_behaves_like_new_for_capital_contribution() {
         Arc::new(SqliteJournalEntryRepository::new(pool.clone()));
     let migration_repo: Arc<dyn OpeningMigrationRepository> =
         Arc::new(SqliteOpeningMigrationRepository::new(pool.clone()));
-    CreateCapitalContributionUseCase::new(partner_repo, account_repo, journal_repo, migration_repo)
+    let fiscal_year_repo = Arc::new(SqliteFiscalYearRepository::new(pool.clone()));
+    let fiscal_period_repo = Arc::new(SqliteFiscalPeriodRepository::new(pool.clone()));
+    CreateCapitalContributionUseCase::new(
+        partner_repo,
+        account_repo,
+        journal_repo,
+        migration_repo,
+        fiscal_year_repo,
+        fiscal_period_repo,
+    )
         .execute(
             partner_id,
             cash.to_string(),

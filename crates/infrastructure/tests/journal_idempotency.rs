@@ -9,8 +9,8 @@ use domain::shared::currency::Currency;
 use domain::shared::ids::AccountId;
 use infrastructure::db::pool::run_migrations;
 use infrastructure::repositories::{
-    SqliteAccountRepository, SqliteJournalEntryRepository, SqliteOpeningMigrationRepository,
-    SqlitePartnerRepository,
+    SqliteAccountRepository, SqliteFiscalPeriodRepository, SqliteFiscalYearRepository,
+    SqliteJournalEntryRepository, SqliteOpeningMigrationRepository, SqlitePartnerRepository,
 };
 use rust_decimal::Decimal;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
@@ -122,11 +122,15 @@ async fn contribution_with_same_event_id_posts_once() {
     let partner_id = seed_partner(&pool).await;
     let funding = funding_account_id(&pool).await;
 
+    let fiscal_year_repo = Arc::new(SqliteFiscalYearRepository::new(pool.clone()));
+    let fiscal_period_repo = Arc::new(SqliteFiscalPeriodRepository::new(pool.clone()));
     let case = CreateCapitalContributionUseCase::new(
         Arc::new(SqlitePartnerRepository::new(pool.clone())),
         Arc::new(SqliteAccountRepository::new(pool.clone())),
         Arc::new(SqliteJournalEntryRepository::new(pool.clone())),
         Arc::new(SqliteOpeningMigrationRepository::new(pool.clone())),
+        fiscal_year_repo,
+        fiscal_period_repo,
     );
 
     let event = "8f1a2b3c-0000-0000-0000-000000000001".to_string();
@@ -171,11 +175,15 @@ async fn distinct_event_ids_create_distinct_journals() {
     let partner_id = seed_partner(&pool).await;
     let funding = funding_account_id(&pool).await;
 
+    let fiscal_year_repo = Arc::new(SqliteFiscalYearRepository::new(pool.clone()));
+    let fiscal_period_repo = Arc::new(SqliteFiscalPeriodRepository::new(pool.clone()));
     let case = CreateCapitalContributionUseCase::new(
         Arc::new(SqlitePartnerRepository::new(pool.clone())),
         Arc::new(SqliteAccountRepository::new(pool.clone())),
         Arc::new(SqliteJournalEntryRepository::new(pool.clone())),
         Arc::new(SqliteOpeningMigrationRepository::new(pool.clone())),
+        fiscal_year_repo,
+        fiscal_period_repo,
     );
 
     let a = case

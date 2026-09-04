@@ -41,7 +41,8 @@ use domain::shared::money::Money;
 use domain::shared::AccountId;
 use infrastructure::db::pool::run_migrations;
 use infrastructure::repositories::{
-    SqliteAccountRepository, SqliteJournalEntryRepository, SqliteOpeningMigrationRepository,
+    SqliteAccountRepository, SqliteFiscalPeriodRepository, SqliteFiscalYearRepository,
+    SqliteJournalEntryRepository, SqliteOpeningMigrationRepository,
     SqliteOpeningPostingRepository,
 };
 use rust_decimal::Decimal;
@@ -315,6 +316,8 @@ async fn reversed_entry_is_neutral_in_ledger_and_report_feed() {
         Arc::new(SqliteJournalEntryRepository::new(pool.clone()));
     let account_repo: Arc<dyn AccountRepository> =
         Arc::new(SqliteAccountRepository::new(pool.clone()));
+    let fiscal_year_repo = Arc::new(SqliteFiscalYearRepository::new(pool.clone()));
+    let fiscal_period_repo = Arc::new(SqliteFiscalPeriodRepository::new(pool.clone()));
 
     let asset = seed_account(pool.as_ref(), "1209", "نقد تجريبي", "Assets", "12").await;
     let equity = seed_account(pool.as_ref(), "510002", "رأس مال تجريبي2", "Equity", "51").await;
@@ -364,7 +367,7 @@ async fn reversed_entry_is_neutral_in_ledger_and_report_feed() {
         .unwrap();
     let entry_id = dto.id;
 
-    PostJournalEntryUseCase::new(journal_repo.clone())
+    PostJournalEntryUseCase::new(journal_repo.clone(), fiscal_year_repo, fiscal_period_repo)
         .execute(entry_id.clone())
         .await
         .unwrap();

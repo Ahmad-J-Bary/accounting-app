@@ -14,7 +14,8 @@ use domain::shared::exchange_rate::{ExchangeRate, RateType};
 use infrastructure::db::pool::run_migrations;
 use infrastructure::repositories::{
     SqliteAccountRepository, SqliteCurrencyRepository, SqliteDamagedItemRepository,
-    SqliteExchangeRateRepository, SqliteInventoryLotRepository, SqliteJournalEntryRepository,
+    SqliteExchangeRateRepository, SqliteFiscalPeriodRepository, SqliteFiscalYearRepository,
+    SqliteInventoryLotRepository, SqliteJournalEntryRepository,
     SqliteMaterialRepository, SqliteStockMovementRepository,
 };
 use rust_decimal::Decimal;
@@ -160,6 +161,8 @@ async fn damaged_item_uses_carrying_cost_as_canonical_loss_and_cost_impact() {
         Arc::new(SqliteExchangeRateRepository::new(pool.clone())),
         Arc::new(SqliteAccountRepository::new(pool.clone())),
         Arc::new(SqliteJournalEntryRepository::new(pool.clone())),
+        Arc::new(SqliteFiscalYearRepository::new(pool.clone())),
+        Arc::new(SqliteFiscalPeriodRepository::new(pool.clone())),
     );
 
     let dto = use_case
@@ -220,6 +223,8 @@ async fn damaged_item_preserves_original_usd_and_base_syp_values() {
         Arc::new(SqliteExchangeRateRepository::new(pool.clone())),
         Arc::new(SqliteAccountRepository::new(pool.clone())),
         Arc::new(SqliteJournalEntryRepository::new(pool.clone())),
+        Arc::new(SqliteFiscalYearRepository::new(pool.clone())),
+        Arc::new(SqliteFiscalPeriodRepository::new(pool.clone())),
     );
 
     let dto = use_case
@@ -304,6 +309,8 @@ async fn deleting_a_damaged_item_removes_only_its_own_document_number_movements(
         Arc::new(SqliteExchangeRateRepository::new(pool.clone())),
         Arc::new(SqliteAccountRepository::new(pool.clone())),
         Arc::new(SqliteJournalEntryRepository::new(pool.clone())),
+        Arc::new(SqliteFiscalYearRepository::new(pool.clone())),
+        Arc::new(SqliteFiscalPeriodRepository::new(pool.clone())),
     );
 
     let first = create

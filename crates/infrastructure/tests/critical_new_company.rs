@@ -34,10 +34,11 @@ use domain::shared::ids::AccountId;
 use infrastructure::db::pool::run_migrations;
 use infrastructure::repositories::{
     SqliteAccountRepository, SqliteCategoryRepository, SqliteCurrencyRepository,
-    SqliteCustomerRepository, SqliteExchangeRateRepository, SqliteInventoryLotRepository,
-    SqliteJournalEntryRepository, SqliteMaterialRepository, SqliteOpeningMigrationRepository,
-    SqlitePartnerRepository, SqliteSettingsRepository, SqliteStockMovementRepository,
-    SqliteSupplierRepository, SqliteUnifiedInvoiceRepository,
+    SqliteCustomerRepository, SqliteExchangeRateRepository, SqliteFiscalPeriodRepository,
+    SqliteFiscalYearRepository, SqliteInventoryLotRepository, SqliteJournalEntryRepository,
+    SqliteMaterialRepository, SqliteOpeningMigrationRepository, SqlitePartnerRepository,
+    SqliteSettingsRepository, SqliteStockMovementRepository, SqliteSupplierRepository,
+    SqliteUnifiedInvoiceRepository,
 };
 use rust_decimal::Decimal;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
@@ -285,11 +286,15 @@ async fn new_company_capital_contribution_posts_real_balanced_event() {
         Arc::new(SqlitePartnerRepository::new(pool.clone()));
     let migration_repo: Arc<dyn OpeningMigrationRepository> =
         Arc::new(SqliteOpeningMigrationRepository::new(pool.clone()));
+    let fiscal_year_repo = Arc::new(SqliteFiscalYearRepository::new(pool.clone()));
+    let fiscal_period_repo = Arc::new(SqliteFiscalPeriodRepository::new(pool.clone()));
     let uc = CreateCapitalContributionUseCase::new(
         partner_repo,
         account_repo,
         journal_repo,
         migration_repo,
+        fiscal_year_repo,
+        fiscal_period_repo,
     );
 
     let first = uc
