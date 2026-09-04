@@ -24,6 +24,7 @@ import { CommandProvider } from '@app/providers/CommandProvider';
 import { GlobalSearchProvider } from '@app/providers/GlobalSearchProvider';
 import { VoiceProvider } from '@app/providers/VoiceProvider';
 import { BarcodeScannerProvider } from '@app/providers/BarcodeScannerProvider';
+import { ResponsiveProvider } from '@app/providers/ResponsiveProvider';
 
 const App = () => {
   const [block, setBlock] = useState<StartupBlockInfo | null>(null);
@@ -75,27 +76,29 @@ const App = () => {
                 {/* ERP Routes with AppLayout */}
                 <Route path="/*" element={
                   <CurrencyProvider>
-                    <TableSettingsProvider>
-                      <SidePanelSettingsProvider>
-                        <NavSidebarSettingsProvider>
-                          <SidebarLayoutProvider>
-                            <TabProvider>
-                              <WindowProvider>
-                                <CommandProvider>
-                                  <GlobalSearchProvider>
-                                    <VoiceProvider>
-                                      <BarcodeScannerProvider>
-                                        <AppLayout />
-                                      </BarcodeScannerProvider>
-                                    </VoiceProvider>
-                                  </GlobalSearchProvider>
-                                </CommandProvider>
-                              </WindowProvider>
-                            </TabProvider>
-                          </SidebarLayoutProvider>
-                        </NavSidebarSettingsProvider>
-                      </SidePanelSettingsProvider>
-                    </TableSettingsProvider>
+                    <ResponsiveProvider>
+                      <TableSettingsProvider>
+                        <SidePanelSettingsProvider>
+                          <NavSidebarSettingsProvider>
+                            <SidebarLayoutProvider>
+                              <TabProvider>
+                                <WindowProvider>
+                                  <CommandProvider>
+                                    <GlobalSearchProvider>
+                                      <VoiceProvider>
+                                        <BarcodeScannerProvider>
+                                          <AppLayout />
+                                        </BarcodeScannerProvider>
+                                      </VoiceProvider>
+                                    </GlobalSearchProvider>
+                                  </CommandProvider>
+                                </WindowProvider>
+                              </TabProvider>
+                            </SidebarLayoutProvider>
+                          </NavSidebarSettingsProvider>
+                        </SidePanelSettingsProvider>
+                      </TableSettingsProvider>
+                    </ResponsiveProvider>
                   </CurrencyProvider>
                 } />
               </Routes>
