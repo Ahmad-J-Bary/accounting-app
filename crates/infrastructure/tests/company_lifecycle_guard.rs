@@ -112,6 +112,21 @@ fn close_enough(actual: f64, expected: f64) -> bool {
     (actual - expected).abs() < 0.01
 }
 
+async fn seed_fiscal_year_and_period(pool: &sqlx::SqlitePool) {
+    let now = chrono::Utc::now();
+    let year_start = format!("{}-01-01T00:00:00Z", now.format("%Y"));
+    let year_end = format!("{}-12-31T23:59:59Z", now.format("%Y"));
+    let fy_id = uuid::Uuid::new_v4().to_string();
+    let fp_id = uuid::Uuid::new_v4().to_string();
+    let now_rfc = now.to_rfc3339();
+    sqlx::query("INSERT INTO fiscal_years (id, company_id, label, start_date, end_date, status, created_at, updated_at) VALUES (?, NULL, 'FY', ?, ?, 'Open', ?, ?)")
+        .bind(&fy_id).bind(&year_start).bind(&year_end).bind(&now_rfc).bind(&now_rfc)
+        .execute(pool).await.unwrap();
+    sqlx::query("INSERT INTO fiscal_periods (id, company_id, start_date, end_date, status, created_at, updated_at) VALUES (?, NULL, ?, ?, 'Open', ?, ?)")
+        .bind(&fp_id).bind(&year_start).bind(&year_end).bind(&now_rfc).bind(&now_rfc)
+        .execute(pool).await.unwrap();
+}
+
 async fn create_partner(
     pool: &Arc<sqlx::SqlitePool>,
     mode: &str,
@@ -192,6 +207,7 @@ async fn create_draft_migration(pool: &Arc<sqlx::SqlitePool>) -> String {
 #[tokio::test]
 async fn new_company_contribution_increases_cash_and_capital() {
     let pool = build_pool().await;
+    seed_fiscal_year_and_period(pool.as_ref()).await;
     set_start_mode(&pool, "NewCompany").await;
 
     let partner_id = create_partner(&pool, "NewCompany", Decimal::from(1000)).await;

@@ -35,6 +35,21 @@ async fn build_pool() -> Arc<sqlx::SqlitePool> {
     pool
 }
 
+async fn seed_fiscal_year_and_period(pool: &sqlx::SqlitePool) {
+    let now = chrono::Utc::now();
+    let year_start = format!("{}-01-01T00:00:00Z", now.format("%Y"));
+    let year_end = format!("{}-12-31T23:59:59Z", now.format("%Y"));
+    let fy_id = uuid::Uuid::new_v4().to_string();
+    let fp_id = uuid::Uuid::new_v4().to_string();
+    let now_rfc = now.to_rfc3339();
+    sqlx::query("INSERT INTO fiscal_years (id, company_id, label, start_date, end_date, status, created_at, updated_at) VALUES (?, NULL, 'FY', ?, ?, 'Open', ?, ?)")
+        .bind(&fy_id).bind(&year_start).bind(&year_end).bind(&now_rfc).bind(&now_rfc)
+        .execute(pool).await.unwrap();
+    sqlx::query("INSERT INTO fiscal_periods (id, company_id, start_date, end_date, status, created_at, updated_at) VALUES (?, NULL, ?, ?, 'Open', ?, ?)")
+        .bind(&fp_id).bind(&year_start).bind(&year_end).bind(&now_rfc).bind(&now_rfc)
+        .execute(pool).await.unwrap();
+}
+
 async fn seed_partner(pool: &sqlx::SqlitePool) -> String {
     let repo = SqlitePartnerRepository::new(Arc::new(pool.clone()));
     let (capital_parent, drawings_parent) = {
@@ -119,6 +134,7 @@ async fn funding_account_id(pool: &sqlx::SqlitePool) -> AccountId {
 #[tokio::test]
 async fn contribution_with_same_event_id_posts_once() {
     let pool = build_pool().await;
+    seed_fiscal_year_and_period(&pool).await;
     let partner_id = seed_partner(&pool).await;
     let funding = funding_account_id(&pool).await;
 
@@ -172,6 +188,7 @@ async fn contribution_with_same_event_id_posts_once() {
 #[tokio::test]
 async fn distinct_event_ids_create_distinct_journals() {
     let pool = build_pool().await;
+    seed_fiscal_year_and_period(&pool).await;
     let partner_id = seed_partner(&pool).await;
     let funding = funding_account_id(&pool).await;
 
@@ -220,6 +237,7 @@ async fn distinct_event_ids_create_distinct_journals() {
 #[tokio::test]
 async fn database_rejects_duplicate_source_pair() {
     let pool = build_pool().await;
+    seed_fiscal_year_and_period(&pool).await;
     seed_partner(&pool).await;
     funding_account_id(&pool).await;
 

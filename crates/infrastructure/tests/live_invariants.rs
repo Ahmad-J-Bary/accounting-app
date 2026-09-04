@@ -85,6 +85,21 @@ async fn account_id_by_code(pool: &sqlx::SqlitePool, code: &str) -> AccountId {
     AccountId(uuid::Uuid::parse_str(&id).unwrap())
 }
 
+async fn seed_fiscal_year_and_period(pool: &sqlx::SqlitePool) {
+    let now = chrono::Utc::now();
+    let year_start = format!("{}-01-01T00:00:00Z", now.format("%Y"));
+    let year_end = format!("{}-12-31T23:59:59Z", now.format("%Y"));
+    let fy_id = uuid::Uuid::new_v4().to_string();
+    let fp_id = uuid::Uuid::new_v4().to_string();
+    let now_rfc = now.to_rfc3339();
+    sqlx::query("INSERT INTO fiscal_years (id, company_id, label, start_date, end_date, status, created_at, updated_at) VALUES (?, NULL, 'FY', ?, ?, 'Open', ?, ?)")
+        .bind(&fy_id).bind(&year_start).bind(&year_end).bind(&now_rfc).bind(&now_rfc)
+        .execute(pool).await.unwrap();
+    sqlx::query("INSERT INTO fiscal_periods (id, company_id, start_date, end_date, status, created_at, updated_at) VALUES (?, NULL, ?, ?, 'Open', ?, ?)")
+        .bind(&fp_id).bind(&year_start).bind(&year_end).bind(&now_rfc).bind(&now_rfc)
+        .execute(pool).await.unwrap();
+}
+
 /// Net of posted journal lines touching an account (base units). Positive = net
 /// debit; credit-normal accounts yield negative for credits.
 async fn ledger_balance(pool: &sqlx::SqlitePool, account_id: &AccountId) -> f64 {
@@ -144,6 +159,7 @@ async fn post_journal(
 async fn live_ledger_satisfies_debit_credit_and_accounting_equation() {
     let pool = build_pool().await;
     set_start_mode(&pool, "NewCompany").await;
+    seed_fiscal_year_and_period(pool.as_ref()).await;
 
     let cash = account_id_by_code(&pool, "122").await;
     let obe = account_id_by_code(&pool, "53").await;

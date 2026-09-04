@@ -83,6 +83,21 @@ fn close_enough(actual: f64, expected: f64) -> bool {
     (actual - expected).abs() < 0.01
 }
 
+async fn seed_fiscal_year_and_period(pool: &sqlx::SqlitePool) {
+    let now = chrono::Utc::now();
+    let year_start = format!("{}-01-01T00:00:00Z", now.format("%Y"));
+    let year_end = format!("{}-12-31T23:59:59Z", now.format("%Y"));
+    let fy_id = uuid::Uuid::new_v4().to_string();
+    let fp_id = uuid::Uuid::new_v4().to_string();
+    let now_rfc = now.to_rfc3339();
+    sqlx::query("INSERT INTO fiscal_years (id, company_id, label, start_date, end_date, status, created_at, updated_at) VALUES (?, NULL, 'FY', ?, ?, 'Open', ?, ?)")
+        .bind(&fy_id).bind(&year_start).bind(&year_end).bind(&now_rfc).bind(&now_rfc)
+        .execute(pool).await.unwrap();
+    sqlx::query("INSERT INTO fiscal_periods (id, company_id, start_date, end_date, status, created_at, updated_at) VALUES (?, NULL, ?, ?, 'Open', ?, ?)")
+        .bind(&fp_id).bind(&year_start).bind(&year_end).bind(&now_rfc).bind(&now_rfc)
+        .execute(pool).await.unwrap();
+}
+
 async fn register_partner_with_capital(pool: &Arc<sqlx::SqlitePool>) -> (String, AccountId) {
     let partner_repo: Arc<dyn PartnerRepository> =
         Arc::new(SqlitePartnerRepository::new(pool.clone()));
@@ -149,6 +164,7 @@ async fn register_partner_with_capital(pool: &Arc<sqlx::SqlitePool>) -> (String,
 async fn capitalization_posts_balanced_auditable_journal_and_is_idempotent() {
     let pool = build_pool().await;
     set_start_mode(&pool, "NewCompany").await;
+    seed_fiscal_year_and_period(&pool).await;
 
     let (partner_id, cap_id) = register_partner_with_capital(&pool).await;
     let retained = account_id_by_code(&pool, "52").await;

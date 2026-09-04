@@ -97,6 +97,21 @@ async fn build_pool_with_base(base_code: &str) -> Arc<sqlx::SqlitePool> {
     pool
 }
 
+async fn seed_fiscal_year_and_period(pool: &sqlx::SqlitePool) {
+    let now = chrono::Utc::now();
+    let year_start = format!("{}-01-01T00:00:00Z", now.format("%Y"));
+    let year_end = format!("{}-12-31T23:59:59Z", now.format("%Y"));
+    let fy_id = uuid::Uuid::new_v4().to_string();
+    let fp_id = uuid::Uuid::new_v4().to_string();
+    let now_rfc = now.to_rfc3339();
+    sqlx::query("INSERT INTO fiscal_years (id, company_id, label, start_date, end_date, status, created_at, updated_at) VALUES (?, NULL, 'FY', ?, ?, 'Open', ?, ?)")
+        .bind(&fy_id).bind(&year_start).bind(&year_end).bind(&now_rfc).bind(&now_rfc)
+        .execute(pool).await.unwrap();
+    sqlx::query("INSERT INTO fiscal_periods (id, company_id, start_date, end_date, status, created_at, updated_at) VALUES (?, NULL, ?, ?, 'Open', ?, ?)")
+        .bind(&fp_id).bind(&year_start).bind(&year_end).bind(&now_rfc).bind(&now_rfc)
+        .execute(pool).await.unwrap();
+}
+
 async fn create_material_with_stock(pool: &Arc<sqlx::SqlitePool>) -> Material {
     create_material_with_stock_costing(pool, "USD", Decimal::from(5), Decimal::ONE).await
 }
@@ -150,6 +165,7 @@ async fn create_material_with_stock_costing(
 #[tokio::test]
 async fn damaged_item_uses_carrying_cost_as_canonical_loss_and_cost_impact() {
     let pool = build_pool().await;
+    seed_fiscal_year_and_period(&pool).await;
     let material = create_material_with_stock(&pool).await;
 
     let use_case = CreateDamagedItemUseCase::new(
@@ -210,6 +226,7 @@ async fn damaged_item_uses_carrying_cost_as_canonical_loss_and_cost_impact() {
 #[tokio::test]
 async fn damaged_item_preserves_original_usd_and_base_syp_values() {
     let pool = build_pool_with_base("SYP").await;
+    seed_fiscal_year_and_period(&pool).await;
     let usd_per_syp = Decimal::ONE / Decimal::from(130);
     let material =
         create_material_with_stock_costing(&pool, "USD", Decimal::from(5), usd_per_syp).await;
@@ -298,6 +315,7 @@ async fn damaged_item_preserves_original_usd_and_base_syp_values() {
 #[tokio::test]
 async fn deleting_a_damaged_item_removes_only_its_own_document_number_movements() {
     let pool = build_pool().await;
+    seed_fiscal_year_and_period(&pool).await;
     let material = create_material_with_stock(&pool).await;
 
     let create = CreateDamagedItemUseCase::new(

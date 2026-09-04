@@ -96,6 +96,21 @@ fn close_enough(actual: f64, expected: f64) -> bool {
     (actual - expected).abs() < 0.01
 }
 
+async fn seed_fiscal_year_and_period(pool: &sqlx::SqlitePool) {
+    let now = chrono::Utc::now();
+    let year_start = format!("{}-01-01T00:00:00Z", now.format("%Y"));
+    let year_end = format!("{}-12-31T23:59:59Z", now.format("%Y"));
+    let fy_id = uuid::Uuid::new_v4().to_string();
+    let fp_id = uuid::Uuid::new_v4().to_string();
+    let now_rfc = now.to_rfc3339();
+    sqlx::query("INSERT INTO fiscal_years (id, company_id, label, start_date, end_date, status, created_at, updated_at) VALUES (?, NULL, 'FY', ?, ?, 'Open', ?, ?)")
+        .bind(&fy_id).bind(&year_start).bind(&year_end).bind(&now_rfc).bind(&now_rfc)
+        .execute(pool).await.unwrap();
+    sqlx::query("INSERT INTO fiscal_periods (id, company_id, start_date, end_date, status, created_at, updated_at) VALUES (?, NULL, ?, ?, 'Open', ?, ?)")
+        .bind(&fp_id).bind(&year_start).bind(&year_end).bind(&now_rfc).bind(&now_rfc)
+        .execute(pool).await.unwrap();
+}
+
 async fn create_material(pool: &Arc<sqlx::SqlitePool>) -> Material {
     let material = Material::new(
         "مادة جديدة".into(),
@@ -274,6 +289,7 @@ async fn new_company_partner_registration_is_not_a_ledger_event() {
 async fn new_company_capital_contribution_posts_real_balanced_event() {
     let pool = build_pool().await;
     set_start_mode(&pool, "NewCompany").await;
+    seed_fiscal_year_and_period(pool.as_ref()).await;
 
     let (partner_id, cap_id) = register_partner(&pool).await;
     let cash = account_id_by_code(&pool, "122").await;
@@ -351,6 +367,7 @@ async fn new_company_capital_contribution_posts_real_balanced_event() {
 async fn new_company_customer_supplier_opening_balance_posts_their_journals() {
     let pool = build_pool().await;
     set_start_mode(&pool, "NewCompany").await;
+    seed_fiscal_year_and_period(pool.as_ref()).await;
 
     let account_repo: Arc<dyn AccountRepository> =
         Arc::new(SqliteAccountRepository::new(pool.clone()));
@@ -446,6 +463,7 @@ async fn new_company_customer_supplier_opening_balance_posts_their_journals() {
 async fn new_company_cash_sale_posts_one_balanced_journal_and_stock_movement() {
     let pool = build_pool().await;
     set_start_mode(&pool, "NewCompany").await;
+    seed_fiscal_year_and_period(pool.as_ref()).await;
 
     let material = create_material(&pool).await;
     stock_material(&pool, &material).await;

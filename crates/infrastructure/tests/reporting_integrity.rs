@@ -111,6 +111,21 @@ async fn account_id_by_code(pool: &sqlx::SqlitePool, code: &str) -> AccountId {
     AccountId(uuid::Uuid::parse_str(&id).unwrap())
 }
 
+async fn seed_fiscal_year_and_period(pool: &sqlx::SqlitePool) {
+    let now = chrono::Utc::now();
+    let year_start = format!("{}-01-01T00:00:00Z", now.format("%Y"));
+    let year_end = format!("{}-12-31T23:59:59Z", now.format("%Y"));
+    let fy_id = uuid::Uuid::new_v4().to_string();
+    let fp_id = uuid::Uuid::new_v4().to_string();
+    let now_rfc = now.to_rfc3339();
+    sqlx::query("INSERT INTO fiscal_years (id, company_id, label, start_date, end_date, status, created_at, updated_at) VALUES (?, NULL, 'FY', ?, ?, 'Open', ?, ?)")
+        .bind(&fy_id).bind(&year_start).bind(&year_end).bind(&now_rfc).bind(&now_rfc)
+        .execute(pool).await.unwrap();
+    sqlx::query("INSERT INTO fiscal_periods (id, company_id, start_date, end_date, status, created_at, updated_at) VALUES (?, NULL, ?, ?, 'Open', ?, ?)")
+        .bind(&fp_id).bind(&year_start).bind(&year_end).bind(&now_rfc).bind(&now_rfc)
+        .execute(pool).await.unwrap();
+}
+
 fn line(account: AccountId, debit: Decimal, credit: Decimal) -> JournalLine {
     let c = test_currency();
     JournalLine::new(
@@ -153,6 +168,7 @@ async fn net_of(pool: &sqlx::SqlitePool, account_id: &AccountId) -> Decimal {
 #[tokio::test]
 async fn exact_opening_with_residual_is_balanced_and_appears_once() {
     let pool = build_pool().await;
+    seed_fiscal_year_and_period(pool.as_ref()).await;
     let migration_repo: Arc<dyn OpeningMigrationRepository> =
         Arc::new(SqliteOpeningMigrationRepository::new(pool.clone()));
     let account_repo: Arc<dyn AccountRepository> =
@@ -312,6 +328,7 @@ async fn exact_opening_with_residual_is_balanced_and_appears_once() {
 #[tokio::test]
 async fn reversed_entry_is_neutral_in_ledger_and_report_feed() {
     let pool = build_pool().await;
+    seed_fiscal_year_and_period(pool.as_ref()).await;
     let journal_repo: Arc<dyn JournalEntryRepository> =
         Arc::new(SqliteJournalEntryRepository::new(pool.clone()));
     let account_repo: Arc<dyn AccountRepository> =
