@@ -39,6 +39,8 @@ interface JournalTableProps {
   /** Reversal-pair lookup (built once over the full fetch by the page) used to
    * show each audit entry's counterpart number (عكس القيد #N / عكسه القيد #M). */
   reversalContext?: ReversalContext;
+  /** Click handler for entry number — opens detail view. */
+  onEntryClick?: (entryId: string) => void;
 }
 
 type SortFieldTwoLine = "entry_number" | "created_at" | "journal_type" | "account";
@@ -91,6 +93,7 @@ export function JournalTable({
   onReverse,
   reversingId,
   reversalContext,
+  onEntryClick,
 }: JournalTableProps) {
   const { isBaseCurrency, currencySuffix: cs, hasSecondaryCurrencies } = useBaseCurrencyColumns();
   const { settings, getDensityPadding } = useTableSettings();
@@ -159,7 +162,19 @@ export function JournalTable({
         id: "entry_number",
         header: "رقم القيد",
         label: "رقم القيد",
-        accessor: (e) => e.isFirstInGroup ? formatNumber(parseInt(e.entry_number) || 0) : "",
+        accessor: (e) => e.isFirstInGroup ? (
+          onEntryClick ? (
+            <button
+              type="button"
+              onClick={() => onEntryClick(e.id)}
+              className="font-black text-center text-blue-600 hover:text-blue-800 hover:underline cursor-pointer bg-transparent border-0 p-0"
+            >
+              {formatNumber(parseInt(e.entry_number) || 0)}
+            </button>
+          ) : (
+            formatNumber(parseInt(e.entry_number) || 0)
+          )
+        ) : "",
         className: "font-black text-slate-900 text-center"
       },
       {
@@ -276,7 +291,7 @@ export function JournalTable({
       },
     );
     return cols;
-  }, [sortedCurrencies, formatAmount, isBaseCurrency, cs, onReverse, reversingId]);
+  }, [sortedCurrencies, formatAmount, isBaseCurrency, cs, onReverse, reversingId, onEntryClick]);
 
   const singleLineColumns = useMemo<UnifiedColumn<JournalSingleLineTableRow>[]>(() => {
     const cols: UnifiedColumn<JournalSingleLineTableRow>[] = [
@@ -284,7 +299,17 @@ export function JournalTable({
         id: "entry_number",
         header: "رقم القيد",
         label: "رقم القيد",
-        accessor: (e) => formatNumber(parseInt(e.entry_number) || 0),
+        accessor: (e) => onEntryClick ? (
+          <button
+            type="button"
+            onClick={() => onEntryClick(e.id)}
+            className="font-black text-center text-blue-600 hover:text-blue-800 hover:underline cursor-pointer bg-transparent border-0 p-0"
+          >
+            {formatNumber(parseInt(e.entry_number) || 0)}
+          </button>
+        ) : (
+          formatNumber(parseInt(e.entry_number) || 0)
+        ),
         className: "font-black text-slate-900 text-center"
       },
       {
@@ -402,7 +427,7 @@ export function JournalTable({
       },
     );
     return cols;
-  }, [formatAmount, cs, sortedCurrencies, isBaseCurrency, onReverse, reversingId]);
+  }, [formatAmount, cs, sortedCurrencies, isBaseCurrency, onReverse, reversingId, onEntryClick]);
 
   // ============ SELECT ACTIVE DATA/COLUMNS/SORT ============
   const sortedData = isTwoLine ? twoLineSort.sortedData : singleLineSort.sortedData;

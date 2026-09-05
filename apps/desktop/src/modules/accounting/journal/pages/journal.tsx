@@ -1,18 +1,20 @@
 ﻿import { useState, useMemo, useEffect, useCallback } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
-import { Filter, LayoutList, LayoutGrid } from "lucide-react";
+import { Filter, LayoutList, LayoutGrid, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { journalEntryService, type JournalFilters } from '@modules/accounting/api/journalEntryService';
 import type { JournalEntryDto, JournalType } from "@erp/shared-types";
 import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTemplate";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
+import { Button } from "@shared/ui/button";
 import { DateRangePicker } from "@widgets/reports";
 import { ConfirmDialog } from "@shared/ui/confirm-dialog";
 import { ErrorBoundary } from "@shared/ui/ErrorBoundary";
 import { useReportFilters } from "@shared/hooks/useReportFilters";
 import { toLocalDateStr } from "@shared/lib/format";
 import { JOURNAL_MUTATION_KEYS, invalidateKeys } from "@shared/hooks/queryClient";
+import { useTabs } from "@app/providers/TabContext";
 
 // Refactored Components & Hooks
 import { useDataTable } from '@shared/hooks';
@@ -24,6 +26,8 @@ type DisplayMode = "two-line" | "one-line";
 
 export default function Journal() {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const { openTab } = useTabs();
   const typeParam = searchParams.get('type') as JournalType | null;
 
   // Date range: same defaults + URL sync as the Account Movements page
@@ -156,12 +160,33 @@ export default function Journal() {
     }
   }, [pendingReverseId, queryClient]);
 
+  const handleEntryClick = useCallback((entryId: string) => {
+    openTab({
+      id: `journal-entry-${entryId}`,
+      title: "تفاصيل القيد",
+      path: `/journal/${entryId}`,
+      closable: true,
+    });
+  }, [openTab]);
+
+  const handleNewEntry = useCallback(() => {
+    navigate("/journal/new");
+  }, [navigate]);
+
   return (
     <ErrorBoundary>
       <OperationalTableTemplate
         title={journalTitle}
         toolbar={
           <div className="flex items-center gap-2 flex-wrap">
+            <Button
+              type="button"
+              onClick={handleNewEntry}
+              className="h-10 px-4 font-bold bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              <Plus className="w-4 h-4 ms-2" />
+              قيد جديد
+            </Button>
             <DateRangePicker
               from={dateFilters.from_date}
               to={dateFilters.to_date}
@@ -241,6 +266,7 @@ export default function Journal() {
             onReverse={handleReverseRequest}
             reversingId={reversingId}
             reversalContext={reversalContext}
+            onEntryClick={handleEntryClick}
           />
         }
       >

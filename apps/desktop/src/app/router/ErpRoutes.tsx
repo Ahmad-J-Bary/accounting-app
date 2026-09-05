@@ -9,6 +9,8 @@ import {
 import Dashboard from '@modules/dashboard/pages/dashboard';
 import Accounting from '@modules/accounting/chart-of-accounts/pages/accounting';
 import Journal from '@modules/accounting/journal/pages/journal';
+import JournalEntryCreatePage from '@modules/accounting/journal/pages/JournalEntryCreatePage';
+import JournalEntryDetailPage from '@modules/accounting/journal/pages/JournalEntryDetailPage';
 import PartyPage from '@modules/partners/pages/PartyPage';
 import PartyStatementPage from '@modules/partners/pages/PartyStatementPage';
 import SalesInvoices from '@modules/invoicing/pages/salesInvoices';
@@ -99,6 +101,8 @@ export function ErpRoutes({ location }: { location?: string | Partial<Location> 
       <Route path="/accounting/reports/fiscal-periods" element={<Navigate to="/accounting/fiscal-periods" replace />} />
       <Route path="/accounting/account-ledger/:accountId" element={<AccountMovement />} />
       <Route path="/journal" element={<OpeningTransactionGate><Journal /></OpeningTransactionGate>} />
+      <Route path="/journal/new/*" element={<OpeningTransactionGate><JournalEntryCreatePage /></OpeningTransactionGate>} />
+      <Route path="/journal/:id" element={<OpeningTransactionGate><JournalEntryDetailPage /></OpeningTransactionGate>} />
       <Route path="/customers" element={<PartyPage entityName="customer" />} />
       <Route path="/partners/customer-statement/:id" element={<PartyStatementPage entityName="customer" />} />
       <Route path="/suppliers" element={<PartyPage entityName="supplier" />} />
