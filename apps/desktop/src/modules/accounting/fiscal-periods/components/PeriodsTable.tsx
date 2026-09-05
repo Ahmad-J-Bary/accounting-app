@@ -33,12 +33,12 @@ export function PeriodsTable({ periods, current, isLoading, actionBusy, onAction
         <table className="w-full text-xs">
           <thead>
             <tr className="border-b border-slate-200 text-slate-500">
-              <th scope="col" className="text-right px-4 py-2 font-semibold">البداية</th>
-              <th scope="col" className="text-right px-4 py-2 font-semibold">النهاية</th>
-              <th scope="col" className="text-right px-4 py-2 font-semibold">الحالة</th>
-              <th scope="col" className="text-right px-4 py-2 font-semibold">أُغلقت بواسطة</th>
-              <th scope="col" className="text-right px-4 py-2 font-semibold">قُفلت بواسطة</th>
-              <th scope="col" className="text-right px-4 py-2 font-semibold">إجراءات</th>
+              <th scope="col" className="text-end px-4 py-2 font-semibold">البداية</th>
+              <th scope="col" className="text-end px-4 py-2 font-semibold">النهاية</th>
+              <th scope="col" className="text-end px-4 py-2 font-semibold">الحالة</th>
+              <th scope="col" className="text-end px-4 py-2 font-semibold">أُغلقت بواسطة</th>
+              <th scope="col" className="text-end px-4 py-2 font-semibold">قُفلت بواسطة</th>
+              <th scope="col" className="text-end px-4 py-2 font-semibold">إجراءات</th>
             </tr>
           </thead>
           <tbody>

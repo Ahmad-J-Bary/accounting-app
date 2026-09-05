@@ -7,6 +7,7 @@ import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { toLocalDateStr } from "@shared/lib/format";
 import { fiscalPeriodService, periodWindowFromDateInput } from "@modules/accounting/api/fiscalPeriodService";
 import { ConfirmDialog } from "@shared/ui/confirm-dialog";
+import { ErrorBoundary } from "@shared/ui/ErrorBoundary";
 import type { FiscalPeriodDto } from "@erp/shared-types";
 import { CreatePeriodCard } from "../components/CreatePeriodCard";
 import { CurrentPeriodCard } from "../components/CurrentPeriodCard";
@@ -134,6 +135,7 @@ export default function FiscalPeriodsPage() {
     : null;
 
   return (
+    <ErrorBoundary>
     <OperationalTableTemplate
       title="الفترات المالية"
       toolbar={
@@ -181,5 +183,6 @@ export default function FiscalPeriodsPage() {
         ) : null
       }
     />
+    </ErrorBoundary>
   );
 }
