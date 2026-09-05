@@ -75,13 +75,17 @@ export function WizardShell({
               const passed = completedSteps?.has(idx) ?? false;
               const clickable = canNavigateToStep?.(idx) ?? false;
               return (
-                <div
+                <button
+                  type="button"
                   key={s.id}
                   className={cn(
                     "flex flex-1 flex-col items-center gap-1 min-w-[3.5rem] transition-colors",
                     clickable && "cursor-pointer hover:bg-slate-50 rounded-lg",
                   )}
                   onClick={() => clickable && onStepClick?.(idx)}
+                  disabled={!clickable}
+                  tabIndex={clickable ? 0 : -1}
+                  aria-label={s.label}
                 >
                   <div
                     className={cn(
@@ -105,7 +109,7 @@ export function WizardShell({
                   >
                     {s.label}
                   </span>
-                </div>
+                </button>
               );
             })}
           </div>
@@ -131,7 +135,7 @@ export function WizardShell({
           disabled={!canPrev || stepIndex === 0}
           className="border-slate-200 text-slate-700 font-bold"
         >
-          <ChevronRight className="w-4 h-4 ml-1.5" /> السابق
+               <ChevronRight className="w-4 h-4 ms-1.5" /> السابق
         </Button>
         <span className="text-xs font-semibold text-slate-500 tabular-nums">
           الخطوة {currentVisualPos + 1} من {steps.length}
@@ -149,7 +153,7 @@ export function WizardShell({
           className="bg-blue-600 hover:bg-blue-700 text-white font-bold"
         >
           {isNexting ? "جارٍ التنفيذ..." : (nextLabel || (isFinal ? "إنهاء" : "التالي"))}
-          {!isFinal && <ChevronLeft className="w-4 h-4 mr-1.5" />}
+          {!isFinal && <ChevronLeft className="w-4 h-4 me-1.5" />}
         </Button>
       </div>
     </div>

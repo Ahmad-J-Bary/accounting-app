@@ -280,7 +280,7 @@ export function GuidedTransitionWizard() {
                   navLink={
                     <Button size="sm" variant="outline" onClick={() => goTo("/customers", "العملاء")} className="h-8 shrink-0 rounded-full border-blue-300 bg-blue-50 px-3 text-xs font-bold text-blue-700 hover:bg-blue-100 hover:border-blue-400 transition-all">
                       صفحة العملاء
-                      <ArrowLeft className="w-3.5 h-3.5 mr-1" />
+                      <ArrowLeft className="w-3.5 h-3.5 me-1" />
                     </Button>
                   }
                 />
@@ -314,7 +314,7 @@ export function GuidedTransitionWizard() {
                   navLink={
                     <Button size="sm" variant="outline" onClick={() => goTo("/fixed-assets", "الأصول الثابتة")} className="h-8 shrink-0 rounded-full border-blue-300 bg-blue-50 px-3 text-xs font-bold text-blue-700 hover:bg-blue-100 hover:border-blue-400 transition-all">
                       صفحة الأصول الثابتة
-                      <ArrowLeft className="w-3.5 h-3.5 mr-1" />
+                      <ArrowLeft className="w-3.5 h-3.5 me-1" />
                     </Button>
                   }
                 />
@@ -342,7 +342,7 @@ export function GuidedTransitionWizard() {
                   navLink={
                     <Button size="sm" variant="outline" onClick={() => goTo("/suppliers", "الموردون")} className="h-8 shrink-0 rounded-full border-blue-300 bg-blue-50 px-3 text-xs font-bold text-blue-700 hover:bg-blue-100 hover:border-blue-400 transition-all">
                       صفحة الموردين
-                      <ArrowLeft className="w-3.5 h-3.5 mr-1" />
+                      <ArrowLeft className="w-3.5 h-3.5 me-1" />
                     </Button>
                   }
                 />
@@ -385,7 +385,7 @@ export function GuidedTransitionWizard() {
                   navLink={
                     <Button size="sm" variant="outline" onClick={() => goTo("/partners", "الشركاء")} className="h-8 shrink-0 rounded-full border-blue-300 bg-blue-50 px-3 text-xs font-bold text-blue-700 hover:bg-blue-100 hover:border-blue-400 transition-all">
                       صفحة الشركاء
-                      <ArrowLeft className="w-3.5 h-3.5 mr-1" />
+                      <ArrowLeft className="w-3.5 h-3.5 me-1" />
                     </Button>
                   }
                 />
@@ -474,9 +474,9 @@ export function GuidedTransitionWizard() {
             <div className="text-xs font-semibold text-slate-600 flex items-center">
               الحالة الحالية:
               {w.migration ? (
-                <StatusBadge status={w.migration.status} className="mr-1.5" />
+                <StatusBadge status={w.migration.status} className="me-1.5" />
               ) : (
-                <span className="text-slate-400 mr-1.5">—</span>
+                <span className="text-slate-400 me-1.5">—</span>
               )}
               {w.migration && w.migration.notes && <span> · {w.migration.notes}</span>}
             </div>

@@ -2,7 +2,6 @@ import { useState } from "react";
 import { Plus, Loader2, Calendar, X, Check } from "lucide-react";
 import { Input } from "@shared/ui/input";
 import { Button } from "@shared/ui/button";
-import { Badge } from "@shared/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
 import type { WarehouseDto } from "@erp/shared-types";
 
@@ -76,7 +75,7 @@ export function QuickCreateFixedAsset({ warehouses, onCreate, navLink }: QuickCr
           onClick={() => setExpanded(true)}
           className="h-8 shrink-0 rounded-full border-emerald-300 bg-emerald-50 px-3 text-xs font-bold text-emerald-700 hover:bg-emerald-100 hover:border-emerald-400 transition-all"
         >
-          <Plus className="w-3.5 h-3.5 ml-1" />
+          <Plus className="w-3.5 h-3.5 ms-1" />
           إضافة أصل ثابت
         </Button>
         {navLink}
@@ -110,7 +109,7 @@ export function QuickCreateFixedAsset({ warehouses, onCreate, navLink }: QuickCr
             value={cost}
             onChange={(e) => setCost(e.target.value)}
             placeholder="التكلفة"
-            className="h-8 w-24 border-slate-200 text-xs text-right tabular-nums bg-white"
+            className="h-8 w-24 border-slate-200 text-xs text-end tabular-nums bg-white"
             disabled={creating}
             onKeyDown={(e) => {
               if (e.key === "Enter") {
@@ -120,13 +119,13 @@ export function QuickCreateFixedAsset({ warehouses, onCreate, navLink }: QuickCr
             }}
           />
           <div className="relative">
-            <Calendar className="absolute left-1.5 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400 pointer-events-none" />
+            <Calendar className="absolute start-1.5 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400 pointer-events-none" />
             <Input
               type="date"
               value={purchaseDate}
               onChange={(e) => setPurchaseDate(e.target.value)}
               title="تاريخ الحيازة"
-              className="h-8 w-36 pl-6 border-slate-200 text-xs bg-white"
+              className="h-8 w-36 ps-6 border-slate-200 text-xs bg-white"
               disabled={creating}
             />
           </div>

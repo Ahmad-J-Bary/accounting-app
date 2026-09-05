@@ -63,7 +63,7 @@ export function AutoAmountSection({ title, hint, rows, onPatch, onDelete, fixedA
           onClick={handleAdd}
           className="h-8 shrink-0 rounded-full border-emerald-300 bg-emerald-50 px-3 text-xs font-bold text-emerald-700 hover:bg-emerald-100 hover:border-emerald-400 transition-all"
         >
-          <Plus className="w-3.5 h-3.5 ml-1" />
+          <Plus className="w-3.5 h-3.5 ms-1" />
           إضافة {title}
         </Button>
       )}
@@ -83,7 +83,7 @@ export function AutoAmountSection({ title, hint, rows, onPatch, onDelete, fixedA
               placeholder="الرصيد الافتتاحي"
               aria-label="الرصيد الافتتاحي"
               autoFocus
-              className={"h-8 text-right tabular-nums text-xs " + (localValue.trim() !== "" && toNum(localValue) <= 0 ? "border-red-400" : "border-slate-200")}
+              className={"h-8 text-end tabular-nums text-xs " + (localValue.trim() !== "" && toNum(localValue) <= 0 ? "border-red-400" : "border-slate-200")}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && existingRow) {
                   e.preventDefault();
@@ -101,7 +101,7 @@ export function AutoAmountSection({ title, hint, rows, onPatch, onDelete, fixedA
             onClick={() => existingRow && save(existingRow.key)}
             className="h-8 px-2 text-xs font-bold shrink-0 bg-emerald-600 hover:bg-emerald-700 text-white"
           >
-            <Check className="w-3.5 h-3.5 ml-1" />
+            <Check className="w-3.5 h-3.5 ms-1" />
             حفظ
           </Button>
           <Button

@@ -129,7 +129,7 @@ export function WizardLineEditor({
                   step="0.01"
                   aria-invalid={amountInvalid}
                   className={cn(
-                    "h-8 w-32 shrink-0 text-right tabular-nums text-xs",
+                    "h-8 w-32 shrink-0 text-end tabular-nums text-xs",
                     amountInvalid && "border-red-300 focus-visible:ring-red-200",
                   )}
                 />
@@ -143,7 +143,7 @@ export function WizardLineEditor({
                   disabled={amountInvalid || !l.account_id}
                   className="h-8 px-2 text-xs font-bold shrink-0 bg-emerald-600 hover:bg-emerald-700 text-white"
                 >
-                  <Check className="w-3.5 h-3.5 ml-1" />
+                  <Check className="w-3.5 h-3.5 ms-1" />
                   حفظ
                 </Button>
                 <Button
@@ -206,7 +206,7 @@ export function WizardLineEditor({
         onClick={handleAdd}
         className="h-8 shrink-0 rounded-full border-emerald-300 bg-emerald-50 px-3 text-xs font-bold text-emerald-700 hover:bg-emerald-100 hover:border-emerald-400 transition-all"
       >
-        <Plus className="h-3.5 w-3.5 ml-1" />
+        <Plus className="h-3.5 w-3.5 ms-1" />
         إضافة بند
       </Button>
       {rows.some((l) => parseFloat(l.amount) > 0) && (

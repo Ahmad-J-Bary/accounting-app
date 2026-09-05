@@ -31,13 +31,13 @@ export function InventorySection({ rows, onRowChange, total, onNavigateToInvoice
             <span className="col-span-5">المادة</span>
             <span className="col-span-2 text-center">الكمية</span>
             <span className="col-span-2 text-center">التكلفة</span>
-            <span className="col-span-3 text-right">القيمة</span>
+            <span className="col-span-3 text-end">القيمة</span>
           </div>
           <div className="divide-y divide-slate-100 max-h-72 overflow-auto">
             {rows.map((r) => (
               <div key={r.material_id} className="grid grid-cols-12 gap-2 items-center px-3 py-1.5 text-xs">
                 <div className="col-span-5 min-w-0">
-                  <span className="text-2xs font-bold text-slate-400 tabular-nums ml-1">{r.code || "—"}</span>
+                  <span className="text-2xs font-bold text-slate-400 tabular-nums ms-1">{r.code || "—"}</span>
                   <span className="truncate text-slate-700">{r.name}</span>
                 </div>
                 <div className="col-span-2">
@@ -48,7 +48,7 @@ export function InventorySection({ rows, onRowChange, total, onNavigateToInvoice
                     value={r.qty}
                     onChange={(e) => onRowChange(r.material_id, { qty: e.target.value })}
                     aria-label={"الكمية: " + r.name}
-                    className="h-8 border-slate-200 text-right tabular-nums text-xs"
+                    className="h-8 border-slate-200 text-end tabular-nums text-xs"
                   />
                 </div>
                 <div className="col-span-2">
@@ -59,10 +59,10 @@ export function InventorySection({ rows, onRowChange, total, onNavigateToInvoice
                     value={r.cost}
                     onChange={(e) => onRowChange(r.material_id, { cost: e.target.value })}
                     aria-label={"التكلفة: " + r.name}
-                    className="h-8 border-slate-200 text-right tabular-nums text-xs"
+                    className="h-8 border-slate-200 text-end tabular-nums text-xs"
                   />
                 </div>
-                <div className="col-span-3 text-right tabular-nums font-semibold text-slate-700">
+                <div className="col-span-3 text-end tabular-nums font-semibold text-slate-700">
                   {toFixed(r.value, 2)}
                 </div>
               </div>
@@ -84,7 +84,7 @@ export function InventorySection({ rows, onRowChange, total, onNavigateToInvoice
           className="h-8 shrink-0 rounded-full border-blue-300 bg-blue-50 px-3 text-xs font-bold text-blue-700 hover:bg-blue-100 hover:border-blue-400 transition-all"
         >
           صفحة فاتورة أول المدة
-          <ArrowLeft className="w-3.5 h-3.5 mr-1" />
+          <ArrowLeft className="w-3.5 h-3.5 me-1" />
         </Button>
       </div>
     </div>

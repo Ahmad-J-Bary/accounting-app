@@ -5,6 +5,7 @@ import { RefreshCw, ArrowLeft, Play } from "lucide-react";
 import { Button } from "@shared/ui/button";
 import { ConfirmDialog } from "@shared/ui/confirm-dialog";
 import { Badge } from "@shared/ui/badge";
+import { ErrorBoundary } from "@shared/ui/ErrorBoundary";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@shared/ui/tabs";
 import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTemplate";
 import { toast } from "sonner";
@@ -203,6 +204,7 @@ export default function OpeningBalanceMigration() {
   const openingClosed = initState === "OPENING_LOCKED" || initState === "ACTIVE";
 
   return (
+    <ErrorBoundary>
     <OperationalTableTemplate
       title={openingClosed ? "اكتمال إعداد الشركة" : "رصيد افتتاح الشركة"}
       badge={<Badge className="bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-50">{INIT_STATE_LABELS[initState]}</Badge>}
@@ -210,7 +212,7 @@ export default function OpeningBalanceMigration() {
         openingClosed ? undefined : (
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={() => refetchMigrations()} className="border-slate-200 hover:bg-slate-50 font-bold">
-              <RefreshCw className="w-4 h-4 ml-2 text-slate-500" /> تحديث
+              <RefreshCw className="w-4 h-4 ms-2 text-slate-500" /> تحديث
             </Button>
           </div>
         )
@@ -244,7 +246,7 @@ export default function OpeningBalanceMigration() {
                         {latestMigration.notes ? ` — ${latestMigration.notes}` : ""}
                       </div>
                       <Button size="sm" variant="outline" onClick={() => setTab("wizard")} className="border-slate-200 font-bold">
-                        <ArrowLeft className="w-4 h-4 ml-1.5" /> متابعة في المعالج
+                        <ArrowLeft className="w-4 h-4 ms-1.5" /> متابعة في المعالج
                       </Button>
                     </div>
                   }
@@ -306,6 +308,7 @@ export default function OpeningBalanceMigration() {
         onConfirm={handleConfirmed}
       />
     </OperationalTableTemplate>
+    </ErrorBoundary>
   );
 }
 
@@ -329,7 +332,7 @@ function WelcomeCard({ onStart }: { onStart: () => void }) {
         </p>
       </div>
       <Button size="sm" onClick={onStart} className="bg-blue-600 hover:bg-blue-700 text-white font-bold">
-        <Play className="w-4 h-4 ml-1.5" /> ابدأ المعالج
+        <Play className="w-4 h-4 ms-1.5" /> ابدأ المعالج
       </Button>
     </div>
   );

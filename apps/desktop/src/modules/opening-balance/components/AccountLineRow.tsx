@@ -52,7 +52,7 @@ export function AccountLineRow({
           step="0.01"
           aria-invalid={showErrorMessage}
           className={cn(
-            "h-9 w-[110px] shrink-0 text-right tabular-nums",
+            "h-9 w-[110px] shrink-0 text-end tabular-nums",
             showErrorMessage && "border-red-300 focus-visible:ring-red-200",
           )}
         />

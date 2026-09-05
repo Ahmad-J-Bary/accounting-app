@@ -63,7 +63,7 @@ export function OpeningDashboard({ snapshot, onOpenSection, loading = false, foo
           <p className="text-xs font-bold text-amber-700 flex items-center gap-1.5">
             <AlertTriangle className="w-4 h-4" /> المعالج لن يُقبل الترحيل حتى تُحل المعطيات التالية:
           </p>
-          <ul className="list-disc pr-5 space-y-0.5">
+          <ul className="list-disc pe-5 space-y-0.5">
             {snapshot.blockers.map((b, i) => (
               <li key={i} className="text-xs text-amber-700">{b}</li>
             ))}
@@ -98,7 +98,7 @@ function SectionCard({ section, onOpen }: { section: OpeningSection; onOpen?: ()
       type="button"
       onClick={onOpen}
       className={cn(
-        "w-full text-right rounded-xl border bg-white p-3 space-y-1.5 transition-all",
+        "w-full text-end rounded-xl border bg-white p-3 space-y-1.5 transition-all",
         section.done
           ? "border-emerald-200 hover:border-emerald-300"
           : "border-slate-200 hover:border-slate-300",

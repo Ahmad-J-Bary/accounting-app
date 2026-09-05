@@ -58,7 +58,7 @@ export function AccountCombobox({
             className,
           )}
         >
-          <span className="truncate text-right">
+          <span className="truncate text-end">
             {selected ? (
               <span className="flex items-center gap-2">
                 <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[11px] font-bold tabular-nums text-slate-600">

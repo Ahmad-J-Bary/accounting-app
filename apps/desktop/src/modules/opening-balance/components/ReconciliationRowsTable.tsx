@@ -32,7 +32,7 @@ export function ReconciliationRowsTable({
               status={r.reconciled ? "متطابق" : "فرق"}
               label={r.reconciled ? "مطابق" : "فرق"}
               tone={r.reconciled ? "green" : "red"}
-              className="mr-2"
+              className="me-2"
             />
           </div>
           <div className="tabular-nums text-slate-600">

@@ -61,7 +61,7 @@ export function MigrationListCard({
             <div className="flex-1 min-w-0">
               <div className="text-sm font-semibold text-slate-700">
                 {toLocalDateStr(m.cutover_date)} — {m.lines.length} بنود
-                <StatusBadge status={m.status} className="mr-2" />
+                <StatusBadge status={m.status} className="me-2" />
               </div>
               <div className="text-xs text-slate-400 truncate">
                 {m.notes || "بدون ملاحظات"}
@@ -77,7 +77,7 @@ export function MigrationListCard({
                   onClick={() => onLock(m.id)}
                   className="bg-slate-600 hover:bg-slate-700 text-white font-bold"
                 >
-                  <Lock className="w-3.5 h-3.5 ml-1.5" /> {transitioningTo === m.id ? "جارٍ..." : "قفل"}
+                  <Lock className="w-3.5 h-3.5 ms-1.5" /> {transitioningTo === m.id ? "جارٍ..." : "قفل"}
                 </Button>
                 <Button
                   size="sm"
@@ -86,7 +86,7 @@ export function MigrationListCard({
                   onClick={() => onCancel(m.id)}
                   className="border-red-200 text-red-600 hover:bg-red-50 font-bold"
                 >
-                  <XCircle className="w-3.5 h-3.5 ml-1.5" /> {cancellingId === m.id ? "جارٍ..." : "إلغاء الترحيل"}
+                  <XCircle className="w-3.5 h-3.5 ms-1.5" /> {cancellingId === m.id ? "جارٍ..." : "إلغاء الترحيل"}
                 </Button>
               </>
             )}
@@ -104,7 +104,7 @@ export function MigrationListCard({
                 className="border-amber-200 text-amber-700 hover:bg-amber-50 font-bold"
                 title="إعادة فتح الترحيل الملغى كمسودة"
               >
-                <RefreshCw className="w-3.5 h-3.5 ml-1.5" /> {transitioningTo === m.id ? "جارٍ..." : "إعادة فتح"}
+                <RefreshCw className="w-3.5 h-3.5 ms-1.5" /> {transitioningTo === m.id ? "جارٍ..." : "إعادة فتح"}
               </Button>
             )}
           </div>

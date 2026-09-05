@@ -20,6 +20,7 @@ import { formatNumber, toLocalDateStr } from "@shared/lib/format";
 import { buildInvoiceLineExportColumns } from "@modules/invoicing/lib/invoice-export-columns";
 
 import { HeaderField } from '@shared/ui/header-field';
+import { ErrorBoundary } from "@shared/ui/ErrorBoundary";
 import { FinancialDocumentTemplate } from "@widgets/templates/FinancialDocumentTemplate";
 import {
   GenericDocumentGrid,
@@ -398,6 +399,7 @@ export default function OpeningBalance() {
   }
 
   return (
+    <ErrorBoundary>
     <FinancialDocumentTemplate
       title="بضاعة أول المدة"
       statusBadge={<DocumentStatusBadge status={header.status} />}
@@ -490,5 +492,6 @@ export default function OpeningBalance() {
       }
       isSidebarOpen={materialFormOpen}
     />
+    </ErrorBoundary>
   );
 }

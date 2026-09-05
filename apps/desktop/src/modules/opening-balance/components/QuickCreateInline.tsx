@@ -2,7 +2,6 @@ import { useState } from "react";
 import { Plus, Loader2, X, Check } from "lucide-react";
 import { Input } from "@shared/ui/input";
 import { Button } from "@shared/ui/button";
-import { Badge } from "@shared/ui/badge";
 
 interface QuickCreateInlineProps {
   label: string;
@@ -50,7 +49,7 @@ export function QuickCreateInline({ label, placeholder, amountLabel, direction, 
           onClick={() => setExpanded(true)}
           className="h-8 shrink-0 rounded-full border-emerald-300 bg-emerald-50 px-3 text-xs font-bold text-emerald-700 hover:bg-emerald-100 hover:border-emerald-400 transition-all"
         >
-          <Plus className="w-3.5 h-3.5 ml-1" />
+          <Plus className="w-3.5 h-3.5 ms-1" />
           إضافة {label}
         </Button>
         {navLink}
@@ -83,7 +82,7 @@ export function QuickCreateInline({ label, placeholder, amountLabel, direction, 
           value={amount}
           onChange={(e) => setAmount(e.target.value)}
           placeholder={amountLabel}
-          className="h-8 w-32 border-slate-200 text-xs text-right tabular-nums bg-white"
+          className="h-8 w-32 border-slate-200 text-xs text-end tabular-nums bg-white"
           disabled={creating}
           onKeyDown={(e) => {
             if (e.key === "Enter") {

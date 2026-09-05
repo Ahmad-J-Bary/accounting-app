@@ -57,7 +57,7 @@ export function InlineBalanceRow({ row, onSave, onDelete, label, nativeHint = "d
               disabled={disabled}
               onChange={(e) => setValue(e.target.value)}
               aria-label={label}
-              className="h-8 w-32 border-slate-200 text-right tabular-nums text-xs"
+              className="h-8 w-32 border-slate-200 text-end tabular-nums text-xs"
               autoFocus
             />
             <span className="text-2xs text-slate-400">{nativeHint === "debit" ? "مدين" : "دائن"}</span>
@@ -97,7 +97,7 @@ export function InlineBalanceRow({ row, onSave, onDelete, label, nativeHint = "d
             <span className="truncate text-slate-700">{row.label}</span>
           </div>
           <div className="flex items-center gap-1.5 shrink-0">
-            <span className="tabular-nums text-xs font-bold text-slate-700 w-32 text-right">{parseFloat(row.amount || "0").toFixed(2)}</span>
+            <span className="tabular-nums text-xs font-bold text-slate-700 w-32 text-end">{parseFloat(row.amount || "0").toFixed(2)}</span>
             <span className="text-2xs text-slate-400">{nativeHint === "debit" ? "مدين" : "دائن"}</span>
             <Button
               type="button"

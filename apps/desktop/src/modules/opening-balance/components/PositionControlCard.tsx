@@ -86,7 +86,7 @@ return (
               <div className="px-3 py-2 rounded-lg bg-red-50 text-red-700 text-xs space-y-1">
                 <div className="font-bold">أخطاء الجاهزية للترحيل</div>
                 {position.validation_errors.map((e, i) => (
-                  <div key={i} className="pr-1">• {e}</div>
+                  <div key={i} className="ps-1">• {e}</div>
                 ))}
               </div>
             )}
