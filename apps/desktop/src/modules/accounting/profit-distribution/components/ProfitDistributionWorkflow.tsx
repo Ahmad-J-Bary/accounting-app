@@ -194,7 +194,7 @@ export function ProfitDistributionWorkflow({
       onClose={onClose}
       footer={renderFooter()}
     >
-      <div className="space-y-6 text-right">
+      <div className="space-y-6 text-end">
         {/* ── Loading ─────────────────────────────────────────────────── */}
         {isLoading && (
           <div className="flex flex-col items-center justify-center py-16 text-slate-400">
@@ -329,21 +329,21 @@ export function ProfitDistributionWorkflow({
                   <Table>
                     <TableHeader className="bg-slate-50/50">
                       <TableRow>
-                        <TableHead className="text-right text-xs font-bold text-slate-500 py-3">الشريك</TableHead>
+                        <TableHead className="text-end text-xs font-bold text-slate-500 py-3">الشريك</TableHead>
                         <TableHead className="text-center text-xs font-bold text-slate-500 py-3">النسبة</TableHead>
-                        <TableHead className="text-left text-xs font-bold text-slate-500 py-3">الحصة</TableHead>
+                        <TableHead className="text-start text-xs font-bold text-slate-500 py-3">الحصة</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {preview.data.shares.map((s) => (
                         <TableRow key={s.partner_id} className="hover:bg-slate-50/30">
-                          <TableCell className="text-right py-3 text-xs font-semibold text-slate-700">
+                          <TableCell className="text-end py-3 text-xs font-semibold text-slate-700">
                             {s.partner_name}
                           </TableCell>
                           <TableCell className="text-center py-3 text-xs text-slate-400 font-medium">
                             {fmtMoney(parseSafeNumber(s.ratio_percent))}%
                           </TableCell>
-                          <TableCell className="text-left py-3 text-xs font-bold text-slate-800 tabular-nums">
+                          <TableCell className="text-start py-3 text-xs font-bold text-slate-800 tabular-nums">
                             {fmtMoney(parseSafeNumber(s.share))}
                           </TableCell>
                         </TableRow>
@@ -351,16 +351,16 @@ export function ProfitDistributionWorkflow({
                     </TableBody>
                     <TableFooter className="bg-slate-50/30 font-bold border-t border-slate-100">
                       <TableRow>
-                        <TableCell className="text-right py-3 text-xs text-slate-600">المجموع الموزع</TableCell>
+                        <TableCell className="text-end py-3 text-xs text-slate-600">المجموع الموزع</TableCell>
                         <TableCell className="text-center py-3 text-xs text-slate-400">-</TableCell>
-                        <TableCell className="text-left py-3 text-xs text-blue-700 font-extrabold tabular-nums">
+                        <TableCell className="text-start py-3 text-xs text-blue-700 font-extrabold tabular-nums">
                           {fmtMoney(parseSafeNumber(preview.data.allocated_total))}
                         </TableCell>
                       </TableRow>
                       <TableRow>
-                        <TableCell className="text-right py-3 text-xs text-slate-600">المبلغ المتبقي</TableCell>
+                        <TableCell className="text-end py-3 text-xs text-slate-600">المبلغ المتبقي</TableCell>
                         <TableCell className="text-center py-3 text-xs text-slate-400">-</TableCell>
-                        <TableCell className="text-left py-3 text-xs text-emerald-700 font-extrabold tabular-nums">
+                        <TableCell className="text-start py-3 text-xs text-emerald-700 font-extrabold tabular-nums">
                           {fmtMoney(available - parseSafeNumber(preview.data.allocated_total))}
                         </TableCell>
                       </TableRow>
@@ -415,17 +415,17 @@ export function ProfitDistributionWorkflow({
                 <Table>
                   <TableHeader className="bg-slate-50/50">
                     <TableRow>
-                      <TableHead className="text-right text-xs font-bold text-slate-500 py-3">الشريك</TableHead>
-                      <TableHead className="text-left text-xs font-bold text-slate-500 py-3">الحصة الموزعة</TableHead>
+                      <TableHead className="text-end text-xs font-bold text-slate-500 py-3">الشريك</TableHead>
+                      <TableHead className="text-start text-xs font-bold text-slate-500 py-3">الحصة الموزعة</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {postedResult.shares.map((s) => (
                       <TableRow key={s.partner_id} className="hover:bg-slate-50/30">
-                        <TableCell className="text-right py-3 text-xs font-semibold text-slate-700">
+                        <TableCell className="text-end py-3 text-xs font-semibold text-slate-700">
                           {s.partner_name}
                         </TableCell>
-                        <TableCell className="text-left py-3 text-xs font-bold text-slate-800 tabular-nums">
+                        <TableCell className="text-start py-3 text-xs font-bold text-slate-800 tabular-nums">
                           {fmtMoney(parseSafeNumber(s.share))}
                         </TableCell>
                       </TableRow>

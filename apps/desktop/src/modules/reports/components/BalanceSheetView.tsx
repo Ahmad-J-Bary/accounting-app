@@ -64,7 +64,7 @@ function TreeRow({ row, formatValue }: { row: BalanceSheetRow; formatValue: (val
         <span className={cn("text-sm", hasChildren ? "font-bold text-slate-800" : "font-medium text-slate-700")}>
           {row.label}
         </span>
-        <span className="mr-auto text-sm font-bold tabular-nums text-slate-900">
+        <span className="me-auto text-sm font-bold tabular-nums text-slate-900">
           {formatValue(row.value)}
         </span>
       </div>

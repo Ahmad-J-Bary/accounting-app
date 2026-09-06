@@ -22,7 +22,7 @@ import type { StockMovementDetailDto } from "@erp/shared-types";
  * nets (331 − 45), so this report can never disagree with the dashboard total.
  */
 export default function InventoryValuationReport() {
-  const { data: baseData, isLoading, isRefetching, refetch } = useReportBaseData();
+  const { data: baseData, isLoading, refetch } = useReportBaseData();
   const { loadMaterialExpenseLedgers } = useMaterialExpenseLedgers();
   const { formatAmount, baseCurrency } = useCurrencyContext();
 
@@ -104,11 +104,11 @@ export default function InventoryValuationReport() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-slate-400 font-black text-[10px] uppercase tracking-widest border-b border-slate-100">
-                  <th className="text-right pb-4">الكود</th>
-                  <th className="text-right pb-4">الصنف</th>
-                  <th className="text-left pb-4">الكمية المتاحة</th>
-                  <th className="text-left pb-4">متوسط التكلفة المحلية</th>
-                  <th className="text-left pb-4">القيمة التقديرية</th>
+                  <th className="text-end pb-4">الكود</th>
+                  <th className="text-end pb-4">الصنف</th>
+                  <th className="text-start pb-4">الكمية المتاحة</th>
+                  <th className="text-start pb-4">متوسط التكلفة المحلية</th>
+                  <th className="text-start pb-4">القيمة التقديرية</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
@@ -126,17 +126,17 @@ export default function InventoryValuationReport() {
                       {material.code}
                     </td>
                     <td className="py-3 font-bold text-slate-700">{material.name}</td>
-                    <td className="py-3 text-left tabular-nums font-bold text-slate-700">
+                    <td className="py-3 text-start tabular-nums font-bold text-slate-700">
                       {formatNumber(toQty(material.total_available))}
                     </td>
-                    <td className="py-3 text-left tabular-nums text-slate-500">
+                    <td className="py-3 text-start tabular-nums text-slate-500">
                       {material.average_cost_base
                         ? formatAmount(toQty(material.average_cost_base), {
                             currencyCode: baseCurrency?.code,
                           })
                         : "—"}
                     </td>
-                    <td className="py-3 text-left tabular-nums font-black text-slate-900">
+                    <td className="py-3 text-start tabular-nums font-black text-slate-900">
                       {formatAmount(value, { currencyCode: baseCurrency?.code })}
                     </td>
                   </tr>
@@ -149,7 +149,7 @@ export default function InventoryValuationReport() {
                   </td>
                   <td className="py-4" />
                   <td className="py-4" />
-                  <td className="py-4 text-left tabular-nums font-black text-slate-900">
+                  <td className="py-4 text-start tabular-nums font-black text-slate-900">
                     {formatAmount(rows.subtotal, { currencyCode: baseCurrency?.code })}
                   </td>
                 </tr>
@@ -159,7 +159,7 @@ export default function InventoryValuationReport() {
                   </td>
                   <td className="py-4" />
                   <td className="py-4" />
-                  <td className="py-4 text-left tabular-nums font-bold text-emerald-700">
+                  <td className="py-4 text-start tabular-nums font-bold text-emerald-700">
                     {formatAmount(rows.netAdjustments, { currencyCode: baseCurrency?.code })}
                   </td>
                 </tr>
@@ -169,7 +169,7 @@ export default function InventoryValuationReport() {
                   </td>
                   <td className="py-4" />
                   <td className="py-4" />
-                  <td className="py-4 text-left text-base tabular-nums font-black text-blue-700">
+                  <td className="py-4 text-start text-base tabular-nums font-black text-blue-700">
                     {formatAmount(rows.total, { currencyCode: baseCurrency?.code })}
                   </td>
                 </tr>

@@ -74,13 +74,13 @@ export default function InventoryLowStockReport() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-slate-400 font-black text-[10px] uppercase tracking-widest border-b border-slate-100">
-                  <th className="text-right pb-4">الكود</th>
-                  <th className="text-right pb-4">الصنف</th>
-                  <th className="text-right pb-4">الفئة</th>
-                  <th className="text-left pb-4">الباركود</th>
-                  <th className="text-left pb-4">الكمية المتاحة</th>
-                  <th className="text-left pb-4">الحد الأدنى</th>
-                  <th className="text-left pb-4">النقص</th>
+                  <th className="text-end pb-4">الكود</th>
+                  <th className="text-end pb-4">الصنف</th>
+                  <th className="text-end pb-4">الفئة</th>
+                  <th className="text-start pb-4">الباركود</th>
+                  <th className="text-start pb-4">الكمية المتاحة</th>
+                  <th className="text-start pb-4">الحد الأدنى</th>
+                  <th className="text-start pb-4">النقص</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
@@ -99,16 +99,16 @@ export default function InventoryLowStockReport() {
                     </td>
                     <td className="py-3 font-bold text-slate-700">{material.name}</td>
                     <td className="py-3 text-sm text-slate-500">{category}</td>
-                    <td className="py-3 text-left font-mono text-xs text-slate-400" dir="ltr">
+                    <td className="py-3 text-start font-mono text-xs text-slate-400" dir="ltr">
                       {material.barcode || "—"}
                     </td>
-                    <td className="py-3 text-left tabular-nums font-bold text-rose-600">
+                    <td className="py-3 text-start tabular-nums font-bold text-rose-600">
                       {formatNumber(available)}
                     </td>
-                    <td className="py-3 text-left tabular-nums text-slate-500">
+                    <td className="py-3 text-start tabular-nums text-slate-500">
                       {formatNumber(minimum)}
                     </td>
-                    <td className="py-3 text-left">
+                    <td className="py-3 text-start">
                       <span className="inline-flex items-center gap-1 rounded-md bg-rose-50 px-2 py-1 text-xs font-black tabular-nums text-rose-600">
                         {formatNumber(shortage)}
                       </span>

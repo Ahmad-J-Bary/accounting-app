@@ -221,7 +221,7 @@ export default function AccountMovement() {
   const toolbarButtons = useMemo(() => {
     const commonPrint = (
       <Button key="print" variant="outline" size="sm" className={OUTLINE_BUTTON_CLASS}>
-        <Printer className="w-4 h-4 ml-2 text-blue-500" />
+        <Printer className="w-4 h-4 ms-2 text-blue-500" />
         طباعة كشف حساب
       </Button>
     );
@@ -259,7 +259,7 @@ export default function AccountMovement() {
               }}
               className={OUTLINE_BUTTON_CLASS}
             >
-              <ShoppingCart className="w-4 h-4 ml-2 text-blue-500" />
+              <ShoppingCart className="w-4 h-4 ms-2 text-blue-500" />
               المبيعات للعميل {linkedEntityName}
             </Button>
           ) : null
@@ -286,7 +286,7 @@ export default function AccountMovement() {
               }}
               className={OUTLINE_BUTTON_CLASS}
             >
-              <ShoppingCart className="w-4 h-4 ml-2 text-emerald-500" />
+              <ShoppingCart className="w-4 h-4 ms-2 text-emerald-500" />
               المشتريات للمورد {linkedEntityName}
             </Button>
           ) : null

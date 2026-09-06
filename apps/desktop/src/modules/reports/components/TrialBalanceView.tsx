@@ -51,7 +51,7 @@ export function TrialBalanceView({ data, loading }: TrialBalanceViewProps) {
         header: "اسم الحساب",
         label: "اسم الحساب",
         accessor: (row) => {
-          const padClass = row.depth === 0 ? "" : row.depth === 1 ? "pr-6" : row.depth === 2 ? "pr-12" : "pr-16";
+          const padClass = row.depth === 0 ? "" : row.depth === 1 ? "ps-6" : row.depth === 2 ? "ps-12" : "ps-16";
           const fontClass = row.depth === 0
             ? "font-extrabold text-sm text-slate-900"
             : row.depth === 1
