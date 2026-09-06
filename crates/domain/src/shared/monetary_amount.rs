@@ -16,7 +16,7 @@ pub struct MonetaryAmount {
     pub base_amount: Decimal,
 
     /// The exchange rate used at the time of entry.
-    /// Formula: base_amount = original.amount * fx_rate
+    /// Formula: base_amount = original.amount / fx_rate
     pub fx_rate: Decimal,
 }
 

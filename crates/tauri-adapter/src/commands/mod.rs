@@ -24,6 +24,7 @@ pub mod payment;
 pub mod platform;
 pub mod production;
 pub mod purchase;
+pub mod report;
 pub mod returns;
 pub mod search;
 pub mod settings;

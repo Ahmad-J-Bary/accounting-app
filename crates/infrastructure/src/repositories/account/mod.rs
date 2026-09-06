@@ -54,4 +54,8 @@ impl AccountRepository for SqliteAccountRepository {
     async fn get_next_child_code(&self, parent_code: &str) -> Result<String, AppError> {
         queries::get_next_child_code(&self.pool, parent_code).await
     }
+
+    async fn find_by_ids(&self, ids: &[AccountId]) -> Result<Vec<Account>, AppError> {
+        queries::find_by_ids(&self.pool, ids).await
+    }
 }

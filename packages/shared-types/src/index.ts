@@ -19,3 +19,4 @@ export * from './currency';
 export * from './opening_balance';
 export * from './fiscal_period';
 export * from './fiscal_year';
+export * from './report';

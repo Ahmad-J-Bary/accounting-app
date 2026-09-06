@@ -43,6 +43,7 @@ export const JOURNAL_TYPE_LABELS: Record<string, string> = {
   ProfitDistribution: "توزيع أرباح",
   PartnerDrawing: "سحب شريك",
   Capitalization: "رسملة الأرباح المبقاة",
+  FiscalClosing: "الإغلاق السنوي",
 };
 
 // Unified column order for ALL journal types:

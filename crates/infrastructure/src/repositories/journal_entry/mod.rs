@@ -1,5 +1,7 @@
 use application::errors::AppError;
-use application::ports::journal_entry_repository::{JournalEntryRepository, ReversalScope};
+use application::ports::journal_entry_repository::{
+    AccountAggregationRow, JournalEntryRepository, ReversalScope,
+};
 use async_trait::async_trait;
 use domain::accounting::journal_entry::JournalEntry;
 use domain::shared::{AccountId, JournalEntryId};
@@ -94,6 +96,10 @@ impl JournalEntryRepository for SqliteJournalEntryRepository {
 
     async fn find_all_by_source_id(&self, source_id: &str) -> Result<Vec<JournalEntry>, AppError> {
         queries::find_all_by_source_id(&self.pool, source_id).await
+    }
+
+    async fn aggregate_by_account(&self) -> Result<Vec<AccountAggregationRow>, AppError> {
+        queries::aggregate_by_account(&self.pool).await
     }
 
     async fn delete(&self, id: &JournalEntryId) -> Result<(), AppError> {

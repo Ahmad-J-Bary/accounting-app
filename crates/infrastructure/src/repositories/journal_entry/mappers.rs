@@ -41,6 +41,7 @@ pub fn row_to_entry(
         "ProfitDistribution" => JournalType::ProfitDistribution,
         "PartnerDrawing" => JournalType::PartnerDrawing,
         "Capitalization" => JournalType::Capitalization,
+        "FiscalClosing" => JournalType::FiscalClosing,
         _ => JournalType::GeneralJournal,
     };
 

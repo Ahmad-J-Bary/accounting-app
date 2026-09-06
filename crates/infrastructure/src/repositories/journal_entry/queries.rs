@@ -1,13 +1,17 @@
 use super::mappers::{row_to_entry, row_to_line};
 use super::models::{JournalEntryRow, JournalLineRow};
 use application::errors::AppError;
-use application::ports::journal_entry_repository::ReversalScope;
+use application::ports::journal_entry_repository::{AccountAggregationRow, ReversalScope};
 use chrono::{DateTime, Utc};
 use domain::accounting::journal_entry::{
     JournalEntry, JournalEntryStatus, JournalLine, JournalType,
 };
 use domain::shared::{AccountId, JournalEntryId};
 use sqlx::SqlitePool;
+use std::collections::HashMap;
+use std::str::FromStr;
+
+const LINES_BATCH_SIZE: usize = 500;
 
 pub async fn find_by_id(
     pool: &SqlitePool,
@@ -81,9 +85,12 @@ pub async fn find_all_by_source_id(
     .await
     .map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
+    let entry_ids: Vec<String> = rows.iter().map(|r| r.id.clone()).collect();
+    let lines_map = load_lines_batch(pool, &entry_ids).await?;
+
     let mut entries = Vec::new();
     for row in rows {
-        let lines = load_lines(pool, &row.id).await?;
+        let lines = lines_map.get(&row.id).cloned().unwrap_or_default();
         entries.push(row_to_entry(row, lines)?);
     }
     Ok(entries)
@@ -97,9 +104,12 @@ pub async fn list_all(pool: &SqlitePool) -> Result<Vec<JournalEntry>, AppError> 
     .await
     .map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
+    let entry_ids: Vec<String> = rows.iter().map(|r| r.id.clone()).collect();
+    let lines_map = load_lines_batch(pool, &entry_ids).await?;
+
     let mut entries = Vec::new();
     for row in rows {
-        let lines = load_lines(pool, &row.id).await?;
+        let lines = lines_map.get(&row.id).cloned().unwrap_or_default();
         entries.push(row_to_entry(row, lines)?);
     }
     Ok(entries)
@@ -121,9 +131,12 @@ pub async fn list_by_account(
     .await
     .map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
+    let entry_ids: Vec<String> = rows.iter().map(|r| r.id.clone()).collect();
+    let lines_map = load_lines_batch(pool, &entry_ids).await?;
+
     let mut entries = Vec::new();
     for row in rows {
-        let lines = load_lines(pool, &row.id).await?;
+        let lines = lines_map.get(&row.id).cloned().unwrap_or_default();
         entries.push(row_to_entry(row, lines)?);
     }
     Ok(entries)
@@ -163,9 +176,12 @@ pub async fn list_by_accounts(
         .await
         .map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
+    let entry_ids: Vec<String> = rows.iter().map(|r| r.id.clone()).collect();
+    let lines_map = load_lines_batch(pool, &entry_ids).await?;
+
     let mut entries = Vec::new();
     for row in rows {
-        let lines = load_lines(pool, &row.id).await?;
+        let lines = lines_map.get(&row.id).cloned().unwrap_or_default();
         entries.push(row_to_entry(row, lines)?);
     }
     Ok(entries)
@@ -242,9 +258,12 @@ pub async fn list_with_filters(
         .await
         .map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
+    let entry_ids: Vec<String> = rows.iter().map(|r| r.id.clone()).collect();
+    let lines_map = load_lines_batch(pool, &entry_ids).await?;
+
     let mut entries = Vec::new();
     for row in rows {
-        let lines = load_lines(pool, &row.id).await?;
+        let lines = lines_map.get(&row.id).cloned().unwrap_or_default();
         entries.push(row_to_entry(row, lines)?);
     }
     Ok(entries)
@@ -292,7 +311,7 @@ pub async fn get_next_entry_number(pool: &SqlitePool) -> Result<String, AppError
 
 pub async fn load_lines(pool: &SqlitePool, entry_id: &str) -> Result<Vec<JournalLine>, AppError> {
     let rows = sqlx::query_as::<_, JournalLineRow>(
-        "SELECT id, account_id, partner_id, currency, fx_rate, debit, debit_base, credit, credit_base, description FROM journal_lines WHERE journal_entry_id = ?"
+        "SELECT id, journal_entry_id, account_id, partner_id, currency, fx_rate, debit, debit_base, credit, credit_base, description FROM journal_lines WHERE journal_entry_id = ?"
     )
     .bind(entry_id)
     .fetch_all(pool)
@@ -300,4 +319,84 @@ pub async fn load_lines(pool: &SqlitePool, entry_id: &str) -> Result<Vec<Journal
     .map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
     Ok(rows.into_iter().map(row_to_line).collect())
+}
+
+pub async fn load_lines_batch(
+    pool: &SqlitePool,
+    entry_ids: &[String],
+) -> Result<HashMap<String, Vec<JournalLine>>, AppError> {
+    if entry_ids.is_empty() {
+        return Ok(HashMap::new());
+    }
+
+    let mut result = HashMap::new();
+
+    for chunk in entry_ids.chunks(LINES_BATCH_SIZE) {
+        let placeholders: Vec<String> = chunk.iter().map(|_| "?".to_string()).collect();
+        let sql = format!(
+            "SELECT id, journal_entry_id, account_id, partner_id, currency, fx_rate, debit, debit_base, credit, credit_base, description FROM journal_lines WHERE journal_entry_id IN ({})",
+            placeholders.join(",")
+        );
+
+        let mut query = sqlx::query_as::<_, JournalLineRow>(&sql);
+        for id in chunk {
+            query = query.bind(id);
+        }
+
+        let rows = query
+            .fetch_all(pool)
+            .await
+            .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+
+        for row in rows {
+            let journal_entry_id = row.journal_entry_id.clone();
+            result
+                .entry(journal_entry_id)
+                .or_insert_with(Vec::new)
+                 .push(row_to_line(row));
+        }
+    }
+
+    Ok(result)
+}
+
+#[derive(sqlx::FromRow)]
+struct AggregationRow {
+    account_id: String,
+    total_debit_base: String,
+    total_credit_base: String,
+}
+
+pub async fn aggregate_by_account(
+    pool: &SqlitePool,
+) -> Result<Vec<AccountAggregationRow>, AppError> {
+    let rows = sqlx::query_as::<_, AggregationRow>(
+        "SELECT jl.account_id,
+                SUM(jl.debit_base) AS total_debit_base,
+                SUM(jl.credit_base) AS total_credit_base
+         FROM journal_lines jl
+         JOIN journal_entries je ON jl.journal_entry_id = je.id
+         WHERE je.status = 'Posted'
+           AND je.reversal_of_entry_id IS NULL
+         GROUP BY jl.account_id",
+    )
+    .fetch_all(pool)
+    .await
+    .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+
+    Ok(rows
+        .into_iter()
+        .filter_map(|r| {
+            let account_id = AccountId::from_str(&r.account_id).ok()?;
+            let total_debit_base =
+                rust_decimal::Decimal::from_str(&r.total_debit_base).unwrap_or(rust_decimal::Decimal::ZERO);
+            let total_credit_base =
+                rust_decimal::Decimal::from_str(&r.total_credit_base).unwrap_or(rust_decimal::Decimal::ZERO);
+            Some(AccountAggregationRow {
+                account_id,
+                total_debit_base,
+                total_credit_base,
+            })
+        })
+        .collect())
 }

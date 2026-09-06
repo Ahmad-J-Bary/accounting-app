@@ -35,6 +35,7 @@ pub enum JournalType {
     ProfitDistribution,     // توزيع أرباح على الشركاء
     PartnerDrawing,         // سحب شريك (مسحوبات)
     Capitalization,         // رسملة الأرباح المبقاة إلى رأس المال
+    FiscalClosing,          // قيد الإغلاق السنوي (الإيرادات والمصروفات → أرباح مبقاة)
 }
 
 impl std::fmt::Display for JournalType {
@@ -65,6 +66,7 @@ impl std::fmt::Display for JournalType {
             Self::ProfitDistribution => "توزيع أرباح",
             Self::PartnerDrawing => "سحب شريك",
             Self::Capitalization => "رسملة الأرباح المبقاة",
+            Self::FiscalClosing => "الإغلاق السنوي",
         };
         write!(f, "{}", s)
     }
@@ -101,6 +103,7 @@ impl JournalType {
             Self::ProfitDistribution => "profit_distribution",
             Self::PartnerDrawing => "partner_drawing",
             Self::Capitalization => "capitalization",
+            Self::FiscalClosing => "fiscal_closing",
         }
     }
 

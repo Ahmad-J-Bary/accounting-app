@@ -3,8 +3,10 @@ use crate::errors::AppError;
 use crate::ports::account_repository::AccountRepository;
 use crate::ports::journal_entry_repository::{JournalEntryRepository, ReversalScope};
 use chrono::{DateTime, NaiveDate, TimeZone, Utc};
+use domain::accounting::account::Account;
 use domain::accounting::{JournalEntryStatus, JournalType};
 use domain::shared::ids::AccountId;
+use std::collections::HashMap;
 use std::sync::Arc;
 use uuid::Uuid;
 
@@ -70,7 +72,7 @@ impl ListJournalEntriesUseCase {
             )
             .await?;
 
-        let mut dtos = Vec::new();
+        let mut filtered = Vec::new();
         for entry in entries {
             let include = match journal_type {
                 Some(JournalType::GeneralJournal) => true,
@@ -94,9 +96,15 @@ impl ListJournalEntriesUseCase {
             };
 
             if include {
-                dtos.push(self.map_to_dto(entry).await?);
+                filtered.push(entry);
             }
         }
+
+        let account_map = batch_load_accounts(&self.account_repo, &filtered).await?;
+        let dtos = filtered
+            .into_iter()
+            .map(|e| map_to_dto(e, &account_map))
+            .collect::<Result<Vec<_>, _>>()?;
 
         Ok(dtos)
     }
@@ -134,10 +142,11 @@ impl ListJournalEntriesUseCase {
             )
             .await?;
 
-        let mut dtos = Vec::with_capacity(entries.len());
-        for entry in entries {
-            dtos.push(self.map_to_dto(entry).await?);
-        }
+        let account_map = batch_load_accounts(&self.account_repo, &entries).await?;
+        let dtos = entries
+            .into_iter()
+            .map(|e| map_to_dto(e, &account_map))
+            .collect::<Result<Vec<_>, _>>()?;
         Ok(dtos)
     }
 
@@ -151,30 +160,51 @@ impl ListJournalEntriesUseCase {
             .await?
             .ok_or_else(|| AppError::NotFound("القيد غير موجود".into()))?;
 
-        self.map_to_dto(entry).await
+        let account_map = batch_load_accounts(&self.account_repo, &[entry.clone()]).await?;
+        map_to_dto(entry, &account_map)
     }
+}
 
-    async fn map_to_dto(
-        &self,
-        entry: domain::accounting::JournalEntry,
-    ) -> Result<JournalEntryDto, AppError> {
-        let mut dto = JournalEntryDto::from(entry);
+fn collect_account_ids(entries: &[domain::accounting::JournalEntry]) -> Vec<AccountId> {
+    let mut ids = std::collections::HashSet::new();
+    for entry in entries {
+        for line in &entry.lines {
+            ids.insert(line.account_id.clone());
+        }
+    }
+    ids.into_iter().collect()
+}
 
-        // Enrich lines with account names and partner names
-        for line in &mut dto.lines {
-            // Account name
-            if let Ok(acc_id) = line.account_id.parse::<AccountId>() {
-                if let Ok(Some(acc)) = self.account_repo.find_by_id(&acc_id).await {
-                    line.account_name = Some(acc.name_ar);
-                    line.account_code = Some(acc.code);
-                    line.account_purpose = Some(acc.purpose.to_str().to_string());
-                    line.account_type = Some(format!("{:?}", acc.account_type));
-                }
+async fn batch_load_accounts(
+    account_repo: &Arc<dyn AccountRepository>,
+    entries: &[domain::accounting::JournalEntry],
+) -> Result<HashMap<AccountId, Account>, AppError> {
+    let ids = collect_account_ids(entries);
+    if ids.is_empty() {
+        return Ok(HashMap::new());
+    }
+    let accounts = account_repo.find_by_ids(&ids).await?;
+    Ok(accounts.into_iter().map(|a| (a.id.clone(), a)).collect())
+}
+
+fn map_to_dto(
+    entry: domain::accounting::JournalEntry,
+    account_map: &HashMap<AccountId, Account>,
+) -> Result<JournalEntryDto, AppError> {
+    let mut dto = JournalEntryDto::from(entry);
+
+    for line in &mut dto.lines {
+        if let Ok(acc_id) = line.account_id.parse::<AccountId>() {
+            if let Some(acc) = account_map.get(&acc_id) {
+                line.account_name = Some(acc.name_ar.clone());
+                line.account_code = Some(acc.code.clone());
+                line.account_purpose = Some(acc.purpose.to_str().to_string());
+                line.account_type = Some(format!("{:?}", acc.account_type));
             }
         }
-
-        Ok(dto)
     }
+
+    Ok(dto)
 }
 
 fn parse_date_bound(value: &str, end_of_day: bool) -> Option<DateTime<Utc>> {

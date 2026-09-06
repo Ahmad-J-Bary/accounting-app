@@ -280,6 +280,41 @@ impl JournalEntryRepository for MockJournalRepository {
     async fn delete(&self, _id: &JournalEntryId) -> Result<(), AppError> {
         Ok(())
     }
+
+    async fn aggregate_by_account(
+        &self,
+    ) -> Result<Vec<crate::ports::journal_entry_repository::AccountAggregationRow>, AppError>
+    {
+        use std::collections::HashMap;
+        let entries = self.entries.lock().unwrap();
+        let mut map: HashMap<domain::shared::AccountId, (rust_decimal::Decimal, rust_decimal::Decimal)> =
+            HashMap::new();
+        for entry in entries.iter() {
+            if entry.status != domain::accounting::JournalEntryStatus::Posted {
+                continue;
+            }
+            if entry.reversal_of_entry_id.is_some() {
+                continue;
+            }
+            for line in &entry.lines {
+                let e = map.entry(line.account_id).or_insert((rust_decimal::Decimal::ZERO, rust_decimal::Decimal::ZERO));
+                e.0 += line.debit.base_amount;
+                e.1 += line.credit.base_amount;
+            }
+        }
+        Ok(map
+            .into_iter()
+            .map(
+                |(account_id, (total_debit_base, total_credit_base))| {
+                    crate::ports::journal_entry_repository::AccountAggregationRow {
+                        account_id,
+                        total_debit_base,
+                        total_credit_base,
+                    }
+                },
+            )
+            .collect())
+    }
 }
 
 pub struct MockAccountRepository {
@@ -338,6 +373,14 @@ impl AccountRepository for MockAccountRepository {
 
     async fn get_next_child_code(&self, _parent_code: &str) -> Result<String, AppError> {
         Ok("001".to_string())
+    }
+
+    async fn find_by_ids(&self, ids: &[AccountId]) -> Result<Vec<Account>, AppError> {
+        let accounts = self.accounts.lock().unwrap();
+        Ok(ids
+            .iter()
+            .filter_map(|id| accounts.iter().find(|a| a.id.0 == id.0).cloned())
+            .collect())
     }
 }
 

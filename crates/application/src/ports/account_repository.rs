@@ -11,4 +11,5 @@ pub trait AccountRepository: Send + Sync {
     async fn list_all(&self) -> Result<Vec<Account>, AppError>;
     async fn delete(&self, id: &AccountId) -> Result<(), AppError>;
     async fn get_next_child_code(&self, parent_code: &str) -> Result<String, AppError>;
+    async fn find_by_ids(&self, ids: &[AccountId]) -> Result<Vec<Account>, AppError>;
 }

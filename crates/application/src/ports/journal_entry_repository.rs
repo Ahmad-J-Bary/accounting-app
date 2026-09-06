@@ -3,6 +3,7 @@ use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use domain::accounting::{JournalEntry, JournalEntryId, JournalType};
 use domain::shared::AccountId;
+use rust_decimal::Decimal;
 
 /**
  * How a journal listing relates to REVERSAL PAIRS. Reports must name this
@@ -20,6 +21,15 @@ pub enum ReversalScope {
     /// Neither side of a reversal pair may reach a ledger or a financial
     /// statement (General Ledger, Trial Balance, Balance Sheet, net profit).
     PostedLedger,
+}
+
+/// Aggregated debit/credit totals for one account across all qualifying
+/// (posted, non-reversed) journal lines.
+#[derive(Debug, Clone)]
+pub struct AccountAggregationRow {
+    pub account_id: AccountId,
+    pub total_debit_base: Decimal,
+    pub total_credit_base: Decimal,
 }
 
 #[async_trait]
@@ -51,6 +61,9 @@ pub trait JournalEntryRepository: Send + Sync {
         status: Option<domain::accounting::JournalEntryStatus>,
         reversal_scope: ReversalScope,
     ) -> Result<Vec<JournalEntry>, AppError>;
+    /// SQL-level aggregation: SUM(debit_base), SUM(credit_base) GROUP BY
+    /// account_id for all posted, non-reversed journal lines.
+    async fn aggregate_by_account(&self) -> Result<Vec<AccountAggregationRow>, AppError>;
     async fn get_next_entry_number(&self) -> Result<String, AppError>;
     async fn find_by_source_id(&self, source_id: &str) -> Result<Option<JournalEntry>, AppError>;
     async fn find_all_by_source_id(&self, source_id: &str) -> Result<Vec<JournalEntry>, AppError>;

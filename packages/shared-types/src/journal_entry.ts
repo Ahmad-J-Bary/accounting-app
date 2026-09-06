@@ -23,7 +23,8 @@ export type JournalType =
   | 'CapitalContribution'
   | 'ProfitDistribution'
   | 'PartnerDrawing'
-  | 'Capitalization';
+  | 'Capitalization'
+  | 'FiscalClosing';
 
 export type JournalEntryStatus = 'Draft' | 'Posted' | 'Reversed' | 'Cancelled';
 

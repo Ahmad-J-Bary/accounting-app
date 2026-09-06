@@ -20,6 +20,7 @@ pub struct JournalEntryRow {
 #[allow(dead_code)]
 pub struct JournalLineRow {
     pub id: String,
+    pub journal_entry_id: String,
     pub account_id: String,
     pub partner_id: Option<String>,
     pub currency: String,

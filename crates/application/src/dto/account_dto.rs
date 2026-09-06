@@ -1,3 +1,4 @@
+use crate::ports::journal_entry_repository::AccountAggregationRow;
 use crate::use_cases::account::types::{AccountLedger, LedgerLine, LedgerOpeningInfo};
 use domain::accounting::account::Account;
 use serde::{Deserialize, Serialize};
@@ -181,6 +182,63 @@ impl From<LedgerLine> for AccountLedgerLineDto {
             debit_original: line.debit_original.to_string(),
             credit_original: line.credit_original.to_string(),
             balance_original: line.balance_original.to_string(),
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GlAccountAggregateLineDto {
+    pub account_id: String,
+    pub account_code: Option<String>,
+    pub account_name: Option<String>,
+    pub total_debit_base: String,
+    pub total_credit_base: String,
+    pub balance_base: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GlAccountAggregationDto {
+    pub lines: Vec<GlAccountAggregateLineDto>,
+    pub total_debit_base: String,
+    pub total_credit_base: String,
+}
+
+impl GlAccountAggregationDto {
+    pub fn from_rows(
+        rows: Vec<AccountAggregationRow>,
+        accounts: Vec<Account>,
+    ) -> Self {
+        let account_map: std::collections::HashMap<_, _> =
+            accounts.into_iter().map(|a| (a.id, a)).collect();
+
+        let mut total_debit = rust_decimal::Decimal::ZERO;
+        let mut total_credit = rust_decimal::Decimal::ZERO;
+
+        let lines: Vec<GlAccountAggregateLineDto> = rows
+            .into_iter()
+            .map(|r| {
+                total_debit += r.total_debit_base;
+                total_credit += r.total_credit_base;
+                let (code, name) = account_map
+                    .get(&r.account_id)
+                    .map(|a| (Some(a.code.clone()), Some(a.name_ar.clone())))
+                    .unwrap_or((None, None));
+                let balance = r.total_debit_base - r.total_credit_base;
+                GlAccountAggregateLineDto {
+                    account_id: r.account_id.0.to_string(),
+                    account_code: code,
+                    account_name: name,
+                    total_debit_base: r.total_debit_base.to_string(),
+                    total_credit_base: r.total_credit_base.to_string(),
+                    balance_base: balance.to_string(),
+                }
+            })
+            .collect();
+
+        Self {
+            lines,
+            total_debit_base: total_debit.to_string(),
+            total_credit_base: total_credit.to_string(),
         }
     }
 }
