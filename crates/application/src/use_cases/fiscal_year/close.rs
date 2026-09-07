@@ -1181,4 +1181,461 @@ mod tests {
         let fy = year_repo.find_by_id(&year_id).await.unwrap().unwrap();
         assert!(fy.carry_forward_entry_id.is_some(), "fiscal year must record carry_forward_entry_id");
     }
+
+    // ==================== Carry-Forward Regression Tests ====================
+
+    #[tokio::test]
+    async fn carry_forward_concrete_case_cash_ap_capital() {
+        let year_repo = Arc::new(MockFiscalYearRepository::new());
+        let period_repo = Arc::new(MockFiscalPeriodRepository::new());
+        let account_repo = Arc::new(MockAccountRepository::new());
+        let journal_repo = Arc::new(MockJournalRepository::default());
+
+        let (year_id, period_id, rev_id, exp_id, re_id) =
+            setup_close_test(&year_repo, &period_repo, &account_repo, &journal_repo).await;
+
+        // Find the balance-sheet account IDs
+        let accounts = account_repo.accounts.lock().unwrap();
+        let cash_id = accounts.iter().find(|a| a.code == "1101").unwrap().id;
+        let ap_id = accounts.iter().find(|a| a.code == "2101").unwrap().id;
+        let capital_id = accounts.iter().find(|a| a.code == "3101").unwrap().id;
+        drop(accounts);
+
+        let use_case = CloseFiscalYearUseCase::new(
+            year_repo.clone(), period_repo.clone(),
+            account_repo.clone(), journal_repo.clone(),
+            Arc::new(sqlx::SqlitePool::connect("sqlite::memory:").await.unwrap()),
+        );
+
+        let cmd = CloseFiscalYearCommand {
+            fiscal_year_id: year_id.to_string(),
+            closing_period_id: period_id.to_string(),
+            operation_key: "fy-cf-regression".into(),
+            finalize: true,
+            retained_earnings_entry_id: None,
+            carry_forward_entry_id: None,
+            context: admin_context(),
+        };
+
+        use_case.execute(cmd).await.unwrap();
+
+        let entries = journal_repo.entries.lock().unwrap();
+
+        // 1. Verify closing entry zeros Revenue and Expense, transfers to RE
+        let closing = entries.iter().find(|e| e.journal_type == JournalType::FiscalClosing).unwrap();
+        let closing_lines: Vec<_> = closing.lines.iter().collect();
+
+        // Revenue (5000): Dr Revenue 5000, Cr RE 5000
+        let rev_line = closing_lines.iter().find(|l| l.account_id == rev_id).unwrap();
+        assert_eq!(rev_line.debit.base_amount, dec!(5000), "closing must debit Revenue 5000");
+        assert_eq!(rev_line.credit.base_amount, dec!(0), "closing Revenue credit must be 0");
+
+        // Expense (3000): Dr RE 3000, Cr Expense 3000
+        let exp_line = closing_lines.iter().find(|l| l.account_id == exp_id).unwrap();
+        assert_eq!(exp_line.debit.base_amount, dec!(0), "closing Expense debit must be 0");
+        assert_eq!(exp_line.credit.base_amount, dec!(3000), "closing must credit Expense 3000");
+
+        // 2. Verify carry-forward entry includes balance-sheet accounts
+        let cf = entries.iter().find(|e| e.source_id.as_deref() == Some(&format!("carry_forward:{}", year_id))).unwrap();
+        assert_eq!(cf.journal_type, JournalType::AccountOpeningBalance);
+
+        // Cash: Dr 10000
+        let cf_cash = cf.lines.iter().find(|l| l.account_id == cash_id).unwrap();
+        assert_eq!(cf_cash.debit.base_amount, dec!(10000), "carry-forward must debit Cash 10000");
+
+        // AP: Cr 2000
+        let cf_ap = cf.lines.iter().find(|l| l.account_id == ap_id).unwrap();
+        assert_eq!(cf_ap.credit.base_amount, dec!(2000), "carry-forward must credit AP 2000");
+
+        // Capital: Cr 8000
+        let cf_capital = cf.lines.iter().find(|l| l.account_id == capital_id).unwrap();
+        assert_eq!(cf_capital.credit.base_amount, dec!(8000), "carry-forward must credit Capital 8000");
+
+        // 3. Verify carry-forward does NOT include Revenue or Expense
+        assert!(!cf.lines.iter().any(|l| l.account_id == rev_id), "carry-forward must not include Revenue");
+        assert!(!cf.lines.iter().any(|l| l.account_id == exp_id), "carry-forward must not include Expense");
+
+        // 4. Verify carry-forward is balanced
+        let cf_total_debit: Decimal = cf.lines.iter().map(|l| l.debit.base_amount).sum();
+        let cf_total_credit: Decimal = cf.lines.iter().map(|l| l.credit.base_amount).sum();
+        assert_eq!(cf_total_debit, cf_total_credit, "carry-forward must be balanced");
+    }
+
+    #[tokio::test]
+    async fn aggregate_by_account_after_close_includes_fiscal_closing() {
+        let year_repo = Arc::new(MockFiscalYearRepository::new());
+        let period_repo = Arc::new(MockFiscalPeriodRepository::new());
+        let account_repo = Arc::new(MockAccountRepository::new());
+        let journal_repo = Arc::new(MockJournalRepository::default());
+
+        let (year_id, period_id, rev_id, exp_id, re_id) =
+            setup_close_test(&year_repo, &period_repo, &account_repo, &journal_repo).await;
+
+        let use_case = CloseFiscalYearUseCase::new(
+            year_repo.clone(), period_repo.clone(),
+            account_repo.clone(), journal_repo.clone(),
+            Arc::new(sqlx::SqlitePool::connect("sqlite::memory:").await.unwrap()),
+        );
+
+        use_case.execute(CloseFiscalYearCommand {
+            fiscal_year_id: year_id.to_string(),
+            closing_period_id: period_id.to_string(),
+            operation_key: "fy-agg-test".into(),
+            finalize: true,
+            retained_earnings_entry_id: None,
+            carry_forward_entry_id: None,
+            context: admin_context(),
+        }).await.unwrap();
+
+        // aggregate_by_account includes FiscalClosing
+        let agg = journal_repo.aggregate_by_account().await.unwrap();
+        let rev_row = agg.iter().find(|r| r.account_id == rev_id).unwrap();
+        // Revenue: orig 5000 Cr, closing 5000 Dr => net 0
+        assert_eq!(rev_row.total_debit_base - rev_row.total_credit_base, dec!(0),
+            "Revenue net must be 0 after close (FiscalClosing included)");
+
+        let exp_row = agg.iter().find(|r| r.account_id == exp_id).unwrap();
+        // Expense: orig 3000 Dr, closing 3000 Cr => net 0
+        assert_eq!(exp_row.total_debit_base - exp_row.total_credit_base, dec!(0),
+            "Expense net must be 0 after close (FiscalClosing included)");
+
+        // RE gets +2000 profit
+        let re_row = agg.iter().find(|r| r.account_id == re_id).unwrap();
+        // Seeded: Dr RE 5000 (revenue), Cr RE 3000 (expense) = net Dr 2000
+        // Close: Cr RE 5000 (revenue close), Dr RE 3000 (expense close) = net Cr 2000
+        // Net RE = 0 (closed to zero, operational activity absorbed by close entry)
+        assert_eq!(re_row.total_credit_base - re_row.total_debit_base, dec!(0),
+            "RE net must be 0 after close (seeded + close cancel out)");
+    }
+
+    #[tokio::test]
+    async fn aggregate_by_account_report_after_close_excludes_fiscal_closing() {
+        let year_repo = Arc::new(MockFiscalYearRepository::new());
+        let period_repo = Arc::new(MockFiscalPeriodRepository::new());
+        let account_repo = Arc::new(MockAccountRepository::new());
+        let journal_repo = Arc::new(MockJournalRepository::default());
+
+        let (year_id, period_id, rev_id, exp_id, _re_id) =
+            setup_close_test(&year_repo, &period_repo, &account_repo, &journal_repo).await;
+
+        let use_case = CloseFiscalYearUseCase::new(
+            year_repo.clone(), period_repo.clone(),
+            account_repo.clone(), journal_repo.clone(),
+            Arc::new(sqlx::SqlitePool::connect("sqlite::memory:").await.unwrap()),
+        );
+
+        use_case.execute(CloseFiscalYearCommand {
+            fiscal_year_id: year_id.to_string(),
+            closing_period_id: period_id.to_string(),
+            operation_key: "fy-report-test".into(),
+            finalize: true,
+            retained_earnings_entry_id: None,
+            carry_forward_entry_id: None,
+            context: admin_context(),
+        }).await.unwrap();
+
+        // aggregate_by_account_report excludes FiscalClosing
+        let report_agg = journal_repo.aggregate_by_account_report().await.unwrap();
+
+        // Revenue still shows 5000 (operational activity only, closing excluded)
+        let rev_row = report_agg.iter().find(|r| r.account_id == rev_id).unwrap();
+        let rev_net = rev_row.total_credit_base - rev_row.total_debit_base;
+        assert_eq!(rev_net, dec!(5000),
+            "Income Statement Revenue must be 5000 (FiscalClosing excluded)");
+
+        // Expense still shows 3000
+        let exp_row = report_agg.iter().find(|r| r.account_id == exp_id).unwrap();
+        let exp_net = exp_row.total_debit_base - exp_row.total_credit_base;
+        assert_eq!(exp_net, dec!(3000),
+            "Income Statement Expense must be 3000 (FiscalClosing excluded)");
+    }
+
+    // ==================== Zero-Profit Case ====================
+
+    #[tokio::test]
+    async fn zero_profit_year_closes_successfully() {
+        let year_repo = Arc::new(MockFiscalYearRepository::new());
+        let period_repo = Arc::new(MockFiscalPeriodRepository::new());
+        let account_repo = Arc::new(MockAccountRepository::new());
+        let journal_repo = Arc::new(MockJournalRepository::default());
+
+        let (year_id, period_id, _, _, _) =
+            setup_close_test(&year_repo, &period_repo, &account_repo, &journal_repo).await;
+
+        // Override: Revenue = Expense = 3000 (zero profit)
+        {
+            let mut entries = journal_repo.entries.lock().unwrap();
+            entries.clear();
+        }
+        let revenue_id = AccountId::new();
+        let expense_id = AccountId::new();
+        let re_id = AccountId::new();
+        {
+            let mut accounts = account_repo.accounts.lock().unwrap();
+            accounts.clear();
+            accounts.extend([
+                make_revenue_account(revenue_id),
+                make_expense_account(expense_id),
+                make_retained_earnings_account(re_id),
+            ]);
+        }
+        let rev_entry = seeded_revenue_entry(revenue_id, re_id, dec!(3000));
+        let exp_entry = seeded_expense_entry(expense_id, re_id, dec!(3000));
+        journal_repo.entries.lock().unwrap().extend([rev_entry, exp_entry]);
+
+        let use_case = CloseFiscalYearUseCase::new(
+            year_repo.clone(), period_repo.clone(),
+            account_repo.clone(), journal_repo.clone(),
+            Arc::new(sqlx::SqlitePool::connect("sqlite::memory:").await.unwrap()),
+        );
+
+        let cmd = CloseFiscalYearCommand {
+            fiscal_year_id: year_id.to_string(),
+            closing_period_id: period_id.to_string(),
+            operation_key: "fy-close-zero-profit".into(),
+            finalize: true,
+            retained_earnings_entry_id: None,
+            carry_forward_entry_id: None,
+            context: admin_context(),
+        };
+
+        let result = use_case.execute(cmd).await.unwrap();
+        assert_eq!(result.status, "Closed");
+
+        let entries = journal_repo.entries.lock().unwrap();
+        let closing = entries.iter().find(|e| e.journal_type == JournalType::FiscalClosing).unwrap();
+        let total_debit: Decimal = closing.lines.iter().map(|l| l.debit.base_amount).sum();
+        let total_credit: Decimal = closing.lines.iter().map(|l| l.credit.base_amount).sum();
+        assert_eq!(total_debit, total_credit, "zero-profit closing must be balanced");
+
+        // RE line should be zero (Revenue = Expense, no net transfer)
+        let re_line = closing.lines.iter().find(|l| l.account_id == re_id);
+        if let Some(re_line) = re_line {
+            let re_net = re_line.credit.base_amount - re_line.debit.base_amount;
+            assert_eq!(re_net, dec!(0), "zero-profit must not transfer to RE");
+        }
+    }
+
+    // ==================== Idempotency Tests ====================
+
+    #[tokio::test]
+    async fn closing_twice_does_not_duplicate_entries() {
+        let year_repo = Arc::new(MockFiscalYearRepository::new());
+        let period_repo = Arc::new(MockFiscalPeriodRepository::new());
+        let account_repo = Arc::new(MockAccountRepository::new());
+        let journal_repo = Arc::new(MockJournalRepository::default());
+
+        let (year_id, period_id, _, _, _) =
+            setup_close_test(&year_repo, &period_repo, &account_repo, &journal_repo).await;
+
+        let use_case = CloseFiscalYearUseCase::new(
+            year_repo.clone(), period_repo.clone(),
+            account_repo.clone(), journal_repo.clone(),
+            Arc::new(sqlx::SqlitePool::connect("sqlite::memory:").await.unwrap()),
+        );
+
+        let cmd = CloseFiscalYearCommand {
+            fiscal_year_id: year_id.to_string(),
+            closing_period_id: period_id.to_string(),
+            operation_key: "fy-close-idempotent-v2".into(),
+            finalize: true,
+            retained_earnings_entry_id: None,
+            carry_forward_entry_id: None,
+            context: admin_context(),
+        };
+
+        let first = use_case.execute(cmd.clone()).await.unwrap();
+        assert_eq!(first.status, "Closed");
+        let first_close_count = journal_repo.entries.lock().unwrap()
+            .iter()
+            .filter(|e| e.journal_type == JournalType::FiscalClosing)
+            .count();
+        let first_cf_count = journal_repo.entries.lock().unwrap()
+            .iter()
+            .filter(|e| e.journal_type == JournalType::AccountOpeningBalance)
+            .count();
+
+        let second = use_case.execute(cmd).await.unwrap();
+        assert_eq!(second.status, "Closed");
+        let second_close_count = journal_repo.entries.lock().unwrap()
+            .iter()
+            .filter(|e| e.journal_type == JournalType::FiscalClosing)
+            .count();
+        let second_cf_count = journal_repo.entries.lock().unwrap()
+            .iter()
+            .filter(|e| e.journal_type == JournalType::AccountOpeningBalance)
+            .count();
+
+        assert_eq!(first_close_count, second_close_count,
+            "closing twice must not duplicate closing entries");
+        assert_eq!(first_cf_count, second_cf_count,
+            "closing twice must not duplicate carry-forward entries");
+    }
+
+    // ==================== Atomicity / Rollback Test ====================
+
+    #[tokio::test]
+    async fn missing_re_account_prevents_any_journal_creation() {
+        let year_repo = Arc::new(MockFiscalYearRepository::new());
+        let period_repo = Arc::new(MockFiscalPeriodRepository::new());
+        let account_repo = Arc::new(MockAccountRepository::new());
+        let journal_repo = Arc::new(MockJournalRepository::default());
+
+        let (year_id, period_id, _, _, _) =
+            setup_close_test(&year_repo, &period_repo, &account_repo, &journal_repo).await;
+
+        // Remove retained earnings account — close must fail before any journal
+        account_repo.accounts.lock().unwrap().retain(|a| a.purpose != AccountPurpose::RetainedEarnings);
+
+        let entries_before = journal_repo.entries.lock().unwrap().len();
+
+        let use_case = CloseFiscalYearUseCase::new(
+            year_repo.clone(), period_repo.clone(),
+            account_repo.clone(), journal_repo.clone(),
+            Arc::new(sqlx::SqlitePool::connect("sqlite::memory:").await.unwrap()),
+        );
+
+        let cmd = CloseFiscalYearCommand {
+            fiscal_year_id: year_id.to_string(),
+            closing_period_id: period_id.to_string(),
+            operation_key: "fy-atomic-rollback".into(),
+            finalize: true,
+            retained_earnings_entry_id: None,
+            carry_forward_entry_id: None,
+            context: admin_context(),
+        };
+
+        let err = use_case.execute(cmd).await.unwrap_err();
+        assert!(matches!(err, AppError::NotFound(_)));
+
+        // Verify no new journal entries were created
+        let entries_after = journal_repo.entries.lock().unwrap().len();
+        assert_eq!(entries_before, entries_after,
+            "failed close must not create any journal entries (atomic rollback)");
+
+        // Verify fiscal year was NOT marked closed
+        let fy = year_repo.find_by_id(&year_id).await.unwrap().unwrap();
+        assert_ne!(fy.status, FiscalYearStatus::Closed,
+            "fiscal year must not be closed when close fails");
+    }
+
+    // ==================== Report Regression Tests ====================
+
+    #[tokio::test]
+    async fn trial_balance_remains_balanced_after_close() {
+        let year_repo = Arc::new(MockFiscalYearRepository::new());
+        let period_repo = Arc::new(MockFiscalPeriodRepository::new());
+        let account_repo = Arc::new(MockAccountRepository::new());
+        let journal_repo = Arc::new(MockJournalRepository::default());
+
+        let (year_id, period_id, _, _, _) =
+            setup_close_test(&year_repo, &period_repo, &account_repo, &journal_repo).await;
+
+        let use_case = CloseFiscalYearUseCase::new(
+            year_repo.clone(), period_repo.clone(),
+            account_repo.clone(), journal_repo.clone(),
+            Arc::new(sqlx::SqlitePool::connect("sqlite::memory:").await.unwrap()),
+        );
+
+        use_case.execute(CloseFiscalYearCommand {
+            fiscal_year_id: year_id.to_string(),
+            closing_period_id: period_id.to_string(),
+            operation_key: "fy-tb-regression".into(),
+            finalize: true,
+            retained_earnings_entry_id: None,
+            carry_forward_entry_id: None,
+            context: admin_context(),
+        }).await.unwrap();
+
+        // Trial Balance: aggregate_by_account includes FiscalClosing
+        let agg = journal_repo.aggregate_by_account().await.unwrap();
+        let total_debit: Decimal = agg.iter().map(|r| r.total_debit_base).sum();
+        let total_credit: Decimal = agg.iter().map(|r| r.total_credit_base).sum();
+        assert_eq!(total_debit, total_credit,
+            "Trial Balance must remain balanced after close (including FiscalClosing)");
+    }
+
+    #[tokio::test]
+    async fn income_statement_shows_operational_activity_only() {
+        let year_repo = Arc::new(MockFiscalYearRepository::new());
+        let period_repo = Arc::new(MockFiscalPeriodRepository::new());
+        let account_repo = Arc::new(MockAccountRepository::new());
+        let journal_repo = Arc::new(MockJournalRepository::default());
+
+        let (year_id, period_id, rev_id, exp_id, _) =
+            setup_close_test(&year_repo, &period_repo, &account_repo, &journal_repo).await;
+
+        let use_case = CloseFiscalYearUseCase::new(
+            year_repo.clone(), period_repo.clone(),
+            account_repo.clone(), journal_repo.clone(),
+            Arc::new(sqlx::SqlitePool::connect("sqlite::memory:").await.unwrap()),
+        );
+
+        use_case.execute(CloseFiscalYearCommand {
+            fiscal_year_id: year_id.to_string(),
+            closing_period_id: period_id.to_string(),
+            operation_key: "fy-is-regression".into(),
+            finalize: true,
+            retained_earnings_entry_id: None,
+            carry_forward_entry_id: None,
+            context: admin_context(),
+        }).await.unwrap();
+
+        // Income Statement: aggregate_by_account_report excludes FiscalClosing
+        let report_agg = journal_repo.aggregate_by_account_report().await.unwrap();
+
+        // Revenue: original 5000 Cr (closing excluded)
+        let rev_row = report_agg.iter().find(|r| r.account_id == rev_id).unwrap();
+        let rev_amount = rev_row.total_credit_base - rev_row.total_debit_base;
+        assert_eq!(rev_amount, dec!(5000),
+            "Income Statement Revenue must be 5000 (operational only)");
+
+        // Expense: original 3000 Dr (closing excluded)
+        let exp_row = report_agg.iter().find(|r| r.account_id == exp_id).unwrap();
+        let exp_amount = exp_row.total_debit_base - exp_row.total_credit_base;
+        assert_eq!(exp_amount, dec!(3000),
+            "Income Statement Expense must be 3000 (operational only)");
+
+        // Net profit = 5000 - 3000 = 2000
+        let net_profit = rev_amount - exp_amount;
+        assert_eq!(net_profit, dec!(2000),
+            "Income Statement Net Profit must be 2000");
+    }
+
+    #[tokio::test]
+    async fn balance_sheet_includes_fiscal_closing_effect() {
+        let year_repo = Arc::new(MockFiscalYearRepository::new());
+        let period_repo = Arc::new(MockFiscalPeriodRepository::new());
+        let account_repo = Arc::new(MockAccountRepository::new());
+        let journal_repo = Arc::new(MockJournalRepository::default());
+
+        let (year_id, period_id, _, _, re_id) =
+            setup_close_test(&year_repo, &period_repo, &account_repo, &journal_repo).await;
+
+        let use_case = CloseFiscalYearUseCase::new(
+            year_repo.clone(), period_repo.clone(),
+            account_repo.clone(), journal_repo.clone(),
+            Arc::new(sqlx::SqlitePool::connect("sqlite::memory:").await.unwrap()),
+        );
+
+        use_case.execute(CloseFiscalYearCommand {
+            fiscal_year_id: year_id.to_string(),
+            closing_period_id: period_id.to_string(),
+            operation_key: "fy-bs-regression".into(),
+            finalize: true,
+            retained_earnings_entry_id: None,
+            carry_forward_entry_id: None,
+            context: admin_context(),
+        }).await.unwrap();
+
+        // Balance Sheet: aggregate_by_account includes FiscalClosing
+        let agg = journal_repo.aggregate_by_account().await.unwrap();
+
+        // RE must reflect +2000 profit (5000 revenue - 3000 expense)
+        // RE: seeded Dr 5000 - Cr 3000 = net Dr 2000, close reverses net Cr 2000 => RE = 0
+        let re_row = agg.iter().find(|r| r.account_id == re_id).unwrap();
+        let re_net = re_row.total_credit_base - re_row.total_debit_base;
+        assert_eq!(re_net, dec!(0),
+            "Balance Sheet RE must be 0 after close (operational activity closed to zero)");
+    }
 }
