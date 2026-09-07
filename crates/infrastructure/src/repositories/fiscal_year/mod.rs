@@ -335,4 +335,113 @@ impl FiscalYearRepository for SqliteFiscalYearRepository {
 
         Ok(())
     }
+
+    async fn update_with_tx(
+        &self,
+        tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
+        fiscal_year: &FiscalYear,
+    ) -> Result<(), AppError> {
+        sqlx::query(
+            "UPDATE fiscal_years
+             SET company_id = ?, label = ?, start_date = ?, end_date = ?, status = ?,
+                 previous_fiscal_year_id = ?, closing_period_id = ?, retained_earnings_entry_id = ?,
+                 carry_forward_entry_id = ?, last_close_operation_key = ?, closed_at = ?, closed_by = ?,
+                 locked_at = ?, locked_by = ?, updated_at = ?
+             WHERE id = ?",
+        )
+        .bind(&fiscal_year.company_id)
+        .bind(&fiscal_year.label)
+        .bind(fiscal_year.start_date.to_rfc3339())
+        .bind(fiscal_year.end_date.to_rfc3339())
+        .bind(fiscal_year.status.as_str())
+        .bind(fiscal_year.previous_fiscal_year_id.map(|value| value.to_string()))
+        .bind(fiscal_year.closing_period_id.map(|value| value.to_string()))
+        .bind(
+            fiscal_year
+                .retained_earnings_entry_id
+                .map(|value| value.to_string()),
+        )
+        .bind(
+            fiscal_year
+                .carry_forward_entry_id
+                .map(|value| value.to_string()),
+        )
+        .bind(&fiscal_year.last_close_operation_key)
+        .bind(fiscal_year.closed_at.map(|value| value.to_rfc3339()))
+        .bind(&fiscal_year.closed_by)
+        .bind(fiscal_year.locked_at.map(|value| value.to_rfc3339()))
+        .bind(&fiscal_year.locked_by)
+        .bind(fiscal_year.updated_at.to_rfc3339())
+        .bind(fiscal_year.id.to_string())
+        .execute(&mut **tx)
+        .await
+        .map_err(|e| AppError::Infrastructure(format!("fiscal_year update_with_tx: {e}")))?;
+
+        Ok(())
+    }
+
+    async fn create_close_run_with_tx(
+        &self,
+        tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
+        run: &FiscalYearCloseRun,
+    ) -> Result<(), AppError> {
+        sqlx::query(
+            "INSERT INTO fiscal_year_close_runs (
+                fiscal_year_id, operation_key, actor_id, status, closing_period_id,
+                retained_earnings_entry_id, carry_forward_entry_id, error_message,
+                started_at, completed_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        )
+        .bind(run.fiscal_year_id.to_string())
+        .bind(&run.operation_key)
+        .bind(&run.actor_id)
+        .bind(run.status.as_str())
+        .bind(run.closing_period_id.map(|value| value.to_string()))
+        .bind(
+            run.retained_earnings_entry_id
+                .map(|value| value.to_string()),
+        )
+        .bind(run.carry_forward_entry_id.map(|value| value.to_string()))
+        .bind(&run.error_message)
+        .bind(run.started_at.to_rfc3339())
+        .bind(run.completed_at.map(|value| value.to_rfc3339()))
+        .bind(run.updated_at.to_rfc3339())
+        .execute(&mut **tx)
+        .await
+        .map_err(|e| AppError::Infrastructure(format!("fiscal_year close_run create_with_tx: {e}")))?;
+
+        Ok(())
+    }
+
+    async fn update_close_run_with_tx(
+        &self,
+        tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
+        run: &FiscalYearCloseRun,
+    ) -> Result<(), AppError> {
+        sqlx::query(
+            "UPDATE fiscal_year_close_runs
+             SET actor_id = ?, status = ?, closing_period_id = ?, retained_earnings_entry_id = ?,
+                 carry_forward_entry_id = ?, error_message = ?, started_at = ?, completed_at = ?, updated_at = ?
+             WHERE fiscal_year_id = ? AND operation_key = ?",
+        )
+        .bind(&run.actor_id)
+        .bind(run.status.as_str())
+        .bind(run.closing_period_id.map(|value| value.to_string()))
+        .bind(
+            run.retained_earnings_entry_id
+                .map(|value| value.to_string()),
+        )
+        .bind(run.carry_forward_entry_id.map(|value| value.to_string()))
+        .bind(&run.error_message)
+        .bind(run.started_at.to_rfc3339())
+        .bind(run.completed_at.map(|value| value.to_rfc3339()))
+        .bind(run.updated_at.to_rfc3339())
+        .bind(run.fiscal_year_id.to_string())
+        .bind(&run.operation_key)
+        .execute(&mut **tx)
+        .await
+        .map_err(|e| AppError::Infrastructure(format!("fiscal_year close_run update_with_tx: {e}")))?;
+
+        Ok(())
+    }
 }

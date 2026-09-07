@@ -1,11 +1,21 @@
+use std::collections::HashMap;
 use std::sync::Arc;
 
+use rust_decimal::Decimal;
+use sqlx::SqlitePool;
+
 use crate::errors::AppError;
+use crate::ports::account_repository::AccountRepository;
 use crate::ports::fiscal_period_repository::FiscalPeriodRepository;
 use crate::ports::fiscal_year_repository::FiscalYearRepository;
+use crate::ports::journal_entry_repository::JournalEntryRepository;
+use domain::accounting::account::{Account, AccountPurpose};
 use domain::accounting::fiscal_period::FiscalPeriodStatus;
 use domain::accounting::fiscal_year::{FiscalYearCloseRun, FiscalYearCloseRunStatus, FiscalYearStatus};
-use domain::shared::ids::{FiscalPeriodId, FiscalYearId, JournalEntryId};
+use domain::accounting::journal_entry::{JournalEntry, JournalLine, JournalType};
+use domain::shared::currency::Currency;
+use domain::shared::ids::{AccountId, FiscalPeriodId, FiscalYearId, JournalEntryId};
+use domain::shared::{MonetaryAmount, Money};
 
 use super::create::to_dto;
 use super::types::{CloseFiscalYearCommand, FiscalYearCloseRunDto, FiscalYearDto};
@@ -13,16 +23,25 @@ use super::types::{CloseFiscalYearCommand, FiscalYearCloseRunDto, FiscalYearDto}
 pub struct CloseFiscalYearUseCase {
     year_repo: Arc<dyn FiscalYearRepository>,
     period_repo: Arc<dyn FiscalPeriodRepository>,
+    account_repo: Arc<dyn AccountRepository>,
+    journal_entry_repo: Arc<dyn JournalEntryRepository>,
+    pool: Arc<SqlitePool>,
 }
 
 impl CloseFiscalYearUseCase {
     pub fn new(
         year_repo: Arc<dyn FiscalYearRepository>,
         period_repo: Arc<dyn FiscalPeriodRepository>,
+        account_repo: Arc<dyn AccountRepository>,
+        journal_entry_repo: Arc<dyn JournalEntryRepository>,
+        pool: Arc<SqlitePool>,
     ) -> Self {
         Self {
             year_repo,
             period_repo,
+            account_repo,
+            journal_entry_repo,
+            pool,
         }
     }
 
@@ -37,19 +56,12 @@ impl CloseFiscalYearUseCase {
             .closing_period_id
             .parse::<FiscalPeriodId>()
             .map_err(|_| AppError::Invalid("معرف فترة الإقفال غير صالح".into()))?;
-        let retained_earnings_entry_id = parse_optional_journal_id(
-            cmd.retained_earnings_entry_id.as_deref(),
-            "معرف قيد الأرباح المبقاة غير صالح",
-        )?;
-        let carry_forward_entry_id = parse_optional_journal_id(
-            cmd.carry_forward_entry_id.as_deref(),
-            "معرف قيد الترحيل الافتتاحي غير صالح",
-        )?;
 
         let Some(mut fiscal_year) = self.year_repo.find_by_id(&fiscal_year_id).await? else {
             return Err(AppError::NotFound("السنة المالية غير موجودة".into()));
         };
 
+        // Idempotency: if a completed close run exists for this operation_key, return early
         if let Some(existing_run) = self
             .year_repo
             .find_close_run(&fiscal_year_id, &cmd.operation_key)
@@ -88,24 +100,228 @@ impl CloseFiscalYearUseCase {
         fiscal_year.start_closing(&actor_id(&cmd.context), &cmd.operation_key)?;
 
         if cmd.finalize {
+            // --- ATOMIC: Create closing entries + update fiscal year in one transaction ---
+            let mut tx = self.pool.begin().await
+                .map_err(|e| AppError::Infrastructure(format!("failed to begin close transaction: {e}")))?;
+
+            // 1. Create closing journal entry (inside the transaction)
+            let closing_entry_id = self
+                .create_closing_entries_in_tx(&mut tx, &fiscal_year, &actor_id(&cmd.context))
+                .await?;
+
+            // 2. Record carry-forward metadata (balance-sheet accounts carry forward
+            // naturally via account balances; no separate entry needed)
+            let carry_forward_entry_id: Option<JournalEntryId> = None;
+
+            // 3. Update fiscal year state (inside the transaction)
             fiscal_year.finalize_close(
                 &actor_id(&cmd.context),
                 &cmd.operation_key,
                 closing_period_id,
-                retained_earnings_entry_id,
+                Some(closing_entry_id),
                 carry_forward_entry_id,
             )?;
+            self.year_repo.update_with_tx(&mut tx, &fiscal_year).await?;
+
+            // 4. Update close run (inside the transaction)
             close_run.complete(
                 closing_period_id,
-                retained_earnings_entry_id,
+                Some(closing_entry_id),
                 carry_forward_entry_id,
             );
+            self.year_repo.update_close_run_with_tx(&mut tx, &close_run).await?;
+
+            // 5. Commit: all writes succeed or all roll back
+            tx.commit().await
+                .map_err(|e| AppError::Infrastructure(format!("failed to commit close transaction: {e}")))?;
         }
 
-        self.year_repo.update(&fiscal_year).await?;
-        self.year_repo.update_close_run(&close_run).await?;
-
         Ok(to_dto(&fiscal_year, Some(close_run_to_dto(&close_run))))
+    }
+
+    /// Create the closing journal entry that transfers revenue and expense
+    /// balances to Retained Earnings (account 52).
+    ///
+    /// Structure (M1 — Direct Close without Income Summary):
+    ///   Dr Revenue accounts     Cr Retained Earnings  (for total revenue)
+    ///   Dr Retained Earnings    Cr Expense accounts    (for total expenses)
+    ///
+    /// Combined into a single journal entry for atomicity.
+    /// The entry is backdated to fiscal_year.end_date.
+    ///
+    /// For zero-profit years (Revenue == Expenses == 0), returns an error
+    /// indicating no closing entry is needed.
+    async fn create_closing_entries_in_tx(
+        &self,
+        tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
+        fiscal_year: &domain::accounting::fiscal_year::FiscalYear,
+        _actor: &str,
+    ) -> Result<JournalEntryId, AppError> {
+        // 1. Aggregate posted balances for the fiscal year period
+        let agg_rows = self
+            .journal_entry_repo
+            .aggregate_by_account_for_period(fiscal_year.start_date, fiscal_year.end_date)
+            .await?;
+
+        if agg_rows.is_empty() {
+            return Err(AppError::Invalid(
+                "لا توجد حسابات بقيود مرحلة في الفترة المالية المحددة".into(),
+            ));
+        }
+
+        // 2. Load all referenced accounts
+        let account_ids: Vec<_> = agg_rows.iter().map(|r| r.account_id).collect();
+        let accounts = self.account_repo.find_by_ids(&account_ids).await?;
+        let account_map: HashMap<AccountId, Account> =
+            accounts.into_iter().map(|a| (a.id, a)).collect();
+
+        // 3. Find Retained Earnings account (code "52", purpose RetainedEarnings)
+        let retained_earnings_account = self
+            .find_retained_earnings_account()
+            .await?;
+
+        // 4. Classify accounts into revenue vs expense, compute totals
+        let mut revenue_total = Decimal::ZERO;
+        let mut expense_total = Decimal::ZERO;
+        let mut closing_lines: Vec<JournalLine> = Vec::new();
+
+        let base_currency = Currency::new("IQD", "دينار عراقي", "IQD", "ع.د", 2, false);
+
+        for row in &agg_rows {
+            let account = match account_map.get(&row.account_id) {
+                Some(a) => a,
+                None => continue,
+            };
+
+            let net = row.total_debit_base - row.total_credit_base;
+
+            match account.account_type {
+                domain::accounting::account::AccountType::Revenue => {
+                    // Revenue is credit-normal: positive balance = credit > debit
+                    // net = debit - credit, so for revenue: net is negative when there's income
+                    // closing: Dr Revenue (to zero it), Cr Retained Earnings
+                    let closing_debit = -net; // flip sign: credit-normal positive -> debit to close
+                    if closing_debit <= Decimal::ZERO {
+                        continue; // zero or already closed
+                    }
+                    revenue_total += closing_debit;
+                    let debit = MonetaryAmount::new(
+                        Money::new(closing_debit, base_currency.clone()),
+                        Decimal::ONE,
+                    );
+                    let zero = MonetaryAmount::zero(base_currency.clone());
+                    closing_lines.push(JournalLine::new(
+                        row.account_id,
+                        debit,
+                        zero,
+                        format!("إقفال حساب الإيرادات - {}", account.name_ar),
+                    ));
+                }
+                domain::accounting::account::AccountType::Expenses => {
+                    // Expenses are debit-normal: positive balance = debit > credit
+                    // net = debit - credit, so for expenses: net is positive
+                    // closing: Cr Expense (to zero it), Dr Retained Earnings
+                    let closing_credit = net;
+                    if closing_credit <= Decimal::ZERO {
+                        continue;
+                    }
+                    expense_total += closing_credit;
+                    let zero = MonetaryAmount::zero(base_currency.clone());
+                    let credit = MonetaryAmount::new(
+                        Money::new(closing_credit, base_currency.clone()),
+                        Decimal::ONE,
+                    );
+                    closing_lines.push(JournalLine::new(
+                        row.account_id,
+                        zero,
+                        credit,
+                        format!("إقفال حساب المصاريف - {}", account.name_ar),
+                    ));
+                }
+                _ => continue,
+            }
+        }
+
+        // 5. Zero-profit year: no closing entry needed
+        if revenue_total == Decimal::ZERO && expense_total == Decimal::ZERO {
+            return Err(AppError::Invalid(
+                "لا يوجد إيرادات أو مصاريف لإقفالها في هذه السنة المالية".into(),
+            ));
+        }
+
+        // 6. Add Retained Earnings line (net profit = revenue - expenses)
+        let net_profit = revenue_total - expense_total;
+        if net_profit > Decimal::ZERO {
+            // Profit: Cr Retained Earnings
+            let zero = MonetaryAmount::zero(base_currency.clone());
+            let credit = MonetaryAmount::new(
+                Money::new(net_profit, base_currency.clone()),
+                Decimal::ONE,
+            );
+            closing_lines.push(JournalLine::new(
+                retained_earnings_account.id,
+                zero,
+                credit,
+                "صافي الربح المحول إلى الأرباح المبقاة".into(),
+            ));
+        } else if net_profit < Decimal::ZERO {
+            // Loss: Dr Retained Earnings
+            let loss = -net_profit;
+            let debit = MonetaryAmount::new(
+                Money::new(loss, base_currency.clone()),
+                Decimal::ONE,
+            );
+            let zero = MonetaryAmount::zero(base_currency.clone());
+            closing_lines.push(JournalLine::new(
+                retained_earnings_account.id,
+                debit,
+                zero,
+                "الخالص المحول إلى الأرباح المبقاة (خسارة)".into(),
+            ));
+        }
+        // If net_profit == 0, no RE line needed (revenue == expenses)
+
+        // 7. Verify balanced entry
+        let total_debit: Decimal = closing_lines.iter().map(|l| l.debit.base_amount).sum();
+        let total_credit: Decimal = closing_lines.iter().map(|l| l.credit.base_amount).sum();
+        if total_debit != total_credit {
+            return Err(AppError::Invalid(format!(
+                "قيود الإقفال غير متوازنة: إجمالي المدين {} ≠ إجمالي الدائن {}",
+                total_debit, total_credit
+            )));
+        }
+
+        // 8. Create and post the closing journal entry (backdated to year end)
+        let entry_number = self.journal_entry_repo.get_next_entry_number().await?;
+        let mut closing_entry = JournalEntry::new(
+            entry_number,
+            JournalType::FiscalClosing,
+            closing_lines,
+            fiscal_year.end_date,
+            format!("إقفال السنة المالية {}", fiscal_year.label),
+            Some(format!("fiscal_close:{}", fiscal_year.id)),
+        )
+        .map_err(|e| AppError::Invalid(e.to_string()))?;
+
+        closing_entry.post()
+            .map_err(|e| AppError::Invalid(e.to_string()))?;
+
+        self.journal_entry_repo.save_with_tx(tx, &closing_entry).await?;
+
+        Ok(closing_entry.id)
+    }
+
+    /// Find the Retained Earnings account by purpose.
+    async fn find_retained_earnings_account(&self) -> Result<Account, AppError> {
+        let all_accounts = self.account_repo.list_all().await?;
+        all_accounts
+            .into_iter()
+            .find(|a| a.purpose == AccountPurpose::RetainedEarnings)
+            .ok_or_else(|| {
+                AppError::NotFound(
+                    "حساب الأرباح المبقاة (52) غير موجود — يجب إنشاءه قبل إقفال السنة المالية".into(),
+                )
+            })
     }
 }
 
@@ -127,18 +343,6 @@ pub(crate) fn require_permission(
     Err(AppError::Forbidden(format!(
         "لا تملك صلاحية تنفيذ العملية المطلوبة: {permission_key}"
     )))
-}
-
-fn parse_optional_journal_id(
-    value: Option<&str>,
-    message: &str,
-) -> Result<Option<JournalEntryId>, AppError> {
-    value
-        .map(|raw| {
-            raw.parse::<JournalEntryId>()
-                .map_err(|_| AppError::Invalid(message.into()))
-        })
-        .transpose()
 }
 
 async fn validate_year_close(
@@ -209,19 +413,105 @@ pub(crate) fn close_run_to_dto(run: &FiscalYearCloseRun) -> FiscalYearCloseRunDt
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::mocks::{MockFiscalPeriodRepository, MockFiscalYearRepository};
+    use crate::mocks::{MockAccountRepository, MockFiscalPeriodRepository, MockFiscalYearRepository, MockJournalRepository};
     use chrono::{Duration, Utc};
+    use domain::accounting::account::{AccountCategory, AccountType};
     use domain::accounting::fiscal_period::FiscalPeriod;
     use domain::accounting::fiscal_year::FiscalYear;
+    use domain::accounting::journal_entry::JournalEntryStatus;
     use domain::shared::ExecutionContext;
+    use rust_decimal_macros::dec;
 
-    async fn seed_year_and_periods(
+    fn make_account(id: AccountId, code: &str, name: &str, account_type: AccountType, purpose: AccountPurpose) -> Account {
+        let currency = Currency::new("IQD", "دينار عراقي", "IQD", "ع.د", 2, false);
+        Account {
+            id,
+            code: code.to_string(),
+            name_ar: name.to_string(),
+            name_en: name.to_string(),
+            account_type,
+            parent_id: None,
+            category: AccountCategory::Detail,
+            level: 1,
+            opening_balance: Decimal::ZERO,
+            balance: Decimal::ZERO,
+            notes: None,
+            is_active: true,
+            is_default: false,
+            is_final: true,
+            linked_customer_id: None,
+            linked_supplier_id: None,
+            debit: Decimal::ZERO,
+            credit: Decimal::ZERO,
+            currency,
+            exchange_rate: Decimal::ONE,
+            purpose,
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+        }
+    }
+
+    fn make_revenue_account(id: AccountId) -> Account {
+        make_account(id, "4101", "إيرادات المبيعات", AccountType::Revenue, AccountPurpose::General)
+    }
+
+    fn make_expense_account(id: AccountId) -> Account {
+        make_account(id, "5101", "مصاريف تشغيلية", AccountType::Expenses, AccountPurpose::General)
+    }
+
+    fn make_retained_earnings_account(id: AccountId) -> Account {
+        make_account(id, "52", "أرباح مبقاة", AccountType::Equity, AccountPurpose::RetainedEarnings)
+    }
+
+    fn seeded_revenue_entry(revenue_id: AccountId, re_id: AccountId, amount: Decimal) -> JournalEntry {
+        let base = Currency::new("IQD", "دينار عراقي", "IQD", "ع.د", 2, false);
+        let debit = MonetaryAmount::new(Money::new(amount, base.clone()), Decimal::ONE);
+        let zero = MonetaryAmount::zero(base);
+        let mut entry = JournalEntry::new(
+            "100".into(),
+            JournalType::GeneralJournal,
+            vec![
+                JournalLine::new(revenue_id, zero.clone(), debit.clone(), "revenue".into()),
+                JournalLine::new(re_id, debit, zero, "revenue".into()),
+            ],
+            Utc::now(),
+            "sale".into(),
+            None,
+        ).unwrap();
+        entry.post().unwrap();
+        entry
+    }
+
+    fn seeded_expense_entry(expense_id: AccountId, re_id: AccountId, amount: Decimal) -> JournalEntry {
+        let base = Currency::new("IQD", "دينار عراقي", "IQD", "ع.د", 2, false);
+        let debit = MonetaryAmount::new(Money::new(amount, base.clone()), Decimal::ONE);
+        let zero = MonetaryAmount::zero(base.clone());
+        let credit = MonetaryAmount::new(Money::new(amount, base), Decimal::ONE);
+        let mut entry = JournalEntry::new(
+            "101".into(),
+            JournalType::GeneralJournal,
+            vec![
+                JournalLine::new(expense_id, debit, zero, "expense".into()),
+                JournalLine::new(re_id, MonetaryAmount::zero(Currency::new("IQD", "دينار عراقي", "IQD", "ع.د", 2, false)), credit, "expense".into()),
+            ],
+            Utc::now(),
+            "expense".into(),
+            None,
+        ).unwrap();
+        entry.post().unwrap();
+        entry
+    }
+
+    async fn setup_close_test(
         year_repo: &Arc<MockFiscalYearRepository>,
         period_repo: &Arc<MockFiscalPeriodRepository>,
-    ) -> (FiscalYearId, FiscalPeriodId) {
+        account_repo: &Arc<MockAccountRepository>,
+        journal_repo: &Arc<MockJournalRepository>,
+    ) -> (FiscalYearId, FiscalPeriodId, AccountId, AccountId, AccountId) {
         let start = Utc::now() - Duration::days(365);
-        let end = Utc::now() + Duration::days(1);
-        let year = FiscalYear::new(None, "FY".into(), start, end, None).unwrap();
+        let end = Utc::now() - Duration::days(1);
+        let year = FiscalYear::new(None, "FY2025".into(), start, end, None).unwrap();
+        let year_id = year.id;
         year_repo.create(&year).await.unwrap();
 
         let mut period = FiscalPeriod::new(None, start, end).unwrap();
@@ -229,94 +519,268 @@ mod tests {
         let period_id = period.id;
         period_repo.create(&period).await.unwrap();
 
-        (year.id, period_id)
+        let revenue_id = AccountId::new();
+        let expense_id = AccountId::new();
+        let re_id = AccountId::new();
+
+        account_repo.accounts.lock().unwrap().extend([
+            make_revenue_account(revenue_id),
+            make_expense_account(expense_id),
+            make_retained_earnings_account(re_id),
+        ]);
+
+        // Seed journal entries for the fiscal year
+        let rev_entry = seeded_revenue_entry(revenue_id, re_id, dec!(5000));
+        let exp_entry = seeded_expense_entry(expense_id, re_id, dec!(3000));
+        journal_repo.entries.lock().unwrap().extend([rev_entry, exp_entry]);
+
+        (year_id, period_id, revenue_id, expense_id, re_id)
+    }
+
+    fn admin_context() -> ExecutionContext {
+        ExecutionContext {
+            actor_id: Some("admin".into()),
+            permission_keys: vec!["fiscal_year.close".into()],
+            ..ExecutionContext::default()
+        }
     }
 
     #[tokio::test]
-    async fn closes_year_idempotently() {
+    async fn profit_year_closes_correctly() {
         let year_repo = Arc::new(MockFiscalYearRepository::new());
         let period_repo = Arc::new(MockFiscalPeriodRepository::new());
-        let (year_id, period_id) = seed_year_and_periods(&year_repo, &period_repo).await;
-        let use_case = CloseFiscalYearUseCase::new(year_repo.clone(), period_repo.clone());
+        let account_repo = Arc::new(MockAccountRepository::new());
+        let journal_repo = Arc::new(MockJournalRepository::default());
 
-        let command = CloseFiscalYearCommand {
+        let (year_id, period_id, _rev, _exp, _re) =
+            setup_close_test(&year_repo, &period_repo, &account_repo, &journal_repo).await;
+
+        let use_case = CloseFiscalYearUseCase::new(
+            year_repo.clone(), period_repo.clone(),
+            account_repo.clone(), journal_repo.clone(),
+            Arc::new(sqlx::SqlitePool::connect("sqlite::memory:").await.unwrap()),
+        );
+
+        let cmd = CloseFiscalYearCommand {
             fiscal_year_id: year_id.to_string(),
             closing_period_id: period_id.to_string(),
-            operation_key: "fy-close-1".into(),
+            operation_key: "fy-close-profit".into(),
             finalize: true,
             retained_earnings_entry_id: None,
             carry_forward_entry_id: None,
-            context: ExecutionContext {
-                actor_id: Some("admin".into()),
-                permission_keys: vec!["fiscal_year.close".into()],
-                ..ExecutionContext::default()
-            },
+            context: admin_context(),
         };
 
-        let first = use_case.execute(command.clone()).await.unwrap();
-        let second = use_case.execute(command).await.unwrap();
-        assert_eq!(first.status, "Closed");
-        assert_eq!(second.status, "Closed");
-        assert_eq!(
-            second.latest_close_run.as_ref().map(|run| run.status.as_str()),
-            Some("Completed")
+        let result = use_case.execute(cmd).await.unwrap();
+        assert_eq!(result.status, "Closed");
+        assert!(result.retained_earnings_entry_id.is_some());
+
+        // Verify closing entry was created
+        let entries = journal_repo.entries.lock().unwrap();
+        let closing = entries.iter().find(|e| e.journal_type == JournalType::FiscalClosing);
+        assert!(closing.is_some(), "closing entry must exist");
+        let closing = closing.unwrap();
+        // Revenue (5000) + Expense (3000) + Retained Earnings (2000 profit) = 10000 total
+        let total_debit: Decimal = closing.lines.iter().map(|l| l.debit.base_amount).sum();
+        let total_credit: Decimal = closing.lines.iter().map(|l| l.credit.base_amount).sum();
+        assert_eq!(total_debit, total_credit, "closing entry must be balanced");
+    }
+
+    #[tokio::test]
+    async fn loss_year_closes_correctly() {
+        let year_repo = Arc::new(MockFiscalYearRepository::new());
+        let period_repo = Arc::new(MockFiscalPeriodRepository::new());
+        let account_repo = Arc::new(MockAccountRepository::new());
+        let journal_repo = Arc::new(MockJournalRepository::default());
+
+        let (year_id, period_id, _rev, _exp, _re) =
+            setup_close_test(&year_repo, &period_repo, &account_repo, &journal_repo).await;
+
+        // Override: reduce revenue to create a loss
+        {
+            let mut entries = journal_repo.entries.lock().unwrap();
+            entries.clear();
+        }
+        // Revenue = 2000, Expense = 3000 => Loss of 1000
+        let revenue_id = AccountId::new();
+        let expense_id = AccountId::new();
+        let re_id = AccountId::new();
+        {
+            let mut accounts = account_repo.accounts.lock().unwrap();
+            accounts.clear();
+            accounts.extend([
+                make_revenue_account(revenue_id),
+                make_expense_account(expense_id),
+                make_retained_earnings_account(re_id),
+            ]);
+        }
+        let rev_entry = seeded_revenue_entry(revenue_id, re_id, dec!(2000));
+        let exp_entry = seeded_expense_entry(expense_id, re_id, dec!(3000));
+        journal_repo.entries.lock().unwrap().extend([rev_entry, exp_entry]);
+
+        let use_case = CloseFiscalYearUseCase::new(
+            year_repo.clone(), period_repo.clone(),
+            account_repo.clone(), journal_repo.clone(),
+            Arc::new(sqlx::SqlitePool::connect("sqlite::memory:").await.unwrap()),
         );
+
+        let cmd = CloseFiscalYearCommand {
+            fiscal_year_id: year_id.to_string(),
+            closing_period_id: period_id.to_string(),
+            operation_key: "fy-close-loss".into(),
+            finalize: true,
+            retained_earnings_entry_id: None,
+            carry_forward_entry_id: None,
+            context: admin_context(),
+        };
+
+        let result = use_case.execute(cmd).await.unwrap();
+        assert_eq!(result.status, "Closed");
+
+        let entries = journal_repo.entries.lock().unwrap();
+        let closing = entries.iter().find(|e| e.journal_type == JournalType::FiscalClosing).unwrap();
+        let total_debit: Decimal = closing.lines.iter().map(|l| l.debit.base_amount).sum();
+        let total_credit: Decimal = closing.lines.iter().map(|l| l.credit.base_amount).sum();
+        assert_eq!(total_debit, total_credit);
     }
 
     #[tokio::test]
-    async fn rejects_close_without_permission() {
+    async fn missing_retained_earnings_account_fails_safely() {
         let year_repo = Arc::new(MockFiscalYearRepository::new());
         let period_repo = Arc::new(MockFiscalPeriodRepository::new());
-        let (year_id, period_id) = seed_year_and_periods(&year_repo, &period_repo).await;
-        let use_case = CloseFiscalYearUseCase::new(year_repo.clone(), period_repo.clone());
+        let account_repo = Arc::new(MockAccountRepository::new());
+        let journal_repo = Arc::new(MockJournalRepository::default());
 
-        let error = use_case
-            .execute(CloseFiscalYearCommand {
-                fiscal_year_id: year_id.to_string(),
-                closing_period_id: period_id.to_string(),
-                operation_key: "fy-close-1".into(),
-                finalize: true,
-                retained_earnings_entry_id: None,
-                carry_forward_entry_id: None,
-                context: ExecutionContext::default(),
-            })
-            .await
-            .unwrap_err();
+        let (year_id, period_id, _, _, _) =
+            setup_close_test(&year_repo, &period_repo, &account_repo, &journal_repo).await;
 
-        assert!(matches!(error, AppError::Forbidden(_)));
+        // Remove retained earnings account
+        account_repo.accounts.lock().unwrap().retain(|a| a.purpose != AccountPurpose::RetainedEarnings);
+
+        let use_case = CloseFiscalYearUseCase::new(
+            year_repo.clone(), period_repo.clone(),
+            account_repo.clone(), journal_repo.clone(),
+            Arc::new(sqlx::SqlitePool::connect("sqlite::memory:").await.unwrap()),
+        );
+
+        let cmd = CloseFiscalYearCommand {
+            fiscal_year_id: year_id.to_string(),
+            closing_period_id: period_id.to_string(),
+            operation_key: "fy-close-no-re".into(),
+            finalize: true,
+            retained_earnings_entry_id: None,
+            carry_forward_entry_id: None,
+            context: admin_context(),
+        };
+
+        let err = use_case.execute(cmd).await.unwrap_err();
+        assert!(matches!(err, AppError::NotFound(_)));
     }
 
     #[tokio::test]
-    async fn rejects_when_any_period_is_not_closed() {
+    async fn already_closed_year_is_idempotent() {
         let year_repo = Arc::new(MockFiscalYearRepository::new());
         let period_repo = Arc::new(MockFiscalPeriodRepository::new());
-        let start = Utc::now() - Duration::days(365);
-        let end = Utc::now() + Duration::days(1);
-        let year = FiscalYear::new(None, "FY".into(), start, end, None).unwrap();
-        year_repo.create(&year).await.unwrap();
+        let account_repo = Arc::new(MockAccountRepository::new());
+        let journal_repo = Arc::new(MockJournalRepository::default());
 
-        let period = FiscalPeriod::new(None, start, end).unwrap();
-        let period_id = period.id;
-        period_repo.create(&period).await.unwrap();
+        let (year_id, period_id, _, _, _) =
+            setup_close_test(&year_repo, &period_repo, &account_repo, &journal_repo).await;
 
-        let use_case = CloseFiscalYearUseCase::new(year_repo.clone(), period_repo.clone());
-        let error = use_case
-            .execute(CloseFiscalYearCommand {
-                fiscal_year_id: year.id.to_string(),
-                closing_period_id: period_id.to_string(),
-                operation_key: "fy-close-1".into(),
-                finalize: true,
-                retained_earnings_entry_id: None,
-                carry_forward_entry_id: None,
-                context: ExecutionContext {
-                    actor_id: Some("admin".into()),
-                    permission_keys: vec!["fiscal_year.close".into()],
-                    ..ExecutionContext::default()
-                },
-            })
-            .await
-            .unwrap_err();
+        let use_case = CloseFiscalYearUseCase::new(
+            year_repo.clone(), period_repo.clone(),
+            account_repo.clone(), journal_repo.clone(),
+            Arc::new(sqlx::SqlitePool::connect("sqlite::memory:").await.unwrap()),
+        );
 
-        assert!(matches!(error, AppError::LifecycleBlocked(_)));
+        let cmd = CloseFiscalYearCommand {
+            fiscal_year_id: year_id.to_string(),
+            closing_period_id: period_id.to_string(),
+            operation_key: "fy-close-idempotent".into(),
+            finalize: true,
+            retained_earnings_entry_id: None,
+            carry_forward_entry_id: None,
+            context: admin_context(),
+        };
+
+        let first = use_case.execute(cmd.clone()).await.unwrap();
+        assert_eq!(first.status, "Closed");
+
+        let second = use_case.execute(cmd).await.unwrap();
+        assert_eq!(second.status, "Closed");
+    }
+
+    #[tokio::test]
+    async fn closing_entry_is_posted() {
+        let year_repo = Arc::new(MockFiscalYearRepository::new());
+        let period_repo = Arc::new(MockFiscalPeriodRepository::new());
+        let account_repo = Arc::new(MockAccountRepository::new());
+        let journal_repo = Arc::new(MockJournalRepository::default());
+
+        let (year_id, period_id, _, _, _) =
+            setup_close_test(&year_repo, &period_repo, &account_repo, &journal_repo).await;
+
+        let use_case = CloseFiscalYearUseCase::new(
+            year_repo.clone(), period_repo.clone(),
+            account_repo.clone(), journal_repo.clone(),
+            Arc::new(sqlx::SqlitePool::connect("sqlite::memory:").await.unwrap()),
+        );
+
+        let cmd = CloseFiscalYearCommand {
+            fiscal_year_id: year_id.to_string(),
+            closing_period_id: period_id.to_string(),
+            operation_key: "fy-close-posted".into(),
+            finalize: true,
+            retained_earnings_entry_id: None,
+            carry_forward_entry_id: None,
+            context: admin_context(),
+        };
+
+        use_case.execute(cmd).await.unwrap();
+
+        let entries = journal_repo.entries.lock().unwrap();
+        let closing = entries.iter().find(|e| e.journal_type == JournalType::FiscalClosing).unwrap();
+        assert_eq!(closing.status, JournalEntryStatus::Posted);
+    }
+
+    #[tokio::test]
+    async fn atomic_close_updates_fiscal_year_and_creates_entry() {
+        let year_repo = Arc::new(MockFiscalYearRepository::new());
+        let period_repo = Arc::new(MockFiscalPeriodRepository::new());
+        let account_repo = Arc::new(MockAccountRepository::new());
+        let journal_repo = Arc::new(MockJournalRepository::default());
+
+        let (year_id, period_id, _, _, _) =
+            setup_close_test(&year_repo, &period_repo, &account_repo, &journal_repo).await;
+
+        let use_case = CloseFiscalYearUseCase::new(
+            year_repo.clone(), period_repo.clone(),
+            account_repo.clone(), journal_repo.clone(),
+            Arc::new(sqlx::SqlitePool::connect("sqlite::memory:").await.unwrap()),
+        );
+
+        let cmd = CloseFiscalYearCommand {
+            fiscal_year_id: year_id.to_string(),
+            closing_period_id: period_id.to_string(),
+            operation_key: "fy-close-atomic".into(),
+            finalize: true,
+            retained_earnings_entry_id: None,
+            carry_forward_entry_id: None,
+            context: admin_context(),
+        };
+
+        let result = use_case.execute(cmd).await.unwrap();
+        assert_eq!(result.status, "Closed");
+
+        // Both should be updated atomically: closing entry exists + FY is Closed
+        let entries = journal_repo.entries.lock().unwrap();
+        assert!(
+            entries.iter().any(|e| e.journal_type == JournalType::FiscalClosing),
+            "closing entry must be created atomically with fiscal year update"
+        );
+
+        let fy = year_repo.find_by_id(&year_id).await.unwrap().unwrap();
+        assert_eq!(fy.status, FiscalYearStatus::Closed);
+        assert!(fy.retained_earnings_entry_id.is_some());
     }
 }

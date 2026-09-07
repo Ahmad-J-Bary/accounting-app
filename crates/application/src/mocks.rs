@@ -281,8 +281,92 @@ impl JournalEntryRepository for MockJournalRepository {
         Ok(())
     }
 
+    async fn save_with_tx(
+        &self,
+        _tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
+        entry: &JournalEntry,
+    ) -> Result<(), AppError> {
+        self.entries.lock().unwrap().push(entry.clone());
+        Ok(())
+    }
+
     async fn aggregate_by_account(
         &self,
+    ) -> Result<Vec<crate::ports::journal_entry_repository::AccountAggregationRow>, AppError>
+    {
+        use std::collections::HashMap;
+        let entries = self.entries.lock().unwrap();
+        let mut map: HashMap<domain::shared::AccountId, (rust_decimal::Decimal, rust_decimal::Decimal)> =
+            HashMap::new();
+        for entry in entries.iter() {
+            if entry.status != domain::accounting::JournalEntryStatus::Posted {
+                continue;
+            }
+            if entry.reversal_of_entry_id.is_some() {
+                continue;
+            }
+            for line in &entry.lines {
+                let e = map.entry(line.account_id).or_insert((rust_decimal::Decimal::ZERO, rust_decimal::Decimal::ZERO));
+                e.0 += line.debit.base_amount;
+                e.1 += line.credit.base_amount;
+            }
+        }
+        Ok(map
+            .into_iter()
+            .map(
+                |(account_id, (total_debit_base, total_credit_base))| {
+                    crate::ports::journal_entry_repository::AccountAggregationRow {
+                        account_id,
+                        total_debit_base,
+                        total_credit_base,
+                    }
+                },
+            )
+            .collect())
+    }
+
+    async fn aggregate_by_account_report(
+        &self,
+    ) -> Result<Vec<crate::ports::journal_entry_repository::AccountAggregationRow>, AppError>
+    {
+        use std::collections::HashMap;
+        let entries = self.entries.lock().unwrap();
+        let mut map: HashMap<domain::shared::AccountId, (rust_decimal::Decimal, rust_decimal::Decimal)> =
+            HashMap::new();
+        for entry in entries.iter() {
+            if entry.status != domain::accounting::JournalEntryStatus::Posted {
+                continue;
+            }
+            if entry.reversal_of_entry_id.is_some() {
+                continue;
+            }
+            if entry.journal_type == domain::accounting::JournalType::FiscalClosing {
+                continue;
+            }
+            for line in &entry.lines {
+                let e = map.entry(line.account_id).or_insert((rust_decimal::Decimal::ZERO, rust_decimal::Decimal::ZERO));
+                e.0 += line.debit.base_amount;
+                e.1 += line.credit.base_amount;
+            }
+        }
+        Ok(map
+            .into_iter()
+            .map(
+                |(account_id, (total_debit_base, total_credit_base))| {
+                    crate::ports::journal_entry_repository::AccountAggregationRow {
+                        account_id,
+                        total_debit_base,
+                        total_credit_base,
+                    }
+                },
+            )
+            .collect())
+    }
+
+    async fn aggregate_by_account_for_period(
+        &self,
+        _from_date: chrono::DateTime<chrono::Utc>,
+        _to_date: chrono::DateTime<chrono::Utc>,
     ) -> Result<Vec<crate::ports::journal_entry_repository::AccountAggregationRow>, AppError>
     {
         use std::collections::HashMap;
@@ -523,6 +607,39 @@ impl FiscalYearRepository for MockFiscalYearRepository {
     }
 
     async fn update_close_run(&self, run: &FiscalYearCloseRun) -> Result<(), AppError> {
+        let mut close_runs = self.close_runs.lock().unwrap();
+        close_runs.retain(|item| {
+            !(item.fiscal_year_id == run.fiscal_year_id && item.operation_key == run.operation_key)
+        });
+        close_runs.push(run.clone());
+        Ok(())
+    }
+
+    async fn update_with_tx(
+        &self,
+        _tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
+        fiscal_year: &FiscalYear,
+    ) -> Result<(), AppError> {
+        let mut fiscal_years = self.fiscal_years.lock().unwrap();
+        fiscal_years.retain(|year| year.id != fiscal_year.id);
+        fiscal_years.push(fiscal_year.clone());
+        Ok(())
+    }
+
+    async fn create_close_run_with_tx(
+        &self,
+        _tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
+        run: &FiscalYearCloseRun,
+    ) -> Result<(), AppError> {
+        self.close_runs.lock().unwrap().push(run.clone());
+        Ok(())
+    }
+
+    async fn update_close_run_with_tx(
+        &self,
+        _tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
+        run: &FiscalYearCloseRun,
+    ) -> Result<(), AppError> {
         let mut close_runs = self.close_runs.lock().unwrap();
         close_runs.retain(|item| {
             !(item.fiscal_year_id == run.fiscal_year_id && item.operation_key == run.operation_key)

@@ -19,4 +19,25 @@ pub trait FiscalYearRepository: Send + Sync {
     ) -> Result<Option<FiscalYearCloseRun>, AppError>;
     async fn create_close_run(&self, run: &FiscalYearCloseRun) -> Result<(), AppError>;
     async fn update_close_run(&self, run: &FiscalYearCloseRun) -> Result<(), AppError>;
+
+    /// Update a fiscal year within an existing transaction.
+    async fn update_with_tx(
+        &self,
+        tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
+        fiscal_year: &FiscalYear,
+    ) -> Result<(), AppError>;
+
+    /// Create a close run within an existing transaction.
+    async fn create_close_run_with_tx(
+        &self,
+        tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
+        run: &FiscalYearCloseRun,
+    ) -> Result<(), AppError>;
+
+    /// Update a close run within an existing transaction.
+    async fn update_close_run_with_tx(
+        &self,
+        tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
+        run: &FiscalYearCloseRun,
+    ) -> Result<(), AppError>;
 }

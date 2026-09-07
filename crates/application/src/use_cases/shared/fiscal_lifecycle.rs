@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use chrono::{DateTime, Utc};
 use domain::accounting::fiscal_period::FiscalPeriod;
-use domain::accounting::fiscal_year::FiscalYear;
+use domain::accounting::fiscal_year::{FiscalYear, FiscalYearStatus};
 
 use crate::errors::AppError;
 use crate::ports::fiscal_period_repository::FiscalPeriodRepository;
@@ -59,6 +59,14 @@ impl FiscalLifecyclePolicy {
                 self.validate_normal_operational(context.company_id.as_deref(), context.transaction_date)
                     .await
             }
+            PostingOperationType::FiscalYearClosing => {
+                self.validate_fiscal_closing(context.company_id.as_deref(), context.transaction_date)
+                    .await
+            }
+            PostingOperationType::CarryForward => {
+                self.validate_carry_forward(context.company_id.as_deref(), context.transaction_date)
+                    .await
+            }
             _ => Err(AppError::Unsupported(
                 "سياسات lifecycle للعمليات الخاصة لم تُعتمد بعد".into(),
             )),
@@ -100,6 +108,66 @@ impl FiscalLifecyclePolicy {
                 fiscal_period.end_date.to_rfc3339(),
                 fiscal_year.start_date.to_rfc3339(),
                 fiscal_year.end_date.to_rfc3339(),
+            )));
+        }
+
+        Ok(ResolvedFiscalLifecycle {
+            fiscal_year,
+            fiscal_period,
+        })
+    }
+
+    /// Fiscal year closing entries are allowed even when the year is in Closing
+    /// status (the close engine posts entries during the close process).
+    /// The year must be Open or Closing.
+    pub async fn validate_fiscal_closing(
+        &self,
+        company_id: Option<&str>,
+        transaction_date: DateTime<Utc>,
+    ) -> Result<ResolvedFiscalLifecycle, AppError> {
+        let fiscal_year = self
+            .resolve_fiscal_year(company_id, transaction_date)
+            .await?;
+        let fiscal_period = self
+            .resolve_fiscal_period(company_id, transaction_date)
+            .await?;
+
+        if !matches!(
+            fiscal_year.status,
+            FiscalYearStatus::Open | FiscalYearStatus::Closing
+        ) {
+            return Err(AppError::FiscalYearClosed(format!(
+                "تاريخ الإقفال {} يقع ضمن سنة مالية حالتها {}",
+                transaction_date.to_rfc3339(),
+                fiscal_year.status.as_str()
+            )));
+        }
+
+        Ok(ResolvedFiscalLifecycle {
+            fiscal_year,
+            fiscal_period,
+        })
+    }
+
+    /// Carry-forward entries target the next fiscal year's opening period.
+    /// The target year must be Open or Reopened.
+    pub async fn validate_carry_forward(
+        &self,
+        company_id: Option<&str>,
+        transaction_date: DateTime<Utc>,
+    ) -> Result<ResolvedFiscalLifecycle, AppError> {
+        let fiscal_year = self
+            .resolve_fiscal_year(company_id, transaction_date)
+            .await?;
+        let fiscal_period = self
+            .resolve_fiscal_period(company_id, transaction_date)
+            .await?;
+
+        if !fiscal_year.status.can_post() {
+            return Err(AppError::FiscalYearClosed(format!(
+                "تاريخ الترحيل الافتتاحي {} يقع ضمن سنة مالية حالتها {}",
+                transaction_date.to_rfc3339(),
+                fiscal_year.status.as_str()
             )));
         }
 

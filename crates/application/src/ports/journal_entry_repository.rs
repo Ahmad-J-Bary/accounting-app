@@ -64,8 +64,30 @@ pub trait JournalEntryRepository: Send + Sync {
     /// SQL-level aggregation: SUM(debit_base), SUM(credit_base) GROUP BY
     /// account_id for all posted, non-reversed journal lines.
     async fn aggregate_by_account(&self) -> Result<Vec<AccountAggregationRow>, AppError>;
+    /// Report-safe aggregation: same as `aggregate_by_account` but excludes
+    /// FiscalClosing entries so reports (Income Statement, Trial Balance, etc.)
+    /// reflect operational activity only. After a fiscal year close, the closing
+    /// entry zeroes Revenue/Expense — excluding it preserves the correct
+    /// report values.
+    async fn aggregate_by_account_report(&self) -> Result<Vec<AccountAggregationRow>, AppError>;
+    /// Date-filtered aggregation: SUM(debit_base), SUM(credit_base) GROUP BY
+    /// account_id for posted, non-reversed journal lines within a date range.
+    async fn aggregate_by_account_for_period(
+        &self,
+        from_date: DateTime<Utc>,
+        to_date: DateTime<Utc>,
+    ) -> Result<Vec<AccountAggregationRow>, AppError>;
     async fn get_next_entry_number(&self) -> Result<String, AppError>;
     async fn find_by_source_id(&self, source_id: &str) -> Result<Option<JournalEntry>, AppError>;
     async fn find_all_by_source_id(&self, source_id: &str) -> Result<Vec<JournalEntry>, AppError>;
     async fn delete(&self, id: &JournalEntryId) -> Result<(), AppError>;
+
+    /// Persist a journal entry within an existing transaction.
+    /// Used by atomic composite operations (e.g. fiscal year close) that must
+    /// write the closing entry and update fiscal year metadata in one commit.
+    async fn save_with_tx(
+        &self,
+        tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
+        entry: &JournalEntry,
+    ) -> Result<(), AppError>;
 }

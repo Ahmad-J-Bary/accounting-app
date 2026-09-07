@@ -34,6 +34,9 @@ pub async fn close_fiscal_year(
     CloseFiscalYearUseCase::new(
         state.fiscal_year_repo.clone(),
         state.fiscal_period_repo.clone(),
+        state.account_repo.clone(),
+        state.journal_entry_repo.clone(),
+        state.pool.clone(),
     )
     .execute(request)
     .await

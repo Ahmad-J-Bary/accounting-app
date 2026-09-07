@@ -400,3 +400,82 @@ pub async fn aggregate_by_account(
         })
         .collect())
 }
+
+/// Report-safe aggregation: excludes `FiscalClosing` entries so that Income
+/// Statement, Trial Balance, and other reports reflect operational activity
+/// only. After a fiscal year close, the closing entry zeroes Revenue/Expense —
+/// including it would produce $0 reports for the closed year.
+pub async fn aggregate_by_account_report(
+    pool: &SqlitePool,
+) -> Result<Vec<AccountAggregationRow>, AppError> {
+    let rows = sqlx::query_as::<_, AggregationRow>(
+        "SELECT jl.account_id,
+                SUM(jl.debit_base) AS total_debit_base,
+                SUM(jl.credit_base) AS total_credit_base
+         FROM journal_lines jl
+         JOIN journal_entries je ON jl.journal_entry_id = je.id
+         WHERE je.status = 'Posted'
+           AND je.reversal_of_entry_id IS NULL
+           AND je.journal_type != 'FiscalClosing'
+         GROUP BY jl.account_id",
+    )
+    .fetch_all(pool)
+    .await
+    .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+
+    Ok(rows
+        .into_iter()
+        .filter_map(|r| {
+            let account_id = AccountId::from_str(&r.account_id).ok()?;
+            let total_debit_base =
+                rust_decimal::Decimal::from_str(&r.total_debit_base).unwrap_or(rust_decimal::Decimal::ZERO);
+            let total_credit_base =
+                rust_decimal::Decimal::from_str(&r.total_credit_base).unwrap_or(rust_decimal::Decimal::ZERO);
+            Some(AccountAggregationRow {
+                account_id,
+                total_debit_base,
+                total_credit_base,
+            })
+        })
+        .collect())
+}
+
+pub async fn aggregate_by_account_for_period(
+    pool: &SqlitePool,
+    from_date: DateTime<Utc>,
+    to_date: DateTime<Utc>,
+) -> Result<Vec<AccountAggregationRow>, AppError> {
+    let rows = sqlx::query_as::<_, AggregationRow>(
+        "SELECT jl.account_id,
+                SUM(jl.debit_base) AS total_debit_base,
+                SUM(jl.credit_base) AS total_credit_base
+         FROM journal_lines jl
+         JOIN journal_entries je ON jl.journal_entry_id = je.id
+         WHERE je.status = 'Posted'
+           AND je.reversal_of_entry_id IS NULL
+           AND je.entry_date >= ?
+           AND je.entry_date <= ?
+         GROUP BY jl.account_id",
+    )
+    .bind(from_date.to_rfc3339())
+    .bind(to_date.to_rfc3339())
+    .fetch_all(pool)
+    .await
+    .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+
+    Ok(rows
+        .into_iter()
+        .filter_map(|r| {
+            let account_id = AccountId::from_str(&r.account_id).ok()?;
+            let total_debit_base =
+                rust_decimal::Decimal::from_str(&r.total_debit_base).unwrap_or(rust_decimal::Decimal::ZERO);
+            let total_credit_base =
+                rust_decimal::Decimal::from_str(&r.total_credit_base).unwrap_or(rust_decimal::Decimal::ZERO);
+            Some(AccountAggregationRow {
+                account_id,
+                total_debit_base,
+                total_credit_base,
+            })
+        })
+        .collect())
+}
