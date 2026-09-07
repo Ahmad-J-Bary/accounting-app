@@ -100,7 +100,10 @@ impl CloseFiscalYearUseCase {
         fiscal_year.start_closing(&actor_id(&cmd.context), &cmd.operation_key)?;
 
         if cmd.finalize {
-            // --- ATOMIC: Create closing entries + update fiscal year in one transaction ---
+            // --- Validate successor fiscal year exists (M1) ---
+            let successor = self.find_successor_year(&fiscal_year).await?;
+
+            // --- ATOMIC: Create closing + carry-forward + update fiscal year in one transaction ---
             let mut tx = self.pool.begin().await
                 .map_err(|e| AppError::Infrastructure(format!("failed to begin close transaction: {e}")))?;
 
@@ -109,9 +112,10 @@ impl CloseFiscalYearUseCase {
                 .create_closing_entries_in_tx(&mut tx, &fiscal_year, &actor_id(&cmd.context))
                 .await?;
 
-            // 2. Record carry-forward metadata (balance-sheet accounts carry forward
-            // naturally via account balances; no separate entry needed)
-            let carry_forward_entry_id: Option<JournalEntryId> = None;
+            // 2. Create carry-forward journal entry in successor year (inside the transaction)
+            let carry_forward_entry_id = self
+                .create_carry_forward_entry_in_tx(&mut tx, &fiscal_year, &successor)
+                .await?;
 
             // 3. Update fiscal year state (inside the transaction)
             fiscal_year.finalize_close(
@@ -309,6 +313,148 @@ impl CloseFiscalYearUseCase {
         self.journal_entry_repo.save_with_tx(tx, &closing_entry).await?;
 
         Ok(closing_entry.id)
+    }
+
+    /// Find the successor (next) fiscal year. The successor must exist before
+    /// the current year can be closed — carry-forward requires a target year.
+    async fn find_successor_year(
+        &self,
+        current: &domain::accounting::fiscal_year::FiscalYear,
+    ) -> Result<domain::accounting::fiscal_year::FiscalYear, AppError> {
+        // Look for a year whose previous_fiscal_year_id points to current year
+        let all_years = self.year_repo.list().await?;
+        if let Some(successor) = all_years.iter().find(|y| {
+            y.previous_fiscal_year_id
+                .as_ref()
+                .map(|id| *id == current.id)
+                .unwrap_or(false)
+        }) {
+            return Ok(successor.clone());
+        }
+
+        // Fallback: find a year whose start_date immediately follows current year's end_date
+        if let Some(successor) = all_years.iter().find(|y| {
+            y.start_date.date_naive() == current.end_date.date_naive()
+                || y.start_date.date_naive() == current.end_date.date_naive() + chrono::Duration::days(1)
+        }) {
+            return Ok(successor.clone());
+        }
+
+        Err(AppError::Invalid(
+            "لا يمكن إقفال السنة المالية بدون وجود سنة مالية تالية — أنشئ السنة المالية التالية أولاً".into(),
+        ))
+    }
+
+    /// Create the carry-forward journal entry that establishes opening balances
+    /// for balance-sheet accounts in the successor fiscal year.
+    ///
+    /// Uses `JournalType::AccountOpeningBalance` (existing type, period-exempt)
+    /// dated at successor.start_date. One line per balance-sheet account with
+    /// non-zero net balance. Debit-normal accounts land on debit side,
+    /// credit-normal on credit side.
+    ///
+    /// Source metadata: source_id = "carry_forward:{fiscal_year_id}" for
+    /// idempotency via UNIQUE(source_type, source_id).
+    async fn create_carry_forward_entry_in_tx(
+        &self,
+        tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
+        fiscal_year: &domain::accounting::fiscal_year::FiscalYear,
+        successor: &domain::accounting::fiscal_year::FiscalYear,
+    ) -> Result<Option<JournalEntryId>, AppError> {
+        use domain::accounting::account::AccountType;
+
+        // 1. Get cumulative GL balances for all accounts (as of now — after close)
+        let agg_rows = self.journal_entry_repo.aggregate_by_account().await?;
+        if agg_rows.is_empty() {
+            return Ok(None);
+        }
+
+        // 2. Load account metadata
+        let account_ids: Vec<_> = agg_rows.iter().map(|r| r.account_id).collect();
+        let accounts = self.account_repo.find_by_ids(&account_ids).await?;
+        let account_map: HashMap<AccountId, Account> =
+            accounts.into_iter().map(|a| (a.id, a)).collect();
+
+        // 3. Build carry-forward lines for balance-sheet accounts only
+        let mut carry_lines: Vec<JournalLine> = Vec::new();
+        let base_currency = Currency::new("IQD", "دينار عراقي", "IQD", "ع.د", 2, false);
+
+        for row in &agg_rows {
+            let account = match account_map.get(&row.account_id) {
+                Some(a) => a,
+                None => continue,
+            };
+
+            // Only carry forward balance-sheet accounts
+            match account.account_type {
+                AccountType::Assets | AccountType::Liabilities | AccountType::Equity => {}
+                _ => continue,
+            }
+
+            let net = row.total_debit_base - row.total_credit_base;
+            if net == Decimal::ZERO {
+                continue; // zero-balance accounts omitted
+            }
+
+            let amount = net.abs();
+            let amount_ma = MonetaryAmount::new(
+                Money::new(amount, base_currency.clone()),
+                Decimal::ONE,
+            );
+            let zero = MonetaryAmount::zero(base_currency.clone());
+
+            if net > Decimal::ZERO {
+                // Debit-normal account (Assets): carry on debit side
+                carry_lines.push(JournalLine::new(
+                    row.account_id,
+                    amount_ma,
+                    zero,
+                    format!("تحويل رصيد افتتاحي - {}", account.name_ar),
+                ));
+            } else {
+                // Credit-normal account (Liabilities, Equity): carry on credit side
+                carry_lines.push(JournalLine::new(
+                    row.account_id,
+                    zero,
+                    amount_ma,
+                    format!("تحويل رصيد افتتاحي - {}", account.name_ar),
+                ));
+            }
+        }
+
+        if carry_lines.is_empty() {
+            return Ok(None);
+        }
+
+        // 4. Verify balanced entry
+        let total_debit: Decimal = carry_lines.iter().map(|l| l.debit.base_amount).sum();
+        let total_credit: Decimal = carry_lines.iter().map(|l| l.credit.base_amount).sum();
+        if total_debit != total_credit {
+            return Err(AppError::Invalid(format!(
+                "قيود التحويل غير متوازنة: إجمالي المدين {} ≠ إجمالي الدائن {}",
+                total_debit, total_credit
+            )));
+        }
+
+        // 5. Create and post the carry-forward entry (dated at successor year start)
+        let entry_number = self.journal_entry_repo.get_next_entry_number().await?;
+        let mut cf_entry = JournalEntry::new(
+            entry_number,
+            JournalType::AccountOpeningBalance,
+            carry_lines,
+            successor.start_date,
+            format!("تحويل رصيد افتتاحي من السنة المالية {}", fiscal_year.label),
+            Some(format!("carry_forward:{}", fiscal_year.id)),
+        )
+        .map_err(|e| AppError::Invalid(e.to_string()))?;
+
+        cf_entry
+            .post()
+            .map_err(|e| AppError::Invalid(e.to_string()))?;
+
+        self.journal_entry_repo.save_with_tx(tx, &cf_entry).await?;
+
+        Ok(Some(cf_entry.id))
     }
 
     /// Find the Retained Earnings account by purpose.
@@ -514,6 +660,12 @@ mod tests {
         let year_id = year.id;
         year_repo.create(&year).await.unwrap();
 
+        // Create successor fiscal year (required for carry-forward)
+        let next_start = end + Duration::days(1);
+        let next_end = end + Duration::days(366);
+        let next_year = FiscalYear::new(None, "FY2026".into(), next_start, next_end, Some(year_id)).unwrap();
+        year_repo.create(&next_year).await.unwrap();
+
         let mut period = FiscalPeriod::new(None, start, end).unwrap();
         period.close("admin", FiscalPeriodStatus::Closed).unwrap();
         let period_id = period.id;
@@ -523,16 +675,47 @@ mod tests {
         let expense_id = AccountId::new();
         let re_id = AccountId::new();
 
+        // Balance-sheet accounts for carry-forward testing
+        let cash_id = AccountId::new();
+        let ap_id = AccountId::new();
+        let capital_id = AccountId::new();
+
         account_repo.accounts.lock().unwrap().extend([
             make_revenue_account(revenue_id),
             make_expense_account(expense_id),
             make_retained_earnings_account(re_id),
+            make_account(cash_id, "1101", "البنك المركزي", AccountType::Assets, AccountPurpose::General),
+            make_account(ap_id, "2101", "الموردون", AccountType::Liabilities, AccountPurpose::General),
+            make_account(capital_id, "3101", "رأس المال", AccountType::Equity, AccountPurpose::General),
         ]);
 
         // Seed journal entries for the fiscal year
         let rev_entry = seeded_revenue_entry(revenue_id, re_id, dec!(5000));
         let exp_entry = seeded_expense_entry(expense_id, re_id, dec!(3000));
-        journal_repo.entries.lock().unwrap().extend([rev_entry, exp_entry]);
+
+        // Balance-sheet entries: Cash Dr 10000, AP Cr 2000, Capital Cr 8000
+        let base = Currency::new("IQD", "دينار عراقي", "IQD", "ع.د", 2, false);
+        let cash_dr = MonetaryAmount::new(Money::new(dec!(10000), base.clone()), Decimal::ONE);
+        let ap_cr = MonetaryAmount::new(Money::new(dec!(2000), base.clone()), Decimal::ONE);
+        let capital_cr = MonetaryAmount::new(Money::new(dec!(8000), base.clone()), Decimal::ONE);
+        let zero = MonetaryAmount::zero(base);
+
+        let bs_entry = JournalEntry::new(
+            "102".into(),
+            JournalType::GeneralJournal,
+            vec![
+                JournalLine::new(cash_id, cash_dr, zero.clone(), "cash opening".into()),
+                JournalLine::new(ap_id, zero.clone(), ap_cr.clone(), "ap opening".into()),
+                JournalLine::new(capital_id, zero.clone(), capital_cr, "capital opening".into()),
+            ],
+            Utc::now(),
+            "balance sheet setup".into(),
+            None,
+        ).unwrap();
+        let mut bs_entry = bs_entry;
+        bs_entry.post().unwrap();
+
+        journal_repo.entries.lock().unwrap().extend([rev_entry, exp_entry, bs_entry]);
 
         (year_id, period_id, revenue_id, expense_id, re_id)
     }
@@ -782,5 +965,220 @@ mod tests {
         let fy = year_repo.find_by_id(&year_id).await.unwrap().unwrap();
         assert_eq!(fy.status, FiscalYearStatus::Closed);
         assert!(fy.retained_earnings_entry_id.is_some());
+    }
+
+    // ==================== Carry-Forward Tests ====================
+
+    #[tokio::test]
+    async fn carry_forward_created_for_profit_year() {
+        let year_repo = Arc::new(MockFiscalYearRepository::new());
+        let period_repo = Arc::new(MockFiscalPeriodRepository::new());
+        let account_repo = Arc::new(MockAccountRepository::new());
+        let journal_repo = Arc::new(MockJournalRepository::default());
+
+        let (year_id, period_id, _, _, _) =
+            setup_close_test(&year_repo, &period_repo, &account_repo, &journal_repo).await;
+
+        let use_case = CloseFiscalYearUseCase::new(
+            year_repo.clone(), period_repo.clone(),
+            account_repo.clone(), journal_repo.clone(),
+            Arc::new(sqlx::SqlitePool::connect("sqlite::memory:").await.unwrap()),
+        );
+
+        let cmd = CloseFiscalYearCommand {
+            fiscal_year_id: year_id.to_string(),
+            closing_period_id: period_id.to_string(),
+            operation_key: "fy-close-cf".into(),
+            finalize: true,
+            retained_earnings_entry_id: None,
+            carry_forward_entry_id: None,
+            context: admin_context(),
+        };
+
+        let result = use_case.execute(cmd).await.unwrap();
+        assert_eq!(result.status, "Closed");
+        assert!(result.carry_forward_entry_id.is_some(), "carry-forward entry must be created");
+
+        // Verify carry-forward entry exists and is posted
+        let entries = journal_repo.entries.lock().unwrap();
+        let cf_entry = entries.iter()
+            .find(|e| e.source_id.as_deref() == Some(&format!("carry_forward:{}", year_id)));
+        assert!(cf_entry.is_some(), "carry-forward journal entry must exist with correct source_id");
+        let cf_entry = cf_entry.unwrap();
+        assert_eq!(cf_entry.journal_type, JournalType::AccountOpeningBalance);
+        assert_eq!(cf_entry.status, JournalEntryStatus::Posted);
+
+        // Verify only balance-sheet accounts are included (no Revenue or Expense)
+        let account_ids: Vec<_> = cf_entry.lines.iter().map(|l| l.account_id).collect();
+        for aid in &account_ids {
+            let acc = account_repo.accounts.lock().unwrap().iter().find(|a| &a.id == aid).cloned().unwrap();
+            assert!(
+                matches!(acc.account_type, AccountType::Assets | AccountType::Liabilities | AccountType::Equity),
+                "carry-forward must only include balance-sheet accounts, got {:?} for {}",
+                acc.account_type, acc.code
+            );
+        }
+
+        // Verify entry is balanced
+        let total_debit: Decimal = cf_entry.lines.iter().map(|l| l.debit.base_amount).sum();
+        let total_credit: Decimal = cf_entry.lines.iter().map(|l| l.credit.base_amount).sum();
+        assert_eq!(total_debit, total_credit, "carry-forward entry must be balanced");
+    }
+
+    #[tokio::test]
+    async fn carry_forward_dates_at_successor_start() {
+        let year_repo = Arc::new(MockFiscalYearRepository::new());
+        let period_repo = Arc::new(MockFiscalPeriodRepository::new());
+        let account_repo = Arc::new(MockAccountRepository::new());
+        let journal_repo = Arc::new(MockJournalRepository::default());
+
+        let (year_id, period_id, _, _, _) =
+            setup_close_test(&year_repo, &period_repo, &account_repo, &journal_repo).await;
+
+        let successor = year_repo.list().await.unwrap().into_iter()
+            .find(|y| y.previous_fiscal_year_id.as_ref() == Some(&year_id))
+            .unwrap();
+
+        let use_case = CloseFiscalYearUseCase::new(
+            year_repo.clone(), period_repo.clone(),
+            account_repo.clone(), journal_repo.clone(),
+            Arc::new(sqlx::SqlitePool::connect("sqlite::memory:").await.unwrap()),
+        );
+
+        let cmd = CloseFiscalYearCommand {
+            fiscal_year_id: year_id.to_string(),
+            closing_period_id: period_id.to_string(),
+            operation_key: "fy-close-cf-date".into(),
+            finalize: true,
+            retained_earnings_entry_id: None,
+            carry_forward_entry_id: None,
+            context: admin_context(),
+        };
+
+        use_case.execute(cmd).await.unwrap();
+
+        let entries = journal_repo.entries.lock().unwrap();
+        let cf_entry = entries.iter()
+            .find(|e| e.source_id.as_deref() == Some(&format!("carry_forward:{}", year_id)))
+            .unwrap();
+
+        // Carry-forward entry date must match successor year start date
+        assert_eq!(
+            cf_entry.entry_date.date_naive(),
+            successor.start_date.date_naive(),
+            "carry-forward entry must be dated at successor year start"
+        );
+    }
+
+    #[tokio::test]
+    async fn carry_forward_skips_revenue_and_expense() {
+        let year_repo = Arc::new(MockFiscalYearRepository::new());
+        let period_repo = Arc::new(MockFiscalPeriodRepository::new());
+        let account_repo = Arc::new(MockAccountRepository::new());
+        let journal_repo = Arc::new(MockJournalRepository::default());
+
+        let (year_id, period_id, rev_id, exp_id, _) =
+            setup_close_test(&year_repo, &period_repo, &account_repo, &journal_repo).await;
+
+        let use_case = CloseFiscalYearUseCase::new(
+            year_repo.clone(), period_repo.clone(),
+            account_repo.clone(), journal_repo.clone(),
+            Arc::new(sqlx::SqlitePool::connect("sqlite::memory:").await.unwrap()),
+        );
+
+        let cmd = CloseFiscalYearCommand {
+            fiscal_year_id: year_id.to_string(),
+            closing_period_id: period_id.to_string(),
+            operation_key: "fy-close-cf-skip".into(),
+            finalize: true,
+            retained_earnings_entry_id: None,
+            carry_forward_entry_id: None,
+            context: admin_context(),
+        };
+
+        use_case.execute(cmd).await.unwrap();
+
+        let entries = journal_repo.entries.lock().unwrap();
+        let cf_entry = entries.iter()
+            .find(|e| e.source_id.as_deref() == Some(&format!("carry_forward:{}", year_id)))
+            .unwrap();
+
+        // Revenue and Expense accounts must NOT appear in carry-forward
+        assert!(!cf_entry.lines.iter().any(|l| l.account_id == rev_id),
+            "revenue account must not appear in carry-forward");
+        assert!(!cf_entry.lines.iter().any(|l| l.account_id == exp_id),
+            "expense account must not appear in carry-forward");
+    }
+
+    #[tokio::test]
+    async fn no_successor_year_fails() {
+        let year_repo = Arc::new(MockFiscalYearRepository::new());
+        let period_repo = Arc::new(MockFiscalPeriodRepository::new());
+        let account_repo = Arc::new(MockAccountRepository::new());
+        let journal_repo = Arc::new(MockJournalRepository::default());
+
+        let (year_id, period_id, _, _, _) =
+            setup_close_test(&year_repo, &period_repo, &account_repo, &journal_repo).await;
+
+        // Remove successor year (keep only the current year)
+        {
+            let mut years = year_repo.fiscal_years.lock().unwrap();
+            years.retain(|y| y.previous_fiscal_year_id.is_none());
+        }
+
+        let use_case = CloseFiscalYearUseCase::new(
+            year_repo.clone(), period_repo.clone(),
+            account_repo.clone(), journal_repo.clone(),
+            Arc::new(sqlx::SqlitePool::connect("sqlite::memory:").await.unwrap()),
+        );
+
+        let cmd = CloseFiscalYearCommand {
+            fiscal_year_id: year_id.to_string(),
+            closing_period_id: period_id.to_string(),
+            operation_key: "fy-close-no-successor".into(),
+            finalize: true,
+            retained_earnings_entry_id: None,
+            carry_forward_entry_id: None,
+            context: admin_context(),
+        };
+
+        let err = use_case.execute(cmd).await.unwrap_err();
+        assert!(
+            matches!(err, AppError::Invalid(_)),
+            "closing without successor year must fail with Invalid error, got: {:?}",
+            err
+        );
+    }
+
+    #[tokio::test]
+    async fn carry_forward_fiscal_year_recorded() {
+        let year_repo = Arc::new(MockFiscalYearRepository::new());
+        let period_repo = Arc::new(MockFiscalPeriodRepository::new());
+        let account_repo = Arc::new(MockAccountRepository::new());
+        let journal_repo = Arc::new(MockJournalRepository::default());
+
+        let (year_id, period_id, _, _, _) =
+            setup_close_test(&year_repo, &period_repo, &account_repo, &journal_repo).await;
+
+        let use_case = CloseFiscalYearUseCase::new(
+            year_repo.clone(), period_repo.clone(),
+            account_repo.clone(), journal_repo.clone(),
+            Arc::new(sqlx::SqlitePool::connect("sqlite::memory:").await.unwrap()),
+        );
+
+        let cmd = CloseFiscalYearCommand {
+            fiscal_year_id: year_id.to_string(),
+            closing_period_id: period_id.to_string(),
+            operation_key: "fy-close-cf-record".into(),
+            finalize: true,
+            retained_earnings_entry_id: None,
+            carry_forward_entry_id: None,
+            context: admin_context(),
+        };
+
+        use_case.execute(cmd).await.unwrap();
+
+        let fy = year_repo.find_by_id(&year_id).await.unwrap().unwrap();
+        assert!(fy.carry_forward_entry_id.is_some(), "fiscal year must record carry_forward_entry_id");
     }
 }

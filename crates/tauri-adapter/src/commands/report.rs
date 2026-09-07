@@ -13,13 +13,13 @@ fn normal_balance(account_type: &AccountType) -> NormalBalance {
 }
 
 /// Trial Balance: aggregated debit/credit per account across all posted,
-/// non-reversed journal lines. Excludes FiscalClosing entries so the report
-/// reflects operational activity. The backend is the single source of truth.
+/// non-reversed journal lines. Includes FiscalClosing entries so the
+/// Trial Balance remains balanced after fiscal year close.
 #[tauri::command]
 pub async fn get_trial_balance(state: State<'_, AppState>) -> Result<TrialBalanceDto, String> {
     let agg_rows = state
         .journal_entry_repo
-        .aggregate_by_account_report()
+        .aggregate_by_account()
         .await
         .map_err(|e| e.to_string())?;
 
@@ -88,7 +88,8 @@ pub async fn get_trial_balance(state: State<'_, AppState>) -> Result<TrialBalanc
 
 /// Income Statement (Profit & Loss): revenue and expense accounts aggregated
 /// from the GL, net profit = total_revenue - total_expenses.
-/// Excludes FiscalClosing entries to show operational results only.
+/// Excludes FiscalClosing entries so the IS shows operational activity only,
+/// not the closing process itself.
 #[tauri::command]
 pub async fn get_income_statement(
     state: State<'_, AppState>,
@@ -162,13 +163,14 @@ pub async fn get_income_statement(
 }
 
 /// Balance Sheet: assets, liabilities, and equity accounts aggregated from the
-/// GL. Equity includes retained earnings from the GL (account 52).
-/// Excludes FiscalClosing entries to show balance-sheet positions only.
+/// GL. Includes FiscalClosing so Retained Earnings reflects the closed year's
+/// profit/loss. Revenue/Expense accounts are filtered by AccountType, not
+/// journal_type.
 #[tauri::command]
 pub async fn get_balance_sheet(state: State<'_, AppState>) -> Result<BalanceSheetDto, String> {
     let agg_rows = state
         .journal_entry_repo
-        .aggregate_by_account_report()
+        .aggregate_by_account()
         .await
         .map_err(|e| e.to_string())?;
 

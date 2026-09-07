@@ -169,7 +169,12 @@ impl Default for MockJournalRepository {
 #[async_trait]
 impl JournalEntryRepository for MockJournalRepository {
     async fn save(&self, entry: &JournalEntry) -> Result<(), AppError> {
-        self.entries.lock().unwrap().push(entry.clone());
+        let mut store = self.entries.lock().unwrap();
+        if let Some(existing) = store.iter_mut().find(|e| e.id == entry.id) {
+            *existing = entry.clone();
+        } else {
+            store.push(entry.clone());
+        }
         Ok(())
     }
     async fn save_reversal_pair(
@@ -182,8 +187,14 @@ impl JournalEntryRepository for MockJournalRepository {
         store.push(original.clone());
         Ok(())
     }
-    async fn find_by_id(&self, _id: &JournalEntryId) -> Result<Option<JournalEntry>, AppError> {
-        Ok(None)
+    async fn find_by_id(&self, id: &JournalEntryId) -> Result<Option<JournalEntry>, AppError> {
+        Ok(self
+            .entries
+            .lock()
+            .unwrap()
+            .iter()
+            .find(|e| e.id == *id)
+            .cloned())
     }
     async fn find_by_number(&self, _number: &str) -> Result<Option<JournalEntry>, AppError> {
         Ok(None)

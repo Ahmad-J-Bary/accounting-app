@@ -401,10 +401,14 @@ pub async fn aggregate_by_account(
         .collect())
 }
 
-/// Report-safe aggregation: excludes `FiscalClosing` entries so that Income
-/// Statement, Trial Balance, and other reports reflect operational activity
-/// only. After a fiscal year close, the closing entry zeroes Revenue/Expense —
-/// including it would produce $0 reports for the closed year.
+/// Income-Statement aggregation: excludes `FiscalClosing` entries so the
+/// Income Statement shows operational revenue/expense activity only. After a
+/// fiscal year close, the closing entry zeroes Revenue/Expense — including it
+/// would produce $0 IS reports for the closed year.
+///
+/// NOTE: Trial Balance and Balance Sheet use `aggregate_by_account()` instead,
+/// because they need FiscalClosing to maintain balanced debits/credits and
+/// correct Retained Earnings.
 pub async fn aggregate_by_account_report(
     pool: &SqlitePool,
 ) -> Result<Vec<AccountAggregationRow>, AppError> {
