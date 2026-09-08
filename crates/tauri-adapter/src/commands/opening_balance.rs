@@ -67,6 +67,7 @@ pub async fn post_opening_balance_migration(
         state.account_repo.clone(),
         state.journal_entry_repo.clone(),
         state.opening_posting_repo.clone(),
+        state.pool.clone(),
     )
     .execute(id)
     .await
@@ -84,6 +85,7 @@ pub async fn allocate_net_profit(
         state.account_repo.clone(),
         state.journal_entry_repo.clone(),
         state.fiscal_period_repo.clone(),
+        state.pool.clone(),
     )
     .execute(request)
     .await

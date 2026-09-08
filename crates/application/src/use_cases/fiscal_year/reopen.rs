@@ -1,6 +1,8 @@
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use crate::errors::AppError;
+use crate::ports::account_repository::AccountRepository;
 use crate::ports::fiscal_year_repository::FiscalYearRepository;
 use crate::ports::journal_entry_repository::JournalEntryRepository;
 use domain::accounting::fiscal_year::FiscalYearStatus;
@@ -13,16 +15,22 @@ use super::types::{FiscalYearDto, ReopenFiscalYearCommand};
 pub struct ReopenFiscalYearUseCase {
     year_repo: Arc<dyn FiscalYearRepository>,
     journal_repo: Arc<dyn JournalEntryRepository>,
+    account_repo: Arc<dyn AccountRepository>,
+    pool: Arc<sqlx::SqlitePool>,
 }
 
 impl ReopenFiscalYearUseCase {
     pub fn new(
         year_repo: Arc<dyn FiscalYearRepository>,
         journal_repo: Arc<dyn JournalEntryRepository>,
+        account_repo: Arc<dyn AccountRepository>,
+        pool: Arc<sqlx::SqlitePool>,
     ) -> Self {
         Self {
             year_repo,
             journal_repo,
+            account_repo,
+            pool,
         }
     }
 
@@ -52,8 +60,46 @@ impl ReopenFiscalYearUseCase {
             if let Some(mut cf_entry) = self.journal_repo.find_by_id(cf_entry_id).await? {
                 use domain::accounting::journal_entry::JournalEntryStatus;
                 if cf_entry.status == JournalEntryStatus::Posted {
+                    // Reverse account snapshots: apply OPPOSITE deltas
+                    let affected_account_ids: Vec<domain::shared::AccountId> = cf_entry
+                        .lines
+                        .iter()
+                        .map(|l| l.account_id)
+                        .collect();
+                    let accounts = self.account_repo.find_by_ids(&affected_account_ids).await?;
+                    let mut account_map: HashMap<domain::shared::AccountId, _> =
+                        accounts.into_iter().map(|a| (a.id, a)).collect();
+
+                    for line in &cf_entry.lines {
+                        if let Some(account) = account_map.get_mut(&line.account_id) {
+                            // Reverse: credit lines become debits, debit lines become credits
+                            if line.debit.base_amount > rust_decimal::Decimal::ZERO {
+                                account
+                                    .credit(line.debit.base_amount)
+                                    .map_err(|e| AppError::Invalid(e.to_string()))?;
+                            }
+                            if line.credit.base_amount > rust_decimal::Decimal::ZERO {
+                                account
+                                    .debit(line.credit.base_amount)
+                                    .map_err(|e| AppError::Invalid(e.to_string()))?;
+                            }
+                        }
+                    }
+
                     cf_entry.reverse().map_err(|e| AppError::Invalid(e.to_string()))?;
-                    self.journal_repo.save(&cf_entry).await?;
+
+                    let mut tx = self.pool.begin().await.map_err(|e| {
+                        AppError::Infrastructure(format!("failed to begin transaction: {e}"))
+                    })?;
+                    self.journal_repo
+                        .save_with_tx(&mut tx, &cf_entry)
+                        .await?;
+                    for account in account_map.values() {
+                        self.account_repo.save_with_tx(&mut tx, account).await?;
+                    }
+                    tx.commit().await.map_err(|e| {
+                        AppError::Infrastructure(format!("failed to commit transaction: {e}"))
+                    })?;
                 }
             }
 
@@ -97,7 +143,7 @@ impl ReopenFiscalYearUseCase {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::mocks::{MockFiscalYearRepository, MockJournalRepository};
+    use crate::mocks::{MockAccountRepository, MockFiscalYearRepository, MockJournalRepository};
     use chrono::{Duration, Utc};
     use domain::accounting::fiscal_year::FiscalYear;
     use domain::accounting::journal_entry::{JournalEntry, JournalEntryStatus, JournalLine, JournalType};
@@ -206,7 +252,9 @@ mod tests {
             .unwrap()
             .push(year.clone());
 
-        let use_case = ReopenFiscalYearUseCase::new(year_repo.clone(), journal_repo.clone());
+        let account_repo = Arc::new(MockAccountRepository::new());
+        let pool = Arc::new(sqlx::SqlitePool::connect("sqlite::memory:").await.unwrap());
+        let use_case = ReopenFiscalYearUseCase::new(year_repo.clone(), journal_repo.clone(), account_repo.clone(), pool.clone());
         let cmd = ReopenFiscalYearCommand {
             fiscal_year_id: year.id.to_string(),
             context: admin_context(),
@@ -224,7 +272,9 @@ mod tests {
         let (year_id, _next_id, cf_entry_id) =
             make_closed_year_with_carry_forward(&year_repo, &journal_repo);
 
-        let use_case = ReopenFiscalYearUseCase::new(year_repo.clone(), journal_repo.clone());
+        let account_repo = Arc::new(MockAccountRepository::new());
+        let pool = Arc::new(sqlx::SqlitePool::connect("sqlite::memory:").await.unwrap());
+        let use_case = ReopenFiscalYearUseCase::new(year_repo.clone(), journal_repo.clone(), account_repo.clone(), pool.clone());
         let cmd = ReopenFiscalYearCommand {
             fiscal_year_id: year_id.to_string(),
             context: admin_context(),
@@ -263,7 +313,9 @@ mod tests {
             .unwrap();
         }
 
-        let use_case = ReopenFiscalYearUseCase::new(year_repo.clone(), journal_repo.clone());
+        let account_repo = Arc::new(MockAccountRepository::new());
+        let pool = Arc::new(sqlx::SqlitePool::connect("sqlite::memory:").await.unwrap());
+        let use_case = ReopenFiscalYearUseCase::new(year_repo.clone(), journal_repo.clone(), account_repo.clone(), pool.clone());
         let cmd = ReopenFiscalYearCommand {
             fiscal_year_id: year_id.to_string(),
             context: admin_context(),

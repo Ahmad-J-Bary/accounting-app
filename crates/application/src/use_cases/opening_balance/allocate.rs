@@ -242,6 +242,7 @@ pub struct AllocateNetProfitUseCase {
     account_repo: Arc<dyn AccountRepository>,
     journal_repo: Arc<dyn JournalEntryRepository>,
     fiscal_period_repo: Arc<dyn FiscalPeriodRepository>,
+    pool: Arc<sqlx::SqlitePool>,
 }
 
 impl AllocateNetProfitUseCase {
@@ -251,6 +252,7 @@ impl AllocateNetProfitUseCase {
         account_repo: Arc<dyn AccountRepository>,
         journal_repo: Arc<dyn JournalEntryRepository>,
         fiscal_period_repo: Arc<dyn FiscalPeriodRepository>,
+        pool: Arc<sqlx::SqlitePool>,
     ) -> Self {
         Self {
             migration_repo,
@@ -258,6 +260,7 @@ impl AllocateNetProfitUseCase {
             account_repo,
             journal_repo,
             fiscal_period_repo,
+            pool,
         }
     }
 
@@ -464,7 +467,13 @@ impl AllocateNetProfitUseCase {
         .map_err(|e| AppError::Invalid(e.to_string()))?;
 
         entry.post().map_err(|e| AppError::Invalid(e.to_string()))?;
-        self.journal_repo.save(&entry).await?;
+        crate::use_cases::journal::snapshot_sync::save_posted_with_snapshots(
+            &self.pool,
+            &*self.journal_repo,
+            &self.account_repo,
+            &entry,
+        )
+        .await?;
 
         let final_total: Decimal = dto_shares.iter().map(|s| s.share).sum();
         Ok(NetProfitAllocationDto {

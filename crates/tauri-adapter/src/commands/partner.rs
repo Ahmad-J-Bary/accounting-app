@@ -69,6 +69,7 @@ pub async fn create_capital_contribution(
         state.opening_migration_repo.clone(),
         state.fiscal_year_repo.clone(),
         state.fiscal_period_repo.clone(),
+        state.pool.clone(),
     )
     .execute(
         partner_id,
@@ -100,6 +101,7 @@ pub async fn create_partner_drawing(
         state.journal_entry_repo.clone(),
         state.fiscal_year_repo.clone(),
         state.fiscal_period_repo.clone(),
+        state.pool.clone(),
     )
     .execute(
         partner_id,
@@ -130,6 +132,7 @@ pub async fn capitalize_retained_earnings(
         state.journal_entry_repo.clone(),
         state.fiscal_year_repo.clone(),
         state.fiscal_period_repo.clone(),
+        state.pool.clone(),
     )
     .execute(partner_id, amt, effective_date, event_id)
     .await

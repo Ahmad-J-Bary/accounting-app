@@ -362,6 +362,7 @@ async fn opening_fixed_assets_book_gl_exactly_once_150_plus_50_equals_200() {
         account_repo.clone(),
         journal_repo.clone(),
         posting_repo.clone(),
+        pool.clone(),
     )
     .execute(migration_id.clone())
     .await
@@ -403,6 +404,7 @@ async fn opening_fixed_assets_book_gl_exactly_once_150_plus_50_equals_200() {
         account_repo.clone(),
         journal_repo.clone(),
         posting_repo.clone(),
+        pool.clone(),
     )
     .execute(migration_id.clone())
     .await;

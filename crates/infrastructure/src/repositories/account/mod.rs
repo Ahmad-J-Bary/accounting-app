@@ -35,6 +35,14 @@ impl AccountRepository for SqliteAccountRepository {
         commands::save(&self.pool, account).await
     }
 
+    async fn save_with_tx(
+        &self,
+        tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
+        account: &Account,
+    ) -> Result<(), AppError> {
+        commands::save_with_tx(tx, account).await
+    }
+
     async fn find_by_id(&self, id: &AccountId) -> Result<Option<Account>, AppError> {
         queries::find_by_id(&self.pool, id).await
     }

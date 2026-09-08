@@ -90,4 +90,12 @@ pub trait JournalEntryRepository: Send + Sync {
         tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
         entry: &JournalEntry,
     ) -> Result<(), AppError>;
+
+    /// Persist a reversal pair within an existing transaction.
+    async fn save_reversal_pair_in_tx(
+        &self,
+        tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
+        reversal: &JournalEntry,
+        original: &JournalEntry,
+    ) -> Result<(), AppError>;
 }

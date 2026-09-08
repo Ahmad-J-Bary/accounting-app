@@ -72,8 +72,10 @@ pub async fn post_journal_entry(
 ) -> Result<JournalEntryDto, String> {
     PostJournalEntryUseCase::new(
         state.journal_entry_repo.clone(),
+        state.account_repo.clone(),
         state.fiscal_year_repo.clone(),
         state.fiscal_period_repo.clone(),
+        state.pool.clone(),
     )
         .execute(entry_id)
         .await
@@ -85,7 +87,11 @@ pub async fn reverse_journal_entry(
     entry_id: String,
     state: State<'_, AppState>,
 ) -> Result<JournalEntryDto, String> {
-    ReverseJournalEntryUseCase::new(state.journal_entry_repo.clone())
+    ReverseJournalEntryUseCase::new(
+        state.journal_entry_repo.clone(),
+        state.account_repo.clone(),
+        state.pool.clone(),
+    )
         .execute(entry_id)
         .await
         .map_err(|e| e.to_string())

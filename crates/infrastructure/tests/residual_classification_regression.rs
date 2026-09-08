@@ -450,6 +450,7 @@ fn poster(pool: &Arc<sqlx::SqlitePool>) -> PostOpeningBalanceUseCase {
         Arc::new(SqliteAccountRepository::new(pool.clone())),
         Arc::new(SqliteJournalEntryRepository::new(pool.clone())),
         Arc::new(SqliteOpeningPostingRepository::new(pool.clone())),
+        pool.clone(),
     )
 }
 

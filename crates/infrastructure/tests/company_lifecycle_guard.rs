@@ -230,6 +230,7 @@ async fn new_company_contribution_increases_cash_and_capital() {
         migration_repo,
         fiscal_year_repo,
         fiscal_period_repo,
+        pool.clone(),
     )
     .execute(
         partner_id.clone(),
@@ -330,6 +331,7 @@ async fn capital_contribution_blocked_while_migration_window_open() {
         migration_repo,
         fiscal_year_repo,
         fiscal_period_repo,
+        pool.clone(),
     )
     .execute(
         partner_id,

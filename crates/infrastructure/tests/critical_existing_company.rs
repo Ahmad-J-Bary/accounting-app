@@ -193,6 +193,7 @@ async fn run_opening_lifecycle(pool: &Arc<sqlx::SqlitePool>) -> String {
         account_repo.clone(),
         journal_repo.clone(),
         posting_repo.clone(),
+        pool.clone(),
     )
     .execute(id.clone())
     .await
@@ -338,6 +339,7 @@ async fn after_lock_company_behaves_like_new_for_capital_contribution() {
         migration_repo,
         fiscal_year_repo,
         fiscal_period_repo,
+        pool.clone(),
     )
         .execute(
             partner_id,

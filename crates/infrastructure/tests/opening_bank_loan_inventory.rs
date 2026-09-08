@@ -491,6 +491,7 @@ async fn exact_465_scenario_full_lifecycle_reconciles_posts_and_locks() {
         Arc::new(SqliteAccountRepository::new(pool.clone())),
         Arc::new(SqliteJournalEntryRepository::new(pool.clone())),
         Arc::new(SqliteOpeningPostingRepository::new(pool.clone())),
+        pool.clone(),
     )
     .execute(id.clone())
     .await
@@ -753,6 +754,7 @@ async fn update_lines_rejected_once_posted_and_for_new_company() {
         Arc::new(SqliteAccountRepository::new(pool.clone())),
         Arc::new(SqliteJournalEntryRepository::new(pool.clone())),
         Arc::new(SqliteOpeningPostingRepository::new(pool.clone())),
+        pool.clone(),
     )
     .execute(id.clone())
     .await
@@ -945,12 +947,13 @@ async fn no_bank_loan_inventory_scenario_reconciles_and_posts() {
     .execute(id.clone(), "manager".into())
     .await
     .expect("approve no-bank");
-    let posted = PostOpeningBalanceUseCase::new(
+    let posted =     PostOpeningBalanceUseCase::new(
         Arc::new(SqliteOpeningMigrationRepository::new(pool.clone())),
         Arc::new(SqliteOpeningItemRepository::new(pool.clone())),
         Arc::new(SqliteAccountRepository::new(pool.clone())),
         Arc::new(SqliteJournalEntryRepository::new(pool.clone())),
         Arc::new(SqliteOpeningPostingRepository::new(pool.clone())),
+        pool.clone(),
     )
     .execute(id.clone())
     .await

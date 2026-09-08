@@ -46,6 +46,7 @@ pub struct PostOpeningBalanceUseCase {
     account_repo: Arc<dyn AccountRepository>,
     journal_repo: Arc<dyn JournalEntryRepository>,
     posting_repo: Arc<dyn OpeningPostingRepository>,
+    pool: Arc<sqlx::SqlitePool>,
 }
 
 impl PostOpeningBalanceUseCase {
@@ -55,6 +56,7 @@ impl PostOpeningBalanceUseCase {
         account_repo: Arc<dyn AccountRepository>,
         journal_repo: Arc<dyn JournalEntryRepository>,
         posting_repo: Arc<dyn OpeningPostingRepository>,
+        pool: Arc<sqlx::SqlitePool>,
     ) -> Self {
         Self {
             repo,
@@ -62,6 +64,7 @@ impl PostOpeningBalanceUseCase {
             account_repo,
             journal_repo,
             posting_repo,
+            pool,
         }
     }
 
@@ -117,7 +120,11 @@ impl PostOpeningBalanceUseCase {
         // post and the GL still nets to exactly one opening movement.
         let dupes = self.duplicate_standalone_opening_journals(&id).await?;
         for entry in dupes {
-            ReverseJournalEntryUseCase::new(self.journal_repo.clone())
+            ReverseJournalEntryUseCase::new(
+                self.journal_repo.clone(),
+                self.account_repo.clone(),
+                self.pool.clone(),
+            )
                 .execute(entry.id.to_string())
                 .await?;
         }

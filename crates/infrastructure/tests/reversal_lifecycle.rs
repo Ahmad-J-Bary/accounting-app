@@ -1,3 +1,4 @@
+use application::ports::account_repository::AccountRepository;
 use application::ports::journal_entry_repository::JournalEntryRepository;
 use chrono::Utc;
 use domain::accounting::journal_entry::{
@@ -8,7 +9,7 @@ use domain::shared::monetary_amount::MonetaryAmount;
 use domain::shared::money::Money;
 use domain::shared::AccountId;
 use infrastructure::db::pool::run_migrations;
-use infrastructure::repositories::SqliteJournalEntryRepository;
+use infrastructure::repositories::{SqliteAccountRepository, SqliteJournalEntryRepository};
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
@@ -172,7 +173,9 @@ async fn use_case_rejects_reversing_an_already_reversed_entry() {
     let pool = build_pool().await;
     let repo: StdArc<dyn JournalEntryRepository> =
         StdArc::new(SqliteJournalEntryRepository::new(pool.clone()));
-    let use_case = ReverseJournalEntryUseCase::new(repo.clone());
+    let account_repo: StdArc<dyn AccountRepository> =
+        StdArc::new(SqliteAccountRepository::new(pool.clone()));
+    let use_case = ReverseJournalEntryUseCase::new(repo.clone(), account_repo, pool.clone());
     let (acc_a, acc_b) = real_accounts(pool.as_ref()).await;
 
     let mut original = JournalEntry::new(

@@ -497,6 +497,7 @@ async fn canonical_full_lifecycle_single_gl_effect_per_subledger() {
         account_repo.clone(),
         journal_repo.clone(),
         posting_repo.clone(),
+        pool.clone(),
     )
     .execute(migration_id.clone())
     .await
@@ -802,6 +803,7 @@ async fn legacy_standalone_opening_journal_auto_reversed_even_on_amount_mismatch
         account_repo.clone(),
         journal_repo.clone(),
         Arc::new(SqliteOpeningPostingRepository::new(pool.clone())),
+        pool.clone(),
     )
     .execute(migration_id.clone())
     .await

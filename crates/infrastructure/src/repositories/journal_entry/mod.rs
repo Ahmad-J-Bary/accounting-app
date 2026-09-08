@@ -125,4 +125,13 @@ impl JournalEntryRepository for SqliteJournalEntryRepository {
     ) -> Result<(), AppError> {
         commands::insert_entry(tx, entry).await
     }
+
+    async fn save_reversal_pair_in_tx(
+        &self,
+        tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
+        reversal: &JournalEntry,
+        original: &JournalEntry,
+    ) -> Result<(), AppError> {
+        commands::save_reversal_pair_in_tx(tx, reversal, original).await
+    }
 }

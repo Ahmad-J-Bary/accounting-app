@@ -398,6 +398,7 @@ async fn unresolved_difference_blocks_posting_before_any_journal() {
         account_repo.clone(),
         journal_repo.clone(),
         posting_repo.clone(),
+        pool.clone(),
     )
     .execute(migration_id.clone())
     .await

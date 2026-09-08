@@ -384,7 +384,13 @@ async fn reversed_entry_is_neutral_in_ledger_and_report_feed() {
         .unwrap();
     let entry_id = dto.id;
 
-    PostJournalEntryUseCase::new(journal_repo.clone(), fiscal_year_repo, fiscal_period_repo)
+    PostJournalEntryUseCase::new(
+        journal_repo.clone(),
+        account_repo.clone(),
+        fiscal_year_repo,
+        fiscal_period_repo,
+        pool.clone(),
+    )
         .execute(entry_id.clone())
         .await
         .unwrap();
@@ -399,7 +405,11 @@ async fn reversed_entry_is_neutral_in_ledger_and_report_feed() {
     assert_eq!(before.closing_balance_base, dec!(100));
 
     // Reverse → the original flips to Reversed, a Posted contra lands in the feed.
-    let reversal = ReverseJournalEntryUseCase::new(journal_repo.clone())
+    let reversal = ReverseJournalEntryUseCase::new(
+        journal_repo.clone(),
+        account_repo.clone(),
+        pool.clone(),
+    )
         .execute(entry_id.clone())
         .await
         .unwrap();

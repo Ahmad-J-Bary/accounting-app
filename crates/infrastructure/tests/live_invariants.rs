@@ -211,6 +211,7 @@ async fn live_ledger_satisfies_debit_credit_and_accounting_equation() {
         migration_repo.clone(),
         fiscal_year_repo,
         fiscal_period_repo,
+        pool.clone(),
     )
     .execute(
         partner_id,

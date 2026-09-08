@@ -57,6 +57,16 @@ pub async fn save_reversal_pair(
     Ok(())
 }
 
+pub async fn save_reversal_pair_in_tx<'a>(
+    tx: &mut sqlx::Transaction<'a, sqlx::Sqlite>,
+    reversal: &JournalEntry,
+    original: &JournalEntry,
+) -> Result<(), AppError> {
+    insert_entry(tx, reversal).await?;
+    insert_entry(tx, original).await?;
+    Ok(())
+}
+
 /// Rejects persisting a POSTED journal whose accounting date falls in a fiscal
 /// period that does not accept posting (Closing / Closed / Locked / Cancelled),
 /// or outside every existing period once periods are in use.

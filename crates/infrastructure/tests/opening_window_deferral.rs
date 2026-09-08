@@ -624,6 +624,7 @@ async fn inventory_opening_in_statement_posts_once_and_reconciles() {
         account_repo.clone(),
         journal_repo.clone(),
         posting_repo.clone(),
+        pool.clone(),
     )
     .execute(migration_id.clone())
     .await

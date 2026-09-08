@@ -138,7 +138,6 @@ pub async fn compute_apply_balances(
                 account
                     .debit(base_amount)
                     .map_err(|e| AppError::Invalid(e.to_string()))?;
-                account.debit += base_amount;
                 changes.push_account(account);
             }
         }
@@ -151,7 +150,6 @@ pub async fn compute_apply_balances(
                 account
                     .debit(base_amount)
                     .map_err(|e| AppError::Invalid(e.to_string()))?;
-                account.debit += base_amount;
                 changes.push_account(account);
             }
         }
@@ -234,7 +232,6 @@ pub async fn compute_reverse_balances(
                 account
                     .credit(base_amount)
                     .map_err(|e| AppError::Invalid(e.to_string()))?;
-                account.debit -= base_amount;
                 changes.push_account(account);
             }
         }
@@ -247,7 +244,6 @@ pub async fn compute_reverse_balances(
                 account
                     .credit(base_amount)
                     .map_err(|e| AppError::Invalid(e.to_string()))?;
-                account.debit -= base_amount;
                 changes.push_account(account);
             }
         }
@@ -377,7 +373,6 @@ pub async fn apply_balance_onto(
                 account
                     .debit(base_amount)
                     .map_err(|e| AppError::Invalid(e.to_string()))?;
-                account.debit += base_amount;
                 if let Some(a) = changes.accounts.iter_mut().find(|a| a.id == *acc_id) {
                     *a = account;
                 } else {

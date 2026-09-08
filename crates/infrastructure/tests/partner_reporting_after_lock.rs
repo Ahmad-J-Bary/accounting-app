@@ -149,6 +149,7 @@ async fn run_opening_lifecycle(
         account_repo.clone(),
         journal_repo.clone(),
         posting_repo.clone(),
+        pool.clone(),
     )
     .execute(id.clone())
     .await

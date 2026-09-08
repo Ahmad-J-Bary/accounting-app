@@ -238,6 +238,7 @@ async fn migration_posting_auto_reverses_standalone_per_entity_opening_journal()
         account_repo.clone(),
         journal_repo.clone(),
         posting_repo.clone(),
+        pool.clone(),
     )
     .execute(migration_id.clone())
     .await
@@ -338,7 +339,7 @@ async fn migration_posts_after_reversal_gl_nets_exactly_one_opening() {
 
     // 2) Reverse the standalone opening journal (audit-preserving, the same
     //    action migration 158 performs for every duplicated journal).
-    ReverseJournalEntryUseCase::new(journal_repo.clone())
+    ReverseJournalEntryUseCase::new(journal_repo.clone(), account_repo.clone(), pool.clone())
         .execute(per_entity_id.clone())
         .await
         .expect("reverse the standalone opening journal");
@@ -432,6 +433,7 @@ async fn migration_posts_after_reversal_gl_nets_exactly_one_opening() {
         account_repo.clone(),
         journal_repo.clone(),
         posting_repo.clone(),
+        pool.clone(),
     )
     .execute(migration_id.clone())
     .await

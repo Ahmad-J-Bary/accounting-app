@@ -147,6 +147,7 @@ async fn contribution_with_same_event_id_posts_once() {
         Arc::new(SqliteOpeningMigrationRepository::new(pool.clone())),
         fiscal_year_repo,
         fiscal_period_repo,
+        pool.clone(),
     );
 
     let event = "8f1a2b3c-0000-0000-0000-000000000001".to_string();
@@ -201,6 +202,7 @@ async fn distinct_event_ids_create_distinct_journals() {
         Arc::new(SqliteOpeningMigrationRepository::new(pool.clone())),
         fiscal_year_repo,
         fiscal_period_repo,
+        pool.clone(),
     );
 
     let a = case

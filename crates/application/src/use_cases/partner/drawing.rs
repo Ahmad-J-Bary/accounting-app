@@ -11,6 +11,7 @@ use crate::ports::fiscal_period_repository::FiscalPeriodRepository;
 use crate::ports::fiscal_year_repository::FiscalYearRepository;
 use crate::ports::journal_entry_repository::JournalEntryRepository;
 use crate::ports::partner_repository::PartnerRepository;
+use crate::use_cases::journal::snapshot_sync::save_posted_with_snapshots;
 use crate::use_cases::shared::fiscal_lifecycle::FiscalLifecyclePolicy;
 use uuid::Uuid;
 
@@ -29,6 +30,7 @@ pub struct CreatePartnerDrawingUseCase {
     journal_repo: Arc<dyn JournalEntryRepository>,
     fiscal_year_repo: Arc<dyn FiscalYearRepository>,
     fiscal_period_repo: Arc<dyn FiscalPeriodRepository>,
+    pool: Arc<sqlx::SqlitePool>,
 }
 
 impl CreatePartnerDrawingUseCase {
@@ -38,6 +40,7 @@ impl CreatePartnerDrawingUseCase {
         journal_repo: Arc<dyn JournalEntryRepository>,
         fiscal_year_repo: Arc<dyn FiscalYearRepository>,
         fiscal_period_repo: Arc<dyn FiscalPeriodRepository>,
+        pool: Arc<sqlx::SqlitePool>,
     ) -> Self {
         Self {
             repo,
@@ -45,6 +48,7 @@ impl CreatePartnerDrawingUseCase {
             journal_repo,
             fiscal_year_repo,
             fiscal_period_repo,
+            pool,
         }
     }
 
@@ -138,8 +142,13 @@ impl CreatePartnerDrawingUseCase {
         .map_err(|e| AppError::Invalid(e.to_string()))?;
 
         entry.post().map_err(|e| AppError::Invalid(e.to_string()))?;
-        // Single-repo atomic write; journal_lines persist in the same transaction.
-        self.journal_repo.save(&entry).await?;
+        save_posted_with_snapshots(
+            &self.pool,
+            &*self.journal_repo,
+            &self.account_repo,
+            &entry,
+        )
+        .await?;
 
         Ok(entry.id.to_string())
     }

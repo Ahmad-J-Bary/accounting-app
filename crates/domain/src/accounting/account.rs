@@ -237,7 +237,8 @@ impl Account {
             return Err(DomainError::Invalid("مبلغ المدين يجب أن يكون موجبًا".into()));
         }
 
-        self.balance += amount;
+        self.debit += amount;
+        self.balance = self.opening_balance + self.debit - self.credit;
         self.updated_at = Utc::now();
         Ok(())
     }
@@ -247,7 +248,8 @@ impl Account {
             return Err(DomainError::Invalid("مبلغ الدائن يجب أن يكون موجبًا".into()));
         }
 
-        self.balance -= amount;
+        self.credit += amount;
+        self.balance = self.opening_balance + self.debit - self.credit;
         self.updated_at = Utc::now();
         Ok(())
     }
@@ -463,6 +465,8 @@ mod tests {
             create_test_account("1001", "النقدية", "Cash", AccountType::Assets).unwrap();
         account.debit(dec!(100)).unwrap();
         assert_eq!(account.balance, dec!(100));
+        assert_eq!(account.debit, dec!(100));
+        assert_eq!(account.credit, dec!(0));
     }
 
     #[test]
@@ -472,6 +476,47 @@ mod tests {
         account.debit(dec!(100)).unwrap();
         account.credit(dec!(50)).unwrap();
         assert_eq!(account.balance, dec!(50));
+        assert_eq!(account.debit, dec!(100));
+        assert_eq!(account.credit, dec!(50));
+    }
+
+    #[test]
+    fn debit_updates_accumulator_exactly_once() {
+        let mut account =
+            create_test_account("1001", "النقدية", "Cash", AccountType::Assets).unwrap();
+        account.debit(dec!(100)).unwrap();
+        assert_eq!(account.debit, dec!(100), "debit accumulator must increase by exactly the amount");
+        account.debit(dec!(200)).unwrap();
+        assert_eq!(account.debit, dec!(300), "repeated debits must accumulate");
+        assert_eq!(account.balance, dec!(300), "balance must match opening + debit - credit");
+    }
+
+    #[test]
+    fn credit_updates_accumulator_exactly_once() {
+        let mut account =
+            create_test_account("1001", "النقدية", "Cash", AccountType::Assets).unwrap();
+        account.credit(dec!(50)).unwrap();
+        assert_eq!(account.credit, dec!(50), "credit accumulator must increase by exactly the amount");
+        account.credit(dec!(30)).unwrap();
+        assert_eq!(account.credit, dec!(80), "repeated credits must accumulate");
+        assert_eq!(account.balance, dec!(-80), "balance = opening(0) + debit(0) - credit(80)");
+    }
+
+    #[test]
+    fn balance_invariant_holds_after_mixed_operations() {
+        let mut account =
+            create_test_account("1001", "النقدية", "Cash", AccountType::Assets).unwrap();
+        // opening_balance = 0, debit = 0, credit = 0
+        account.debit(dec!(1000)).unwrap();
+        account.credit(dec!(300)).unwrap();
+        account.debit(dec!(500)).unwrap();
+        account.credit(dec!(200)).unwrap();
+        // Expected: debit=1500, credit=500, balance=0+1500-500=1000
+        assert_eq!(account.debit, dec!(1500));
+        assert_eq!(account.credit, dec!(500));
+        assert_eq!(account.balance, dec!(1000));
+        assert_eq!(account.balance, account.opening_balance + account.debit - account.credit,
+            "invariant: balance == opening_balance + debit - credit");
     }
 
     #[test]

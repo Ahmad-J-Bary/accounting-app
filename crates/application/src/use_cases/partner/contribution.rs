@@ -12,6 +12,7 @@ use crate::ports::fiscal_year_repository::FiscalYearRepository;
 use crate::ports::journal_entry_repository::JournalEntryRepository;
 use crate::ports::opening_migration_repository::OpeningMigrationRepository;
 use crate::ports::partner_repository::PartnerRepository;
+use crate::use_cases::journal::snapshot_sync::save_posted_with_snapshots;
 use crate::use_cases::opening_balance::opening_window_active;
 use crate::use_cases::shared::fiscal_lifecycle::FiscalLifecyclePolicy;
 use uuid::Uuid;
@@ -33,6 +34,7 @@ pub struct CreateCapitalContributionUseCase {
     opening_migration_repo: Arc<dyn OpeningMigrationRepository>,
     fiscal_year_repo: Arc<dyn FiscalYearRepository>,
     fiscal_period_repo: Arc<dyn FiscalPeriodRepository>,
+    pool: Arc<sqlx::SqlitePool>,
 }
 
 impl CreateCapitalContributionUseCase {
@@ -43,6 +45,7 @@ impl CreateCapitalContributionUseCase {
         opening_migration_repo: Arc<dyn OpeningMigrationRepository>,
         fiscal_year_repo: Arc<dyn FiscalYearRepository>,
         fiscal_period_repo: Arc<dyn FiscalPeriodRepository>,
+        pool: Arc<sqlx::SqlitePool>,
     ) -> Self {
         Self {
             repo,
@@ -51,6 +54,7 @@ impl CreateCapitalContributionUseCase {
             opening_migration_repo,
             fiscal_year_repo,
             fiscal_period_repo,
+            pool,
         }
     }
 
@@ -150,9 +154,13 @@ impl CreateCapitalContributionUseCase {
         .map_err(|e| AppError::Invalid(e.to_string()))?;
 
         entry.post().map_err(|e| AppError::Invalid(e.to_string()))?;
-        // The journal repository persists the entry atomically (single write);
-        // journal_lines are written in the same transaction.
-        self.journal_repo.save(&entry).await?;
+        save_posted_with_snapshots(
+            &self.pool,
+            &*self.journal_repo,
+            &self.account_repo,
+            &entry,
+        )
+        .await?;
 
         Ok(entry.id.to_string())
     }

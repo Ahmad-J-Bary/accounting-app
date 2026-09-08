@@ -297,7 +297,21 @@ impl JournalEntryRepository for MockJournalRepository {
         _tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
         entry: &JournalEntry,
     ) -> Result<(), AppError> {
-        self.entries.lock().unwrap().push(entry.clone());
+        let mut store = self.entries.lock().unwrap();
+        store.retain(|e| e.id != entry.id);
+        store.push(entry.clone());
+        Ok(())
+    }
+
+    async fn save_reversal_pair_in_tx(
+        &self,
+        _tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
+        reversal: &JournalEntry,
+        original: &JournalEntry,
+    ) -> Result<(), AppError> {
+        let mut store = self.entries.lock().unwrap();
+        store.push(reversal.clone());
+        store.push(original.clone());
         Ok(())
     }
 
@@ -445,6 +459,14 @@ impl AccountRepository for MockAccountRepository {
         accounts.retain(|a| a.id.0 != account.id.0);
         accounts.push(account.clone());
         Ok(())
+    }
+
+    async fn save_with_tx(
+        &self,
+        _tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
+        account: &Account,
+    ) -> Result<(), AppError> {
+        self.save(account).await
     }
 
     async fn find_by_id(&self, id: &AccountId) -> Result<Option<Account>, AppError> {

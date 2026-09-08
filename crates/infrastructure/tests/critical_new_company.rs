@@ -311,6 +311,7 @@ async fn new_company_capital_contribution_posts_real_balanced_event() {
         migration_repo,
         fiscal_year_repo,
         fiscal_period_repo,
+        pool.clone(),
     );
 
     let first = uc

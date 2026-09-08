@@ -136,6 +136,7 @@ async fn register_partner_with_capital(pool: &Arc<sqlx::SqlitePool>) -> (String,
         Arc::new(SqliteOpeningMigrationRepository::new(pool.clone())),
         fiscal_year_repo,
         fiscal_period_repo,
+        pool.clone(),
     );
     contribution
         .execute(
@@ -183,6 +184,7 @@ async fn capitalization_posts_balanced_auditable_journal_and_is_idempotent() {
         journal_repo.clone(),
         fiscal_year_repo,
         fiscal_period_repo,
+        pool.clone(),
     );
 
     let first = uc

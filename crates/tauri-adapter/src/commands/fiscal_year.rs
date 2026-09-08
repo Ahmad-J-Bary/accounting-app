@@ -48,7 +48,12 @@ pub async fn reopen_fiscal_year(
     state: State<'_, AppState>,
     request: ReopenFiscalYearCommand,
 ) -> Result<FiscalYearDto, String> {
-    ReopenFiscalYearUseCase::new(state.fiscal_year_repo.clone(), state.journal_entry_repo.clone())
+    ReopenFiscalYearUseCase::new(
+        state.fiscal_year_repo.clone(),
+        state.journal_entry_repo.clone(),
+        state.account_repo.clone(),
+        state.pool.clone(),
+    )
         .execute(request)
         .await
         .map_err(|e| e.to_string())

@@ -348,6 +348,7 @@ async fn new_allocate(pool: &Arc<sqlx::SqlitePool>) -> AllocateNetProfitUseCase 
         Arc::new(SqliteAccountRepository::new(pool.clone())),
         Arc::new(SqliteJournalEntryRepository::new(pool.clone())),
         Arc::new(SqliteFiscalPeriodRepository::new(pool.clone())),
+        pool.clone(),
     )
 }
 
@@ -417,6 +418,7 @@ async fn allocation_credits_current_account_not_capital() {
         account_repo.clone(),
         Arc::new(SqliteJournalEntryRepository::new(pool.clone())),
         Arc::new(SqliteFiscalPeriodRepository::new(pool.clone())),
+        pool.clone(),
     );
     let event_key = uuid::Uuid::new_v4().to_string();
     let result = allocate
@@ -557,6 +559,7 @@ async fn allocation_is_rejected_beyond_available() {
         Arc::new(SqliteAccountRepository::new(pool.clone())),
         Arc::new(SqliteJournalEntryRepository::new(pool.clone())),
         Arc::new(SqliteFiscalPeriodRepository::new(pool.clone())),
+        pool.clone(),
     );
     let err = allocate
         .execute(DistributeProfitCommand {
@@ -591,6 +594,7 @@ async fn allocation_is_allowed_within_available() {
         Arc::new(SqliteAccountRepository::new(pool.clone())),
         Arc::new(SqliteJournalEntryRepository::new(pool.clone())),
         Arc::new(SqliteFiscalPeriodRepository::new(pool.clone())),
+        pool.clone(),
     );
     let result = allocate
         .execute(DistributeProfitCommand {
@@ -619,6 +623,7 @@ async fn allocation_after_lock_is_allowed() {
         Arc::new(SqliteAccountRepository::new(pool.clone())),
         Arc::new(SqliteJournalEntryRepository::new(pool.clone())),
         Arc::new(SqliteFiscalPeriodRepository::new(pool.clone())),
+        pool.clone(),
     );
     let event_key = uuid::Uuid::new_v4().to_string();
     let result = allocate
@@ -961,7 +966,9 @@ async fn reversing_a_distribution_restores_the_pool() {
     // Reverse through the existing reversal mechanism (Sec 16) — never delete.
     let journal_repo: Arc<dyn JournalEntryRepository> =
         Arc::new(SqliteJournalEntryRepository::new(pool.clone()));
-    ReverseJournalEntryUseCase::new(journal_repo)
+    let account_repo: Arc<dyn AccountRepository> =
+        Arc::new(SqliteAccountRepository::new(pool.clone()));
+    ReverseJournalEntryUseCase::new(journal_repo, account_repo, pool.clone())
         .execute(journal_id.clone())
         .await
         .unwrap();

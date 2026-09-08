@@ -248,7 +248,6 @@ impl FixedAssetUseCases {
             asset_account
                 .debit(base_amount)
                 .map_err(|e| AppError::Invalid(e.to_string()))?;
-            asset_account.debit += base_amount;
             accounts.push(asset_account);
         }
         if let Some(mut payment_account) = self
@@ -259,7 +258,6 @@ impl FixedAssetUseCases {
             payment_account
                 .credit(base_amount)
                 .map_err(|e| AppError::Invalid(e.to_string()))?;
-            payment_account.credit += base_amount;
             accounts.push(payment_account);
         }
 
@@ -356,10 +354,28 @@ impl FixedAssetUseCases {
         // and Balance Sheet (balances are computed from POSTED entries).
         entry.post().map_err(|e| AppError::Invalid(e.to_string()))?;
 
-        // Commit updated asset + movement + journal in ONE transaction
+        // --- Update account snapshots for depreciation lines ---
+        let mut accounts = Vec::new();
+        for line in &entry.lines {
+            if let Some(mut account) = self.account_repo.find_by_id(&line.account_id).await? {
+                if line.debit.base_amount > rust_decimal::Decimal::ZERO {
+                    account
+                        .debit(line.debit.base_amount)
+                        .map_err(|e| AppError::Invalid(e.to_string()))?;
+                }
+                if line.credit.base_amount > rust_decimal::Decimal::ZERO {
+                    account
+                        .credit(line.credit.base_amount)
+                        .map_err(|e| AppError::Invalid(e.to_string()))?;
+                }
+                accounts.push(account);
+            }
+        }
+
+        // Commit updated asset + movement + journal + accounts in ONE transaction
         // (Sec 9 atomicity).
         self.repo
-            .save_asset_with_accounting(&asset, &[movement], &[entry], &[])
+            .save_asset_with_accounting(&asset, &[movement], &[entry], &accounts)
             .await?;
 
         Ok(())
@@ -570,10 +586,28 @@ impl FixedAssetUseCases {
             // entries).
             entry.post().map_err(|e| AppError::Invalid(e.to_string()))?;
 
-            // Commit updated asset + movement + journal in ONE transaction
+            // --- Update account snapshots for depreciation lines ---
+            let mut accounts = Vec::new();
+            for line in &entry.lines {
+                if let Some(mut account) = self.account_repo.find_by_id(&line.account_id).await? {
+                    if line.debit.base_amount > rust_decimal::Decimal::ZERO {
+                        account
+                            .debit(line.debit.base_amount)
+                            .map_err(|e| AppError::Invalid(e.to_string()))?;
+                    }
+                    if line.credit.base_amount > rust_decimal::Decimal::ZERO {
+                        account
+                            .credit(line.credit.base_amount)
+                            .map_err(|e| AppError::Invalid(e.to_string()))?;
+                    }
+                    accounts.push(account);
+                }
+            }
+
+            // Commit updated asset + movement + journal + accounts in ONE transaction
             // (Sec 9 atomicity).
             self.repo
-                .save_asset_with_accounting(&asset, &[movement], &[entry], &[])
+                .save_asset_with_accounting(&asset, &[movement], &[entry], &accounts)
                 .await?;
 
             results.push(RotationResult {

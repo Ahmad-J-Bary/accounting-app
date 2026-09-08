@@ -251,6 +251,7 @@ async fn equity_statement_reconciles_with_partner_ledgers() {
         account_repo.clone(),
         journal_repo.clone(),
         Arc::new(SqliteFiscalPeriodRepository::new(pool.clone())),
+        pool.clone(),
     )
     .execute(DistributeProfitCommand {
         source: ProfitDistributionSource::OpeningMigration {
@@ -280,6 +281,7 @@ async fn equity_statement_reconciles_with_partner_ledgers() {
         Arc::new(SqliteOpeningMigrationRepository::new(pool.clone())),
         fiscal_year_repo.clone(),
         fiscal_period_repo.clone(),
+        pool.clone(),
     )
     .execute(
         a_id.to_string(),
@@ -297,6 +299,7 @@ async fn equity_statement_reconciles_with_partner_ledgers() {
         Arc::new(SqliteOpeningMigrationRepository::new(pool.clone())),
         fiscal_year_repo.clone(),
         fiscal_period_repo.clone(),
+        pool.clone(),
     )
     .execute(
         b_id.to_string(),
@@ -315,6 +318,7 @@ async fn equity_statement_reconciles_with_partner_ledgers() {
         journal_repo.clone(),
         fiscal_year_repo,
         fiscal_period_repo,
+        pool.clone(),
     )
     .execute(
         a_id.to_string(),
@@ -468,6 +472,7 @@ async fn equity_statement_date_range_filtering() {
         account_repo.clone(),
         journal_repo.clone(),
         Arc::new(SqliteFiscalPeriodRepository::new(pool.clone())),
+        pool.clone(),
     )
     .execute(DistributeProfitCommand {
         source: ProfitDistributionSource::OpeningMigration {
@@ -495,6 +500,7 @@ async fn equity_statement_date_range_filtering() {
         Arc::new(SqliteOpeningMigrationRepository::new(pool.clone())),
         fiscal_year_repo,
         fiscal_period_repo,
+        pool.clone(),
     )
     .execute(
         a_id.to_string(),

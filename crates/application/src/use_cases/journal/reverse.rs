@@ -1,8 +1,11 @@
+use std::collections::HashMap;
 use std::sync::Arc;
+
 use uuid::Uuid;
 
 use crate::dto::journal_entry_dto::JournalEntryDto;
 use crate::errors::AppError;
+use crate::ports::account_repository::AccountRepository;
 use crate::ports::journal_entry_repository::JournalEntryRepository;
 use domain::accounting::journal_entry::{JournalEntry, JournalEntryStatus};
 use domain::shared::JournalEntryId;
@@ -13,11 +16,21 @@ use domain::shared::JournalEntryId;
 /// through `save_reversal_pair` (single transaction).
 pub struct ReverseJournalEntryUseCase {
     repo: Arc<dyn JournalEntryRepository>,
+    account_repo: Arc<dyn AccountRepository>,
+    pool: Arc<sqlx::SqlitePool>,
 }
 
 impl ReverseJournalEntryUseCase {
-    pub fn new(repo: Arc<dyn JournalEntryRepository>) -> Self {
-        Self { repo }
+    pub fn new(
+        repo: Arc<dyn JournalEntryRepository>,
+        account_repo: Arc<dyn AccountRepository>,
+        pool: Arc<sqlx::SqlitePool>,
+    ) -> Self {
+        Self {
+            repo,
+            account_repo,
+            pool,
+        }
     }
 
     pub async fn execute(&self, entry_id: String) -> Result<JournalEntryDto, AppError> {
@@ -56,7 +69,48 @@ impl ReverseJournalEntryUseCase {
         let mut original = original;
         original.reverse().map_err(AppError::from)?;
 
-        self.repo.save_reversal_pair(&reversal, &original).await?;
+        // Snapshot sync: the reversal entry is Posted — apply its line deltas
+        let affected_account_ids: Vec<domain::shared::AccountId> = reversal
+            .lines
+            .iter()
+            .map(|l| l.account_id)
+            .collect();
+
+        let accounts = self.account_repo.find_by_ids(&affected_account_ids).await?;
+        let mut account_map: HashMap<domain::shared::AccountId, _> =
+            accounts.into_iter().map(|a| (a.id, a)).collect();
+
+        for line in &reversal.lines {
+            if let Some(account) = account_map.get_mut(&line.account_id) {
+                if line.debit.base_amount > rust_decimal::Decimal::ZERO {
+                    account
+                        .debit(line.debit.base_amount)
+                        .map_err(|e| AppError::Invalid(e.to_string()))?;
+                }
+                if line.credit.base_amount > rust_decimal::Decimal::ZERO {
+                    account
+                        .credit(line.credit.base_amount)
+                        .map_err(|e| AppError::Invalid(e.to_string()))?;
+                }
+            }
+        }
+
+        // Persist reversal pair + account snapshots atomically
+        let mut tx = self
+            .pool
+            .begin()
+            .await
+            .map_err(|e| AppError::Infrastructure(format!("failed to begin transaction: {e}")))?;
+
+        self.repo.save_reversal_pair_in_tx(&mut tx, &reversal, &original).await?;
+
+        for account in account_map.values() {
+            self.account_repo.save_with_tx(&mut tx, account).await?;
+        }
+
+        tx.commit()
+            .await
+            .map_err(|e| AppError::Infrastructure(format!("failed to commit transaction: {e}")))?;
 
         Ok(JournalEntryDto::from(reversal))
     }

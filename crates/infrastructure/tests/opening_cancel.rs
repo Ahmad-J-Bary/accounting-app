@@ -144,6 +144,7 @@ async fn post_migration(pool: &Arc<sqlx::SqlitePool>, id: &str) {
         account_repo.clone(),
         journal_repo.clone(),
         posting_repo.clone(),
+        pool.clone(),
     )
     .execute(id.to_string())
     .await

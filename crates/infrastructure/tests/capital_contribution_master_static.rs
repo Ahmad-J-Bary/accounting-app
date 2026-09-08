@@ -154,6 +154,7 @@ async fn contribution_keeps_master_static_and_ledger_is_truth() {
         Arc::new(SqliteOpeningMigrationRepository::new(pool.clone())),
         Arc::new(SqliteFiscalYearRepository::new(pool.clone())),
         Arc::new(SqliteFiscalPeriodRepository::new(pool.clone())),
+        pool.clone(),
     );
     case.execute(
         partner_id.clone(),

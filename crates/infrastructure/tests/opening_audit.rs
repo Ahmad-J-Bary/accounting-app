@@ -179,6 +179,7 @@ async fn lifecycle_stamps_full_audit_trail_on_persisted_row() {
         account_repo.clone(),
         journal_repo.clone(),
         posting_repo.clone(),
+        pool.clone(),
     )
     .execute(id.clone())
     .await
