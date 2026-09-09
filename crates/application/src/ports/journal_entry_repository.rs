@@ -96,8 +96,13 @@ pub trait JournalEntryRepository: Send + Sync {
     /// Monthly revenue/expenses aggregation: groups posted journal lines by
     /// YYYY-MM and account type, computing revenue (net credit) and expenses
     /// (abs magnitude) per month. Excludes opening entries.
+    /// When `from_date` / `to_date` are provided (ISO-8601 `YYYY-MM-DD`),
+    /// only entries whose `entry_date` falls within the inclusive range are
+    /// included.  `None` means unbounded.
     async fn aggregate_monthly_revenue_expenses(
         &self,
+        from_date: Option<&str>,
+        to_date: Option<&str>,
     ) -> Result<Vec<MonthlyRevenueExpense>, AppError>;
 
     /// Count of posted journal entries (for dashboard statistics).

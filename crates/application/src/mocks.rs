@@ -433,6 +433,8 @@ impl JournalEntryRepository for MockJournalRepository {
 
     async fn aggregate_monthly_revenue_expenses(
         &self,
+        _from_date: Option<&str>,
+        _to_date: Option<&str>,
     ) -> Result<Vec<crate::ports::journal_entry_repository::MonthlyRevenueExpense>, AppError> {
         Ok(vec![])
     }

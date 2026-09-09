@@ -41,6 +41,23 @@ export function dashboardPeriodRange(period: DashboardPeriod): { fromTs: number;
   }
 }
 
+/** ISO-8601 date bounds for the selected Dashboard period. */
+function dashboardPeriodDates(period: DashboardPeriod): { fromDate: string; toDate: string } {
+  const now = new Date();
+  const toDate = now.toISOString().slice(0, 10);
+  switch (period) {
+    case "today":
+      return { fromDate: toDate, toDate };
+    case "this_month": {
+      const mm = String(now.getMonth() + 1).padStart(2, "0");
+      return { fromDate: `${now.getFullYear()}-${mm}-01`, toDate };
+    }
+    case "this_year":
+    default:
+      return { fromDate: `${now.getFullYear()}-01-01`, toDate };
+  }
+}
+
 interface DashboardKpiBackendResponse {
   kpis: Record<string, string>;
   monthly: Array<{ year_month: string; revenue: number; expenses: number }>;
@@ -70,9 +87,15 @@ export function useDashboardMetrics(period: DashboardPeriod): {
   isLoading: boolean;
   refreshing: boolean;
 } {
+  const { fromDate, toDate } = useMemo(() => dashboardPeriodDates(period), [period]);
+
   const dashboardKpiQuery = useQuery({
-    queryKey: [...QUERY_KEYS.dashboard, "kpis"],
-    queryFn: () => invoke<DashboardKpiBackendResponse>("compute_dashboard_kpis"),
+    queryKey: [...QUERY_KEYS.dashboard, "kpis", fromDate, toDate],
+    queryFn: () =>
+      invoke<DashboardKpiBackendResponse>("compute_dashboard_kpis", {
+        fromDate,
+        toDate,
+      }),
   });
 
   const journalQuery = useQuery({

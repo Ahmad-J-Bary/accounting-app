@@ -537,6 +537,8 @@ struct MonthlyAggregationRow {
 
 pub async fn aggregate_monthly_revenue_expenses(
     pool: &SqlitePool,
+    from_date: Option<&str>,
+    to_date: Option<&str>,
 ) -> Result<Vec<application::ports::journal_entry_repository::MonthlyRevenueExpense>, AppError>
 {
     let rows = sqlx::query_as::<_, MonthlyAggregationRow>(
@@ -555,9 +557,13 @@ pub async fn aggregate_monthly_revenue_expenses(
                 OR (je.source_id NOT LIKE 'opening_balance:%'
                     AND je.source_id NOT LIKE 'residual_classification:%'
                     AND je.source_id NOT LIKE 'ob_reversal:%'))
+           AND je.entry_date >= COALESCE(?, '0000-01-01')
+           AND je.entry_date <= COALESCE(?, '9999-12-31')
          GROUP BY year_month, a.account_type
          ORDER BY year_month ASC",
     )
+    .bind(from_date)
+    .bind(to_date)
     .fetch_all(pool)
     .await
     .map_err(|e| AppError::Infrastructure(e.to_string()))?;

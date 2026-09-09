@@ -76,6 +76,8 @@ pub struct DashboardKpiResponse {
 #[tauri::command]
 pub async fn compute_dashboard_kpis(
     state: State<'_, AppState>,
+    from_date: Option<String>,
+    to_date: Option<String>,
 ) -> Result<DashboardKpiResponse, String> {
     let purpose_nets = state
         .journal_entry_repo
@@ -90,7 +92,7 @@ pub async fn compute_dashboard_kpis(
 
     let monthly = state
         .journal_entry_repo
-        .aggregate_monthly_revenue_expenses()
+        .aggregate_monthly_revenue_expenses(from_date.as_deref(), to_date.as_deref())
         .await
         .map_err(|e| e.to_string())?;
 

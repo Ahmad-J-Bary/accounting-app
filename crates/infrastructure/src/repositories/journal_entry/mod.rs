@@ -122,9 +122,11 @@ impl JournalEntryRepository for SqliteJournalEntryRepository {
 
     async fn aggregate_monthly_revenue_expenses(
         &self,
+        from_date: Option<&str>,
+        to_date: Option<&str>,
     ) -> Result<Vec<application::ports::journal_entry_repository::MonthlyRevenueExpense>, AppError>
     {
-        queries::aggregate_monthly_revenue_expenses(&self.pool).await
+        queries::aggregate_monthly_revenue_expenses(&self.pool, from_date, to_date).await
     }
 
     async fn count_posted_entries(&self) -> Result<i64, AppError> {
