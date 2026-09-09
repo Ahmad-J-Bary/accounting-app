@@ -32,6 +32,8 @@ pub struct AccountAggregationRow {
     pub total_credit_base: Decimal,
 }
 
+
+
 #[async_trait]
 pub trait JournalEntryRepository: Send + Sync {
     async fn save(&self, entry: &JournalEntry) -> Result<(), AppError>;
@@ -77,6 +79,7 @@ pub trait JournalEntryRepository: Send + Sync {
         from_date: DateTime<Utc>,
         to_date: DateTime<Utc>,
     ) -> Result<Vec<AccountAggregationRow>, AppError>;
+
     async fn get_next_entry_number(&self) -> Result<String, AppError>;
     async fn find_by_source_id(&self, source_id: &str) -> Result<Option<JournalEntry>, AppError>;
     async fn find_all_by_source_id(&self, source_id: &str) -> Result<Vec<JournalEntry>, AppError>;

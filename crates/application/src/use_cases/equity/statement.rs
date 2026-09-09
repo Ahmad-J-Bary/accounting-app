@@ -67,6 +67,10 @@ pub struct PartnerEquityStatementDto {
 /// - Period-specific profit and drawings (within the date range)
 /// - Accumulated profit/drawings from prior periods (before from_date)
 /// - Capital ratio and effective profit-sharing ratio
+///
+/// Performance: uses a single batched `list_by_accounts` query (1 query
+/// regardless of partner count) and iterates in Rust, preserving exact
+/// Decimal scale from journal line storage.
 pub struct GetPartnerEquityStatementUseCase {
     partner_repo: Arc<dyn PartnerRepository>,
     journal_repo: Arc<dyn JournalEntryRepository>,
@@ -94,30 +98,76 @@ impl GetPartnerEquityStatementUseCase {
         let total_capital: Decimal = partners.iter().map(|p| p.amount_local).sum();
         let total_original_capital: Decimal = partners.iter().map(|p| p.amount_original).sum();
 
+        // Collect all unique partner account IDs for a single batched query
+        let mut all_account_ids: Vec<AccountId> = Vec::new();
+        let mut seen = std::collections::HashSet::new();
+        for p in &partners {
+            for aid in [
+                p.linked_account_id,
+                p.drawings_account_id,
+                p.current_account_id,
+            ]
+            .into_iter()
+            .flatten()
+            {
+                if seen.insert(aid) {
+                    all_account_ids.push(aid);
+                }
+            }
+        }
+
+        // Single batched query — loads all journal entries for all partner accounts at once.
+        // This eliminates N+1 (was P×5 queries for P partners; now always 1).
+        let entries = self
+            .journal_repo
+            .list_by_accounts(&all_account_ids)
+            .await?;
+
+        // Index entries by account_id for O(1) lookup during row construction.
+        // Each entry may contain multiple lines; only lines matching the account_id
+        // contribute to that account's balance.
+        use std::collections::HashMap;
+        let mut by_account: HashMap<AccountId, Vec<&domain::accounting::JournalEntry>> =
+            HashMap::new();
+        for entry in &entries {
+            if entry.status != JournalEntryStatus::Posted {
+                continue;
+            }
+            for line in &entry.lines {
+                by_account.entry(line.account_id).or_default().push(entry);
+            }
+        }
+
+        // --- Build partner rows from batched data (pure in-memory) ---
         let mut rows = Vec::with_capacity(partners.len());
         let mut total_profit = Decimal::ZERO;
         let mut total_drawings = Decimal::ZERO;
         let mut total_equity = Decimal::ZERO;
 
         for p in &partners {
-            let ledger_balance = match p.linked_account_id {
-                Some(account_id) => self.ledger_balance(&account_id).await?,
-                None => Decimal::ZERO,
-            };
-            // Drawings are a debit-normal contra-equity account, so their signed
-            // ledger balance is negative. The statement presents the magnitude
-            // and SUBTRACTS it: `total_equity = ledger + current - drawings`
-            // then reduces equity — a drawing must never inflate it.
-            let drawings = match p.drawings_account_id {
-                Some(account_id) => self.ledger_balance(&account_id).await?.abs(),
-                None => Decimal::ZERO,
-            };
-            // Accumulated profit allocations live in the partner's CURRENT
-            // account, never inside the capital account (Sec 4 / Sec 13).
-            let (current_balance, loss_allocated) = match p.current_account_id {
-                Some(account_id) => self.ledger_breakdown(&account_id).await?,
+            // Capital: net credit − debit balance of linked account
+            let (ledger_balance, _debits) = match p.linked_account_id {
+                Some(account_id) => ledger_breakdown_for_account(
+                    &by_account, &account_id,
+                ),
                 None => (Decimal::ZERO, Decimal::ZERO),
             };
+
+            // Drawings: debit-normal contra-equity, abs() presents the magnitude
+            let drawings = match p.drawings_account_id {
+                Some(account_id) => {
+                    let (bal, _) = ledger_breakdown_for_account(&by_account, &account_id);
+                    bal.abs()
+                }
+                None => Decimal::ZERO,
+            };
+
+            // Current/profit account: (net credit−debit balance, debit magnitude)
+            let (current_balance, loss_allocated) = match p.current_account_id {
+                Some(account_id) => ledger_breakdown_for_account(&by_account, &account_id),
+                None => (Decimal::ZERO, Decimal::ZERO),
+            };
+
             let capital_registered = p.amount_local;
             let profit_allocated = current_balance;
             let total_equity_row = ledger_balance + current_balance - drawings;
@@ -149,20 +199,21 @@ impl GetPartnerEquityStatementUseCase {
                 period_drawings,
             ) = if let (Some(from), Some(to)) = (from_date, to_date) {
                 let current_breakdown = match p.current_account_id {
-                    Some(account_id) => self.ledger_breakdown_ranged(&account_id, from, to).await?,
+                    Some(account_id) => ledger_breakdown_ranged_for_account(
+                        &by_account, &account_id, from, to,
+                    ),
                     None => (Decimal::ZERO, Decimal::ZERO, Decimal::ZERO),
                 };
                 let drawings_breakdown = match p.drawings_account_id {
-                    Some(account_id) => {
-                        self.drawings_breakdown_ranged(&account_id, from, to)
-                            .await?
-                    }
+                    Some(account_id) => drawings_breakdown_ranged_for_account(
+                        &by_account, &account_id, from, to,
+                    ),
                     None => (Decimal::ZERO, Decimal::ZERO),
                 };
                 (
                     current_breakdown.1,  // prior credit balance
                     drawings_breakdown.1, // prior debit magnitude
-                    current_breakdown.0,  // period net (credit - debit)
+                    current_breakdown.0,  // period net (credit − debit)
                     drawings_breakdown.0, // period debit magnitude
                 )
             } else {
@@ -200,91 +251,86 @@ impl GetPartnerEquityStatementUseCase {
             rows,
         })
     }
+}
 
-    async fn ledger_balance(&self, account_id: &AccountId) -> Result<Decimal, AppError> {
-        Ok(self.ledger_breakdown(account_id).await?.0)
-    }
-
-    /// (net credit−debit balance, debit magnitude) for an account across all
-    /// Posted journal lines only, from the ledgers themselves.
-    async fn ledger_breakdown(
-        &self,
-        account_id: &AccountId,
-    ) -> Result<(Decimal, Decimal), AppError> {
-        let entries = self.journal_repo.list_by_account(account_id).await?;
-        let mut balance = Decimal::ZERO;
-        let mut debits = Decimal::ZERO;
-        for entry in &entries {
-            if entry.status != JournalEntryStatus::Posted {
-                continue;
+/// (net credit−debit balance, debit magnitude) for a single account, computed
+/// from the pre-loaded entries map. Matches the old `ledger_breakdown` semantics
+/// exactly — preserves Decimal scale from the journal line storage.
+fn ledger_breakdown_for_account(
+    by_account: &std::collections::HashMap<AccountId, Vec<&domain::accounting::JournalEntry>>,
+    account_id: &AccountId,
+) -> (Decimal, Decimal) {
+    let entries = match by_account.get(account_id) {
+        Some(e) => e,
+        None => return (Decimal::ZERO, Decimal::ZERO),
+    };
+    let mut balance = Decimal::ZERO;
+    let mut debits = Decimal::ZERO;
+    for entry in entries {
+        for line in &entry.lines {
+            if line.account_id == *account_id {
+                balance += line.credit.base_amount - line.debit.base_amount;
+                debits += line.debit.base_amount;
             }
-            for line in &entry.lines {
-                if line.account_id == *account_id {
-                    balance += line.credit.base_amount - line.debit.base_amount;
-                    debits += line.debit.base_amount;
+        }
+    }
+    (balance, debits)
+}
+
+/// Period breakdown for the current/profit account:
+/// (period_net, prior_credit_balance, _unused)
+fn ledger_breakdown_ranged_for_account(
+    by_account: &std::collections::HashMap<AccountId, Vec<&domain::accounting::JournalEntry>>,
+    account_id: &AccountId,
+    from: DateTime<Utc>,
+    to: DateTime<Utc>,
+) -> (Decimal, Decimal, Decimal) {
+    let entries = match by_account.get(account_id) {
+        Some(e) => e,
+        None => return (Decimal::ZERO, Decimal::ZERO, Decimal::ZERO),
+    };
+    let mut period_net = Decimal::ZERO;
+    let mut prior_balance = Decimal::ZERO;
+    for entry in entries {
+        for line in &entry.lines {
+            if line.account_id == *account_id {
+                let net = line.credit.base_amount - line.debit.base_amount;
+                if entry.entry_date < from {
+                    prior_balance += net;
+                } else if entry.entry_date <= to {
+                    period_net += net;
                 }
             }
         }
-        Ok((balance, debits))
     }
+    (period_net, prior_balance, Decimal::ZERO)
+}
 
-    /// Period breakdown for the current/profit account:
-    /// (period_net, prior_credit_balance, _unused)
-    /// where period_net = credit - debit within [from, to].
-    async fn ledger_breakdown_ranged(
-        &self,
-        account_id: &AccountId,
-        from: DateTime<Utc>,
-        to: DateTime<Utc>,
-    ) -> Result<(Decimal, Decimal, Decimal), AppError> {
-        let entries = self.journal_repo.list_by_account(account_id).await?;
-        let mut period_net = Decimal::ZERO;
-        let mut prior_balance = Decimal::ZERO;
-        for entry in &entries {
-            if entry.status != JournalEntryStatus::Posted {
-                continue;
-            }
-            for line in &entry.lines {
-                if line.account_id == *account_id {
-                    let line_date = entry.entry_date;
-                    let net = line.credit.base_amount - line.debit.base_amount;
-                    if line_date < from {
-                        prior_balance += net;
-                    } else if line_date <= to {
-                        period_net += net;
-                    }
+/// Period breakdown for the drawings account (debit-normal contra-equity):
+/// (period_debit_magnitude, prior_debit_magnitude)
+fn drawings_breakdown_ranged_for_account(
+    by_account: &std::collections::HashMap<AccountId, Vec<&domain::accounting::JournalEntry>>,
+    account_id: &AccountId,
+    from: DateTime<Utc>,
+    to: DateTime<Utc>,
+) -> (Decimal, Decimal) {
+    let entries = match by_account.get(account_id) {
+        Some(e) => e,
+        None => return (Decimal::ZERO, Decimal::ZERO),
+    };
+    let mut period_debits = Decimal::ZERO;
+    let mut prior_debits = Decimal::ZERO;
+    for entry in entries {
+        for line in &entry.lines {
+            if line.account_id == *account_id {
+                let debit = line.debit.base_amount;
+                if entry.entry_date < from {
+                    prior_debits += debit;
+                } else if entry.entry_date <= to {
+                    period_debits += debit;
                 }
             }
         }
-        Ok((period_net, prior_balance, Decimal::ZERO))
     }
-
-    /// Period breakdown for the drawings account (debit-normal contra-equity):
-    /// (period_debit_magnitude, prior_debit_magnitude)
-    async fn drawings_breakdown_ranged(
-        &self,
-        account_id: &AccountId,
-        from: DateTime<Utc>,
-        to: DateTime<Utc>,
-    ) -> Result<(Decimal, Decimal), AppError> {
-        let entries = self.journal_repo.list_by_account(account_id).await?;
-        let mut period_debits = Decimal::ZERO;
-        let mut prior_debits = Decimal::ZERO;
-        for entry in &entries {
-            if entry.status != JournalEntryStatus::Posted {
-                continue;
-            }
-            for line in &entry.lines {
-                if line.account_id == *account_id {
-                    let debit = line.debit.base_amount;
-                    if entry.entry_date < from {
-                        prior_debits += debit;
-                    } else if entry.entry_date <= to {
-                        period_debits += debit;
-                    }
-                }
-            }
-        }
-        Ok((period_debits, prior_debits))
-    }
+    (period_debits, prior_debits)
 }

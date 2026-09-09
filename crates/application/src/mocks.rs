@@ -424,6 +424,7 @@ impl JournalEntryRepository for MockJournalRepository {
             )
             .collect())
     }
+
 }
 
 pub struct MockAccountRepository {
