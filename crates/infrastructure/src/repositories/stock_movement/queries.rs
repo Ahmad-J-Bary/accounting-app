@@ -1,11 +1,12 @@
 use super::mappers::row_to_movement;
 use super::models::StockMovementRow;
-use application::dto::stock_dto::StockMovementDetailDto;
+use application::dto::stock_dto::{StockMovementDetailDto, StockMovementDto};
 use application::errors::AppError;
 use domain::inventory::stock_movement::StockMovement;
 use domain::shared::ids::{MaterialId, StockMovementId};
 use rust_decimal::Decimal;
 use sqlx::SqlitePool;
+use std::collections::HashMap;
 
 const COLUMNS: &str = "id, material_id, quantity, unit_cost, unit_cost_base, total_cost, total_cost_base, raw_total_cost_base, original_currency, fx_rate, movement_type, reason, reference, document_number, warehouse_id, movement_date, created_at, signed_quantity";
 
@@ -410,4 +411,163 @@ pub async fn get_next_inventory_reference(pool: &SqlitePool) -> Result<String, A
 
     let max_val = row.and_then(|r| r.0).unwrap_or(0);
     Ok((max_val + 1).to_string())
+}
+
+#[derive(sqlx::FromRow)]
+struct MovementWithNameRow {
+    pub id: String,
+    pub material_id: String,
+    pub quantity: String,
+    pub unit_cost: String,
+    pub unit_cost_base: String,
+    pub total_cost: String,
+    pub total_cost_base: String,
+    pub original_currency: Option<String>,
+    pub fx_rate: String,
+    pub movement_type: String,
+    pub reason: Option<String>,
+    pub reference: Option<String>,
+    pub document_number: Option<String>,
+    pub warehouse_id: Option<String>,
+    pub movement_date: String,
+    pub created_at: String,
+    pub signed_quantity: Option<String>,
+    pub material_name: Option<String>,
+}
+
+pub async fn list_all_with_material_names(
+    pool: &SqlitePool,
+) -> Result<Vec<(StockMovementDto, Option<String>)>, AppError> {
+    let rows = sqlx::query_as::<_, MovementWithNameRow>(
+        r#"
+        SELECT
+            sm.id, sm.material_id, sm.quantity, sm.unit_cost, sm.unit_cost_base,
+            sm.total_cost, sm.total_cost_base,
+            sm.original_currency, sm.fx_rate, sm.movement_type, sm.reason,
+            sm.reference, sm.document_number, sm.warehouse_id,
+            sm.movement_date, sm.created_at, sm.signed_quantity,
+            m.name AS material_name
+        FROM stock_movements sm
+        LEFT JOIN materials m ON sm.material_id = m.id
+        ORDER BY sm.movement_date DESC
+        "#,
+    )
+    .fetch_all(pool)
+    .await
+    .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+
+    Ok(rows
+        .into_iter()
+        .map(|r| {
+            let doc_num = r.document_number.clone();
+            (
+                StockMovementDto {
+                    id: r.id,
+                    material_id: r.material_id,
+                    material_name: r.material_name,
+                    quantity: r.quantity,
+                    movement_type: r.movement_type,
+                    unit_cost: Some(r.unit_cost),
+                    unit_cost_base: Some(r.unit_cost_base),
+                    total_cost: Some(r.total_cost),
+                    total_cost_base: Some(r.total_cost_base),
+                    original_currency: r.original_currency,
+                    fx_rate: Some(r.fx_rate),
+                    reason: r.reason,
+                    reference: r.reference,
+                    source_document_id: None,
+                    warehouse_id: r.warehouse_id,
+                    movement_date: r.movement_date,
+                    created_at: r.created_at,
+                    signed_quantity: r.signed_quantity,
+                },
+                doc_num,
+            )
+        })
+        .collect())
+}
+
+pub async fn resolve_source_document_ids(
+    pool: &SqlitePool,
+    document_numbers: &[String],
+) -> Result<HashMap<String, String>, AppError> {
+    if document_numbers.is_empty() {
+        return Ok(HashMap::new());
+    }
+
+    let mut result: HashMap<String, String> = HashMap::new();
+
+    // 1. Unified invoices (highest priority)
+    {
+        let placeholders: Vec<&str> = document_numbers.iter().map(|_| "?").collect();
+        let sql = format!(
+            "SELECT invoice_number, id FROM unified_invoices WHERE invoice_number IN ({})",
+            placeholders.join(", ")
+        );
+        let mut query = sqlx::query_as::<_, (String, String)>(&sql);
+        for dn in document_numbers {
+            query = query.bind(dn);
+        }
+        if let Ok(rows) = query.fetch_all(pool).await {
+            for (invoice_number, id) in rows {
+                result.insert(invoice_number, id);
+            }
+        }
+    }
+
+    // 2. Legacy sales invoices (fill only missing)
+    {
+        let placeholders: Vec<&str> = document_numbers.iter().map(|_| "?").collect();
+        let sql = format!(
+            "SELECT invoice_number, id FROM sales_invoices WHERE invoice_number IN ({})",
+            placeholders.join(", ")
+        );
+        let mut query = sqlx::query_as::<_, (String, String)>(&sql);
+        for dn in document_numbers {
+            query = query.bind(dn);
+        }
+        if let Ok(rows) = query.fetch_all(pool).await {
+            for (invoice_number, id) in rows {
+                result.entry(invoice_number).or_insert(id);
+            }
+        }
+    }
+
+    // 3. Sales returns (overwrite)
+    {
+        let placeholders: Vec<&str> = document_numbers.iter().map(|_| "?").collect();
+        let sql = format!(
+            "SELECT return_number, id FROM sales_returns WHERE return_number IN ({})",
+            placeholders.join(", ")
+        );
+        let mut query = sqlx::query_as::<_, (String, String)>(&sql);
+        for dn in document_numbers {
+            query = query.bind(dn);
+        }
+        if let Ok(rows) = query.fetch_all(pool).await {
+            for (return_number, id) in rows {
+                result.insert(return_number, id);
+            }
+        }
+    }
+
+    // 4. Purchase returns (overwrite)
+    {
+        let placeholders: Vec<&str> = document_numbers.iter().map(|_| "?").collect();
+        let sql = format!(
+            "SELECT return_number, id FROM purchase_returns WHERE return_number IN ({})",
+            placeholders.join(", ")
+        );
+        let mut query = sqlx::query_as::<_, (String, String)>(&sql);
+        for dn in document_numbers {
+            query = query.bind(dn);
+        }
+        if let Ok(rows) = query.fetch_all(pool).await {
+            for (return_number, id) in rows {
+                result.insert(return_number, id);
+            }
+        }
+    }
+
+    Ok(result)
 }

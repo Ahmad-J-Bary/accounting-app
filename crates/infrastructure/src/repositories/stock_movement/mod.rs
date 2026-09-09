@@ -130,4 +130,18 @@ impl StockMovementRepository for SqliteStockMovementRepository {
     async fn get_next_inventory_reference(&self) -> Result<String, AppError> {
         queries::get_next_inventory_reference(&self.pool).await
     }
+
+    async fn list_all_with_material_names(
+        &self,
+    ) -> Result<Vec<(application::dto::stock_dto::StockMovementDto, Option<String>)>, AppError>
+    {
+        queries::list_all_with_material_names(&self.pool).await
+    }
+
+    async fn resolve_source_document_ids(
+        &self,
+        document_numbers: &[String],
+    ) -> Result<std::collections::HashMap<String, String>, AppError> {
+        queries::resolve_source_document_ids(&self.pool, document_numbers).await
+    }
 }
