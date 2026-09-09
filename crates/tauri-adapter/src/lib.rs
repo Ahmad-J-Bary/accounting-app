@@ -327,6 +327,7 @@ pub fn run() -> tauri::Builder<tauri::Wry> {
             commands::assets::run_yearly_rotation,
             // Dashboard
             commands::dashboard::get_receivables_payables_summary,
+            commands::dashboard::compute_dashboard_kpis,
             // Partners
             commands::partner::add_partner,
             commands::partner::create_capital_contribution,

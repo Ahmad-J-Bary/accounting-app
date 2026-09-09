@@ -1,5 +1,7 @@
 use crate::bootstrap::container::AppState;
+use application::ports::journal_entry_repository::MonthlyRevenueExpense;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use tauri::State;
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -63,4 +65,34 @@ pub async fn get_receivables_payables_summary(
         unlinked_customers,
         unlinked_suppliers,
     })
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct DashboardKpiResponse {
+    pub kpis: HashMap<String, String>,
+    pub monthly: Vec<MonthlyRevenueExpense>,
+}
+
+#[tauri::command]
+pub async fn compute_dashboard_kpis(
+    state: State<'_, AppState>,
+) -> Result<DashboardKpiResponse, String> {
+    let purpose_nets = state
+        .journal_entry_repo
+        .aggregate_dashboard_kpis()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    let kpis: HashMap<String, String> = purpose_nets
+        .into_iter()
+        .map(|(k, v)| (k, v.to_string()))
+        .collect();
+
+    let monthly = state
+        .journal_entry_repo
+        .aggregate_monthly_revenue_expenses()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    Ok(DashboardKpiResponse { kpis, monthly })
 }

@@ -4,6 +4,7 @@ use chrono::{DateTime, Utc};
 use domain::accounting::{JournalEntry, JournalEntryId, JournalType};
 use domain::shared::AccountId;
 use rust_decimal::Decimal;
+use std::collections::HashMap;
 
 /**
  * How a journal listing relates to REVERSAL PAIRS. Reports must name this
@@ -85,6 +86,23 @@ pub trait JournalEntryRepository: Send + Sync {
     async fn find_all_by_source_id(&self, source_id: &str) -> Result<Vec<JournalEntry>, AppError>;
     async fn delete(&self, id: &JournalEntryId) -> Result<(), AppError>;
 
+    /// Dashboard KPI aggregation: groups posted journal lines by account
+    /// purpose, computing the net position for each balance-sheet tile
+    /// (cash, bank, receivables, payables, loans).
+    async fn aggregate_dashboard_kpis(
+        &self,
+    ) -> Result<HashMap<String, Decimal>, AppError>;
+
+    /// Monthly revenue/expenses aggregation: groups posted journal lines by
+    /// YYYY-MM and account type, computing revenue (net credit) and expenses
+    /// (abs magnitude) per month. Excludes opening entries.
+    async fn aggregate_monthly_revenue_expenses(
+        &self,
+    ) -> Result<Vec<MonthlyRevenueExpense>, AppError>;
+
+    /// Count of posted journal entries (for dashboard statistics).
+    async fn count_posted_entries(&self) -> Result<i64, AppError>;
+
     /// Persist a journal entry within an existing transaction.
     /// Used by atomic composite operations (e.g. fiscal year close) that must
     /// write the closing entry and update fiscal year metadata in one commit.
@@ -101,4 +119,11 @@ pub trait JournalEntryRepository: Send + Sync {
         reversal: &JournalEntry,
         original: &JournalEntry,
     ) -> Result<(), AppError>;
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct MonthlyRevenueExpense {
+    pub year_month: String,
+    pub revenue: Decimal,
+    pub expenses: Decimal,
 }

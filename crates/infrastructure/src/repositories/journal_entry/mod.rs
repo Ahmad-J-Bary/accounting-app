@@ -114,6 +114,23 @@ impl JournalEntryRepository for SqliteJournalEntryRepository {
         queries::aggregate_by_account_for_period(&self.pool, from_date, to_date).await
     }
 
+    async fn aggregate_dashboard_kpis(
+        &self,
+    ) -> Result<std::collections::HashMap<String, rust_decimal::Decimal>, AppError> {
+        queries::aggregate_dashboard_kpis(&self.pool).await
+    }
+
+    async fn aggregate_monthly_revenue_expenses(
+        &self,
+    ) -> Result<Vec<application::ports::journal_entry_repository::MonthlyRevenueExpense>, AppError>
+    {
+        queries::aggregate_monthly_revenue_expenses(&self.pool).await
+    }
+
+    async fn count_posted_entries(&self) -> Result<i64, AppError> {
+        queries::count_posted_entries(&self.pool).await
+    }
+
     async fn delete(&self, id: &JournalEntryId) -> Result<(), AppError> {
         commands::delete(&self.pool, id).await
     }

@@ -425,6 +425,21 @@ impl JournalEntryRepository for MockJournalRepository {
             .collect())
     }
 
+    async fn aggregate_dashboard_kpis(
+        &self,
+    ) -> Result<std::collections::HashMap<String, rust_decimal::Decimal>, AppError> {
+        Ok(std::collections::HashMap::new())
+    }
+
+    async fn aggregate_monthly_revenue_expenses(
+        &self,
+    ) -> Result<Vec<crate::ports::journal_entry_repository::MonthlyRevenueExpense>, AppError> {
+        Ok(vec![])
+    }
+
+    async fn count_posted_entries(&self) -> Result<i64, AppError> {
+        Ok(0)
+    }
 }
 
 pub struct MockAccountRepository {

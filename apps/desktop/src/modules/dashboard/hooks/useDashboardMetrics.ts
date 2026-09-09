@@ -7,17 +7,13 @@ import type {
   CategoryDto,
   StockMovement,
 } from "@erp/shared-types";
+import { invoke } from "@shared/lib/invoke";
 import { QUERY_KEYS } from "@shared/hooks/queryClient";
 import { journalEntryService } from "@modules/accounting/api/journalEntryService";
 import { paymentService } from "@modules/payments/api/paymentService";
 import { materialService } from "@modules/inventory/api/materialService";
 import { categoryService } from "@modules/inventory/api/categoryService";
 import { stockMovementService } from "@modules/inventory/api/stockMovementService";
-import {
-  computeDashboardKpis,
-  type DashboardKpis,
-  type GlMonthlyIncome,
-} from "@modules/accounting/dashboard/lib/gl-kpis";
 import {
   computeInventoryProjection,
   inventoryAdjustmentNets,
@@ -45,8 +41,22 @@ export function dashboardPeriodRange(period: DashboardPeriod): { fromTs: number;
   }
 }
 
+interface DashboardKpiBackendResponse {
+  kpis: Record<string, string>;
+  monthly: Array<{ year_month: string; revenue: number; expenses: number }>;
+}
+
 export interface DashboardMetrics {
-  kpis: DashboardKpis & { monthly: GlMonthlyIncome[] };
+  kpis: {
+    sales: number;
+    purchases: number;
+    cash: number;
+    bank: number;
+    receivables: number;
+    payables: number;
+    loans: number;
+    monthly: Array<{ yearMonth: string; revenue: number; expenses: number }>;
+  };
   inventory: number;
   journalEntries: JournalEntryDto[];
   payments: Payment[];
@@ -60,6 +70,11 @@ export function useDashboardMetrics(period: DashboardPeriod): {
   isLoading: boolean;
   refreshing: boolean;
 } {
+  const dashboardKpiQuery = useQuery({
+    queryKey: [...QUERY_KEYS.dashboard, "kpis"],
+    queryFn: () => invoke<DashboardKpiBackendResponse>("compute_dashboard_kpis"),
+  });
+
   const journalQuery = useQuery({
     queryKey: QUERY_KEYS.dashboard,
     queryFn: () => journalEntryService.listPostedJournalEntries(),
@@ -81,12 +96,34 @@ export function useDashboardMetrics(period: DashboardPeriod): {
     queryFn: () => stockMovementService.list(),
   });
 
-  const range = useMemo(() => dashboardPeriodRange(period), [period]);
+  const kpis = useMemo(() => {
+    const backend = dashboardKpiQuery.data;
+    if (!backend) {
+      return {
+        sales: 0, purchases: 0, cash: 0, bank: 0,
+        receivables: 0, payables: 0, loans: 0,
+        monthly: [],
+      };
+    }
 
-  const kpis = useMemo(
-    () => computeDashboardKpis(journalQuery.data ?? [], range),
-    [journalQuery.data, range.fromTs, range.toTs],
-  );
+    const purposeNets = backend.kpis;
+    const cash = parseFloat(purposeNets["general"] ?? "0") || 0;
+    const bank = parseFloat(purposeNets["bank"] ?? "0") || 0;
+    const receivables = Math.abs(parseFloat(purposeNets["receivable"] ?? "0") || 0);
+    const payables = Math.abs(parseFloat(purposeNets["payable"] ?? "0") || 0);
+    const loans = Math.abs(parseFloat(purposeNets["loan"] ?? "0") || 0);
+
+    const sales = backend.monthly.reduce((sum, m) => sum + m.revenue, 0);
+    const purchases = backend.monthly.reduce((sum, m) => sum + m.expenses, 0);
+
+    const monthly = backend.monthly.map(m => ({
+      yearMonth: m.year_month,
+      revenue: m.revenue,
+      expenses: m.expenses,
+    }));
+
+    return { sales, purchases, cash, bank, receivables, payables, loans, monthly };
+  }, [dashboardKpiQuery.data]);
 
   const inventory = useMemo(() => {
     const adjustments = inventoryAdjustmentNets(journalQuery.data ?? []);
@@ -108,12 +145,14 @@ export function useDashboardMetrics(period: DashboardPeriod): {
       stockMovements: stockMovementsQuery.data ?? [],
     },
     isLoading:
+      dashboardKpiQuery.isLoading ||
       journalQuery.isLoading ||
       paymentsQuery.isLoading ||
       materialsQuery.isLoading ||
       categoriesQuery.isLoading ||
       stockMovementsQuery.isLoading,
     refreshing:
+      dashboardKpiQuery.isRefetching ||
       journalQuery.isRefetching ||
       paymentsQuery.isRefetching ||
       materialsQuery.isRefetching ||

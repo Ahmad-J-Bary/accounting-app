@@ -484,3 +484,133 @@ pub async fn aggregate_by_account_for_period(
         .collect())
 }
 
+#[derive(sqlx::FromRow)]
+struct PurposeAggregationRow {
+    purpose: String,
+    total_debit_base: String,
+    total_credit_base: String,
+}
+
+pub async fn aggregate_dashboard_kpis(
+    pool: &SqlitePool,
+) -> Result<std::collections::HashMap<String, rust_decimal::Decimal>, AppError> {
+    let rows = sqlx::query_as::<_, PurposeAggregationRow>(
+        "SELECT COALESCE(a.purpose, '') AS purpose,
+                SUM(CAST(jl.debit_base AS REAL)) AS total_debit_base,
+                SUM(CAST(jl.credit_base AS REAL)) AS total_credit_base
+         FROM journal_lines jl
+         JOIN journal_entries je ON jl.journal_entry_id = je.id
+         JOIN accounts a ON jl.account_id = a.id
+         WHERE je.status = 'Posted'
+           AND je.reversal_of_entry_id IS NULL
+           AND a.purpose IS NOT NULL
+           AND a.purpose != ''
+         GROUP BY a.purpose",
+    )
+    .fetch_all(pool)
+    .await
+    .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+
+    let mut result = std::collections::HashMap::new();
+    for row in rows {
+        let debit: rust_decimal::Decimal = row
+            .total_debit_base
+            .parse()
+            .unwrap_or(rust_decimal::Decimal::ZERO);
+        let credit: rust_decimal::Decimal = row
+            .total_credit_base
+            .parse()
+            .unwrap_or(rust_decimal::Decimal::ZERO);
+        let net = credit - debit;
+        result.insert(row.purpose, net);
+    }
+    Ok(result)
+}
+
+#[derive(sqlx::FromRow)]
+struct MonthlyAggregationRow {
+    year_month: String,
+    account_type: String,
+    total_debit_base: String,
+    total_credit_base: String,
+}
+
+pub async fn aggregate_monthly_revenue_expenses(
+    pool: &SqlitePool,
+) -> Result<Vec<application::ports::journal_entry_repository::MonthlyRevenueExpense>, AppError>
+{
+    let rows = sqlx::query_as::<_, MonthlyAggregationRow>(
+        "SELECT SUBSTR(je.entry_date, 1, 7) AS year_month,
+                a.account_type,
+                SUM(CAST(jl.debit_base AS REAL)) AS total_debit_base,
+                SUM(CAST(jl.credit_base AS REAL)) AS total_credit_base
+         FROM journal_lines jl
+         JOIN journal_entries je ON jl.journal_entry_id = je.id
+         JOIN accounts a ON jl.account_id = a.id
+         WHERE je.status = 'Posted'
+           AND je.reversal_of_entry_id IS NULL
+           AND a.account_type IN ('Revenue', 'Expenses')
+           AND je.journal_type NOT IN ('CashOpeningBalance', 'AccountOpeningBalance', 'MaterialOpeningBalance')
+           AND (je.source_id IS NULL
+                OR (je.source_id NOT LIKE 'opening_balance:%'
+                    AND je.source_id NOT LIKE 'residual_classification:%'
+                    AND je.source_id NOT LIKE 'ob_reversal:%'))
+         GROUP BY year_month, a.account_type
+         ORDER BY year_month ASC",
+    )
+    .fetch_all(pool)
+    .await
+    .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+
+    let mut monthly_map: std::collections::HashMap<
+        String,
+        (rust_decimal::Decimal, rust_decimal::Decimal),
+    > = std::collections::HashMap::new();
+
+    for row in rows {
+        let debit: rust_decimal::Decimal = row
+            .total_debit_base
+            .parse()
+            .unwrap_or(rust_decimal::Decimal::ZERO);
+        let credit: rust_decimal::Decimal = row
+            .total_credit_base
+            .parse()
+            .unwrap_or(rust_decimal::Decimal::ZERO);
+
+        let entry = monthly_map
+            .entry(row.year_month)
+            .or_insert((rust_decimal::Decimal::ZERO, rust_decimal::Decimal::ZERO));
+
+        if row.account_type == "Revenue" {
+            entry.0 += credit - debit;
+        } else if row.account_type == "Expenses" {
+            entry.1 += debit - credit;
+        }
+    }
+
+    let mut result: Vec<_> = monthly_map
+        .into_iter()
+        .map(
+            |(year_month, (revenue, expenses))| {
+                application::ports::journal_entry_repository::MonthlyRevenueExpense {
+                    year_month,
+                    revenue,
+                    expenses: expenses.abs(),
+                }
+            },
+        )
+        .collect();
+    result.sort_by(|a, b| a.year_month.cmp(&b.year_month));
+    Ok(result)
+}
+
+pub async fn count_posted_entries(pool: &SqlitePool) -> Result<i64, AppError> {
+    let row: (i64,) = sqlx::query_as(
+        "SELECT COUNT(*) FROM journal_entries WHERE status = 'Posted' AND reversal_of_entry_id IS NULL",
+    )
+    .fetch_one(pool)
+    .await
+    .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+    Ok(row.0)
+}
+
