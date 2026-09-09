@@ -7,6 +7,7 @@ use domain::accounting::journal_entry::{
     JournalEntry, JournalEntryStatus, JournalLine, JournalType,
 };
 use domain::shared::{AccountId, JournalEntryId};
+use rust_decimal::Decimal;
 use sqlx::SqlitePool;
 use std::collections::HashMap;
 use std::str::FromStr;
@@ -482,6 +483,40 @@ pub async fn aggregate_by_account_for_period(
             })
         })
         .collect())
+}
+
+/// Retained-earnings balance: credit-normal SUM(credit − debit) over
+/// posted, non-reversed journal lines hitting `purpose = 'retained_earnings'`
+/// accounts, optionally bounded by `to_date`.
+pub async fn retained_earnings_balance(
+    pool: &SqlitePool,
+    to_date: Option<DateTime<Utc>>,
+) -> Result<Decimal, AppError> {
+    let mut sql = "SELECT CAST(SUM(CAST(jl.credit_base AS REAL) - CAST(jl.debit_base AS REAL)) AS TEXT) AS balance
+         FROM journal_lines jl
+         JOIN journal_entries je ON jl.journal_entry_id = je.id
+         JOIN accounts a ON jl.account_id = a.id
+         WHERE je.status = 'Posted'
+           AND je.reversal_of_entry_id IS NULL
+           AND a.purpose = 'retained_earnings'"
+        .to_string();
+
+    if to_date.is_some() {
+        sql.push_str(" AND je.entry_date <= ?");
+    }
+
+    let mut query = sqlx::query_scalar::<_, Option<String>>(&sql);
+    if let Some(date) = to_date {
+        query = query.bind(date.to_rfc3339());
+    }
+
+    let balance_str = query
+        .fetch_one(pool)
+        .await
+        .map_err(|e| AppError::Infrastructure(e.to_string()))?
+        .unwrap_or_else(|| "0".to_string());
+
+    Ok(Decimal::from_str(&balance_str).unwrap_or(Decimal::ZERO))
 }
 
 #[derive(sqlx::FromRow)]

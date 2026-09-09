@@ -13,7 +13,6 @@ use crate::ports::fiscal_period_repository::FiscalPeriodRepository;
 use crate::ports::journal_entry_repository::{JournalEntryRepository, ReversalScope};
 use crate::ports::opening_migration_repository::OpeningMigrationRepository;
 use crate::ports::partner_repository::PartnerRepository;
-use crate::use_cases::fiscal_period::distributable::retained_earnings_balance;
 use crate::use_cases::fiscal_period::types::AUTH_ALLOCATION_SOURCE_PREFIX;
 use crate::use_cases::opening_balance::net_profit::{compute_ledger_totals, cutover_end_of_day};
 use crate::use_cases::opening_balance::types::{
@@ -144,10 +143,10 @@ fn validate_ratio_list(ratios: &[(String, Decimal)]) -> Result<Decimal, AppError
 pub(crate) fn available_for_distribution(
     accounts: &[domain::accounting::account::Account],
     entries: &[JournalEntry],
-) -> Decimal {
+    retained_earnings: rust_decimal::Decimal,
+) -> rust_decimal::Decimal {
     let totals = compute_ledger_totals(accounts, entries);
-    let retained = retained_earnings_balance(accounts, entries);
-    totals.net + retained
+    totals.net + retained_earnings
 }
 
 struct Pending {
@@ -370,7 +369,11 @@ impl AllocateNetProfitUseCase {
                     ReversalScope::PostedLedger,
                 )
                 .await?;
-            let available = available_for_distribution(&accounts, &entries).round_dp(2);
+            let retained = self
+                .journal_repo
+                .retained_earnings_balance(Some(window_end))
+                .await?;
+            let available = available_for_distribution(&accounts, &entries, retained).round_dp(2);
             if net_profit > available {
                 let difference = net_profit - available;
                 return Err(AppError::Invalid(format!(
@@ -640,7 +643,11 @@ impl PreviewProfitDistributionUseCase {
                     ReversalScope::PostedLedger,
                 )
                 .await?;
-            let available = available_for_distribution(&accounts, &entries).round_dp(2);
+            let retained = self
+                .journal_repo
+                .retained_earnings_balance(Some(window_end))
+                .await?;
+            let available = available_for_distribution(&accounts, &entries, retained).round_dp(2);
             if net_profit > available {
                 let difference = net_profit - available;
                 return Err(AppError::Invalid(format!(
@@ -923,7 +930,11 @@ mod tests {
         // so available = 700 (net) + 300 (retained) = 1000. Subtracting the 200
         // AGAIN would undercount the pool and break partial distributions.
         assert_eq!(
-            available_for_distribution(&[retained, partner_current, revenue, expenses], &entries),
+            available_for_distribution(
+                &[retained, partner_current, revenue, expenses],
+                &entries,
+                Decimal::new(300, 0)
+            ),
             Decimal::new(1000, 0)
         );
     }
@@ -951,7 +962,7 @@ mod tests {
         ];
 
         assert_eq!(
-            available_for_distribution(&[retained, capital], &entries),
+            available_for_distribution(&[retained, capital], &entries, Decimal::ZERO),
             Decimal::ZERO
         );
     }

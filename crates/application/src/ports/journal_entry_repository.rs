@@ -86,6 +86,15 @@ pub trait JournalEntryRepository: Send + Sync {
     async fn find_all_by_source_id(&self, source_id: &str) -> Result<Vec<JournalEntry>, AppError>;
     async fn delete(&self, id: &JournalEntryId) -> Result<(), AppError>;
 
+    /// Retained-earnings (credit-normal) balance: SUM(credit_base −
+    /// debit_base) over posted, non-reversed journal lines hitting accounts
+    /// with `purpose = 'retained_earnings'`, up to `to_date`.  Returns `0`
+    /// when no qualifying lines exist.
+    async fn retained_earnings_balance(
+        &self,
+        to_date: Option<DateTime<Utc>>,
+    ) -> Result<Decimal, AppError>;
+
     /// Dashboard KPI aggregation: groups posted journal lines by account
     /// purpose, computing the net position for each balance-sheet tile
     /// (cash, bank, receivables, payables, loans).

@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use rust_decimal::Decimal;
 
+#[cfg(test)]
 use domain::accounting::account::AccountPurpose;
 use domain::accounting::JournalEntryStatus;
 
@@ -74,27 +75,10 @@ impl GetDistributableProfitUseCase {
             &period_entries,
         );
 
-        // Retained earnings balance: the retained-earnings (52) account balance
-        // derived from the ledger, NOT the stored/registered balance.
-        //
-        // IMPORTANT: Retained earnings is a cumulative equity account. Its
-        // balance may include entries from BEFORE the period window (e.g.,
-        // opening balance migration posted earlier). We must compute it from
-        // ALL posted entries up to the period end, not just from entries
-        // within the window.
-        let all_entries = self
-            .journal_repo
-            .list_with_filters(
-                None,
-                Some(to),
-                None,
-                None,
-                None,
-                Some(JournalEntryStatus::Posted),
-                ReversalScope::PostedLedger,
-            )
-            .await?;
-        let retained = retained_earnings_balance(&accounts, &all_entries);
+        // Retained earnings balance: targeted SQL aggregate over posted,
+        // non-reversed journal lines hitting retained-earnings accounts.
+        // This replaces the former full-history load.
+        let retained = self.journal_repo.retained_earnings_balance(Some(to)).await?;
 
         // Allocated-to-date = sum of profit_distribution source journals posted
         // for the window. `find_all_by_source_id` prefix not supported, so we
@@ -122,8 +106,9 @@ impl GetDistributableProfitUseCase {
 }
 
 /// Balance of the retained-earnings (purpose `RetainedEarnings`) accounts
-/// derived from the posted ledger. `pub(crate)` so `AllocateNetProfitUseCase`
-/// guards its distribution cap with the exact same figure.
+/// derived from the posted ledger.  Pure function kept for unit tests;
+/// production code uses `JournalEntryRepository::retained_earnings_balance`.
+#[cfg(test)]
 pub(crate) fn retained_earnings_balance(
     accounts: &[domain::accounting::account::Account],
     entries: &[domain::accounting::JournalEntry],

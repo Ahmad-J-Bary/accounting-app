@@ -114,6 +114,13 @@ impl JournalEntryRepository for SqliteJournalEntryRepository {
         queries::aggregate_by_account_for_period(&self.pool, from_date, to_date).await
     }
 
+    async fn retained_earnings_balance(
+        &self,
+        to_date: Option<chrono::DateTime<chrono::Utc>>,
+    ) -> Result<rust_decimal::Decimal, AppError> {
+        queries::retained_earnings_balance(&self.pool, to_date).await
+    }
+
     async fn aggregate_dashboard_kpis(
         &self,
     ) -> Result<std::collections::HashMap<String, rust_decimal::Decimal>, AppError> {

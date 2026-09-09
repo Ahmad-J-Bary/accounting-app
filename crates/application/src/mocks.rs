@@ -425,6 +425,13 @@ impl JournalEntryRepository for MockJournalRepository {
             .collect())
     }
 
+    async fn retained_earnings_balance(
+        &self,
+        _to_date: Option<chrono::DateTime<chrono::Utc>>,
+    ) -> Result<rust_decimal::Decimal, AppError> {
+        Ok(rust_decimal::Decimal::ZERO)
+    }
+
     async fn aggregate_dashboard_kpis(
         &self,
     ) -> Result<std::collections::HashMap<String, rust_decimal::Decimal>, AppError> {
