@@ -385,16 +385,16 @@ impl GetOpeningPositionControlUseCase {
             .await?
             .ok_or_else(|| AppError::NotFound("ترحيل الرصيد الافتتاحي غير موجود".into()))?;
 
-        // Resolve every account referenced by the migration lines once.
-        let mut accounts: HashMap<AccountId, Account> = HashMap::new();
-        for line in &migration.lines {
-            if accounts.contains_key(&line.account_id) {
-                continue;
-            }
-            if let Some(account) = self.account_repo.find_by_id(&line.account_id).await? {
-                accounts.insert(line.account_id, account);
-            }
-        }
+        // Batch-load all accounts referenced by the migration lines once.
+        // Eliminates N individual `find_by_id` queries; now always 1 batch query.
+        let account_ids: Vec<_> = migration.lines.iter().map(|l| l.account_id).collect();
+        let accounts: HashMap<AccountId, Account> = self
+            .account_repo
+            .find_by_ids(&account_ids)
+            .await?
+            .into_iter()
+            .map(|a| (a.id, a))
+            .collect();
 
         let buckets = bucket_position(&migration, &accounts);
         let partner_rows = self.partner_rows(&buckets).await?;

@@ -1,6 +1,7 @@
 use domain::accounting::journal_entry::{JournalEntry, JournalLine, JournalType};
 use domain::accounting::JournalEntryStatus;
 use domain::shared::{Currency, MonetaryAmount};
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use crate::errors::AppError;
@@ -110,6 +111,18 @@ impl PostOpeningBalanceUseCase {
             return Err(AppError::Invalid(blockers.join("؛ ")));
         }
 
+        // Batch-load all accounts referenced by the migration lines once.
+        // This eliminates N individual `find_by_id` queries (was N per line × 2 loops;
+        // now always 1 batch query regardless of line count).
+        let account_ids: Vec<_> = migration.lines.iter().map(|l| l.account_id).collect();
+        let accounts: HashMap<_, _> = self
+            .account_repo
+            .find_by_ids(&account_ids)
+            .await?
+            .into_iter()
+            .map(|a| (a.id, a))
+            .collect();
+
         // R1 prevention: the migration aggregate owns the GL position
         // of every opening sub-ledger. If an account included in this migration
         // was ALREADY booked by a standalone per-entity opening journal (posted
@@ -118,7 +131,9 @@ impl PostOpeningBalanceUseCase {
         // journal is AUTO-REVERSED at post time (audit-preserving Reversal +
         // original kept, the same shape as migration 158), so the migration can
         // post and the GL still nets to exactly one opening movement.
-        let dupes = self.duplicate_standalone_opening_journals(&id).await?;
+        let dupes = self
+            .duplicate_standalone_opening_journals(&id, &accounts)
+            .await?;
         for entry in dupes {
             ReverseJournalEntryUseCase::new(
                 self.journal_repo.clone(),
@@ -133,10 +148,8 @@ impl PostOpeningBalanceUseCase {
 
         let mut lines: Vec<JournalLine> = Vec::with_capacity(migration.lines.len());
         for line in &migration.lines {
-            let account = self
-                .account_repo
-                .find_by_id(&line.account_id)
-                .await?
+            let account = accounts
+                .get(&line.account_id)
                 .ok_or_else(|| {
                     AppError::NotFound(format!("الحساب غير موجود: {}", line.account_id))
                 })?;
@@ -213,31 +226,19 @@ impl PostOpeningBalanceUseCase {
     /// = 0 and only the final opening journal remains in the reports.
     async fn duplicate_standalone_opening_journals(
         &self,
-        id: &str,
+        _id: &str,
+        accounts: &HashMap<domain::shared::ids::AccountId, domain::accounting::account::Account>,
     ) -> Result<Vec<JournalEntry>, AppError> {
         use std::collections::HashSet;
-
-        let migration = self
-            .repo
-            .find_by_id(id)
-            .await?
-            .ok_or_else(|| AppError::NotFound("ترحيل الرصيد الافتتاحي غير موجود".into()))?;
 
         // The set of accounts the migration's opening lines cover. Any posted
         // standalone opening journal touching one of these accounts pre-books a
         // balance the aggregate is about to book itself — the exact amount is
         // irrelevant because the aggregate is the canonical GL owner.
-        let mut expected: HashSet<String> = HashSet::new();
-        for line in &migration.lines {
-            let account = self
-                .account_repo
-                .find_by_id(&line.account_id)
-                .await?
-                .ok_or_else(|| {
-                    AppError::NotFound(format!("الحساب غير موجود: {}", line.account_id))
-                })?;
-            expected.insert(account.id.0.to_string());
-        }
+        let expected: HashSet<String> = accounts
+            .keys()
+            .map(|aid| aid.0.to_string())
+            .collect();
 
         let mut flagged: Vec<JournalEntry> = Vec::new();
         let mut seen: HashSet<String> = HashSet::new();

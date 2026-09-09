@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::str::FromStr;
 use std::sync::Arc;
 
@@ -74,6 +75,22 @@ impl SaveOpeningItemsUseCase {
             ));
         }
 
+        // Batch-load all bank/loan accounts referenced by the items once.
+        // Eliminates K individual `find_by_id` queries; now always 1 batch query.
+        let bank_loan_ids: Vec<_> = cmd
+            .items
+            .iter()
+            .filter(|it| it.kind == KIND_BANK || it.kind == KIND_LOAN)
+            .filter_map(|it| AccountId::from_str(&it.entity_id).ok())
+            .collect();
+        let bank_loan_accounts: HashMap<_, _> = self
+            .account_repo
+            .find_by_ids(&bank_loan_ids)
+            .await?
+            .into_iter()
+            .map(|a| (a.id, a))
+            .collect();
+
         // Every referenced entity must exist in its own real module. This is the
         // guard that makes the sub-ledger a link to real entities instead of a
         // parallel free-text store.
@@ -115,9 +132,12 @@ impl SaveOpeningItemsUseCase {
                 KIND_BANK | KIND_LOAN => {
                     let id = AccountId::from_str(&it.entity_id)
                         .map_err(|_| AppError::Invalid("معرف الحساب غير صالح".into()))?;
-                    self.account_repo.find_by_id(&id).await?.ok_or_else(|| {
-                        AppError::NotFound(format!("الحساب غير موجود: {}", it.entity_id))
-                    })?;
+                    if !bank_loan_accounts.contains_key(&id) {
+                        return Err(AppError::NotFound(format!(
+                            "الحساب غير موجود: {}",
+                            it.entity_id
+                        )));
+                    }
                 }
                 _ => {
                     return Err(AppError::Invalid(format!("نوع بند غير معروف: {}", it.kind)));

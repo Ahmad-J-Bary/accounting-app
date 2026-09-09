@@ -176,16 +176,17 @@ impl GetOpeningReconciliationUseCase {
             .ok_or_else(|| AppError::NotFound("ترحيل الرصيد الافتتاحي غير موجود".into()))?;
         let items = self.detail_repo.load_items(&migration_id).await?;
 
-        // Resolve every account referenced by the migration lines once.
-        let mut accounts: HashMap<AccountId, Account> = HashMap::new();
-        for line in &migration.lines {
-            if accounts.contains_key(&line.account_id) {
-                continue;
-            }
-            if let Some(account) = self.account_repo.find_by_id(&line.account_id).await? {
-                accounts.insert(line.account_id, account);
-            }
-        }
+        // Batch-load all accounts referenced by the migration lines once.
+        // Eliminates N individual `find_by_id` queries (was M unique + N in drift_totals;
+        // now always 1 batch query regardless of line count).
+        let account_ids: Vec<_> = migration.lines.iter().map(|l| l.account_id).collect();
+        let accounts: HashMap<AccountId, Account> = self
+            .account_repo
+            .find_by_ids(&account_ids)
+            .await?
+            .into_iter()
+            .map(|a| (a.id, a))
+            .collect();
 
         let gl = gl_bucket_totals(&migration, &accounts);
         let sub = detail_subledger_totals(&items);
@@ -228,7 +229,7 @@ impl GetOpeningReconciliationUseCase {
                 obe_control_net(&self.journal_repo, obe_account_id, &migration_id).await?,
             )
         } else {
-            let (d, c) = drift_totals(&migration, &self.account_repo).await?;
+            let (d, c) = drift_totals(&migration, &accounts)?;
             (d, c, d - c)
         };
 
@@ -245,16 +246,15 @@ impl GetOpeningReconciliationUseCase {
 
 /// Classifies migration lines into a debit and a credit total using each
 /// account's nature (the pre-posting fallback of the reconciliation DTO).
-async fn drift_totals(
+fn drift_totals(
     migration: &domain::accounting::OpeningBalanceMigration,
-    account_repo: &Arc<dyn AccountRepository>,
+    accounts: &HashMap<AccountId, Account>,
 ) -> Result<(Decimal, Decimal), AppError> {
     let mut d = Decimal::ZERO;
     let mut c_ = Decimal::ZERO;
     for line in &migration.lines {
-        let account = account_repo
-            .find_by_id(&line.account_id)
-            .await?
+        let account = accounts
+            .get(&line.account_id)
             .ok_or_else(|| AppError::NotFound(format!("الحساب غير موجود: {}", line.account_id)))?;
         if matches!(
             account.normal_balance(),

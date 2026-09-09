@@ -2,6 +2,7 @@ use chrono::{DateTime, Utc};
 use domain::accounting::{MigrationStatus, OpeningBalanceLine, OpeningBalanceMigration};
 use domain::shared::ids::AccountId;
 use rust_decimal::Decimal;
+use std::collections::HashMap;
 use std::str::FromStr;
 use std::sync::Arc;
 
@@ -80,6 +81,21 @@ impl CreateOpeningBalanceUseCase {
             ));
         }
 
+        // Batch-load all accounts referenced by the command lines once.
+        // Eliminates N individual `find_by_id` queries; now always 1 batch query.
+        let account_ids: Vec<_> = cmd
+            .lines
+            .iter()
+            .filter_map(|l| AccountId::from_str(&l.account_id).ok())
+            .collect();
+        let accounts: HashMap<_, _> = self
+            .account_repo
+            .find_by_ids(&account_ids)
+            .await?
+            .into_iter()
+            .map(|a| (a.id, a))
+            .collect();
+
         let mut lines = Vec::with_capacity(cmd.lines.len());
         for l in cmd.lines {
             let amount = Decimal::from_str(&l.amount)
@@ -88,12 +104,10 @@ impl CreateOpeningBalanceUseCase {
                 .map_err(|_| AppError::Invalid("معرف الحساب غير صالح".into()))?;
 
             // Balance-sheet only: opening entries never carry P&L accounts.
-            let account = self
-                .account_repo
-                .find_by_id(&account_id)
-                .await?
+            let account = accounts
+                .get(&account_id)
                 .ok_or_else(|| AppError::NotFound(format!("الحساب غير موجود: {}", account_id)))?;
-            super::guard::reject_pl_account(&account)?;
+            super::guard::reject_pl_account(account)?;
 
             lines.push(OpeningBalanceLine {
                 account_id,
