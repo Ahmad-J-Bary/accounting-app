@@ -67,6 +67,13 @@ pub trait JournalEntryRepository: Send + Sync {
     /// SQL-level aggregation: SUM(debit_base), SUM(credit_base) GROUP BY
     /// account_id for all posted, non-reversed journal lines.
     async fn aggregate_by_account(&self) -> Result<Vec<AccountAggregationRow>, AppError>;
+    /// Transaction-aware variant of `aggregate_by_account`. Executes against the
+    /// active transaction so uncommitted writes (e.g. the FiscalClosing entry
+    /// created earlier in the same fiscal-close transaction) are visible.
+    async fn aggregate_by_account_in_tx(
+        &self,
+        tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
+    ) -> Result<Vec<AccountAggregationRow>, AppError>;
     /// Report-safe aggregation: same as `aggregate_by_account` but excludes
     /// FiscalClosing entries so reports (Income Statement, Trial Balance, etc.)
     /// reflect operational activity only. After a fiscal year close, the closing
@@ -89,6 +96,13 @@ pub trait JournalEntryRepository: Send + Sync {
     ) -> Result<Vec<AccountAggregationRow>, AppError>;
 
     async fn get_next_entry_number(&self) -> Result<String, AppError>;
+    /// Transaction-aware variant of `get_next_entry_number`. Executes inside
+    /// the caller's transaction so it doesn't deadlock when a write lock is
+    /// already held (e.g. during fiscal year close).
+    async fn get_next_entry_number_in_tx(
+        &self,
+        tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
+    ) -> Result<String, AppError>;
     async fn find_by_source_id(&self, source_id: &str) -> Result<Option<JournalEntry>, AppError>;
     async fn find_all_by_source_id(&self, source_id: &str) -> Result<Vec<JournalEntry>, AppError>;
     async fn delete(&self, id: &JournalEntryId) -> Result<(), AppError>;

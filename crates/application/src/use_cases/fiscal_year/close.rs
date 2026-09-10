@@ -296,7 +296,7 @@ impl CloseFiscalYearUseCase {
         }
 
         // 8. Create and post the closing journal entry (backdated to year end)
-        let entry_number = self.journal_entry_repo.get_next_entry_number().await?;
+        let entry_number = self.journal_entry_repo.get_next_entry_number_in_tx(tx).await?;
         let mut closing_entry = JournalEntry::new(
             entry_number,
             JournalType::FiscalClosing,
@@ -363,8 +363,13 @@ impl CloseFiscalYearUseCase {
     ) -> Result<Option<JournalEntryId>, AppError> {
         use domain::accounting::account::AccountType;
 
-        // 1. Get cumulative GL balances for all accounts (as of now — after close)
-        let agg_rows = self.journal_entry_repo.aggregate_by_account().await?;
+        // 1. Get cumulative GL balances for all accounts — read through the
+        //    active transaction so the just-created FiscalClosing entry is
+        //    visible to this aggregation (DEFECT-2 fix).
+        let agg_rows = self
+            .journal_entry_repo
+            .aggregate_by_account_in_tx(tx)
+            .await?;
         if agg_rows.is_empty() {
             return Ok(None);
         }
@@ -437,7 +442,7 @@ impl CloseFiscalYearUseCase {
         }
 
         // 5. Create and post the carry-forward entry (dated at successor year start)
-        let entry_number = self.journal_entry_repo.get_next_entry_number().await?;
+        let entry_number = self.journal_entry_repo.get_next_entry_number_in_tx(tx).await?;
         let mut cf_entry = JournalEntry::new(
             entry_number,
             JournalType::AccountOpeningBalance,

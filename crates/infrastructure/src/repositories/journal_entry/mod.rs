@@ -90,6 +90,13 @@ impl JournalEntryRepository for SqliteJournalEntryRepository {
         queries::get_next_entry_number(&self.pool).await
     }
 
+    async fn get_next_entry_number_in_tx(
+        &self,
+        tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
+    ) -> Result<String, AppError> {
+        queries::get_next_entry_number_in_tx(tx).await
+    }
+
     async fn find_by_source_id(&self, source_id: &str) -> Result<Option<JournalEntry>, AppError> {
         queries::find_by_source_id(&self.pool, source_id).await
     }
@@ -100,6 +107,13 @@ impl JournalEntryRepository for SqliteJournalEntryRepository {
 
     async fn aggregate_by_account(&self) -> Result<Vec<AccountAggregationRow>, AppError> {
         queries::aggregate_by_account(&self.pool).await
+    }
+
+    async fn aggregate_by_account_in_tx(
+        &self,
+        tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
+    ) -> Result<Vec<AccountAggregationRow>, AppError> {
+        queries::aggregate_by_account_in_tx(tx).await
     }
 
     async fn aggregate_by_account_report(&self) -> Result<Vec<AccountAggregationRow>, AppError> {

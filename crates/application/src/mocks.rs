@@ -273,6 +273,12 @@ impl JournalEntryRepository for MockJournalRepository {
         let next = entries.len() + 1;
         Ok(next.to_string())
     }
+    async fn get_next_entry_number_in_tx(
+        &self,
+        _tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
+    ) -> Result<String, AppError> {
+        self.get_next_entry_number().await
+    }
     async fn find_by_source_id(&self, source_id: &str) -> Result<Option<JournalEntry>, AppError> {
         let entries = self.entries.lock().unwrap();
         Ok(entries
@@ -348,6 +354,16 @@ impl JournalEntryRepository for MockJournalRepository {
                 },
             )
             .collect())
+    }
+
+    async fn aggregate_by_account_in_tx(
+        &self,
+        _tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
+    ) -> Result<Vec<crate::ports::journal_entry_repository::AccountAggregationRow>, AppError>
+    {
+        // In-memory mocks cannot use the real transaction; delegate to the
+        // non-tx variant which reads from the same in-memory store.
+        self.aggregate_by_account().await
     }
 
     async fn aggregate_by_account_report(

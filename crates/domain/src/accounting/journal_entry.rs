@@ -109,14 +109,19 @@ impl JournalType {
 
     /// Whether a journal of this type bypasses fiscal-period gating. Opening
     /// balances are a Company Setup / Lifecycle step (they post before the
-    /// first operational period exists). Reversals are NOT a type — they are a
-    /// relationship between two entries (`reversal_of_entry_id`), and posting a
-    /// contra of ANY type is period-exempt so closed/locked financial history
-    /// can be corrected; callers decide that from the relationship, not here.
+    /// first operational period exists). FiscalClosing is a lifecycle
+    /// operation that must backdate into closed/locked periods. Reversals are
+    /// NOT a type — they are a relationship between two entries
+    /// (`reversal_of_entry_id`), and posting a contra of ANY type is
+    /// period-exempt so closed/locked financial history can be corrected;
+    /// callers decide that from the relationship, not here.
     pub fn is_period_exempt(self) -> bool {
         matches!(
             self,
-            Self::CashOpeningBalance | Self::AccountOpeningBalance | Self::MaterialOpeningBalance
+            Self::CashOpeningBalance
+                | Self::AccountOpeningBalance
+                | Self::MaterialOpeningBalance
+                | Self::FiscalClosing
         )
     }
 }

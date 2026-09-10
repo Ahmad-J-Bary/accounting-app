@@ -282,30 +282,48 @@ pub async fn get_next_entry_number(pool: &SqlitePool) -> Result<String, AppError
         .await
         .map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
+    let result = get_next_entry_number_in_tx_inner(&mut tx).await;
+
+    tx.commit()
+        .await
+        .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+
+    result
+}
+
+/// Transaction-aware variant of [`get_next_entry_number`]. Executes the
+/// sequence increment inside the caller's transaction so it can be used by
+/// atomic composite operations (e.g. fiscal year close) that must hold a
+/// single write lock throughout.
+pub async fn get_next_entry_number_in_tx(
+    tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
+) -> Result<String, AppError> {
+    get_next_entry_number_in_tx_inner(tx).await
+}
+
+async fn get_next_entry_number_in_tx_inner(
+    tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
+) -> Result<String, AppError> {
     sqlx::query(
         "INSERT INTO journal_numbering (id, next_value) VALUES (1, COALESCE((SELECT MAX(CAST(entry_number AS INTEGER)) FROM journal_entries), 0) + 1) ON CONFLICT(id) DO NOTHING"
     )
-    .execute(&mut *tx)
+    .execute(&mut **tx)
     .await
     .map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
     sqlx::query(
         "UPDATE journal_numbering SET next_value = MAX(next_value, (SELECT COALESCE(MAX(CAST(entry_number AS INTEGER)), 0) FROM journal_entries) + 1) WHERE id = 1"
     )
-    .execute(&mut *tx)
+    .execute(&mut **tx)
     .await
     .map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
     let next_value: i64 = sqlx::query_scalar(
         "UPDATE journal_numbering SET next_value = next_value + 1 WHERE id = 1 RETURNING next_value"
     )
-    .fetch_one(&mut *tx)
+    .fetch_one(&mut **tx)
     .await
     .map_err(|e| AppError::Infrastructure(e.to_string()))?;
-
-    tx.commit()
-        .await
-        .map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
     Ok((next_value - 1).to_string())
 }
@@ -373,8 +391,8 @@ pub async fn aggregate_by_account(
 ) -> Result<Vec<AccountAggregationRow>, AppError> {
     let rows = sqlx::query_as::<_, AggregationRow>(
         "SELECT jl.account_id,
-                SUM(jl.debit_base) AS total_debit_base,
-                SUM(jl.credit_base) AS total_credit_base
+                CAST(COALESCE(SUM(jl.debit_base), '0') AS TEXT) AS total_debit_base,
+                CAST(COALESCE(SUM(jl.credit_base), '0') AS TEXT) AS total_credit_base
          FROM journal_lines jl
          JOIN journal_entries je ON jl.journal_entry_id = je.id
          WHERE je.status = 'Posted'
@@ -382,6 +400,44 @@ pub async fn aggregate_by_account(
          GROUP BY jl.account_id",
     )
     .fetch_all(pool)
+    .await
+    .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+
+    Ok(rows
+        .into_iter()
+        .filter_map(|r| {
+            let account_id = AccountId::from_str(&r.account_id).ok()?;
+            let total_debit_base =
+                rust_decimal::Decimal::from_str(&r.total_debit_base).unwrap_or(rust_decimal::Decimal::ZERO);
+            let total_credit_base =
+                rust_decimal::Decimal::from_str(&r.total_credit_base).unwrap_or(rust_decimal::Decimal::ZERO);
+            Some(AccountAggregationRow {
+                account_id,
+                total_debit_base,
+                total_credit_base,
+            })
+        })
+        .collect())
+}
+
+/// Transaction-aware variant of [`aggregate_by_account`]. Executes against the
+/// active transaction so uncommitted writes (e.g. the FiscalClosing entry
+/// created earlier in the same fiscal-close transaction) are visible to the
+/// carry-forward aggregation.
+pub async fn aggregate_by_account_in_tx(
+    tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
+) -> Result<Vec<AccountAggregationRow>, AppError> {
+    let rows = sqlx::query_as::<_, AggregationRow>(
+        "SELECT jl.account_id,
+                CAST(COALESCE(SUM(jl.debit_base), '0') AS TEXT) AS total_debit_base,
+                CAST(COALESCE(SUM(jl.credit_base), '0') AS TEXT) AS total_credit_base
+         FROM journal_lines jl
+         JOIN journal_entries je ON jl.journal_entry_id = je.id
+         WHERE je.status = 'Posted'
+           AND je.reversal_of_entry_id IS NULL
+         GROUP BY jl.account_id",
+    )
+    .fetch_all(&mut **tx)
     .await
     .map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
@@ -415,8 +471,8 @@ pub async fn aggregate_by_account_report(
 ) -> Result<Vec<AccountAggregationRow>, AppError> {
     let rows = sqlx::query_as::<_, AggregationRow>(
         "SELECT jl.account_id,
-                SUM(jl.debit_base) AS total_debit_base,
-                SUM(jl.credit_base) AS total_credit_base
+                CAST(COALESCE(SUM(jl.debit_base), '0') AS TEXT) AS total_debit_base,
+                CAST(COALESCE(SUM(jl.credit_base), '0') AS TEXT) AS total_credit_base
          FROM journal_lines jl
          JOIN journal_entries je ON jl.journal_entry_id = je.id
          WHERE je.status = 'Posted'
@@ -456,8 +512,8 @@ pub async fn aggregate_by_account_report_for_period(
 ) -> Result<Vec<AccountAggregationRow>, AppError> {
     let rows = sqlx::query_as::<_, AggregationRow>(
         "SELECT jl.account_id,
-                SUM(jl.debit_base) AS total_debit_base,
-                SUM(jl.credit_base) AS total_credit_base
+                CAST(COALESCE(SUM(jl.debit_base), '0') AS TEXT) AS total_debit_base,
+                CAST(COALESCE(SUM(jl.credit_base), '0') AS TEXT) AS total_credit_base
          FROM journal_lines jl
          JOIN journal_entries je ON jl.journal_entry_id = je.id
          WHERE je.status = 'Posted'
@@ -497,8 +553,8 @@ pub async fn aggregate_by_account_for_period(
 ) -> Result<Vec<AccountAggregationRow>, AppError> {
     let rows = sqlx::query_as::<_, AggregationRow>(
         "SELECT jl.account_id,
-                SUM(jl.debit_base) AS total_debit_base,
-                SUM(jl.credit_base) AS total_credit_base
+                CAST(COALESCE(SUM(jl.debit_base), '0') AS TEXT) AS total_debit_base,
+                CAST(COALESCE(SUM(jl.credit_base), '0') AS TEXT) AS total_credit_base
          FROM journal_lines jl
          JOIN journal_entries je ON jl.journal_entry_id = je.id
          WHERE je.status = 'Posted'
