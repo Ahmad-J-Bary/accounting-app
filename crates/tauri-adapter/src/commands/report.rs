@@ -1,7 +1,7 @@
 use tauri::State;
 
 use crate::bootstrap::container::AppState;
-use application::dto::report_dto::{BalanceSheetDto, ProfitLossDto, ProfitLossLineDto, TrialBalanceDto, TrialBalanceLineDto};
+use application::dto::report_dto::{BalanceSheetDto, BalanceSheetLineDto, ProfitLossDto, ProfitLossLineDto, TrialBalanceDto, TrialBalanceLineDto};
 use domain::accounting::account::{AccountType, NormalBalance};
 
 /// Compute the normal balance side for an account type.
@@ -301,6 +301,10 @@ pub async fn get_income_statement(
 /// GL. Includes FiscalClosing so Retained Earnings reflects the closed year's
 /// profit/loss. Revenue/Expense accounts are filtered by AccountType, not
 /// journal_type.
+///
+/// Also computes `net_profit` (total Revenue - total Expenses) and
+/// `total_drawings` (net of the DRAWINGS system account) so the frontend
+/// can display the full equity equation without re-reading raw journals.
 #[tauri::command]
 pub async fn get_balance_sheet(state: State<'_, AppState>) -> Result<BalanceSheetDto, String> {
     let agg_rows = state
@@ -325,6 +329,9 @@ pub async fn get_balance_sheet(state: State<'_, AppState>) -> Result<BalanceShee
     let mut total_assets = rust_decimal::Decimal::ZERO;
     let mut total_liabilities = rust_decimal::Decimal::ZERO;
     let mut total_equity = rust_decimal::Decimal::ZERO;
+    let mut total_revenue = rust_decimal::Decimal::ZERO;
+    let mut total_expenses = rust_decimal::Decimal::ZERO;
+    let mut total_drawings = rust_decimal::Decimal::ZERO;
 
     for row in agg_rows {
         let account = match account_map.get(&row.account_id) {
@@ -337,7 +344,8 @@ pub async fn get_balance_sheet(state: State<'_, AppState>) -> Result<BalanceShee
         match account.account_type {
             AccountType::Assets => {
                 total_assets += net;
-                asset_lines.push(ProfitLossLineDto {
+                asset_lines.push(BalanceSheetLineDto {
+                    account_id: row.account_id.to_string(),
                     account_name: account.name_ar.clone(),
                     amount: net.to_string(),
                     account_code: account.code.clone(),
@@ -346,7 +354,8 @@ pub async fn get_balance_sheet(state: State<'_, AppState>) -> Result<BalanceShee
             }
             AccountType::Liabilities => {
                 total_liabilities += net;
-                liability_lines.push(ProfitLossLineDto {
+                liability_lines.push(BalanceSheetLineDto {
+                    account_id: row.account_id.to_string(),
                     account_name: account.name_ar.clone(),
                     amount: net.to_string(),
                     account_code: account.code.clone(),
@@ -355,20 +364,36 @@ pub async fn get_balance_sheet(state: State<'_, AppState>) -> Result<BalanceShee
             }
             AccountType::Equity => {
                 total_equity += net;
-                equity_lines.push(ProfitLossLineDto {
+                equity_lines.push(BalanceSheetLineDto {
+                    account_id: row.account_id.to_string(),
                     account_name: account.name_ar.clone(),
                     amount: net.to_string(),
                     account_code: account.code.clone(),
                     account_type: format!("{:?}", account.account_type),
                 });
             }
-            _ => continue,
+            AccountType::Revenue => {
+                // Revenue is credit-normal: positive credit = revenue.
+                // net = debit - credit; for revenue credit > debit => negative net.
+                total_revenue += -net;
+            }
+            AccountType::Expenses => {
+                // Expenses are debit-normal: positive debit = expense.
+                total_expenses += net;
+            }
+        }
+
+        // Track drawings from the DRAWINGS system account
+        if account.purpose == domain::accounting::account::AccountPurpose::PartnerDrawings {
+            total_drawings += net.abs();
         }
     }
 
     asset_lines.sort_by(|a, b| a.account_name.cmp(&b.account_name));
     liability_lines.sort_by(|a, b| a.account_name.cmp(&b.account_name));
     equity_lines.sort_by(|a, b| a.account_name.cmp(&b.account_name));
+
+    let net_profit = total_revenue - total_expenses;
 
     Ok(BalanceSheetDto {
         assets: asset_lines,
@@ -377,6 +402,8 @@ pub async fn get_balance_sheet(state: State<'_, AppState>) -> Result<BalanceShee
         total_assets: total_assets.to_string(),
         total_liabilities: total_liabilities.to_string(),
         total_equity: total_equity.to_string(),
+        net_profit: net_profit.to_string(),
+        total_drawings: total_drawings.to_string(),
         as_of_date: chrono::Utc::now().to_rfc3339(),
     })
 }

@@ -40,12 +40,22 @@ export interface ProfitLossDto {
   period_end: string;
 }
 
+export interface BalanceSheetLineDto {
+  account_id: string;
+  account_name: string;
+  amount: string;
+  account_code?: string;
+  account_type?: string;
+}
+
 export interface BalanceSheetDto {
-  assets: ProfitLossLineDto[];
-  liabilities: ProfitLossLineDto[];
-  equity: ProfitLossLineDto[];
+  assets: BalanceSheetLineDto[];
+  liabilities: BalanceSheetLineDto[];
+  equity: BalanceSheetLineDto[];
   total_assets: string;
   total_liabilities: string;
   total_equity: string;
+  net_profit?: string;
+  total_drawings?: string;
   as_of_date: string;
 }

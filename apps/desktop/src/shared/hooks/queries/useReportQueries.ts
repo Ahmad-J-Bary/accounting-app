@@ -3,7 +3,7 @@ import { journalEntryService } from "@modules/accounting/api/journalEntryService
 import { accountingService } from "@modules/accounting/api/accountingService";
 import { QUERY_KEYS } from "@shared/hooks/queryClient";
 import { toUtcBound } from "@shared/lib/format";
-import type { JournalEntryDto, ReceivablesPayablesSummary, AccountDto, TrialBalanceDto, ProfitLossDto } from "@erp/shared-types";
+import type { JournalEntryDto, ReceivablesPayablesSummary, AccountDto, TrialBalanceDto, ProfitLossDto, BalanceSheetDto } from "@erp/shared-types";
 
 export function useJournalEntries(filters: { from_date: string; to_date: string }) {
   return useQuery<JournalEntryDto[]>({
@@ -44,5 +44,12 @@ export function useIncomeStatement(filters?: { from_date?: string; to_date?: str
     queryKey: QUERY_KEYS.incomeStatement(filters?.from_date, filters?.to_date),
     queryFn: () =>
       accountingService.getIncomeStatement(filters?.from_date, filters?.to_date),
+  });
+}
+
+export function useBalanceSheet() {
+  return useQuery<BalanceSheetDto>({
+    queryKey: QUERY_KEYS.balanceSheet,
+    queryFn: () => accountingService.getBalanceSheet(),
   });
 }

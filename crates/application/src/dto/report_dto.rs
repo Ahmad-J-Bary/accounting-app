@@ -60,13 +60,28 @@ pub struct ProfitLossDto {
 
 // Balance Sheet
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BalanceSheetLineDto {
+    pub account_id: String,
+    pub account_name: String,
+    pub amount: String,
+    #[serde(default)]
+    pub account_code: String,
+    #[serde(default)]
+    pub account_type: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BalanceSheetDto {
-    pub assets: Vec<ProfitLossLineDto>,
-    pub liabilities: Vec<ProfitLossLineDto>,
-    pub equity: Vec<ProfitLossLineDto>,
+    pub assets: Vec<BalanceSheetLineDto>,
+    pub liabilities: Vec<BalanceSheetLineDto>,
+    pub equity: Vec<BalanceSheetLineDto>,
     pub total_assets: String,
     pub total_liabilities: String,
     pub total_equity: String,
+    #[serde(default)]
+    pub net_profit: String,
+    #[serde(default)]
+    pub total_drawings: String,
     pub as_of_date: String,
 }
 
