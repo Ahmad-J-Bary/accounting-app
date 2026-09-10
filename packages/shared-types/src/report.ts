@@ -6,6 +6,10 @@ export interface TrialBalanceLineDto {
   debit_total: string;
   credit_total: string;
   balance: string;
+  opening_debit?: string;
+  opening_credit?: string;
+  period_debit?: string;
+  period_credit?: string;
 }
 
 export interface TrialBalanceDto {
@@ -13,6 +17,10 @@ export interface TrialBalanceDto {
   total_debit: string;
   total_credit: string;
   generated_at: string;
+  total_opening_debit?: string;
+  total_opening_credit?: string;
+  total_period_debit?: string;
+  total_period_credit?: string;
 }
 
 export interface ProfitLossLineDto {

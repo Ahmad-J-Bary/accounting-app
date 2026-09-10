@@ -10,6 +10,14 @@ pub struct TrialBalanceLineDto {
     pub debit_total: String,
     pub credit_total: String,
     pub balance: String,
+    #[serde(default)]
+    pub opening_debit: String,
+    #[serde(default)]
+    pub opening_credit: String,
+    #[serde(default)]
+    pub period_debit: String,
+    #[serde(default)]
+    pub period_credit: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -18,6 +26,14 @@ pub struct TrialBalanceDto {
     pub total_debit: String,
     pub total_credit: String,
     pub generated_at: String,
+    #[serde(default)]
+    pub total_opening_debit: String,
+    #[serde(default)]
+    pub total_opening_credit: String,
+    #[serde(default)]
+    pub total_period_debit: String,
+    #[serde(default)]
+    pub total_period_credit: String,
 }
 
 // Profit & Loss

@@ -49,8 +49,8 @@ export const accountingService = {
     return await invoke<ReceivablesPayablesSummary>("get_receivables_payables_summary");
   },
 
-  async getTrialBalance(): Promise<TrialBalanceDto> {
-    return await invoke<TrialBalanceDto>("get_trial_balance");
+  async getTrialBalance(fromDate?: string, toDate?: string): Promise<TrialBalanceDto> {
+    return await invoke<TrialBalanceDto>("get_trial_balance", { fromDate: fromDate ?? null, toDate: toDate ?? null });
   },
 
   async getIncomeStatement(): Promise<ProfitLossDto> {

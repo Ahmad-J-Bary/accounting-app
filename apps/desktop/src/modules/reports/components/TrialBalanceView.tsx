@@ -9,6 +9,7 @@ import { Minus, Plus } from "lucide-react";
 import { ReportMeta } from "@widgets/reports";
 import { computeTreeTotals, flattenTreeRows, isBalanceDebit } from "../lib/trialBalance";
 import type { TrialBalanceTreeRow } from "../lib/trialBalance";
+import type { AccountLedgerTotal } from "../lib/ledgerTotals";
 import type { LoadedTrialBalanceData } from "../hooks/useTrialBalanceReport";
 
 type TrialBalanceViewProps = {
@@ -31,7 +32,29 @@ export function TrialBalanceView({ data, loading }: TrialBalanceViewProps) {
   const [detailLevel, setDetailLevel] = useState(3);
 
   const accounts = data.accounts;
-  const ledgerTotals = data.ledgerTotals;
+
+  const ledgerTotals = useMemo<Map<string, AccountLedgerTotal>>(() => {
+    const map = new Map<string, AccountLedgerTotal>();
+    for (const line of data.trialBalance.lines) {
+      const openingDebit = parseFloat(line.opening_debit || "0");
+      const openingCredit = parseFloat(line.opening_credit || "0");
+      const periodDebit = parseFloat(line.period_debit || "0");
+      const periodCredit = parseFloat(line.period_credit || "0");
+      const debit = parseFloat(line.debit_total || "0");
+      const credit = parseFloat(line.credit_total || "0");
+      const balance = parseFloat(line.balance || "0");
+      map.set(line.account_id, {
+        openingDebit,
+        openingCredit,
+        periodDebit,
+        periodCredit,
+        debit,
+        credit,
+        endingBalance: balance,
+      });
+    }
+    return map;
+  }, [data.trialBalance.lines]);
 
   const treeTotals = useMemo(() => computeTreeTotals(accounts, ledgerTotals), [accounts, ledgerTotals]);
 

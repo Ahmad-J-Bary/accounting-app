@@ -1,10 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { journalEntryService } from "@modules/accounting/api/journalEntryService";
 import { accountingService } from "@modules/accounting/api/accountingService";
-import { computeLedgerTotals, type AccountLedgerTotal } from "@modules/reports/lib/ledgerTotals";
 import { QUERY_KEYS } from "@shared/hooks/queryClient";
 import { toUtcBound } from "@shared/lib/format";
-import type { JournalEntryDto, ReceivablesPayablesSummary, AccountDto } from "@erp/shared-types";
+import type { JournalEntryDto, ReceivablesPayablesSummary, AccountDto, TrialBalanceDto } from "@erp/shared-types";
 
 export function useJournalEntries(filters: { from_date: string; to_date: string }) {
   return useQuery<JournalEntryDto[]>({
@@ -27,22 +26,15 @@ export function useReceivablesPayables() {
 export function useTrialBalance(filters?: { from_date?: string; to_date?: string }) {
   return useQuery<{
     accounts: AccountDto[];
-    ledgerTotals: Map<string, AccountLedgerTotal>;
+    trialBalance: TrialBalanceDto;
   }>({
     queryKey: QUERY_KEYS.trialBalance(filters?.from_date, filters?.to_date),
     queryFn: async () => {
-      const [accounts, entries] = await Promise.all([
+      const [accounts, trialBalance] = await Promise.all([
         accountingService.getChartOfAccounts(),
-        journalEntryService.listPostedJournalEntries(),
+        accountingService.getTrialBalance(filters?.from_date, filters?.to_date),
       ]);
-
-      const { ledgerTotals } = computeLedgerTotals(
-        accounts,
-        entries,
-        filters?.from_date,
-        filters?.to_date,
-      );
-      return { accounts, ledgerTotals };
+      return { accounts, trialBalance };
     },
   });
 }

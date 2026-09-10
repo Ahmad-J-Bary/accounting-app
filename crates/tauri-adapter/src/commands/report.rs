@@ -15,13 +15,48 @@ fn normal_balance(account_type: &AccountType) -> NormalBalance {
 /// Trial Balance: aggregated debit/credit per account across all posted,
 /// non-reversed journal lines. Includes FiscalClosing entries so the
 /// Trial Balance remains balanced after fiscal year close.
+///
+/// When `from_date` / `to_date` are provided (ISO-8601 date strings),
+/// the response includes opening/period splits for the given window.
+/// When omitted, opening and period fields default to the cumulative totals.
 #[tauri::command]
-pub async fn get_trial_balance(state: State<'_, AppState>) -> Result<TrialBalanceDto, String> {
+pub async fn get_trial_balance(
+    state: State<'_, AppState>,
+    from_date: Option<String>,
+    to_date: Option<String>,
+) -> Result<TrialBalanceDto, String> {
     let agg_rows = state
         .journal_entry_repo
         .aggregate_by_account()
         .await
         .map_err(|e| e.to_string())?;
+
+    // When date filters are provided, also fetch period-specific aggregates
+    // so we can split cumulative totals into opening + period.
+    let period_agg = if let (Some(ref fd), Some(ref td)) = (&from_date, &to_date) {
+        let from_dt = chrono::NaiveDate::parse_from_str(fd, "%Y-%m-%d")
+            .map_err(|e| format!("Invalid from_date: {e}"))?
+            .and_hms_opt(0, 0, 0)
+            .ok_or_else(|| "Invalid from_date time".to_string())?;
+
+        let to_dt = chrono::NaiveDate::parse_from_str(td, "%Y-%m-%d")
+            .map_err(|e| format!("Invalid to_date: {e}"))?
+            .and_hms_opt(23, 59, 59)
+            .ok_or_else(|| "Invalid to_date time".to_string())?;
+
+        let from_utc = from_dt.and_utc();
+        let to_utc = to_dt.and_utc();
+
+        Some(
+            state
+                .journal_entry_repo
+                .aggregate_by_account_for_period(from_utc, to_utc)
+                .await
+                .map_err(|e| e.to_string())?,
+        )
+    } else {
+        None
+    };
 
     let account_ids: Vec<_> = agg_rows.iter().map(|r| r.account_id).collect();
     let accounts = state
@@ -33,8 +68,22 @@ pub async fn get_trial_balance(state: State<'_, AppState>) -> Result<TrialBalanc
     let account_map: std::collections::HashMap<_, _> =
         accounts.into_iter().map(|a| (a.id, a)).collect();
 
+    // Build period lookup: account_id -> (debit, credit)
+    let period_map: std::collections::HashMap<_, _> = period_agg
+        .as_ref()
+        .map(|rows| {
+            rows.iter()
+                .map(|r| (r.account_id.clone(), (r.total_debit_base, r.total_credit_base)))
+                .collect()
+        })
+        .unwrap_or_default();
+
     let mut total_debit = rust_decimal::Decimal::ZERO;
     let mut total_credit = rust_decimal::Decimal::ZERO;
+    let mut total_opening_debit = rust_decimal::Decimal::ZERO;
+    let mut total_opening_credit = rust_decimal::Decimal::ZERO;
+    let mut total_period_debit = rust_decimal::Decimal::ZERO;
+    let mut total_period_credit = rust_decimal::Decimal::ZERO;
 
     let mut lines: Vec<TrialBalanceLineDto> = agg_rows
         .into_iter()
@@ -60,8 +109,58 @@ pub async fn get_trial_balance(state: State<'_, AppState>) -> Result<TrialBalanc
                 }
             };
 
+            // Compute opening/period split when period data is available
+            let (opening_debit, opening_credit, period_debit, period_credit) =
+                if let Some(&(ref p_debit, ref p_credit)) = period_map.get(&row.account_id) {
+                    let p_net = p_debit - p_credit;
+                    let o_net = net - p_net;
+
+                    let (o_debit, o_credit) = match nb {
+                        NormalBalance::Debit => {
+                            if o_net > rust_decimal::Decimal::ZERO {
+                                (o_net, rust_decimal::Decimal::ZERO)
+                            } else {
+                                (rust_decimal::Decimal::ZERO, -o_net)
+                            }
+                        }
+                        NormalBalance::Credit => {
+                            if o_net > rust_decimal::Decimal::ZERO {
+                                (rust_decimal::Decimal::ZERO, o_net)
+                            } else {
+                                (-o_net, rust_decimal::Decimal::ZERO)
+                            }
+                        }
+                    };
+
+                    let (pd, pc) = match nb {
+                        NormalBalance::Debit => {
+                            if p_net > rust_decimal::Decimal::ZERO {
+                                (p_net, rust_decimal::Decimal::ZERO)
+                            } else {
+                                (rust_decimal::Decimal::ZERO, -p_net)
+                            }
+                        }
+                        NormalBalance::Credit => {
+                            if p_net > rust_decimal::Decimal::ZERO {
+                                (rust_decimal::Decimal::ZERO, p_net)
+                            } else {
+                                (-p_net, rust_decimal::Decimal::ZERO)
+                            }
+                        }
+                    };
+
+                    (o_debit, o_credit, pd, pc)
+                } else {
+                    // No period filter — opening = cumulative, period = 0
+                    (debit_total, credit_total, rust_decimal::Decimal::ZERO, rust_decimal::Decimal::ZERO)
+                };
+
             total_debit += debit_total;
             total_credit += credit_total;
+            total_opening_debit += opening_debit;
+            total_opening_credit += opening_credit;
+            total_period_debit += period_debit;
+            total_period_credit += period_credit;
 
             Some(TrialBalanceLineDto {
                 account_id: account.id.0.to_string(),
@@ -71,6 +170,10 @@ pub async fn get_trial_balance(state: State<'_, AppState>) -> Result<TrialBalanc
                 debit_total: debit_total.to_string(),
                 credit_total: credit_total.to_string(),
                 balance: net.to_string(),
+                opening_debit: opening_debit.to_string(),
+                opening_credit: opening_credit.to_string(),
+                period_debit: period_debit.to_string(),
+                period_credit: period_credit.to_string(),
             })
         })
         .collect();
@@ -83,6 +186,10 @@ pub async fn get_trial_balance(state: State<'_, AppState>) -> Result<TrialBalanc
         total_debit: total_debit.to_string(),
         total_credit: total_credit.to_string(),
         generated_at: chrono::Utc::now().to_rfc3339(),
+        total_opening_debit: total_opening_debit.to_string(),
+        total_opening_credit: total_opening_credit.to_string(),
+        total_period_debit: total_period_debit.to_string(),
+        total_period_credit: total_period_credit.to_string(),
     })
 }
 
