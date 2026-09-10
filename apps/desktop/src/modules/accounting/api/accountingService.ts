@@ -53,8 +53,8 @@ export const accountingService = {
     return await invoke<TrialBalanceDto>("get_trial_balance", { fromDate: fromDate ?? null, toDate: toDate ?? null });
   },
 
-  async getIncomeStatement(): Promise<ProfitLossDto> {
-    return await invoke<ProfitLossDto>("get_income_statement");
+  async getIncomeStatement(fromDate?: string, toDate?: string): Promise<ProfitLossDto> {
+    return await invoke<ProfitLossDto>("get_income_statement", { fromDate: fromDate ?? null, toDate: toDate ?? null });
   },
 
   async getBalanceSheet(): Promise<BalanceSheetDto> {

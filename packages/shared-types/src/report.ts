@@ -26,6 +26,8 @@ export interface TrialBalanceDto {
 export interface ProfitLossLineDto {
   account_name: string;
   amount: string;
+  account_code?: string;
+  account_type?: string;
 }
 
 export interface ProfitLossDto {

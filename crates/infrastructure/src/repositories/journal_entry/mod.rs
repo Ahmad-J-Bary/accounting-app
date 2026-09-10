@@ -106,6 +106,14 @@ impl JournalEntryRepository for SqliteJournalEntryRepository {
         queries::aggregate_by_account_report(&self.pool).await
     }
 
+    async fn aggregate_by_account_report_for_period(
+        &self,
+        from_date: chrono::DateTime<chrono::Utc>,
+        to_date: chrono::DateTime<chrono::Utc>,
+    ) -> Result<Vec<AccountAggregationRow>, AppError> {
+        queries::aggregate_by_account_report_for_period(&self.pool, from_date, to_date).await
+    }
+
     async fn aggregate_by_account_for_period(
         &self,
         from_date: chrono::DateTime<chrono::Utc>,

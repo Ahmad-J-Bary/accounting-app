@@ -41,6 +41,10 @@ pub struct TrialBalanceDto {
 pub struct ProfitLossLineDto {
     pub account_name: String,
     pub amount: String,
+    #[serde(default)]
+    pub account_code: String,
+    #[serde(default)]
+    pub account_type: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

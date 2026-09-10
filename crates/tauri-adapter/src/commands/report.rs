@@ -197,15 +197,39 @@ pub async fn get_trial_balance(
 /// from the GL, net profit = total_revenue - total_expenses.
 /// Excludes FiscalClosing entries so the IS shows operational activity only,
 /// not the closing process itself.
+///
+/// When `from_date` / `to_date` are provided (ISO-8601 date strings),
+/// the aggregation is bounded to that period.
+/// When omitted, uses cumulative totals (all time).
 #[tauri::command]
 pub async fn get_income_statement(
     state: State<'_, AppState>,
+    from_date: Option<String>,
+    to_date: Option<String>,
 ) -> Result<ProfitLossDto, String> {
-    let agg_rows = state
-        .journal_entry_repo
-        .aggregate_by_account_report()
-        .await
-        .map_err(|e| e.to_string())?;
+    let agg_rows = if let (Some(ref fd), Some(ref td)) = (&from_date, &to_date) {
+        let from_dt = chrono::NaiveDate::parse_from_str(fd, "%Y-%m-%d")
+            .map_err(|e| format!("Invalid from_date: {e}"))?
+            .and_hms_opt(0, 0, 0)
+            .ok_or_else(|| "Invalid from_date time".to_string())?;
+
+        let to_dt = chrono::NaiveDate::parse_from_str(td, "%Y-%m-%d")
+            .map_err(|e| format!("Invalid to_date: {e}"))?
+            .and_hms_opt(23, 59, 59)
+            .ok_or_else(|| "Invalid to_date time".to_string())?;
+
+        state
+            .journal_entry_repo
+            .aggregate_by_account_report_for_period(from_dt.and_utc(), to_dt.and_utc())
+            .await
+            .map_err(|e| e.to_string())?
+    } else {
+        state
+            .journal_entry_repo
+            .aggregate_by_account_report()
+            .await
+            .map_err(|e| e.to_string())?
+    };
 
     let account_ids: Vec<_> = agg_rows.iter().map(|r| r.account_id).collect();
     let accounts = state
@@ -230,25 +254,29 @@ pub async fn get_income_statement(
 
         let net = row.total_debit_base - row.total_credit_base;
 
-        match account.account_type {
-            AccountType::Revenue => {
-                // Revenue is credit-normal: positive credit = revenue
-                let amount = -net; // net = debit - credit; for revenue, credit > debit => negative net => positive amount
-                total_revenue += amount;
-                revenue_lines.push(ProfitLossLineDto {
-                    account_name: account.name_ar.clone(),
-                    amount: amount.to_string(),
-                });
-            }
-            AccountType::Expenses => {
-                // Expenses are debit-normal: positive debit = expense
-                let amount = net; // net = debit - credit; for expenses, debit > credit => positive net
-                total_expenses += amount;
-                expense_lines.push(ProfitLossLineDto {
-                    account_name: account.name_ar.clone(),
-                    amount: amount.to_string(),
-                });
-            }
+            match account.account_type {
+                AccountType::Revenue => {
+                    // Revenue is credit-normal: positive credit = revenue
+                    let amount = -net; // net = debit - credit; for revenue, credit > debit => negative net => positive amount
+                    total_revenue += amount;
+                    revenue_lines.push(ProfitLossLineDto {
+                        account_name: account.name_ar.clone(),
+                        amount: amount.to_string(),
+                        account_code: account.code.clone(),
+                        account_type: format!("{:?}", account.account_type),
+                    });
+                }
+                AccountType::Expenses => {
+                    // Expenses are debit-normal: positive debit = expense
+                    let amount = net; // net = debit - credit; for expenses, debit > credit => positive net
+                    total_expenses += amount;
+                    expense_lines.push(ProfitLossLineDto {
+                        account_name: account.name_ar.clone(),
+                        amount: amount.to_string(),
+                        account_code: account.code.clone(),
+                        account_type: format!("{:?}", account.account_type),
+                    });
+                }
             _ => continue,
         }
     }
@@ -264,8 +292,8 @@ pub async fn get_income_statement(
         total_revenue: total_revenue.to_string(),
         total_expenses: total_expenses.to_string(),
         net_profit: net_profit.to_string(),
-        period_start: String::new(),
-        period_end: String::new(),
+        period_start: from_date.unwrap_or_default(),
+        period_end: to_date.unwrap_or_default(),
     })
 }
 
@@ -312,6 +340,8 @@ pub async fn get_balance_sheet(state: State<'_, AppState>) -> Result<BalanceShee
                 asset_lines.push(ProfitLossLineDto {
                     account_name: account.name_ar.clone(),
                     amount: net.to_string(),
+                    account_code: account.code.clone(),
+                    account_type: format!("{:?}", account.account_type),
                 });
             }
             AccountType::Liabilities => {
@@ -319,6 +349,8 @@ pub async fn get_balance_sheet(state: State<'_, AppState>) -> Result<BalanceShee
                 liability_lines.push(ProfitLossLineDto {
                     account_name: account.name_ar.clone(),
                     amount: net.to_string(),
+                    account_code: account.code.clone(),
+                    account_type: format!("{:?}", account.account_type),
                 });
             }
             AccountType::Equity => {
@@ -326,6 +358,8 @@ pub async fn get_balance_sheet(state: State<'_, AppState>) -> Result<BalanceShee
                 equity_lines.push(ProfitLossLineDto {
                     account_name: account.name_ar.clone(),
                     amount: net.to_string(),
+                    account_code: account.code.clone(),
+                    account_type: format!("{:?}", account.account_type),
                 });
             }
             _ => continue,

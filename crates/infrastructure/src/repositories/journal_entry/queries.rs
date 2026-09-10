@@ -445,6 +445,51 @@ pub async fn aggregate_by_account_report(
         .collect())
 }
 
+/// Income-Statement aggregation with date filtering: same as
+/// `aggregate_by_account_report` but bounded by a date range.
+/// Excludes `FiscalClosing` entries so the Income Statement shows
+/// operational revenue/expense activity only.
+pub async fn aggregate_by_account_report_for_period(
+    pool: &SqlitePool,
+    from_date: DateTime<Utc>,
+    to_date: DateTime<Utc>,
+) -> Result<Vec<AccountAggregationRow>, AppError> {
+    let rows = sqlx::query_as::<_, AggregationRow>(
+        "SELECT jl.account_id,
+                SUM(jl.debit_base) AS total_debit_base,
+                SUM(jl.credit_base) AS total_credit_base
+         FROM journal_lines jl
+         JOIN journal_entries je ON jl.journal_entry_id = je.id
+         WHERE je.status = 'Posted'
+           AND je.reversal_of_entry_id IS NULL
+           AND je.journal_type != 'FiscalClosing'
+           AND je.entry_date >= ?
+           AND je.entry_date <= ?
+         GROUP BY jl.account_id",
+    )
+    .bind(from_date.to_rfc3339())
+    .bind(to_date.to_rfc3339())
+    .fetch_all(pool)
+    .await
+    .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+
+    Ok(rows
+        .into_iter()
+        .filter_map(|r| {
+            let account_id = AccountId::from_str(&r.account_id).ok()?;
+            let total_debit_base =
+                rust_decimal::Decimal::from_str(&r.total_debit_base).unwrap_or(rust_decimal::Decimal::ZERO);
+            let total_credit_base =
+                rust_decimal::Decimal::from_str(&r.total_credit_base).unwrap_or(rust_decimal::Decimal::ZERO);
+            Some(AccountAggregationRow {
+                account_id,
+                total_debit_base,
+                total_credit_base,
+            })
+        })
+        .collect())
+}
+
 pub async fn aggregate_by_account_for_period(
     pool: &SqlitePool,
     from_date: DateTime<Utc>,

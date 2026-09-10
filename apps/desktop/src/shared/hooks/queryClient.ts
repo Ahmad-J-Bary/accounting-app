@@ -64,7 +64,7 @@ export const QUERY_KEYS = {
   salesReturns: ["sales-returns"] as const,
   purchaseReturns: ["purchase-returns"] as const,
 
-  incomeStatement: ["reports", "income-statement"] as const,
+  incomeStatement: (from?: string, to?: string) => ["reports", "income-statement", from, to] as const,
   balanceSheet: ["reports", "balance-sheet"] as const,
   trialBalance: (from?: string, to?: string) => ["reports", "trial-balance", from, to] as const,
   dashboard: ["reports", "dashboard"] as const,
@@ -87,7 +87,7 @@ export const QUERY_KEYS = {
 /** All report/ledger query keys that should be invalidated after any accounting mutation. */
 export const ALL_REPORT_KEYS: readonly (readonly unknown[])[] = [
   ["reports", "trial-balance"] as const,
-  QUERY_KEYS.incomeStatement,
+  ["reports", "income-statement"] as const,
   QUERY_KEYS.balanceSheet,
   QUERY_KEYS.dashboard,
   ["journal-entries"] as const,
@@ -137,7 +137,7 @@ const REPORT_CORE_KEYS: readonly (readonly unknown[])[] = [
   ["account-ledger"] as const,
   ["account-ledger-lines"] as const,
   QUERY_KEYS.dashboard,
-  QUERY_KEYS.incomeStatement,
+  ["reports", "income-statement"] as const,
   QUERY_KEYS.balanceSheet,
   ["reports", "trial-balance"] as const,
   QUERY_KEYS.receivablesPayables,

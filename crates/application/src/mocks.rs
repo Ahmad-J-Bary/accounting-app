@@ -388,6 +388,52 @@ impl JournalEntryRepository for MockJournalRepository {
             .collect())
     }
 
+    async fn aggregate_by_account_report_for_period(
+        &self,
+        from_date: chrono::DateTime<chrono::Utc>,
+        to_date: chrono::DateTime<chrono::Utc>,
+    ) -> Result<Vec<crate::ports::journal_entry_repository::AccountAggregationRow>, AppError>
+    {
+        use std::collections::HashMap;
+        let entries = self.entries.lock().unwrap();
+        let mut map: HashMap<domain::shared::AccountId, (rust_decimal::Decimal, rust_decimal::Decimal)> =
+            HashMap::new();
+        for entry in entries.iter() {
+            if entry.status != domain::accounting::JournalEntryStatus::Posted {
+                continue;
+            }
+            if entry.reversal_of_entry_id.is_some() {
+                continue;
+            }
+            if entry.journal_type == domain::accounting::JournalType::FiscalClosing {
+                continue;
+            }
+            let entry_date = entry.entry_date.naive_utc().date();
+            let from_date = from_date.naive_utc().date();
+            let to_date = to_date.naive_utc().date();
+            if entry_date < from_date || entry_date > to_date {
+                continue;
+            }
+            for line in &entry.lines {
+                let e = map.entry(line.account_id).or_insert((rust_decimal::Decimal::ZERO, rust_decimal::Decimal::ZERO));
+                e.0 += line.debit.base_amount;
+                e.1 += line.credit.base_amount;
+            }
+        }
+        Ok(map
+            .into_iter()
+            .map(
+                |(account_id, (total_debit_base, total_credit_base))| {
+                    crate::ports::journal_entry_repository::AccountAggregationRow {
+                        account_id,
+                        total_debit_base,
+                        total_credit_base,
+                    }
+                },
+            )
+            .collect())
+    }
+
     async fn aggregate_by_account_for_period(
         &self,
         _from_date: chrono::DateTime<chrono::Utc>,

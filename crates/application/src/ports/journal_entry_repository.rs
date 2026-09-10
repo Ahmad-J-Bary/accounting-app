@@ -73,6 +73,13 @@ pub trait JournalEntryRepository: Send + Sync {
     /// entry zeroes Revenue/Expense — excluding it preserves the correct
     /// report values.
     async fn aggregate_by_account_report(&self) -> Result<Vec<AccountAggregationRow>, AppError>;
+    /// Report-safe aggregation with date filtering: same as
+    /// `aggregate_by_account_report` but bounded by a date range.
+    async fn aggregate_by_account_report_for_period(
+        &self,
+        from_date: DateTime<Utc>,
+        to_date: DateTime<Utc>,
+    ) -> Result<Vec<AccountAggregationRow>, AppError>;
     /// Date-filtered aggregation: SUM(debit_base), SUM(credit_base) GROUP BY
     /// account_id for posted, non-reversed journal lines within a date range.
     async fn aggregate_by_account_for_period(
