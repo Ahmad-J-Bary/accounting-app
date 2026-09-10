@@ -208,8 +208,6 @@ export default function PaymentsPage() {
               selectedPayment
                 ? {
                     ...selectedPayment,
-                    amount: parseFloat(selectedPayment.amount),
-                    exchange_rate: parseFloat(selectedPayment.exchange_rate),
                   }
                 : initialType
                   ? {

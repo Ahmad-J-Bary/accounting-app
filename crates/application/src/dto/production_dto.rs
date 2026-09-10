@@ -42,7 +42,7 @@ pub struct CreateProductionMaterialRequest {
 pub struct CreateProductionOutputRequest {
     pub material_id: String,
     pub quantity_produced: f64,
-    pub unit_cost: f64,
+    pub unit_cost: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

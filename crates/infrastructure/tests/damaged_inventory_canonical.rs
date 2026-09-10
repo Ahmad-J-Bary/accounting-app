@@ -187,9 +187,9 @@ async fn damaged_item_uses_carrying_cost_as_canonical_loss_and_cost_impact() {
             quantity: 8.0,
             reason: Some("اختبار".into()),
             damage_date: Utc::now().to_rfc3339(),
-            cost_impact: 9999.0,
+            cost_impact: "9999.0".into(),
             currency_code: Some("SYP".into()),
-            fx_rate: Some(999.0),
+            fx_rate: Some("999.0".into()),
             notes: None,
         })
         .await
@@ -250,9 +250,9 @@ async fn damaged_item_preserves_original_usd_and_base_syp_values() {
             quantity: 8.0,
             reason: Some("مثال متعدد العملات".into()),
             damage_date: Utc::now().to_rfc3339(),
-            cost_impact: 0.0,
+            cost_impact: "0.0".into(),
             currency_code: Some("SYP".into()),
-            fx_rate: Some(1.0),
+            fx_rate: Some("1.0".into()),
             notes: None,
         })
         .await
@@ -337,9 +337,9 @@ async fn deleting_a_damaged_item_removes_only_its_own_document_number_movements(
             quantity: 3.0,
             reason: None,
             damage_date: Utc::now().to_rfc3339(),
-            cost_impact: 1.0,
+            cost_impact: "1.0".into(),
             currency_code: Some("USD".into()),
-            fx_rate: Some(1.0),
+            fx_rate: Some("1.0".into()),
             notes: None,
         })
         .await
@@ -351,9 +351,9 @@ async fn deleting_a_damaged_item_removes_only_its_own_document_number_movements(
             quantity: 2.0,
             reason: None,
             damage_date: Utc::now().to_rfc3339(),
-            cost_impact: 1.0,
+            cost_impact: "1.0".into(),
             currency_code: Some("USD".into()),
-            fx_rate: Some(1.0),
+            fx_rate: Some("1.0".into()),
             notes: None,
         })
         .await

@@ -53,7 +53,7 @@ export function DamagedForm({ onClose, products, onSave, saving, initialMaterial
     return {
       damage_date: new Date().toISOString(),
       quantity: 0,
-      cost_impact: prod ? parseFloat(prod.last_purchase_price || "0") : 0,
+      cost_impact: prod ? (prod.last_purchase_price || "0") : "0",
       reason: "",
       material_id: initialMaterialId ?? "",
     };
@@ -90,7 +90,7 @@ export function DamagedForm({ onClose, products, onSave, saving, initialMaterial
       setForm({
         damage_date: new Date().toISOString(),
         quantity: qty,
-        cost_impact: 0,
+        cost_impact: "0",
         reason: "",
         material_id: initialMaterialId ?? "",
       });
@@ -105,7 +105,7 @@ export function DamagedForm({ onClose, products, onSave, saving, initialMaterial
     const converted = currencyField.currency === materialCurrencyRef.current
       ? baseCostRef.current
       : convertBetween(baseCostRef.current, materialCurrencyRef.current, currencyField.currency);
-    setForm(p => ({ ...p, cost_impact: converted }));
+    setForm(p => ({ ...p, cost_impact: String(converted) }));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currencyField.currency]);
 
@@ -124,7 +124,7 @@ export function DamagedForm({ onClose, products, onSave, saving, initialMaterial
     setForm((p) => ({
       ...p,
       material_id: val,
-      cost_impact: converted,
+      cost_impact: String(converted),
     }));
   };
 
@@ -141,7 +141,7 @@ export function DamagedForm({ onClose, products, onSave, saving, initialMaterial
     setForm((p) => ({
       ...p,
       quantity: qty,
-      cost_impact: converted,
+      cost_impact: String(converted),
     }));
   };
 
@@ -152,10 +152,10 @@ export function DamagedForm({ onClose, products, onSave, saving, initialMaterial
       quantity: form.quantity,
       reason: form.reason || undefined,
       damage_date: form.damage_date || new Date().toISOString(),
-      cost_impact: form.cost_impact ?? 0,
+      cost_impact: String(form.cost_impact ?? 0),
       notes: form.notes,
       currency_code: currencyField.currency || undefined,
-      fx_rate: parseFloat(currencyField.fxRate) || 1,
+      fx_rate: currencyField.fxRate || undefined,
     } as CreateDamagedItemRequest);
   };
 
@@ -213,7 +213,7 @@ export function DamagedForm({ onClose, products, onSave, saving, initialMaterial
               } else {
                 baseCostRef.current = convertBetween(newAmount, currencyField.currency, matCurrency);
               }
-              setForm((p) => ({ ...p, cost_impact: newAmount }));
+              setForm((p) => ({ ...p, cost_impact: String(newAmount) }));
             }}
             symbol={currencyField.symbol}
             showCurrency={currencyField.hasMultipleCurrencies}

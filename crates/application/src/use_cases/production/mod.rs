@@ -83,7 +83,7 @@ impl CreateProductionOrderUseCase {
                 .map_err(|_| AppError::Invalid("معرف المادة غير صالح".into()))?;
             let qty = Decimal::try_from(out.quantity_produced)
                 .map_err(|_| AppError::Invalid("الكمية غير صالحة".into()))?;
-            let cost = Decimal::try_from(out.unit_cost)
+            let cost = Decimal::try_from(out.unit_cost.as_str())
                 .map_err(|_| AppError::Invalid("التكلفة غير صالحة".into()))?;
             order
                 .add_output(pid, qty, cost)

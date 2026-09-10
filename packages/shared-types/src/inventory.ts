@@ -21,9 +21,9 @@ export interface CreateDamagedItemRequest {
   quantity: number;
   reason?: string;
   damage_date: string;
-  cost_impact: number;
+  cost_impact: string;
   currency_code?: string;
-  fx_rate?: number;
+  fx_rate?: string;
   notes?: string;
 }
 
@@ -33,9 +33,9 @@ export interface UpdateDamagedItemRequest {
   quantity: number;
   reason?: string;
   damage_date: string;
-  cost_impact: number;
+  cost_impact: string;
   currency_code?: string;
-  fx_rate?: number;
+  fx_rate?: string;
   notes?: string;
 }
 
@@ -63,9 +63,9 @@ export interface StockAdjustment {
 export interface CreateStockAdjustmentRequest {
   material_id: string;
   actual_quantity: number;
-  unit_cost: number;
+  unit_cost: string;
   currency_code?: string;
-  fx_rate?: number;
+  fx_rate?: string;
   reason?: string;
   notes?: string;
   adjustment_date: string;
@@ -75,9 +75,9 @@ export interface UpdateStockAdjustmentRequest {
   id: string;
   material_id: string;
   actual_quantity: number;
-  unit_cost: number;
+  unit_cost: string;
   currency_code?: string;
-  fx_rate?: number;
+  fx_rate?: string;
   reason?: string;
   notes?: string;
   adjustment_date: string;
@@ -121,7 +121,7 @@ export interface CreateProductionMaterialRequest {
 export interface CreateProductionOutputRequest {
   product_id: string;
   quantity_produced: number;
-  unit_cost: number;
+  unit_cost: string;
 }
 
 export interface CreateProductionOrderRequest {

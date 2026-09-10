@@ -35,7 +35,7 @@ export function AdjustmentForm({ onClose, products, onSave, saving, initialValue
     adjustment_date: new Date().toISOString(),
     actual_quantity: 0,
     material_id: "",
-    unit_cost: 0,
+    unit_cost: "0",
   });
   const [systemQuantity, setSystemQuantity] = useState<number>(0);
   const [unitCostPerUnit, setUnitCostPerUnit] = useState<number>(0);
@@ -79,7 +79,7 @@ export function AdjustmentForm({ onClose, products, onSave, saving, initialValue
       const converted = selectedCurrency === matCurrency
         ? baseCost
         : convertBetween(baseCost, matCurrency, selectedCurrency);
-      setForm(p => ({ ...p, unit_cost: converted }));
+      setForm(p => ({ ...p, unit_cost: String(converted) }));
     } catch {
       toast.error("فشل تحميل رصيد المخزون");
     } finally {
@@ -111,7 +111,7 @@ export function AdjustmentForm({ onClose, products, onSave, saving, initialValue
       setForm({
         material_id: initialValues.material_id,
         actual_quantity: parseFloat(initialValues.actual_quantity),
-        unit_cost: totalCost,
+        unit_cost: String(totalCost),
         notes: initialValues.notes || initialValues.reason || "",
         adjustment_date: initialValues.adjustment_date,
       });
@@ -120,7 +120,7 @@ export function AdjustmentForm({ onClose, products, onSave, saving, initialValue
         adjustment_date: new Date().toISOString(),
         actual_quantity: 0,
         material_id: initialMaterialId || "",
-        unit_cost: 0,
+        unit_cost: "0",
       });
       setSystemQuantity(0);
       setUnitCostPerUnit(0);
@@ -141,7 +141,7 @@ export function AdjustmentForm({ onClose, products, onSave, saving, initialValue
     const converted = currencyField.currency === materialCurrencyRef.current
       ? baseCostRef.current
       : convertBetween(baseCostRef.current, materialCurrencyRef.current, currencyField.currency);
-    setForm(p => ({ ...p, unit_cost: converted }));
+    setForm(p => ({ ...p, unit_cost: String(converted) }));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currencyField.currency]);
 
@@ -164,7 +164,7 @@ export function AdjustmentForm({ onClose, products, onSave, saving, initialValue
     const converted = matCurrency === currencyField.currency
       ? baseCost
       : convertBetween(baseCost, matCurrency, currencyField.currency);
-    setForm(p => ({ ...p, unit_cost: converted }));
+    setForm(p => ({ ...p, unit_cost: String(converted) }));
   };
 
   const handleSave = async () => {
@@ -172,9 +172,9 @@ export function AdjustmentForm({ onClose, products, onSave, saving, initialValue
     const payload: CreateStockAdjustmentRequest = {
       material_id: form.material_id,
       actual_quantity: form.actual_quantity,
-      unit_cost: form.unit_cost ?? 0,
+      unit_cost: String(form.unit_cost ?? 0),
       currency_code: currencyField.currency || undefined,
-      fx_rate: parseFloat(currencyField.fxRate) || 1,
+      fx_rate: currencyField.fxRate || undefined,
       reason: form.notes || undefined,
       notes: form.notes || undefined,
       adjustment_date: form.adjustment_date,
@@ -234,7 +234,7 @@ export function AdjustmentForm({ onClose, products, onSave, saving, initialValue
               } else {
                 baseCostRef.current = convertBetween(newAmount, currencyField.currency, matCurrency);
               }
-              setForm(p => ({ ...p, unit_cost: newAmount }));
+              setForm(p => ({ ...p, unit_cost: String(newAmount) }));
             }}
             symbol={currencyField.symbol}
             showCurrency={currencyField.hasMultipleCurrencies}

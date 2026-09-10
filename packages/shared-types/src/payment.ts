@@ -32,9 +32,9 @@ export interface Payment {
 export interface CreatePaymentRequest {
   voucher_number?: string;
   payment_type: PaymentType;
-  amount: number;
+  amount: string;
   currency_code?: string;
-  exchange_rate?: number;
+  exchange_rate?: string;
   payment_date: string;
   debit_account_id?: string;
   credit_account_id?: string;

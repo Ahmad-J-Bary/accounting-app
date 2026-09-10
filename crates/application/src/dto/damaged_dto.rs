@@ -25,9 +25,9 @@ pub struct CreateDamagedItemRequest {
     pub quantity: f64,
     pub reason: Option<String>,
     pub damage_date: String,
-    pub cost_impact: f64,
+    pub cost_impact: String,
     pub currency_code: Option<String>,
-    pub fx_rate: Option<f64>,
+    pub fx_rate: Option<String>,
     pub notes: Option<String>,
 }
 
@@ -38,8 +38,8 @@ pub struct UpdateDamagedItemRequest {
     pub quantity: f64,
     pub reason: Option<String>,
     pub damage_date: String,
-    pub cost_impact: f64,
+    pub cost_impact: String,
     pub currency_code: Option<String>,
-    pub fx_rate: Option<f64>,
+    pub fx_rate: Option<String>,
     pub notes: Option<String>,
 }

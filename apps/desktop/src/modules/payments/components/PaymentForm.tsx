@@ -28,10 +28,10 @@ export function PaymentForm({ customers, suppliers, accounts, onSave, onClose, s
 
   const [form, setForm] = useState<Partial<PaymentFormPayload>>({
     payment_type: "Receipt",
-    amount: 0,
+    amount: "0",
     payment_date: new Date().toISOString(),
     currency_code: baseCurrency?.code || "",
-    exchange_rate: 1,
+    exchange_rate: "1",
     ...initialValues
   });
 
@@ -40,7 +40,7 @@ export function PaymentForm({ customers, suppliers, accounts, onSave, onClose, s
     setForm(p => ({
       ...p,
       currency_code: val,
-      exchange_rate: rate
+      exchange_rate: String(rate)
     }));
   };
 
@@ -48,10 +48,10 @@ export function PaymentForm({ customers, suppliers, accounts, onSave, onClose, s
     await onSave({
       id: form.id,
       payment_type: form.payment_type as PaymentType,
-      amount: form.amount || 0,
+      amount: String(form.amount || 0),
       voucher_number: form.voucher_number || undefined,
       currency_code: form.currency_code || baseCurrency?.code || "",
-      exchange_rate: form.exchange_rate || 1,
+      exchange_rate: form.exchange_rate != null ? String(form.exchange_rate) : undefined,
       payment_date: form.payment_date || new Date().toISOString(),
       debit_account_id: form.debit_account_id || undefined,
       credit_account_id: form.credit_account_id || undefined,
@@ -62,7 +62,7 @@ export function PaymentForm({ customers, suppliers, accounts, onSave, onClose, s
     });
   };
 
-  const isSaveDisabled = !form.amount || form.amount <= 0 || (
+  const isSaveDisabled = !form.amount || parseFloat(form.amount) <= 0 || (
     form.payment_type === "Receipt" && !form.customer_id
   ) || (
     form.payment_type === "SupplierPayment" && !form.supplier_id
@@ -229,7 +229,7 @@ export function PaymentForm({ customers, suppliers, accounts, onSave, onClose, s
                 min="0" 
                 step="0.01"
                 value={form.amount || ""}
-                onChange={e => setForm(p => ({ ...p, amount: parseFloat(e.target.value) || 0 }))} 
+                onChange={e => setForm(p => ({ ...p, amount: e.target.value }))} 
                 className="h-9 font-bold tabular-nums bg-white"
               />
             </div>

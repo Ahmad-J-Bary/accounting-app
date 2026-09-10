@@ -168,9 +168,9 @@ export default function DamagedPage() {
         quantity: parseFloat(selectedItem.quantity),
         reason: selectedItem.reason,
         damage_date: selectedItem.damage_date,
-        cost_impact: parseFloat(selectedItem.cost_impact),
+        cost_impact: selectedItem.cost_impact,
         currency_code: selectedItem.currency_code || undefined,
-        fx_rate: selectedItem.fx_rate ? parseFloat(selectedItem.fx_rate) : undefined,
+        fx_rate: selectedItem.fx_rate || undefined,
         notes: selectedItem.notes,
       }
     : undefined;

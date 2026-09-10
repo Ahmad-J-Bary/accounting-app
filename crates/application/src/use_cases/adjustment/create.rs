@@ -70,7 +70,7 @@ impl CreateStockAdjustmentUseCase {
         let actual_quantity = Decimal::try_from(req.actual_quantity)
             .map_err(|_| AppError::Invalid("الكمية المجرود غير صالحة".into()))?;
 
-        let unit_cost = Decimal::try_from(req.unit_cost)
+        let unit_cost = Decimal::try_from(req.unit_cost.as_str())
             .map_err(|_| AppError::Invalid("التكلفة غير صالحة".into()))?;
 
         // Resolve the entry currency + exchange rate. Defaults to the
@@ -81,8 +81,13 @@ impl CreateStockAdjustmentUseCase {
             .filter(|c| !c.trim().is_empty())
             .or_else(|| material.default_purchase_currency.clone())
             .unwrap_or_else(|| BASE_CURRENCY.to_string());
-        let fx_rate = Decimal::try_from(req.fx_rate.unwrap_or(1.0))
-            .map_err(|_| AppError::Invalid("سعر الصرف غير صالح".into()))?;
+        let fx_rate = req
+            .fx_rate
+            .as_deref()
+            .map(Decimal::try_from)
+            .transpose()
+            .map_err(|_| AppError::Invalid("سعر الصرف غير صالح".into()))?
+            .unwrap_or(Decimal::ONE);
         // Base conversion: 1 base = fx_rate foreign units, so base = / fx_rate.
         let unit_cost_base = (unit_cost / fx_rate)
             .round_dp_with_strategy(4, rust_decimal::RoundingStrategy::MidpointAwayFromZero);

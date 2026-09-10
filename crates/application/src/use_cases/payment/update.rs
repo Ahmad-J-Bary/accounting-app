@@ -137,11 +137,14 @@ impl UpdatePaymentUseCase {
 
         // 3. Build updated payment
         let payment_type = parse_payment_type(&req.payment_type);
-        let amount = Decimal::try_from(req.amount)
+        let amount = Decimal::try_from(req.amount.as_str())
             .map_err(|_| AppError::Invalid("المبلغ غير صالح".into()))?;
         let exchange_rate = req
             .exchange_rate
-            .and_then(|v| Decimal::try_from(v).ok())
+            .as_deref()
+            .map(Decimal::try_from)
+            .transpose()
+            .map_err(|_| AppError::Invalid("سعر الصرف غير صالح".into()))?
             .unwrap_or(Decimal::ONE);
         let currency_code = req.currency_code.unwrap_or_default();
         let payment_date = DateTime::parse_from_rfc3339(&req.payment_date)

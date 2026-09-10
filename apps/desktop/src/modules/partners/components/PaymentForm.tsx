@@ -39,17 +39,17 @@ export function PaymentForm({ config, onSave, onClose, saving }: PaymentFormProp
 
   const [form, setForm] = useState<Partial<CreatePaymentRequest>>({
     payment_type: config.paymentType,
-    amount: 0,
+    amount: "0",
     payment_date: new Date().toISOString(),
     currency_code: defaultCurrency,
-    exchange_rate: getExchangeRate(defaultCurrency, rateMap, baseCurrency?.code),
+    exchange_rate: String(getExchangeRate(defaultCurrency, rateMap, baseCurrency?.code)),
     [idFieldName]: config.entityId,
     notes: `${config.notesPrefix}${config.entityName}`,
   });
 
   const handleCurrencyChange = (val: string) => {
     const rate = getExchangeRate(val, rateMap, baseCurrency?.code);
-    setForm((p) => ({ ...p, currency_code: val, exchange_rate: rate }));
+    setForm((p) => ({ ...p, currency_code: val, exchange_rate: String(rate) }));
   };
 
   const handleSave = async () => {
@@ -57,16 +57,16 @@ export function PaymentForm({ config, onSave, onClose, saving }: PaymentFormProp
 
     await onSave({
       payment_type: config.paymentType,
-      amount: form.amount,
+      amount: String(form.amount),
       currency_code: form.currency_code || baseCurrency?.code || "",
-      exchange_rate: form.exchange_rate || 1,
+      exchange_rate: form.exchange_rate != null ? String(form.exchange_rate) : undefined,
       payment_date: form.payment_date || new Date().toISOString(),
       [idFieldName]: config.entityId,
       notes: form.notes || undefined,
     });
   };
 
-  const isSaveDisabled = !form.amount || form.amount <= 0 || !config.entityId;
+  const isSaveDisabled = !form.amount || parseFloat(form.amount) <= 0 || !config.entityId;
 
   return (
     <FormPanel
@@ -106,7 +106,7 @@ export function PaymentForm({ config, onSave, onClose, saving }: PaymentFormProp
                 min="0"
                 step="0.01"
                 value={form.amount || ""}
-                onChange={(e) => setForm((p) => ({ ...p, amount: parseFloat(e.target.value) || 0 }))}
+                onChange={(e) => setForm((p) => ({ ...p, amount: e.target.value }))}
                 className="h-9 font-bold tabular-nums bg-white"
               />
             </div>

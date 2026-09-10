@@ -22,10 +22,10 @@ export function ExpenseVoucherForm({ expenseAccount, onSave, onClose, saving }: 
 
   const [form, setForm] = useState<Partial<CreatePaymentRequest>>({
     payment_type: "ExpenseVoucher",
-    amount: 0,
+    amount: "0",
     payment_date: new Date().toISOString(),
     currency_code: baseCurrency?.code || "",
-    exchange_rate: 1,
+    exchange_rate: "1",
     debit_account_id: expenseAccount.id,
     notes: `سند صرف: ${expenseAccount.name_ar}`,
   });
@@ -35,7 +35,7 @@ export function ExpenseVoucherForm({ expenseAccount, onSave, onClose, saving }: 
     setForm(p => ({
       ...p,
       currency_code: val,
-      exchange_rate: rate
+      exchange_rate: String(rate)
     }));
   };
 
@@ -44,16 +44,16 @@ export function ExpenseVoucherForm({ expenseAccount, onSave, onClose, saving }: 
 
     await onSave({
       payment_type: "ExpenseVoucher",
-      amount: form.amount,
+      amount: String(form.amount),
       currency_code: form.currency_code || baseCurrency?.code || "",
-      exchange_rate: form.exchange_rate || 1,
+      exchange_rate: form.exchange_rate != null ? String(form.exchange_rate) : undefined,
       payment_date: form.payment_date || new Date().toISOString(),
       debit_account_id: form.debit_account_id,
       notes: form.notes || undefined,
     });
   };
 
-  const isSaveDisabled = !form.amount || form.amount <= 0 || !form.debit_account_id;
+  const isSaveDisabled = !form.amount || parseFloat(form.amount) <= 0 || !form.debit_account_id;
 
   return (
     <FormPanel
@@ -89,7 +89,7 @@ export function ExpenseVoucherForm({ expenseAccount, onSave, onClose, saving }: 
                 min="0" 
                 step="0.01"
                 value={form.amount || ""}
-                onChange={e => setForm(p => ({ ...p, amount: parseFloat(e.target.value) || 0 }))} 
+                onChange={e => setForm(p => ({ ...p, amount: e.target.value }))} 
                 className="h-9 font-bold tabular-nums bg-white"
               />
             </div>
