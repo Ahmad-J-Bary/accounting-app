@@ -22,34 +22,20 @@ export default function BalanceSheetReport() {
   );
 
   const { isLoading: bsLoading, isRefetching: bsRefetching, data: bsData, dataUpdatedAt: bsUpdatedAt, refetch: bsRefetch } = useBalanceSheet();
-  const { loading: legacyLoading, refreshing: legacyRefreshing, lastLoadedAt: legacyLastLoadedAt, reportData, loadReportData: legacyLoadReportData } = useBalanceSheetReport(filters);
+  const { loading: enrichmentLoading, reportData } = useBalanceSheetReport(filters);
 
-  const loading = bsLoading || legacyLoading;
-  const refreshing = bsRefetching || legacyRefreshing;
-  const lastLoadedAt = bsUpdatedAt ? new Date(bsUpdatedAt) : legacyLastLoadedAt;
-  const loadReportData = async () => {
-    await Promise.all([bsRefetch(), legacyLoadReportData()]);
-  };
+  const loading = bsLoading || enrichmentLoading;
+  const refreshing = bsRefetching;
+  const lastLoadedAt = bsUpdatedAt ? new Date(bsUpdatedAt) : null;
 
   const computed = useMemo(() => {
-    if (!bsData) {
-      return computeBalanceSheet(
-        reportData.accounts,
-        {
-          netProfit: reportData.netProfit,
-          totalDrawings: reportData.totalDrawings,
-        },
-        reportData.ledgerTotals,
-        { closingInventory: reportData.closingInventory },
-      );
-    }
+    if (!bsData) return null;
 
     // Convert backend BalanceSheetDto to the ledgerTotals format computeBalanceSheet expects
     const backendLedgerTotals = new Map<string, { debit: number; credit: number }>();
     const allBackendLines = [...bsData.assets, ...bsData.liabilities, ...bsData.equity];
     for (const line of allBackendLines) {
       const net = parseFloat(line.amount) || 0;
-      // Convert net to debit/credit format for computeBalanceSheet
       if (net >= 0) {
         backendLedgerTotals.set(line.account_id, { debit: net, credit: 0 });
       } else {
@@ -59,18 +45,15 @@ export default function BalanceSheetReport() {
 
     // Use backend net_profit if available; totalDrawings is already included
     // in total_equity (DRAWINGS account is Equity type with negative balance)
-    const netProfit = bsData.net_profit ? parseFloat(bsData.net_profit) || 0 : reportData.netProfit;
-
-    // Build accounts from backend data for the tree
-    const accounts = reportData.accounts;
+    const netProfit = bsData.net_profit ? parseFloat(bsData.net_profit) || 0 : 0;
 
     return computeBalanceSheet(
-      accounts,
+      reportData.accounts,
       { netProfit, totalDrawings: 0 },
       backendLedgerTotals,
       { closingInventory: reportData.closingInventory },
     );
-  }, [bsData, reportData]);
+  }, [bsData, reportData.accounts, reportData.closingInventory]);
 
   const formatValue = useCallback(
     (value: number) =>
@@ -94,20 +77,20 @@ export default function BalanceSheetReport() {
           currencies={currencies}
           baseCurrencyCode={baseCurrency?.code}
           refreshing={refreshing}
-          onRefresh={() => void loadReportData()}
+          onRefresh={() => void bsRefetch()}
           lastLoadedAt={lastLoadedAt}
         />
       }
       tableContent={
         loading ? (
           <ReportLoadingSkeleton />
-        ) : (
+        ) : computed ? (
           <BalanceSheetView
-              computed={computed}
-              filters={filters}
-              formatValue={formatValue}
-            />
-        )
+            computed={computed}
+            filters={filters}
+            formatValue={formatValue}
+          />
+        ) : null
       }
     />
   );
