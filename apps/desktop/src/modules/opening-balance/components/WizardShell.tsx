@@ -54,7 +54,7 @@ export function WizardShell({
   children,
 }: WizardShellProps) {
   // stepOrder maps visual position → actual step index. If not provided, use natural order.
-  const orderedIndices = stepOrder ?? steps.map((_, i) => i);
+  const orderedIndices = (stepOrder ?? steps.map((_, i) => i)).filter((idx) => idx >= 0 && idx < steps.length);
   const visualPosition = new Map(orderedIndices.map((idx, pos) => [idx, pos]));
   const currentVisualPos = visualPosition.get(stepIndex) ?? 0;
   const progress = ((currentVisualPos + 1) / steps.length) * 100;

@@ -173,18 +173,24 @@ describe("GuidedTransitionWizard", () => {
     expect(await screen.findByText("تم بدء المحاسبة بنجاح ✓")).toBeInTheDocument();
   });
 
-  it("ExistingCompany mode runs the 11-step transition incl. the first-period step", async () => {
+  it("ExistingCompany mode renders the full 10-step transition", async () => {
     vi.mocked(settingsService.getSettings).mockResolvedValue({ accounting_start_mode: "ExistingCompanyMigration" } as never);
     renderWizard();
     expect(await screen.findByText("معالج التحويل الموجه (شركة قائمة)")).toBeInTheDocument();
-    expect(screen.getByText("أول فترة تشغيلية")).toBeInTheDocument();
-    expect(screen.getByText("النقد والبنوك")).toBeInTheDocument();
-    expect(screen.getByText("المخزون")).toBeInTheDocument();
-    expect(screen.getAllByText("حقوق الشركاء").length).toBeGreaterThan(0);
-    expect(screen.queryByText("الشركاء ورأس المال")).not.toBeInTheDocument();
-    expect(screen.getByText("إتمام الترحيل")).toBeInTheDocument();
-    expect(screen.getAllByText("الموردون والالتزامات").length).toBeGreaterThan(0);
-    expect(screen.getByText("اكتمال")).toBeInTheDocument();
+    for (const label of [
+      "بدء الحسابات",
+      "النقد والبنوك",
+      "الذمم المدينة",
+      "المخزون",
+      "الأصول الثابتة",
+      "الموردون والالتزامات",
+      "حقوق الشركاء",
+      "المراجعة والحفظ",
+      "إتمام الترحيل",
+      "اكتمال",
+    ]) {
+      expect(screen.getAllByText(label).length).toBeGreaterThan(0);
+    }
   });
 
   it("no longer exposes a start-mode toggle — company type is fixed from settings", async () => {
@@ -203,16 +209,11 @@ describe("GuidedTransitionWizard", () => {
       debit_total: "0",
       credit_total: "0",
     } as never);
-    const user = userEvent.setup();
     renderWizard();
-    expect(await screen.findByText("تم التحويل بنجاح ✓")).toBeInTheDocument();
-    expect(screen.getByText("الخطوة التالية: إعداد أول فترة تشغيلية")).toBeInTheDocument();
-    expect(screen.getByText("الأرصدة الافتتاحية مُرحّلة إلى دفتر الأستاذ")).toBeInTheDocument();
-    // The first-period form stays hidden until [بدء أول فترة تشغيلية] is pressed.
-    expect(screen.queryByLabelText(/بداية الفترة/)).not.toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "بدء أول فترة تشغيلية" }));
-    expect(screen.getByLabelText(/بداية الفترة/)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "إنشاء أول فترة تشغيلية" })).toBeEnabled();
+    expect(await screen.findByText("اكتمل إعداد الشركة ✓")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "الانتقال إلى لوحة التحكم" })).toBeInTheDocument();
+    expect(screen.queryByText("المركز الافتتاحي")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "حفظ المسودة" })).not.toBeInTheDocument();
   });
 
   it("ExistingCompany with a Locked migration and an existing fiscal period resumes at ACTIVE completion", async () => {
@@ -243,20 +244,13 @@ describe("GuidedTransitionWizard", () => {
     expect(await screen.findByText("DASHBOARD_ROOT")).toBeInTheDocument();
   });
 
-  it("Locked completion shows the retained-earnings summary and [توزيع الأرباح] navigates into the distribution workflow", async () => {
+  it("Locked completion hides the retained-earnings distribution controls (sealed after lock)", async () => {
     vi.mocked(settingsService.getSettings).mockResolvedValue({ accounting_start_mode: "ExistingCompanyMigration" } as never);
     vi.mocked(openingBalanceService.listMigrations).mockResolvedValue([LOCKED_MIGRATION as never]);
     vi.mocked(fiscalPeriodService.listFiscalPeriods).mockResolvedValue([PERIOD as never]);
-    const user = userEvent.setup();
     renderWizard();
     expect(await screen.findByText("اكتمل إعداد الشركة ✓")).toBeInTheDocument();
-    // The retained-earnings summary card shows the available distribution figure.
-    expect(await screen.findByText(/المتبقي للتوزيع/)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "عرض الأرباح المبقاة" })).toBeInTheDocument();
-    // [توزيع الأرباح] navigates to the partners page with profit distribution dialog
-    await user.click(screen.getByRole("button", { name: "توزيع الأرباح" }));
-    expect(await screen.findByText("PARTNERS_ROOT")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "احسب من اليومية" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "توزيع الأرباح" })).not.toBeInTheDocument();
   });
 
   it("review step shows [توزيع الأرباح] when retained earnings is the residual classification", async () => {

@@ -1465,7 +1465,11 @@ export function useOpeningBalanceWizard() {
     const dataEntryEnd = Math.min(STEP_REVIEW, steps.length);
     setStepOrder((prev) => {
       const base = prev.length === steps.length ? prev : [...Array(steps.length).keys()];
-      return updateStepOrder(base, completedSteps, dataEntryEnd);
+      const next = updateStepOrder(base, completedSteps, dataEntryEnd);
+      if (next.length === prev.length && next.every((v, i) => v === prev[i])) {
+        return prev;
+      }
+      return next;
     });
   }, [completedSteps, steps.length]);
 
