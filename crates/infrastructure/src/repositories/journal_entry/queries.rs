@@ -589,11 +589,15 @@ pub async fn aggregate_by_account_for_period(
 /// Retained-earnings balance: credit-normal SUM(credit − debit) over
 /// posted, non-reversed journal lines hitting `purpose = 'retained_earnings'`
 /// accounts, optionally bounded by `to_date`.
+///
+/// Uses TEXT-safe SQL aggregation (no REAL arithmetic) and Rust Decimal for
+/// the final subtraction to guarantee exact precision.
 pub async fn retained_earnings_balance(
     pool: &SqlitePool,
     to_date: Option<DateTime<Utc>>,
 ) -> Result<Decimal, AppError> {
-    let mut sql = "SELECT CAST(SUM(CAST(jl.credit_base AS REAL) - CAST(jl.debit_base AS REAL)) AS TEXT) AS balance
+    let mut sql = "SELECT CAST(COALESCE(SUM(jl.credit_base), '0') AS TEXT) AS total_credit,
+                CAST(COALESCE(SUM(jl.debit_base), '0') AS TEXT) AS total_debit
          FROM journal_lines jl
          JOIN journal_entries je ON jl.journal_entry_id = je.id
          JOIN accounts a ON jl.account_id = a.id
@@ -606,18 +610,28 @@ pub async fn retained_earnings_balance(
         sql.push_str(" AND je.entry_date <= ?");
     }
 
-    let mut query = sqlx::query_scalar::<_, Option<String>>(&sql);
+    #[derive(sqlx::FromRow)]
+    struct Row {
+        total_credit: String,
+        total_debit: String,
+    }
+
+    let mut query = sqlx::query_as::<_, Row>(&sql);
     if let Some(date) = to_date {
         query = query.bind(date.to_rfc3339());
     }
 
-    let balance_str = query
+    let row = query
         .fetch_one(pool)
         .await
-        .map_err(|e| AppError::Infrastructure(e.to_string()))?
-        .unwrap_or_else(|| "0".to_string());
+        .map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
-    Ok(Decimal::from_str(&balance_str).unwrap_or(Decimal::ZERO))
+    let credit = Decimal::from_str(&row.total_credit)
+        .map_err(|e| AppError::Infrastructure(format!("Invalid credit_base decimal: {}", e)))?;
+    let debit = Decimal::from_str(&row.total_debit)
+        .map_err(|e| AppError::Infrastructure(format!("Invalid debit_base decimal: {}", e)))?;
+
+    Ok(credit - debit)
 }
 
 #[derive(sqlx::FromRow)]
@@ -632,8 +646,8 @@ pub async fn aggregate_dashboard_kpis(
 ) -> Result<std::collections::HashMap<String, rust_decimal::Decimal>, AppError> {
     let rows = sqlx::query_as::<_, PurposeAggregationRow>(
         "SELECT COALESCE(a.purpose, '') AS purpose,
-                SUM(CAST(jl.debit_base AS REAL)) AS total_debit_base,
-                SUM(CAST(jl.credit_base AS REAL)) AS total_credit_base
+                CAST(COALESCE(SUM(jl.debit_base), '0') AS TEXT) AS total_debit_base,
+                CAST(COALESCE(SUM(jl.credit_base), '0') AS TEXT) AS total_credit_base
          FROM journal_lines jl
          JOIN journal_entries je ON jl.journal_entry_id = je.id
          JOIN accounts a ON jl.account_id = a.id
@@ -649,14 +663,10 @@ pub async fn aggregate_dashboard_kpis(
 
     let mut result = std::collections::HashMap::new();
     for row in rows {
-        let debit: rust_decimal::Decimal = row
-            .total_debit_base
-            .parse()
-            .unwrap_or(rust_decimal::Decimal::ZERO);
-        let credit: rust_decimal::Decimal = row
-            .total_credit_base
-            .parse()
-            .unwrap_or(rust_decimal::Decimal::ZERO);
+        let debit: rust_decimal::Decimal = rust_decimal::Decimal::from_str(&row.total_debit_base)
+            .map_err(|e| AppError::Infrastructure(format!("Invalid debit_base decimal for purpose '{}': {}", row.purpose, e)))?;
+        let credit: rust_decimal::Decimal = rust_decimal::Decimal::from_str(&row.total_credit_base)
+            .map_err(|e| AppError::Infrastructure(format!("Invalid credit_base decimal for purpose '{}': {}", row.purpose, e)))?;
         let net = credit - debit;
         result.insert(row.purpose, net);
     }
@@ -680,8 +690,8 @@ pub async fn aggregate_monthly_revenue_expenses(
     let rows = sqlx::query_as::<_, MonthlyAggregationRow>(
         "SELECT SUBSTR(je.entry_date, 1, 7) AS year_month,
                 a.account_type,
-                SUM(CAST(jl.debit_base AS REAL)) AS total_debit_base,
-                SUM(CAST(jl.credit_base AS REAL)) AS total_credit_base
+                CAST(COALESCE(SUM(jl.debit_base), '0') AS TEXT) AS total_debit_base,
+                CAST(COALESCE(SUM(jl.credit_base), '0') AS TEXT) AS total_credit_base
          FROM journal_lines jl
          JOIN journal_entries je ON jl.journal_entry_id = je.id
          JOIN accounts a ON jl.account_id = a.id
@@ -710,14 +720,10 @@ pub async fn aggregate_monthly_revenue_expenses(
     > = std::collections::HashMap::new();
 
     for row in rows {
-        let debit: rust_decimal::Decimal = row
-            .total_debit_base
-            .parse()
-            .unwrap_or(rust_decimal::Decimal::ZERO);
-        let credit: rust_decimal::Decimal = row
-            .total_credit_base
-            .parse()
-            .unwrap_or(rust_decimal::Decimal::ZERO);
+        let debit: rust_decimal::Decimal = rust_decimal::Decimal::from_str(&row.total_debit_base)
+            .map_err(|e| AppError::Infrastructure(format!("Invalid debit_base decimal for month '{}' type '{}': {}", row.year_month, row.account_type, e)))?;
+        let credit: rust_decimal::Decimal = rust_decimal::Decimal::from_str(&row.total_credit_base)
+            .map_err(|e| AppError::Infrastructure(format!("Invalid credit_base decimal for month '{}' type '{}': {}", row.year_month, row.account_type, e)))?;
 
         let entry = monthly_map
             .entry(row.year_month)
