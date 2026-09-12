@@ -73,7 +73,7 @@ pub async fn get_trial_balance(
         .as_ref()
         .map(|rows| {
             rows.iter()
-                .map(|r| (r.account_id.clone(), (r.total_debit_base, r.total_credit_base)))
+                .map(|r| (r.account_id, (r.total_debit_base, r.total_credit_base)))
                 .collect()
         })
         .unwrap_or_default();
@@ -111,8 +111,8 @@ pub async fn get_trial_balance(
 
             // Compute opening/period split when period data is available
             let (opening_debit, opening_credit, period_debit, period_credit) =
-                if let Some(&(ref p_debit, ref p_credit)) = period_map.get(&row.account_id) {
-                    let p_net = p_debit - p_credit;
+                if let Some((p_debit, p_credit)) = period_map.get(&row.account_id) {
+                    let p_net = *p_debit - *p_credit;
                     let o_net = net - p_net;
 
                     let (o_debit, o_credit) = match nb {

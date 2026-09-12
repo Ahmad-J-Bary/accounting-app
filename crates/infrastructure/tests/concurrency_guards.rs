@@ -171,18 +171,18 @@ async fn concurrent_readers_observe_balanced_ledger_while_writer_commits() {
 
     // Writer connection streams 12 balanced commits.
     let writer_pool = pool.clone();
-    let w_cash = cash.clone();
-    let w_rev = revenue.clone();
+    let w_cash = cash;
+    let w_rev = revenue;
     let writer = tokio::spawn(async move {
         let repo = SqliteJournalEntryRepository::new(writer_pool);
         for i in 0..12u32 {
             let amount = Decimal::from(i + 1);
             let mut entry = JournalEntry::new(
-                format!("CG-{:04}", 7000 + i).into(),
+                format!("CG-{:04}", 7000 + i),
                 JournalType::GeneralJournal,
                 vec![
-                    line(w_cash.clone(), amount, Decimal::ZERO),
-                    line(w_rev.clone(), Decimal::ZERO, amount),
+                    line(w_cash, amount, Decimal::ZERO),
+                    line(w_rev, Decimal::ZERO, amount),
                 ],
                 Utc::now(),
                 "concurrent stream".into(),
@@ -254,8 +254,8 @@ async fn allocator_stays_ahead_of_all_posted_numbers() {
             number.into(),
             JournalType::GeneralJournal,
             vec![
-                line(cash.clone(), amount, Decimal::ZERO),
-                line(capital.clone(), Decimal::ZERO, amount),
+                line(cash, amount, Decimal::ZERO),
+                line(capital, Decimal::ZERO, amount),
             ],
             Utc::now(),
             "vector post".into(),

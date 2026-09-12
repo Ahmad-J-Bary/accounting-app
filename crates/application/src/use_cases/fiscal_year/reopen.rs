@@ -283,9 +283,11 @@ mod tests {
         let result = use_case.execute(cmd).await.unwrap();
         assert_eq!(result.status, "Reopened");
 
-        let entries = journal_repo.entries.lock().unwrap();
-        let cf_entry = entries.iter().find(|e| e.id == cf_entry_id).unwrap();
-        assert_eq!(cf_entry.status, JournalEntryStatus::Reversed);
+        {
+            let entries = journal_repo.entries.lock().unwrap();
+            let cf_entry = entries.iter().find(|e| e.id == cf_entry_id).unwrap();
+            assert_eq!(cf_entry.status, JournalEntryStatus::Reversed);
+        }
 
         let fy = year_repo.find_by_id(&year_id).await.unwrap().unwrap();
         assert!(fy.carry_forward_entry_id.is_none());
@@ -296,7 +298,7 @@ mod tests {
         let year_repo = Arc::new(MockFiscalYearRepository::new());
         let journal_repo = Arc::new(MockJournalRepository::default());
 
-        let (year_id, next_id, cf_entry_id) =
+        let (year_id, next_id, _cf_entry_id) =
             make_closed_year_with_carry_forward(&year_repo, &journal_repo);
 
         {

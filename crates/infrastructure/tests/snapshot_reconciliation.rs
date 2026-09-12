@@ -279,11 +279,9 @@ async fn gl_aggregation_matches_snapshot_balances() {
     let revenue = seed_account(pool.as_ref(), "4101", "إيرادات").await;
 
     // Post 3 entries
-    let entries_data = vec![
-        (dec!(10000), receivable, revenue),
+    let entries_data = [(dec!(10000), receivable, revenue),
         (dec!(5000), cash, revenue),
-        (dec!(3000), cash, receivable),
-    ];
+        (dec!(3000), cash, receivable)];
 
     let mut total_revenue_debit = dec!(0);
     let mut total_revenue_credit = dec!(0);
@@ -371,7 +369,7 @@ async fn balance_invariant_holds_after_multiple_postings() {
     let expense = seed_account(pool.as_ref(), "6101", "مصاريف").await;
 
     // Post 5 entries of varying amounts
-    let amounts = vec![dec!(1000), dec!(2500), dec!(750), dec!(4200), dec!(1800)];
+    let amounts = [dec!(1000), dec!(2500), dec!(750), dec!(4200), dec!(1800)];
     let mut expected_cash_credit = dec!(0);
     let mut expected_expense_debit = dec!(0);
 

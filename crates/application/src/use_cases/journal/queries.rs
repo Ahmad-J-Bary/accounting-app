@@ -160,7 +160,7 @@ impl ListJournalEntriesUseCase {
             .await?
             .ok_or_else(|| AppError::NotFound("القيد غير موجود".into()))?;
 
-        let account_map = batch_load_accounts(&self.account_repo, &[entry.clone()]).await?;
+        let account_map = batch_load_accounts(&self.account_repo, std::slice::from_ref(&entry)).await?;
         map_to_dto(entry, &account_map)
     }
 }
@@ -169,7 +169,7 @@ fn collect_account_ids(entries: &[domain::accounting::JournalEntry]) -> Vec<Acco
     let mut ids = std::collections::HashSet::new();
     for entry in entries {
         for line in &entry.lines {
-            ids.insert(line.account_id.clone());
+            ids.insert(line.account_id);
         }
     }
     ids.into_iter().collect()
@@ -184,7 +184,7 @@ async fn batch_load_accounts(
         return Ok(HashMap::new());
     }
     let accounts = account_repo.find_by_ids(&ids).await?;
-    Ok(accounts.into_iter().map(|a| (a.id.clone(), a)).collect())
+    Ok(accounts.into_iter().map(|a| (a.id, a)).collect())
 }
 
 fn map_to_dto(

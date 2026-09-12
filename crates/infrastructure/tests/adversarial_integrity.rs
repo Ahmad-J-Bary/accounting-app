@@ -163,7 +163,7 @@ async fn a1_posted_entry_cannot_be_resaved() {
     let capital = seed_account(&pool, "3000", "Capital", "Equity", "general").await;
 
     post_entry(&repo, "ADJ-A1-001", JournalType::GeneralJournal,
-        vec![line(cash.clone(), dec!(100), Decimal::ZERO), line(capital.clone(), Decimal::ZERO, dec!(100))]).await;
+        vec![line(cash, dec!(100), Decimal::ZERO), line(capital, Decimal::ZERO, dec!(100))]).await;
 
     // Try to re-save the same posted entry — must fail
     let entry_id: (String,) = sqlx::query_as(
@@ -187,7 +187,7 @@ async fn a4_reversal_produces_net_zero() {
 
     // Post a revenue entry: Dr Cash 150.75, Cr Revenue 150.75
     post_entry(&repo, "ADJ-A4-001", JournalType::CashReceipt,
-        vec![line(cash.clone(), dec!(150.75), Decimal::ZERO), line(revenue.clone(), Decimal::ZERO, dec!(150.75))]).await;
+        vec![line(cash, dec!(150.75), Decimal::ZERO), line(revenue, Decimal::ZERO, dec!(150.75))]).await;
 
     // Get original entry
     let original_id: (String,) = sqlx::query_as(
@@ -241,7 +241,7 @@ async fn b4_double_reversal_rejected() {
     let capital = seed_account(&pool, "3000", "Capital", "Equity", "general").await;
 
     post_entry(&repo, "ADJ-B4-001", JournalType::GeneralJournal,
-        vec![line(cash.clone(), dec!(50), Decimal::ZERO), line(capital.clone(), Decimal::ZERO, dec!(50))]).await;
+        vec![line(cash, dec!(50), Decimal::ZERO), line(capital, Decimal::ZERO, dec!(50))]).await;
 
     let original_id: (String,) = sqlx::query_as(
         "SELECT id FROM journal_entries WHERE entry_number = 'ADJ-B4-001'"
@@ -275,7 +275,7 @@ async fn b5_reversal_of_reversed_entry_rejected() {
     let capital = seed_account(&pool, "3000", "Capital", "Equity", "general").await;
 
     post_entry(&repo, "ADJ-B5-001", JournalType::GeneralJournal,
-        vec![line(cash.clone(), dec!(75), Decimal::ZERO), line(capital.clone(), Decimal::ZERO, dec!(75))]).await;
+        vec![line(cash, dec!(75), Decimal::ZERO), line(capital, Decimal::ZERO, dec!(75))]).await;
 
     let original_id: (String,) = sqlx::query_as(
         "SELECT id FROM journal_entries WHERE entry_number = 'ADJ-B5-001'"
@@ -312,7 +312,7 @@ async fn b3_fractional_reversal_exact_zero() {
 
     // Post: Dr Expense 33.33, Cr Cash 33.33
     post_entry(&repo, "ADJ-B3-001", JournalType::CashPayment,
-        vec![line(expense.clone(), dec!(33.33), Decimal::ZERO), line(cash.clone(), Decimal::ZERO, dec!(33.33))]).await;
+        vec![line(expense, dec!(33.33), Decimal::ZERO), line(cash, Decimal::ZERO, dec!(33.33))]).await;
 
     let original_id: (String,) = sqlx::query_as(
         "SELECT id FROM journal_entries WHERE entry_number = 'ADJ-B3-001'"
@@ -365,23 +365,23 @@ async fn f1_accounting_equation_after_mixed_transactions() {
 
     // 1. Capital contribution: Dr Cash 1000, Cr Capital 1000
     post_entry(&repo, "ADJ-F1-001", JournalType::CapitalContribution,
-        vec![line(cash.clone(), dec!(1000), Decimal::ZERO), line(capital.clone(), Decimal::ZERO, dec!(1000))]).await;
+        vec![line(cash, dec!(1000), Decimal::ZERO), line(capital, Decimal::ZERO, dec!(1000))]).await;
 
     // 2. Cash sale: Dr Cash 200.50, Cr Revenue 200.50
     post_entry(&repo, "ADJ-F1-002", JournalType::CashReceipt,
-        vec![line(cash.clone(), dec!(200.50), Decimal::ZERO), line(revenue.clone(), Decimal::ZERO, dec!(200.50))]).await;
+        vec![line(cash, dec!(200.50), Decimal::ZERO), line(revenue, Decimal::ZERO, dec!(200.50))]).await;
 
     // 3. Credit sale: Dr AR 150.25, Cr Revenue 150.25
     post_entry(&repo, "ADJ-F1-003", JournalType::CreditSalesJournal,
-        vec![line(ar.clone(), dec!(150.25), Decimal::ZERO), line(revenue.clone(), Decimal::ZERO, dec!(150.25))]).await;
+        vec![line(ar, dec!(150.25), Decimal::ZERO), line(revenue, Decimal::ZERO, dec!(150.25))]).await;
 
     // 4. Expense: Dr Expense 75.10, Cr Cash 75.10
     post_entry(&repo, "ADJ-F1-004", JournalType::CashPayment,
-        vec![line(expense.clone(), dec!(75.10), Decimal::ZERO), line(cash.clone(), Decimal::ZERO, dec!(75.10))]).await;
+        vec![line(expense, dec!(75.10), Decimal::ZERO), line(cash, Decimal::ZERO, dec!(75.10))]).await;
 
     // 5. Purchase on credit: Dr Expense 50.20, Cr AP 50.20
     post_entry(&repo, "ADJ-F1-005", JournalType::PurchaseJournal,
-        vec![line(expense.clone(), dec!(50.20), Decimal::ZERO), line(ap.clone(), Decimal::ZERO, dec!(50.20))]).await;
+        vec![line(expense, dec!(50.20), Decimal::ZERO), line(ap, Decimal::ZERO, dec!(50.20))]).await;
 
     // Compute A = L + E from journal_lines
     let (assets, liabilities, equity) = compute_ale(
@@ -423,10 +423,10 @@ async fn f2_accounting_equation_after_reversal() {
 
     // Post: Dr Cash 500, Cr Capital 500
     post_entry(&repo, "ADJ-F2-001", JournalType::CapitalContribution,
-        vec![line(cash.clone(), dec!(500), Decimal::ZERO), line(capital.clone(), Decimal::ZERO, dec!(500))]).await;
+        vec![line(cash, dec!(500), Decimal::ZERO), line(capital, Decimal::ZERO, dec!(500))]).await;
 
     // Compute A = L + E before reversal
-    let (a1, l1, e1) = compute_ale(&pool, &[cash.clone()], &[], &[capital.clone()]).await;
+    let (a1, l1, e1) = compute_ale(&pool, &[cash], &[], &[capital]).await;
     assert_eq!(a1, l1 + e1, "F2: A = L + E before reversal");
 
     // Reverse
@@ -469,7 +469,7 @@ async fn c1_duplicate_source_id_posts_once() {
         let mut entry = JournalEntry::new(
             "ADJ-C1-001".into(),
             JournalType::CapitalContribution,
-            vec![line(cash.clone(), dec!(100), Decimal::ZERO), line(capital.clone(), Decimal::ZERO, dec!(100))],
+            vec![line(cash, dec!(100), Decimal::ZERO), line(capital, Decimal::ZERO, dec!(100))],
             Utc::now(),
             "idempotency test".into(),
             Some(source_id.clone()),
@@ -506,15 +506,15 @@ async fn m1_trial_balance_debit_equals_credit() {
 
     // Post several transactions
     post_entry(&repo, "ADJ-M1-001", JournalType::CapitalContribution,
-        vec![line(cash.clone(), dec!(5000), Decimal::ZERO), line(capital.clone(), Decimal::ZERO, dec!(5000))]).await;
+        vec![line(cash, dec!(5000), Decimal::ZERO), line(capital, Decimal::ZERO, dec!(5000))]).await;
     post_entry(&repo, "ADJ-M1-002", JournalType::CashReceipt,
-        vec![line(cash.clone(), dec!(1000.50), Decimal::ZERO), line(revenue.clone(), Decimal::ZERO, dec!(1000.50))]).await;
+        vec![line(cash, dec!(1000.50), Decimal::ZERO), line(revenue, Decimal::ZERO, dec!(1000.50))]).await;
     post_entry(&repo, "ADJ-M1-003", JournalType::CreditSalesJournal,
-        vec![line(ar.clone(), dec!(750.25), Decimal::ZERO), line(revenue.clone(), Decimal::ZERO, dec!(750.25))]).await;
+        vec![line(ar, dec!(750.25), Decimal::ZERO), line(revenue, Decimal::ZERO, dec!(750.25))]).await;
     post_entry(&repo, "ADJ-M1-004", JournalType::CashPayment,
-        vec![line(expense.clone(), dec!(300.75), Decimal::ZERO), line(cash.clone(), Decimal::ZERO, dec!(300.75))]).await;
+        vec![line(expense, dec!(300.75), Decimal::ZERO), line(cash, Decimal::ZERO, dec!(300.75))]).await;
     post_entry(&repo, "ADJ-M1-005", JournalType::PurchaseJournal,
-        vec![line(expense.clone(), dec!(200.10), Decimal::ZERO), line(ap.clone(), Decimal::ZERO, dec!(200.10))]).await;
+        vec![line(expense, dec!(200.10), Decimal::ZERO), line(ap, Decimal::ZERO, dec!(200.10))]).await;
 
     // Trial Balance: sum all account debits and credits from journal_lines
     let row: (String, String) = sqlx::query_as(
@@ -598,7 +598,7 @@ async fn q1_journal_lines_authoritative_not_accounts_balance() {
     let capital = seed_account(&pool, "3000", "Capital", "Equity", "general").await;
 
     post_entry(&repo, "ADJ-Q1-001", JournalType::CapitalContribution,
-        vec![line(cash.clone(), dec!(250), Decimal::ZERO), line(capital.clone(), Decimal::ZERO, dec!(250))]).await;
+        vec![line(cash, dec!(250), Decimal::ZERO), line(capital, Decimal::ZERO, dec!(250))]).await;
 
     // Compute from journal_lines (authoritative)
     let jl_row: (String, String) = sqlx::query_as(

@@ -961,9 +961,14 @@ mod tests {
         assert_eq!(result.status, "Closed");
 
         // Both should be updated atomically: closing entry exists + FY is Closed
-        let entries = journal_repo.entries.lock().unwrap();
+        let has_fiscal_closing = {
+            let entries = journal_repo.entries.lock().unwrap();
+            entries
+                .iter()
+                .any(|e| e.journal_type == JournalType::FiscalClosing)
+        };
         assert!(
-            entries.iter().any(|e| e.journal_type == JournalType::FiscalClosing),
+            has_fiscal_closing,
             "closing entry must be created atomically with fiscal year update"
         );
 
@@ -1196,15 +1201,17 @@ mod tests {
         let account_repo = Arc::new(MockAccountRepository::new());
         let journal_repo = Arc::new(MockJournalRepository::default());
 
-        let (year_id, period_id, rev_id, exp_id, re_id) =
+        let (year_id, period_id, rev_id, exp_id, _re_id) =
             setup_close_test(&year_repo, &period_repo, &account_repo, &journal_repo).await;
 
         // Find the balance-sheet account IDs
-        let accounts = account_repo.accounts.lock().unwrap();
-        let cash_id = accounts.iter().find(|a| a.code == "1101").unwrap().id;
-        let ap_id = accounts.iter().find(|a| a.code == "2101").unwrap().id;
-        let capital_id = accounts.iter().find(|a| a.code == "3101").unwrap().id;
-        drop(accounts);
+        let (cash_id, ap_id, capital_id) = {
+            let accounts = account_repo.accounts.lock().unwrap();
+            let cash_id = accounts.iter().find(|a| a.code == "1101").unwrap().id;
+            let ap_id = accounts.iter().find(|a| a.code == "2101").unwrap().id;
+            let capital_id = accounts.iter().find(|a| a.code == "3101").unwrap().id;
+            (cash_id, ap_id, capital_id)
+        };
 
         let use_case = CloseFiscalYearUseCase::new(
             year_repo.clone(), period_repo.clone(),

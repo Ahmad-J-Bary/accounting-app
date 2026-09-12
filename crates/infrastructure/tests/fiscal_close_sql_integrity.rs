@@ -6,7 +6,6 @@
 //!
 //! All assertions are live-ledger based (journal_lines are the source of truth).
 
-use std::str::FromStr;
 use std::sync::Arc;
 
 use application::ports::fiscal_period_repository::FiscalPeriodRepository;
@@ -313,7 +312,7 @@ async fn test_a_fiscal_closing_posts_into_closed_period() {
         journal_repo,
         year_id,
         period_id,
-        successor_id,
+        _successor_id,
         _rev,
         _exp,
         _re,
@@ -576,7 +575,7 @@ async fn test_d_reopen_after_close_reverses_carry_forward() {
         journal_repo,
         year_id,
         period_id,
-        successor_id,
+        _successor_id,
         _rev,
         _exp,
         _re,

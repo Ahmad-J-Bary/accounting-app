@@ -172,8 +172,8 @@ async fn golden_case_1_opening_balance_with_fractional_movements() {
         "GDT-1-001",
         JournalType::GeneralJournal,
         vec![
-            line(asset.clone(), dec!(27), Decimal::ZERO),
-            line(equity.clone(), Decimal::ZERO, dec!(27)),
+            line(asset, dec!(27), Decimal::ZERO),
+            line(equity, Decimal::ZERO, dec!(27)),
         ],
     )
     .await;
@@ -184,8 +184,8 @@ async fn golden_case_1_opening_balance_with_fractional_movements() {
         "GDT-1-002",
         JournalType::GeneralJournal,
         vec![
-            line(asset.clone(), dec!(0.10), Decimal::ZERO),
-            line(equity.clone(), Decimal::ZERO, dec!(0.10)),
+            line(asset, dec!(0.10), Decimal::ZERO),
+            line(equity, Decimal::ZERO, dec!(0.10)),
         ],
     )
     .await;
@@ -196,8 +196,8 @@ async fn golden_case_1_opening_balance_with_fractional_movements() {
         "GDT-1-003",
         JournalType::GeneralJournal,
         vec![
-            line(asset.clone(), dec!(0.20), Decimal::ZERO),
-            line(equity.clone(), Decimal::ZERO, dec!(0.20)),
+            line(asset, dec!(0.20), Decimal::ZERO),
+            line(equity, Decimal::ZERO, dec!(0.20)),
         ],
     )
     .await;
@@ -208,8 +208,8 @@ async fn golden_case_1_opening_balance_with_fractional_movements() {
         "GDT-1-004",
         JournalType::GeneralJournal,
         vec![
-            line(asset.clone(), Decimal::ZERO, dec!(0.30)),
-            line(equity.clone(), dec!(0.30), Decimal::ZERO),
+            line(asset, Decimal::ZERO, dec!(0.30)),
+            line(equity, dec!(0.30), Decimal::ZERO),
         ],
     )
     .await;
@@ -241,8 +241,8 @@ async fn golden_case_2_revenue_minus_expense_profit() {
         "GDT-2-001",
         JournalType::CashReceipt,
         vec![
-            line(cash.clone(), dec!(100.25), Decimal::ZERO),
-            line(revenue_acc.clone(), Decimal::ZERO, dec!(100.25)),
+            line(cash, dec!(100.25), Decimal::ZERO),
+            line(revenue_acc, Decimal::ZERO, dec!(100.25)),
         ],
     )
     .await;
@@ -253,8 +253,8 @@ async fn golden_case_2_revenue_minus_expense_profit() {
         "GDT-2-002",
         JournalType::CashPayment,
         vec![
-            line(expense_acc.clone(), dec!(27.10), Decimal::ZERO),
-            line(cash.clone(), Decimal::ZERO, dec!(27.10)),
+            line(expense_acc, dec!(27.10), Decimal::ZERO),
+            line(cash, Decimal::ZERO, dec!(27.10)),
         ],
     )
     .await;
@@ -286,8 +286,8 @@ async fn golden_case_3_distributable_profit() {
         "GDT-3-001",
         JournalType::GeneralJournal,
         vec![
-            line(cash.clone(), dec!(40), Decimal::ZERO),
-            line(re_acc.clone(), Decimal::ZERO, dec!(40)),
+            line(cash, dec!(40), Decimal::ZERO),
+            line(re_acc, Decimal::ZERO, dec!(40)),
         ],
     )
     .await;
@@ -298,8 +298,8 @@ async fn golden_case_3_distributable_profit() {
         "GDT-3-002",
         JournalType::GeneralJournal,
         vec![
-            line(cash.clone(), dec!(12.35), Decimal::ZERO),
-            line(re_acc.clone(), Decimal::ZERO, dec!(12.35)),
+            line(cash, dec!(12.35), Decimal::ZERO),
+            line(re_acc, Decimal::ZERO, dec!(12.35)),
         ],
     )
     .await;
@@ -333,8 +333,8 @@ async fn golden_case_4_large_value_addition() {
         "GDT-4-001",
         JournalType::CapitalContribution,
         vec![
-            line(asset.clone(), dec!(123456789.99), Decimal::ZERO),
-            line(equity.clone(), Decimal::ZERO, dec!(123456789.99)),
+            line(asset, dec!(123456789.99), Decimal::ZERO),
+            line(equity, Decimal::ZERO, dec!(123456789.99)),
         ],
     )
     .await;
@@ -345,8 +345,8 @@ async fn golden_case_4_large_value_addition() {
         "GDT-4-002",
         JournalType::GeneralJournal,
         vec![
-            line(asset.clone(), dec!(0.01), Decimal::ZERO),
-            line(equity.clone(), Decimal::ZERO, dec!(0.01)),
+            line(asset, dec!(0.01), Decimal::ZERO),
+            line(equity, Decimal::ZERO, dec!(0.01)),
         ],
     )
     .await;
@@ -377,8 +377,8 @@ async fn golden_case_5_accounting_equation_with_fractional() {
         "GDT-5-001",
         JournalType::CashReceipt,
         vec![
-            line(cash.clone(), dec!(100.25), Decimal::ZERO),
-            line(capital.clone(), Decimal::ZERO, dec!(100.25)),
+            line(cash, dec!(100.25), Decimal::ZERO),
+            line(capital, Decimal::ZERO, dec!(100.25)),
         ],
     )
     .await;
@@ -389,8 +389,8 @@ async fn golden_case_5_accounting_equation_with_fractional() {
         "GDT-5-002",
         JournalType::CashPayment,
         vec![
-            line(capital.clone(), dec!(27.10), Decimal::ZERO),
-            line(ap.clone(), Decimal::ZERO, dec!(27.10)),
+            line(capital, dec!(27.10), Decimal::ZERO),
+            line(ap, Decimal::ZERO, dec!(27.10)),
         ],
     )
     .await;
@@ -431,8 +431,8 @@ async fn golden_case_6_zero_balance_via_fractional_subtraction() {
         "GDT-6-001",
         JournalType::CashPayment,
         vec![
-            line(expense.clone(), dec!(0.10), Decimal::ZERO),
-            line(asset.clone(), Decimal::ZERO, dec!(0.10)),
+            line(expense, dec!(0.10), Decimal::ZERO),
+            line(asset, Decimal::ZERO, dec!(0.10)),
         ],
     )
     .await;
@@ -443,8 +443,8 @@ async fn golden_case_6_zero_balance_via_fractional_subtraction() {
         "GDT-6-002",
         JournalType::CashPayment,
         vec![
-            line(expense.clone(), dec!(0.20), Decimal::ZERO),
-            line(asset.clone(), Decimal::ZERO, dec!(0.20)),
+            line(expense, dec!(0.20), Decimal::ZERO),
+            line(asset, Decimal::ZERO, dec!(0.20)),
         ],
     )
     .await;
@@ -455,8 +455,8 @@ async fn golden_case_6_zero_balance_via_fractional_subtraction() {
         "GDT-6-003",
         JournalType::GeneralJournal,
         vec![
-            line(expense.clone(), Decimal::ZERO, dec!(0.30)),
-            line(asset.clone(), dec!(0.30), Decimal::ZERO),
+            line(expense, Decimal::ZERO, dec!(0.30)),
+            line(asset, dec!(0.30), Decimal::ZERO),
         ],
     )
     .await;
@@ -486,9 +486,9 @@ async fn precision_case_a_addition_0_10_0_20() {
     let equity = seed_account(&pool, "3000", "Capital", "Equity", "general").await;
 
     post_entry(&repo, "PRC-A-001", JournalType::GeneralJournal,
-        vec![line(cash.clone(), dec!(0.10), Decimal::ZERO), line(equity.clone(), Decimal::ZERO, dec!(0.10))]).await;
+        vec![line(cash, dec!(0.10), Decimal::ZERO), line(equity, Decimal::ZERO, dec!(0.10))]).await;
     post_entry(&repo, "PRC-A-002", JournalType::GeneralJournal,
-        vec![line(cash.clone(), dec!(0.20), Decimal::ZERO), line(equity.clone(), Decimal::ZERO, dec!(0.20))]).await;
+        vec![line(cash, dec!(0.20), Decimal::ZERO), line(equity, Decimal::ZERO, dec!(0.20))]).await;
 
     let (debit, _) = aggregate_debit_credit(&pool, &cash).await;
     assert_eq!(debit, dec!(0.30), "Case A: 0.10 + 0.20 must equal 0.30");
@@ -504,11 +504,11 @@ async fn precision_case_b_addition_0_10_0_20_0_30() {
     let equity = seed_account(&pool, "3000", "Capital", "Equity", "general").await;
 
     post_entry(&repo, "PRC-B-001", JournalType::GeneralJournal,
-        vec![line(cash.clone(), dec!(0.10), Decimal::ZERO), line(equity.clone(), Decimal::ZERO, dec!(0.10))]).await;
+        vec![line(cash, dec!(0.10), Decimal::ZERO), line(equity, Decimal::ZERO, dec!(0.10))]).await;
     post_entry(&repo, "PRC-B-002", JournalType::GeneralJournal,
-        vec![line(cash.clone(), dec!(0.20), Decimal::ZERO), line(equity.clone(), Decimal::ZERO, dec!(0.20))]).await;
+        vec![line(cash, dec!(0.20), Decimal::ZERO), line(equity, Decimal::ZERO, dec!(0.20))]).await;
     post_entry(&repo, "PRC-B-003", JournalType::GeneralJournal,
-        vec![line(cash.clone(), dec!(0.30), Decimal::ZERO), line(equity.clone(), Decimal::ZERO, dec!(0.30))]).await;
+        vec![line(cash, dec!(0.30), Decimal::ZERO), line(equity, Decimal::ZERO, dec!(0.30))]).await;
 
     let (debit, _) = aggregate_debit_credit(&pool, &cash).await;
     assert_eq!(debit, dec!(0.60), "Case B: 0.10 + 0.20 + 0.30 must equal 0.60");
@@ -524,9 +524,9 @@ async fn precision_case_c_subtraction_100_25_27_10() {
     let equity = seed_account(&pool, "3000", "Capital", "Equity", "general").await;
 
     post_entry(&repo, "PRC-C-001", JournalType::CashReceipt,
-        vec![line(cash.clone(), dec!(100.25), Decimal::ZERO), line(equity.clone(), Decimal::ZERO, dec!(100.25))]).await;
+        vec![line(cash, dec!(100.25), Decimal::ZERO), line(equity, Decimal::ZERO, dec!(100.25))]).await;
     post_entry(&repo, "PRC-C-002", JournalType::CashPayment,
-        vec![line(equity.clone(), dec!(27.10), Decimal::ZERO), line(cash.clone(), Decimal::ZERO, dec!(27.10))]).await;
+        vec![line(equity, dec!(27.10), Decimal::ZERO), line(cash, Decimal::ZERO, dec!(27.10))]).await;
 
     let (debit, credit) = aggregate_debit_credit(&pool, &cash).await;
     let balance = debit - credit;
@@ -543,9 +543,9 @@ async fn precision_case_d_large_value() {
     let equity = seed_account(&pool, "3000", "Capital", "Equity", "general").await;
 
     post_entry(&repo, "PRC-D-001", JournalType::CapitalContribution,
-        vec![line(cash.clone(), dec!(123456789.99), Decimal::ZERO), line(equity.clone(), Decimal::ZERO, dec!(123456789.99))]).await;
+        vec![line(cash, dec!(123456789.99), Decimal::ZERO), line(equity, Decimal::ZERO, dec!(123456789.99))]).await;
     post_entry(&repo, "PRC-D-002", JournalType::GeneralJournal,
-        vec![line(cash.clone(), dec!(0.01), Decimal::ZERO), line(equity.clone(), Decimal::ZERO, dec!(0.01))]).await;
+        vec![line(cash, dec!(0.01), Decimal::ZERO), line(equity, Decimal::ZERO, dec!(0.01))]).await;
 
     let (debit, _) = aggregate_debit_credit(&pool, &cash).await;
     assert_eq!(debit, dec!(123456790.00), "Case D: 123456789.99 + 0.01 must equal 123456790.00");
@@ -561,9 +561,9 @@ async fn precision_case_e_very_large_value() {
     let equity = seed_account(&pool, "3000", "Capital", "Equity", "general").await;
 
     post_entry(&repo, "PRC-E-001", JournalType::CapitalContribution,
-        vec![line(cash.clone(), dec!(999999999999.99), Decimal::ZERO), line(equity.clone(), Decimal::ZERO, dec!(999999999999.99))]).await;
+        vec![line(cash, dec!(999999999999.99), Decimal::ZERO), line(equity, Decimal::ZERO, dec!(999999999999.99))]).await;
     post_entry(&repo, "PRC-E-002", JournalType::GeneralJournal,
-        vec![line(cash.clone(), dec!(0.01), Decimal::ZERO), line(equity.clone(), Decimal::ZERO, dec!(0.01))]).await;
+        vec![line(cash, dec!(0.01), Decimal::ZERO), line(equity, Decimal::ZERO, dec!(0.01))]).await;
 
     let (debit, _) = aggregate_debit_credit(&pool, &cash).await;
     assert_eq!(debit, dec!(1000000000000.00), "Case E: 999999999999.99 + 0.01 must equal 1000000000000.00");
@@ -587,7 +587,7 @@ async fn precision_case_f_large_multi_row_aggregate() {
     ];
     for (i, val) in values.iter().enumerate() {
         post_entry(&repo, &format!("PRC-F-{:03}", i + 1), JournalType::CapitalContribution,
-            vec![line(cash.clone(), *val, Decimal::ZERO), line(equity.clone(), Decimal::ZERO, *val)]).await;
+            vec![line(cash, *val, Decimal::ZERO), line(equity, Decimal::ZERO, *val)]).await;
     }
 
     let (debit, _) = aggregate_debit_credit(&pool, &cash).await;
@@ -605,11 +605,11 @@ async fn precision_case_g_exact_zero_subtraction() {
     let expense = seed_account(&pool, "5000", "Misc", "Expenses", "general").await;
 
     post_entry(&repo, "PRC-G-001", JournalType::CashPayment,
-        vec![line(expense.clone(), dec!(0.10), Decimal::ZERO), line(cash.clone(), Decimal::ZERO, dec!(0.10))]).await;
+        vec![line(expense, dec!(0.10), Decimal::ZERO), line(cash, Decimal::ZERO, dec!(0.10))]).await;
     post_entry(&repo, "PRC-G-002", JournalType::CashPayment,
-        vec![line(expense.clone(), dec!(0.20), Decimal::ZERO), line(cash.clone(), Decimal::ZERO, dec!(0.20))]).await;
+        vec![line(expense, dec!(0.20), Decimal::ZERO), line(cash, Decimal::ZERO, dec!(0.20))]).await;
     post_entry(&repo, "PRC-G-003", JournalType::GeneralJournal,
-        vec![line(expense.clone(), Decimal::ZERO, dec!(0.30)), line(cash.clone(), dec!(0.30), Decimal::ZERO)]).await;
+        vec![line(expense, Decimal::ZERO, dec!(0.30)), line(cash, dec!(0.30), Decimal::ZERO)]).await;
 
     let (debit, credit) = aggregate_debit_credit(&pool, &cash).await;
     let balance = debit - credit;
@@ -631,9 +631,9 @@ async fn golden_retained_earnings_exact() {
     let cash = seed_account(&pool, "1000", "Cash", "Assets", "general").await;
 
     post_entry(&repo, "GOL-RE-001", JournalType::GeneralJournal,
-        vec![line(cash.clone(), dec!(40), Decimal::ZERO), line(re_acc.clone(), Decimal::ZERO, dec!(40))]).await;
+        vec![line(cash, dec!(40), Decimal::ZERO), line(re_acc, Decimal::ZERO, dec!(40))]).await;
     post_entry(&repo, "GOL-RE-002", JournalType::GeneralJournal,
-        vec![line(cash.clone(), dec!(12.35), Decimal::ZERO), line(re_acc.clone(), Decimal::ZERO, dec!(12.35))]).await;
+        vec![line(cash, dec!(12.35), Decimal::ZERO), line(re_acc, Decimal::ZERO, dec!(12.35))]).await;
 
     let balance = repo.retained_earnings_balance(None).await.unwrap();
     assert_eq!(balance, dec!(52.35), "Golden RE: 40.00 + 12.35 must equal 52.35");
@@ -649,9 +649,9 @@ async fn golden_retained_earnings_exact_zero() {
     let cash = seed_account(&pool, "1000", "Cash", "Assets", "general").await;
 
     post_entry(&repo, "GOL-RZ-001", JournalType::GeneralJournal,
-        vec![line(cash.clone(), dec!(27.10), Decimal::ZERO), line(re_acc.clone(), Decimal::ZERO, dec!(27.10))]).await;
+        vec![line(cash, dec!(27.10), Decimal::ZERO), line(re_acc, Decimal::ZERO, dec!(27.10))]).await;
     post_entry(&repo, "GOL-RZ-002", JournalType::GeneralJournal,
-        vec![line(re_acc.clone(), dec!(27.10), Decimal::ZERO), line(cash.clone(), Decimal::ZERO, dec!(27.10))]).await;
+        vec![line(re_acc, dec!(27.10), Decimal::ZERO), line(cash, Decimal::ZERO, dec!(27.10))]).await;
 
     let balance = repo.retained_earnings_balance(None).await.unwrap();
     assert_eq!(balance, dec!(0), "Golden RE zero: 27.10 - 27.10 must equal exactly 0");
@@ -671,16 +671,16 @@ async fn golden_dashboard_kpis_exact() {
 
     // Cash sale: Dr Cash 100.25, Cr Revenue 100.25
     post_entry(&repo, "GOL-KPI-001", JournalType::CashReceipt,
-        vec![line(cash.clone(), dec!(100.25), Decimal::ZERO), line(revenue.clone(), Decimal::ZERO, dec!(100.25))]).await;
+        vec![line(cash, dec!(100.25), Decimal::ZERO), line(revenue, Decimal::ZERO, dec!(100.25))]).await;
     // Credit sale: Dr AR 200.50, Cr Revenue 200.50
     post_entry(&repo, "GOL-KPI-002", JournalType::CreditSalesJournal,
-        vec![line(ar.clone(), dec!(200.50), Decimal::ZERO), line(revenue.clone(), Decimal::ZERO, dec!(200.50))]).await;
+        vec![line(ar, dec!(200.50), Decimal::ZERO), line(revenue, Decimal::ZERO, dec!(200.50))]).await;
     // Expense: Dr Expense 50.10, Cr Cash 50.10
     post_entry(&repo, "GOL-KPI-003", JournalType::CashPayment,
-        vec![line(expense.clone(), dec!(50.10), Decimal::ZERO), line(cash.clone(), Decimal::ZERO, dec!(50.10))]).await;
+        vec![line(expense, dec!(50.10), Decimal::ZERO), line(cash, Decimal::ZERO, dec!(50.10))]).await;
     // Purchase on credit: Dr Expense 75.30, Cr AP 75.30
     post_entry(&repo, "GOL-KPI-004", JournalType::PurchaseJournal,
-        vec![line(expense.clone(), dec!(75.30), Decimal::ZERO), line(ap.clone(), Decimal::ZERO, dec!(75.30))]).await;
+        vec![line(expense, dec!(75.30), Decimal::ZERO), line(ap, Decimal::ZERO, dec!(75.30))]).await;
 
     let kpis = repo.aggregate_dashboard_kpis().await.unwrap();
 
@@ -710,14 +710,14 @@ async fn golden_monthly_revenue_expenses_exact() {
 
     // Month 1 (2025-06): revenue 100.25, expense 27.10
     let mut e1 = JournalEntry::new("GOL-M-001".into(), JournalType::CashReceipt,
-        vec![line(cash.clone(), dec!(100.25), Decimal::ZERO), line(revenue.clone(), Decimal::ZERO, dec!(100.25))],
+        vec![line(cash, dec!(100.25), Decimal::ZERO), line(revenue, Decimal::ZERO, dec!(100.25))],
         chrono::NaiveDate::from_ymd_opt(2025, 6, 15).unwrap().and_hms_opt(10, 0, 0).unwrap().and_utc(),
         "month 1 revenue".into(), None).unwrap();
     e1.post().unwrap();
     repo.save(&e1).await.unwrap();
 
     let mut e2 = JournalEntry::new("GOL-M-002".into(), JournalType::CashPayment,
-        vec![line(expense.clone(), dec!(27.10), Decimal::ZERO), line(cash.clone(), Decimal::ZERO, dec!(27.10))],
+        vec![line(expense, dec!(27.10), Decimal::ZERO), line(cash, Decimal::ZERO, dec!(27.10))],
         chrono::NaiveDate::from_ymd_opt(2025, 6, 20).unwrap().and_hms_opt(10, 0, 0).unwrap().and_utc(),
         "month 1 expense".into(), None).unwrap();
     e2.post().unwrap();
@@ -725,14 +725,14 @@ async fn golden_monthly_revenue_expenses_exact() {
 
     // Month 2 (2025-07): revenue 50.20, expense 15.05
     let mut e3 = JournalEntry::new("GOL-M-003".into(), JournalType::CashReceipt,
-        vec![line(cash.clone(), dec!(50.20), Decimal::ZERO), line(revenue.clone(), Decimal::ZERO, dec!(50.20))],
+        vec![line(cash, dec!(50.20), Decimal::ZERO), line(revenue, Decimal::ZERO, dec!(50.20))],
         chrono::NaiveDate::from_ymd_opt(2025, 7, 10).unwrap().and_hms_opt(10, 0, 0).unwrap().and_utc(),
         "month 2 revenue".into(), None).unwrap();
     e3.post().unwrap();
     repo.save(&e3).await.unwrap();
 
     let mut e4 = JournalEntry::new("GOL-M-004".into(), JournalType::CashPayment,
-        vec![line(expense.clone(), dec!(15.05), Decimal::ZERO), line(cash.clone(), Decimal::ZERO, dec!(15.05))],
+        vec![line(expense, dec!(15.05), Decimal::ZERO), line(cash, Decimal::ZERO, dec!(15.05))],
         chrono::NaiveDate::from_ymd_opt(2025, 7, 25).unwrap().and_hms_opt(10, 0, 0).unwrap().and_utc(),
         "month 2 expense".into(), None).unwrap();
     e4.post().unwrap();
@@ -793,9 +793,9 @@ async fn invalid_data_bad_rows_dont_corrupt_results() {
 
     // Seed valid entries
     post_entry(&repo, "INV-RE-001", JournalType::GeneralJournal,
-        vec![line(cash.clone(), dec!(50), Decimal::ZERO), line(re_acc.clone(), Decimal::ZERO, dec!(50))]).await;
+        vec![line(cash, dec!(50), Decimal::ZERO), line(re_acc, Decimal::ZERO, dec!(50))]).await;
     post_entry(&repo, "INV-RE-002", JournalType::GeneralJournal,
-        vec![line(cash.clone(), dec!(30), Decimal::ZERO), line(re_acc.clone(), Decimal::ZERO, dec!(30))]).await;
+        vec![line(cash, dec!(30), Decimal::ZERO), line(re_acc, Decimal::ZERO, dec!(30))]).await;
 
     // Get the journal_entry_id
     let entry_id: (String,) = sqlx::query_as(

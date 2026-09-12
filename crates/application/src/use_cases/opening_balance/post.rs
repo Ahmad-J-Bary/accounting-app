@@ -157,7 +157,7 @@ impl PostOpeningBalanceUseCase {
             // Opening balances carry balance-sheet items only. P&L accounts
             // (Revenue/Expenses) are never posted to the Opening Balance; the
             // historical result flows through Retained Earnings / the residual.
-            super::guard::reject_pl_account(&account)?;
+            super::guard::reject_pl_account(account)?;
 
             let amount = MonetaryAmount::from_base(line.amount, base_currency.clone());
             // Debit-normal accounts (assets, expenses, *drawings*) carry the
