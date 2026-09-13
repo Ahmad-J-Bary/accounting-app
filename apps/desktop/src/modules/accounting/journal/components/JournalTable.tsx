@@ -703,7 +703,7 @@ export function JournalTable({
       if (debitMatch) {
         const currCode = debitMatch[1];
         const isB = isBaseCurrency(currCode);
-        const label = col.label || `عليه / مدين${cs(currCode)}`;
+        const label = col.label || t("journal.debitColumn", { namespace: "accounting", fallback: `عليه / مدين${cs(currCode)}` });
         return {
           id: `${id}_total`,
           columnId: id,
@@ -719,7 +719,7 @@ export function JournalTable({
       if (creditMatch) {
         const currCode = creditMatch[1];
         const isB = isBaseCurrency(currCode);
-        const label = col.label || `له / دائن${cs(currCode)}`;
+        const label = col.label || t("journal.creditColumn", { namespace: "accounting", fallback: `له / دائن${cs(currCode)}` });
         return {
           id: `${id}_total`,
           columnId: id,

@@ -28,7 +28,7 @@ export function AccountTreeNodeItem({
   toggleNode,
   virtualRootId,
 }: AccountTreeNodeItemProps) {
-  const { t } = useLocalization();
+  const { t, language } = useLocalization();
   const isVirtualRoot = virtualRootId === account.id;
   const isSummary = isVirtualRoot || isSummaryAccount(account);
 
@@ -60,7 +60,7 @@ export function AccountTreeNodeItem({
           </div>
         )}
         <span className={cn("truncate", isVirtualRoot && "text-primary font-bold")}>
-          {node.name_ar}
+          {language === "ar" ? node.name_ar : node.name_en}
         </span>
         <div className="flex items-center gap-1 flex-shrink-0">
           {node.is_default && (

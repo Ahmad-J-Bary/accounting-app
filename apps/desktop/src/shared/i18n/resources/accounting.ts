@@ -109,6 +109,8 @@ export const accounting: Record<AppLanguage, TranslationTree> = {
       newEntry: "قيد جديد",
       typePlaceholder: "نوع اليومية",
       loading: "جاري التحميل...",
+      debitColumn: "عليه / مدين",
+      creditColumn: "له / دائن",
       actions: {
         cancel: "إلغاء",
       },
@@ -619,6 +621,8 @@ export const accounting: Record<AppLanguage, TranslationTree> = {
       newEntry: "New Entry",
       typePlaceholder: "Journal Type",
       loading: "Loading...",
+      debitColumn: "Debit",
+      creditColumn: "Credit",
       actions: {
         cancel: "Cancel",
       },

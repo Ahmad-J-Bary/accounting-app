@@ -104,11 +104,11 @@ export default function Accounting() {
 
   const visibleTree = useMemo(() => getVisibleRootTree(computedTree, searchQuery), [computedTree, searchQuery]);
   const rootNode = useMemo<AccountTreeNode>(() => ({
-    id: ROOT_ACCOUNT_ID, code: "", name_ar: "دليل الحسابات", name_en: "Chart of Accounts",
+    id: ROOT_ACCOUNT_ID, code: "", name_ar: t("chartOfAccounts.title", { namespace: "accounting", fallback: "دليل الحسابات" }), name_en: t("chartOfAccounts.title", { namespace: "accounting", fallback: "Chart of Accounts" }),
     account_type: "Assets", parent_id: null, category: "Summary", level: 0, opening_balance: "0",
     balance: String(rootBalance), notes: null, is_active: true, is_default: false, is_final: false,
     linked_customer_id: null, linked_supplier_id: null, debit: "0", credit: "0", children: visibleTree,
-  }), [visibleTree, rootBalance]);
+  }), [visibleTree, rootBalance, t]);
 
   // Expand nodes and set root node as selected on initial load
   useEffect(() => {
