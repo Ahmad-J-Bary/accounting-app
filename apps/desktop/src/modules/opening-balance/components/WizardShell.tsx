@@ -3,6 +3,7 @@ import { ChevronRight, ChevronLeft, Check } from "lucide-react";
 import { Button } from "@shared/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@shared/ui/card";
 import { cn } from "@shared/lib/utils";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 export interface WizardStepDef {
   id: string;
@@ -53,6 +54,7 @@ export function WizardShell({
   completedSteps,
   children,
 }: WizardShellProps) {
+  const { t } = useLocalization();
   // stepOrder maps visual position → actual step index. If not provided, use natural order.
   const orderedIndices = (stepOrder ?? steps.map((_, i) => i)).filter((idx) => idx >= 0 && idx < steps.length);
   const visualPosition = new Map(orderedIndices.map((idx, pos) => [idx, pos]));
@@ -135,10 +137,10 @@ export function WizardShell({
           disabled={!canPrev || stepIndex === 0}
           className="border-slate-200 text-slate-700 font-bold"
         >
-               <ChevronRight className="w-4 h-4 ms-1.5" /> السابق
+               <ChevronRight className="w-4 h-4 ms-1.5" /> {t("openingBalance.prevButton", { namespace: "accounting", fallback: "السابق" })}
         </Button>
         <span className="text-xs font-semibold text-slate-500 tabular-nums">
-          الخطوة {currentVisualPos + 1} من {steps.length}
+          {t("openingBalance.progressStep", { namespace: "accounting", vars: { current: currentVisualPos + 1, total: steps.length }, fallback: `الخطوة ${currentVisualPos + 1} من ${steps.length}` })}
         </span>
         {!canNext && canNextHint && (
           <span className="basis-full text-2xs font-semibold text-amber-600">
@@ -152,7 +154,7 @@ export function WizardShell({
           title={!canNext ? canNextHint : undefined}
           className="bg-blue-600 hover:bg-blue-700 text-white font-bold"
         >
-          {isNexting ? "جارٍ التنفيذ..." : (nextLabel || (isFinal ? "إنهاء" : "التالي"))}
+          {isNexting ? t("openingBalance.executingShort", { namespace: "accounting", fallback: "جارٍ التنفيذ..." }) : (nextLabel || (isFinal ? t("openingBalance.finishButton", { namespace: "accounting", fallback: "إنهاء" }) : t("openingBalance.nextButton", { namespace: "accounting", fallback: "التالي" })))}
           {!isFinal && <ChevronLeft className="w-4 h-4 me-1.5" />}
         </Button>
       </div>

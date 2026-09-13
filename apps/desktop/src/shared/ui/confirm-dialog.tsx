@@ -9,6 +9,7 @@ import {
   AlertDialogTitle,
 } from "./alert-dialog";
 import { cn } from "@shared/lib/utils";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 interface ConfirmDialogProps {
   open: boolean;
@@ -26,11 +27,14 @@ export function ConfirmDialog({
   onOpenChange,
   title,
   description,
-  confirmLabel = "تأكيد",
-  cancelLabel = "إلغاء",
+  confirmLabel,
+  cancelLabel,
   destructive = false,
   onConfirm,
 }: ConfirmDialogProps) {
+  const { t } = useLocalization();
+  const resolvedConfirmLabel = confirmLabel ?? t('actions.confirm', { fallback: 'تأكيد' });
+  const resolvedCancelLabel = cancelLabel ?? t('actions.cancel', { fallback: 'إلغاء' });
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
@@ -41,12 +45,12 @@ export function ConfirmDialog({
           )}
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>{cancelLabel}</AlertDialogCancel>
+          <AlertDialogCancel>{resolvedCancelLabel}</AlertDialogCancel>
           <AlertDialogAction
             onClick={onConfirm}
             className={cn(destructive && "bg-red-600 hover:bg-red-700 text-white font-bold")}
           >
-            {confirmLabel}
+            {resolvedConfirmLabel}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

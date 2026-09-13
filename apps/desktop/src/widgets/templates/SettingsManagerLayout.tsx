@@ -2,6 +2,7 @@ import React from "react";
 import { cn } from "@shared/lib/utils";
 import { Button } from "@shared/ui/button";
 import { RotateCcw } from "lucide-react";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 interface SettingsGroupProps {
   title: string;
@@ -32,6 +33,7 @@ interface SettingsManagerLayoutProps {
 }
 
 export function SettingsManagerLayout({ children, resetButton, resetAction }: SettingsManagerLayoutProps) {
+  const { t } = useLocalization();
   return (
     <div className="space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-500" dir="rtl">
       {children}
@@ -45,7 +47,7 @@ export function SettingsManagerLayout({ children, resetButton, resetAction }: Se
                 className="rounded-xl h-10 gap-2 text-slate-500 border-slate-200"
               >
                 <RotateCcw className="w-4 h-4" />
-                استعادة الإعدادات الافتراضية
+                {t('actions.restoreDefaults', { fallback: 'استعادة الإعدادات الافتراضية' })}
               </Button>
             )
           )}

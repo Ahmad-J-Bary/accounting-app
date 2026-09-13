@@ -4,13 +4,7 @@ import { StatusBadge } from "@shared/ui/status-badge";
 import type { ProductionOrder } from "@erp/shared-types";
 import { SharedTable } from '@widgets/table-shell/SharedTable';
 import type { UnifiedColumn } from '@widgets/table-shell/UnifiedTable';
-
-const STATUS_MAP: Record<string, { label: string; cls: string }> = {
-  Draft: { label: "مسودة", cls: "bg-slate-100 text-slate-600 ring-slate-200" },
-  InProgress: { label: "جاري التنفيذ", cls: "bg-blue-50 text-blue-700 ring-blue-100" },
-  Completed: { label: "مكتمل", cls: "bg-emerald-50 text-emerald-700 ring-emerald-100" },
-  Cancelled: { label: "ملغي", cls: "bg-rose-50 text-rose-700 ring-rose-100" },
-};
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 interface ProductionTableProps {
   data: ProductionOrder[];
@@ -21,25 +15,26 @@ interface ProductionTableProps {
 }
 
 export function ProductionTable({ data, loading, search, onSearchChange, onVisibleColumnsChange }: ProductionTableProps) {
+  const { t } = useLocalization();
   const allColumns = useMemo<UnifiedColumn<ProductionOrder>[]>(() => [
     {
       id: "order_number",
-      header: "رقم الأمر",
-      label: "رقم أمر الإنتاج",
+      header: t("production.orderNumber", { namespace: "inventory", fallback: "رقم الأمر" }),
+      label: t("production.orderNumberLabel", { namespace: "inventory", fallback: "رقم أمر الإنتاج" }),
       accessor: "order_number",
       className: "font-black text-blue-600 font-mono"
     },
     {
       id: "production_date",
-      header: "التاريخ",
-      label: "تاريخ الإنتاج",
+      header: t("production.date", { namespace: "inventory", fallback: "التاريخ" }),
+      label: t("production.dateLabel", { namespace: "inventory", fallback: "تاريخ الإنتاج" }),
       accessor: (o) => formatDateTime(o.production_date),
       className: "tabular-nums text-slate-500"
     },
     {
       id: "materials_count",
-      header: "المواد الخام",
-      label: "عدد المواد الخام المستخدمة",
+      header: t("production.rawMaterials", { namespace: "inventory", fallback: "المواد الخام" }),
+      label: t("production.rawMaterialsLabel", { namespace: "inventory", fallback: "عدد المواد الخام المستخدمة" }),
       accessor: (o) => (
         <span className="inline-flex items-center gap-1.5 bg-slate-100 px-2 py-1 rounded text-slate-600 font-bold text-xs">
           {o.materials.length} أصناف
@@ -48,8 +43,8 @@ export function ProductionTable({ data, loading, search, onSearchChange, onVisib
     },
     {
       id: "outputs_count",
-      header: "المنتجات التامة",
-      label: "عدد المنتجات التامة الناتجة",
+      header: t("production.finishedProducts", { namespace: "inventory", fallback: "المنتجات التامة" }),
+      label: t("production.finishedProductsLabel", { namespace: "inventory", fallback: "عدد المنتجات التامة الناتجة" }),
       accessor: (o) => (
         <span className="inline-flex items-center gap-1.5 bg-blue-50 px-2 py-1 rounded text-blue-600 font-bold text-xs">
           {o.outputs.length} منتجات
@@ -58,18 +53,18 @@ export function ProductionTable({ data, loading, search, onSearchChange, onVisib
     },
     {
       id: "total_cost",
-      header: "إجمالي التكلفة",
-      label: "إجمالي تكلفة الإنتاج",
+      header: t("production.totalCost", { namespace: "inventory", fallback: "إجمالي التكلفة" }),
+      label: t("production.totalCostLabel", { namespace: "inventory", fallback: "إجمالي تكلفة الإنتاج" }),
       accessor: (o) => formatCurrency(parseFloat(o.total_cost)),
       className: "tabular-nums font-black text-slate-900"
     },
     {
       id: "status",
-      header: "الحالة",
-      label: "حالة الأمر",
+      header: t("production.status", { namespace: "inventory", fallback: "الحالة" }),
+      label: t("production.statusLabel", { namespace: "inventory", fallback: "حالة الأمر" }),
       accessor: (o) => <StatusBadge status={o.status} />,
     }
-  ], []);
+  ], [t]);
 
   const filtered = useMemo(() =>
     data.filter(o =>

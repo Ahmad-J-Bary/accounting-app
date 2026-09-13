@@ -163,6 +163,8 @@ export const common: Record<AppLanguage, TranslationTree> = {
       lastPurchasePrice: "آخر سعر شراء",
       lastSalePrice: "آخر سعر مبيع",
       hierarchicalTree: "شجرة البيانات الهيكلية",
+      barcode: "الباركود",
+      materialNameAr: "الصنف (عربي)",
     },
     confirmations: {
       delete: "هل أنت متأكد من الحذف؟",
@@ -333,6 +335,8 @@ export const common: Record<AppLanguage, TranslationTree> = {
       lastPurchasePrice: "Last Purchase Price",
       lastSalePrice: "Last Sale Price",
       hierarchicalTree: "Hierarchical Data Tree",
+      barcode: "Barcode",
+      materialNameAr: "Material (Arabic)",
     },
     confirmations: {
       delete: "Are you sure you want to delete?",

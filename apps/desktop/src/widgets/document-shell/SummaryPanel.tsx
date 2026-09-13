@@ -248,7 +248,7 @@ export function SummaryPanel({
                 {/* مجموع الفاتورة */}
                 <div className="flex items-center gap-2 text-2xs font-bold text-slate-500 bg-muted px-2.5 py-1 rounded-md border border-border h-7 shrink-0">
                   <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
-                  <span>مجموع الفاتورة:</span>
+                   <span>{t('labels.invoiceTotal', { fallback: 'مجموع الفاتورة:' })}</span>
                   <span className="font-black text-slate-800 tabular-nums">
                     {formatRawAmount(subtotal, currency)}
                   </span>
@@ -257,7 +257,7 @@ export function SummaryPanel({
                 {/* تكاليف إضافية */}
                 <div className="flex items-center gap-2 text-2xs font-bold text-indigo-500 bg-indigo-50/40 px-2.5 py-1 rounded-md border border-indigo-100/60 h-7 shrink-0">
                   <span className="w-1.5 h-1.5 rounded-full bg-indigo-400" />
-                  <span>تكاليف إضافية:</span>
+                   <span>{t('labels.extraCosts', { fallback: 'تكاليف إضافية:' })}</span>
                   {onExtraCostsChange && !isReadOnly ? (
                     <input
                       type="number"
@@ -288,7 +288,7 @@ export function SummaryPanel({
               {/* المبلغ كاملاً */}
               <div className="flex flex-col items-center bg-indigo-600 text-white px-4 py-1.5 rounded-xl shadow-md h-[42px] justify-center shrink-0">
                 <span className="text-4xs font-black uppercase tracking-wider opacity-90">
-                  المبلغ كاملاً
+                  {t('labels.totalAmount', { fallback: 'المبلغ كاملاً' })}
                 </span>
                 <span className="text-xs font-black tabular-nums">
                   {formatRawAmount(net, currency)}
@@ -335,11 +335,11 @@ export function SummaryPanel({
                         <div className="flex items-center gap-2 bg-blue-50/40 px-2.5 py-1 rounded-md border border-blue-100/60 h-7 shrink-0">
                           <span className="w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0" />
                           <span className="text-3xs font-black text-blue-500 uppercase tracking-wider shrink-0">
-                            دفع الفاتورة:
+                            {t('labels.invoicePayment', { fallback: 'دفع الفاتورة:' })}
                           </span>
                           {isCashParty ? (
                             <span className="h-5 px-1 font-black text-3xs text-emerald-600 flex items-center">
-                              نقداً
+                              {t('labels.cash', { fallback: 'نقداً' })}
                             </span>
                           ) : (
                             <select
@@ -350,9 +350,9 @@ export function SummaryPanel({
                               disabled={isReadOnly}
                               className="h-5 px-1 bg-white border border-blue-200 rounded font-black text-3xs outline-none cursor-pointer text-blue-700 focus:ring-0"
                             >
-                              <option value="cash">نقداً</option>
-                              <option value="credit">آجل</option>
-                              <option value="partial">جزئي</option>
+                              <option value="cash">{t('labels.cash', { fallback: 'نقداً' })}</option>
+                              <option value="credit">{t('labels.credit', { fallback: 'آجل' })}</option>
+                              <option value="partial">{t('labels.partial', { fallback: 'جزئي' })}</option>
                             </select>
                           )}
                           {derivedInvoiceMethod === "partial" &&
@@ -385,11 +385,11 @@ export function SummaryPanel({
                         <div className="flex items-center gap-2 bg-violet-50/40 px-2.5 py-1 rounded-md border border-violet-100/60 h-7 shrink-0">
                           <span className="w-1.5 h-1.5 rounded-full bg-violet-400 shrink-0" />
                           <span className="text-3xs font-black text-violet-500 uppercase tracking-wider shrink-0">
-                            دفع التكاليف:
+                            {t('labels.costsPayment', { fallback: 'دفع التكاليف:' })}
                           </span>
                           {isCashParty ? (
                             <span className="h-5 px-1 font-black text-3xs text-emerald-600 flex items-center">
-                              نقداً
+                              {t('labels.cash', { fallback: 'نقداً' })}
                             </span>
                           ) : (
                             <select
@@ -400,9 +400,9 @@ export function SummaryPanel({
                               disabled={isReadOnly}
                               className="h-5 px-1 bg-white border border-violet-200 rounded font-black text-3xs outline-none cursor-pointer text-violet-700 focus:ring-0"
                             >
-                              <option value="cash">نقداً</option>
-                              <option value="credit">آجل</option>
-                              <option value="partial">جزئي</option>
+                              <option value="cash">{t('labels.cash', { fallback: 'نقداً' })}</option>
+                              <option value="credit">{t('labels.credit', { fallback: 'آجل' })}</option>
+                              <option value="partial">{t('labels.partial', { fallback: 'جزئي' })}</option>
                             </select>
                           )}
                           {derivedExtraMethod === "partial" &&
@@ -453,11 +453,11 @@ export function SummaryPanel({
                       {/* دفع الفاتورة */}
                       <div className="flex items-center gap-2 bg-blue-50/40 px-2.5 py-1 rounded-md border border-blue-100/60 h-[42px] justify-center shrink-0">
                         <span className="text-4xs font-black text-blue-500 uppercase tracking-wider">
-                          طريقة دفع الفاتورة
+                          {t('labels.invoicePaymentMethod', { fallback: 'طريقة دفع الفاتورة' })}
                         </span>
                         {isCashParty ? (
                           <span className="h-6 px-1 font-black text-2xs text-emerald-600 flex items-center">
-                            نقداً
+                            {t('labels.cash', { fallback: 'نقداً' })}
                           </span>
                         ) : (
                           <select
@@ -468,9 +468,9 @@ export function SummaryPanel({
                             disabled={isReadOnly}
                             className="h-6 px-1 bg-transparent font-black text-2xs outline-none cursor-pointer border-none text-blue-700 focus:ring-0"
                           >
-                            <option value="cash">نقداً</option>
-                            <option value="credit">آجل</option>
-                            <option value="partial">جزئي</option>
+                            <option value="cash">{t('labels.cash', { fallback: 'نقداً' })}</option>
+                            <option value="credit">{t('labels.credit', { fallback: 'آجل' })}</option>
+                            <option value="partial">{t('labels.partial', { fallback: 'جزئي' })}</option>
                           </select>
                         )}
                           {derivedInvoiceMethod === "partial" &&
@@ -511,7 +511,7 @@ export function SummaryPanel({
               {/* المبلغ كاملاً */}
               <div className="flex items-center gap-2 text-2xs font-bold text-slate-500 bg-muted px-2.5 py-1 rounded-md border border-border h-7 shrink-0">
                 <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
-                <span>المبلغ كاملاً:</span>
+                <span>{t('labels.totalAmount', { fallback: 'المبلغ كاملاً:' })}</span>
                 <span className="font-black text-slate-800 tabular-nums">
                   {formatRawAmount(net, currency)}
                 </span>
@@ -534,11 +534,11 @@ export function SummaryPanel({
                   {/* طريقة الدفع */}
                   <div className="flex flex-col items-center bg-muted px-2.5 py-1 rounded-md border border-border h-[42px] justify-center shrink-0">
                     <span className="text-4xs font-black text-muted-foreground uppercase tracking-wider">
-                      طريقة الدفع
+                      {t('labels.paymentMethod', { fallback: 'طريقة الدفع' })}
                     </span>
                     {isCashParty ? (
                       <span className="h-6 px-1 font-black text-[11px] text-emerald-600 flex items-center">
-                        نقداً
+                        {t('labels.cash', { fallback: 'نقداً' })}
                       </span>
                     ) : (
                       <select
@@ -547,9 +547,9 @@ export function SummaryPanel({
                         disabled={isReadOnly}
                         className="h-6 px-1 bg-transparent font-black text-[11px] outline-none cursor-pointer border-none text-slate-800 focus:ring-0"
                       >
-                        <option value="cash">نقداً</option>
-                        <option value="credit">آجل</option>
-                        <option value="partial">جزئي</option>
+                        <option value="cash">{t('labels.cash', { fallback: 'نقداً' })}</option>
+                        <option value="credit">{t('labels.credit', { fallback: 'آجل' })}</option>
+                        <option value="partial">{t('labels.partial', { fallback: 'جزئي' })}</option>
                       </select>
                     )}
                   </div>
@@ -569,7 +569,7 @@ export function SummaryPanel({
                   {/* مدفوع الفاتورة */}
                   <div className="flex items-center gap-2 text-2xs font-bold text-blue-600 bg-blue-50/40 px-2.5 py-1 rounded-md border border-blue-100/60 h-7 shrink-0">
                     <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
-                    <span>مدفوع الفاتورة:</span>
+                    <span>{t('labels.paidAmount', { fallback: 'مدفوع الفاتورة:' })}</span>
                     {paymentMethod === "partial" &&
                     onPaidAmountChange &&
                     !isReadOnly ? (
@@ -613,7 +613,7 @@ export function SummaryPanel({
                 remaining <= 0 ? "text-emerald-600" : "text-rose-600",
               )}
             >
-              المبلغ المتبقي
+              {t('labels.remainingAmount', { fallback: 'المبلغ المتبقي' })}
             </span>
             <span
               className={cn(

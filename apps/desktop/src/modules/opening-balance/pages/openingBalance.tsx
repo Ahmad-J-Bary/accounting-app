@@ -266,11 +266,11 @@ export default function OpeningBalance() {
     setSaving(true);
     try {
       await invoiceService.reopenInvoice(header.id);
-      toast.success("تم إلغاء الترحيل بنجاح");
+      toast.success(t("openingBalance.reopenSuccess", { namespace: "accounting", fallback: "تم إلغاء الترحيل بنجاح" }));
       setHeader(s => ({ ...s, status: "Draft" }));
       invalidateAccountingMutationQueries(queryClient);
     } catch (e: unknown) {
-      toast.error("فشل إلغاء الترحيل: " + e);
+      toast.error(t("openingBalance.reopenFailed", { namespace: "accounting", vars: { error: String(e) }, fallback: "فشل إلغاء الترحيل: " + e }));
     } finally {
       setSaving(false);
     }
@@ -280,7 +280,7 @@ export default function OpeningBalance() {
     return [
       {
         key: "expiry_date",
-        header: "تاريخ الانتهاء",
+        header: t("openingBalance.expiryDate", { namespace: "accounting", fallback: "تاريخ الانتهاء" }),
         width: "w-[110px]",
         align: "center",
         type: "date",
@@ -288,14 +288,14 @@ export default function OpeningBalance() {
       },
       {
         key: "notes",
-        header: "ملاحظات",
+        header: t("openingBalance.notes", { namespace: "accounting", fallback: "ملاحظات" }),
         width: "flex-[1]",
         align: "right",
         type: "text",
         defaultVisible: true,
       },
     ];
-  }, []);
+  }, [t]);
 
   const dynamicVisibleColumns = useMemo<string[]>(() => {
     const cols: string[] = [];
@@ -329,14 +329,14 @@ export default function OpeningBalance() {
     setHeaderState: setHeader,
     currencies,
     invoiceType: "OpeningBalance",
-    priceLabel: "التكلفة",
+        priceLabel: t("openingBalance.priceLabel", { namespace: "accounting", fallback: "التكلفة" }),
     extraColumns: extraCols,
     materials,
   });
 
   const handleExport = useCallback(async () => {
     if (enrichedLines.length === 0) {
-      toast.error("لا توجد بنود للتصدير");
+      toast.error(t("openingBalance.noLinesToExport", { namespace: "accounting", fallback: "لا توجد بنود للتصدير" }));
       return;
     }
 
@@ -375,18 +375,18 @@ export default function OpeningBalance() {
     addCurrencySummary(summary, "line_total", currencies);
 
     await executeExport(exportData, {
-      sheetName: "بضاعة أول المدة",
-      filename: `بضاعة_أول_المدة_${header.docNumber || "جديد"}`,
+      sheetName: t("openingBalance.sheetName", { namespace: "accounting", fallback: "بضاعة أول المدة" }),
+      filename: t("openingBalance.filename", { namespace: "accounting", vars: { number: header.docNumber || "جديد" }, fallback: `بضاعة_أول_المدة_${header.docNumber || "جديد"}` }),
       data: enrichedForExport,
       columns,
       summary,
-      summaryLabel: "المجموع",
+      summaryLabel: t("openingBalance.summaryTotal", { namespace: "accounting", fallback: "المجموع" }),
       additionalSummary: [
-        { label: "المجموع الكلي (الصافي)", value: net }
+        { label: t("openingBalance.summaryGrandTotal", { namespace: "accounting", fallback: "المجموع الكلي (الصافي)" }), value: net }
       ],
       currencyRatesSheet: ratesSheet,
     });
-  }, [enrichedLines, exportData, header, net, currencies, hasMultipleCurrencies, gridColumns, gridVisibleColumnIds, materials, warehouses, currencyMode, ratesSheet]);
+  }, [enrichedLines, exportData, header, net, currencies, hasMultipleCurrencies, gridColumns, gridVisibleColumnIds, materials, warehouses, currencyMode, ratesSheet, t]);
 
   // بضاعة أول المدة is part of the opening workflow: away as soon as the
   // persisted type says NEW, and once an EXISTING company's lifecycle closes
@@ -404,7 +404,7 @@ export default function OpeningBalance() {
   return (
     <ErrorBoundary>
     <FinancialDocumentTemplate
-      title="بضاعة أول المدة"
+      title={t("openingBalance.title", { namespace: "accounting", fallback: "بضاعة أول المدة" })}
       statusBadge={<DocumentStatusBadge status={header.status} />}
       toolbar={
         <DocumentToolbar
@@ -416,7 +416,7 @@ export default function OpeningBalance() {
             closeTab(activeTabId);
             openTab({
               id: `/opening-balance/${header.id}`,
-              title: `تعديل بضاعة أول المدة`,
+              title: t("openingBalance.editTabTitle", { namespace: "accounting", fallback: "تعديل بضاعة أول المدة" }),
               path: `/opening-balance/${header.id}`,
               closable: true,
             });
@@ -425,16 +425,16 @@ export default function OpeningBalance() {
           onSaveAndPost={() => handleSave(true)}
           onReopen={handleReopen}
           onExport={handleExport}
-          saveAndPostLabel="حفظ وترحيل الرصيد"
+          saveAndPostLabel={t("openingBalance.saveAndPostLabel", { namespace: "accounting", fallback: "حفظ وترحيل الرصيد" })}
         />
       }
       headerFields={
         <>
-          <HeaderField label="رقم القيد" value={formatNumber(parseInt(header.docNumber) || 0)} readOnly inputClassName="font-mono font-bold" />
+          <HeaderField label={t("openingBalance.entryNumber", { namespace: "accounting", fallback: "رقم القيد" })} value={formatNumber(parseInt(header.docNumber) || 0)} readOnly inputClassName="font-mono font-bold" />
 
-          <HeaderField label="التاريخ" type="date" value={header.issued_at} onChange={v => setHeader(s => ({ ...s, issued_at: v }))} disabled={isReadOnly} inputClassName="font-bold" />
+          <HeaderField label={t("openingBalance.date", { namespace: "accounting", fallback: "التاريخ" })} type="date" value={header.issued_at} onChange={v => setHeader(s => ({ ...s, issued_at: v }))} disabled={isReadOnly} inputClassName="font-bold" />
 
-          <HeaderField label="ملاحظات" value={header.notes} onChange={v => setHeader(s => ({ ...s, notes: v }))} disabled={isReadOnly} placeholder="أدخل أي ملاحظات هنا..." className="lg:col-span-4" />
+          <HeaderField label={t("openingBalance.notes", { namespace: "accounting", fallback: "ملاحظات" })} value={header.notes} onChange={v => setHeader(s => ({ ...s, notes: v }))} disabled={isReadOnly} placeholder={t("openingBalance.notesPlaceholder", { namespace: "accounting", fallback: "أدخل أي ملاحظات هنا..." })} className="lg:col-span-4" />
         </>
       }
       lineItemsGrid={

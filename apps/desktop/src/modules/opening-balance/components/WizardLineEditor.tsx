@@ -9,6 +9,7 @@ import type { AccountDto } from "@erp/shared-types";
 import type { WizLine } from "@modules/opening-balance/lib/wizard-types";
 import { newLine } from "@modules/opening-balance/lib/wizard-types";
 import { AccountCombobox } from "./AccountCombobox";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 type WizLineSetter = Dispatch<SetStateAction<WizLine[]>>;
 
@@ -37,6 +38,7 @@ export function WizardLineEditor({
   accounts,
   detailAccounts,
 }: WizardLineEditorProps) {
+  const { t } = useLocalization();
   const [editingKeys, setEditingKeys] = useState<Set<string>>(new Set());
   const [newKeys, setNewKeys] = useState<Set<string>>(new Set());
 
@@ -99,7 +101,7 @@ export function WizardLineEditor({
   return (
     <div className="space-y-1.5">
       {rows.length === 0 && (
-        <p className="text-xs text-slate-400 text-center py-2">لا توجد بنود بعد</p>
+        <p className="text-xs text-slate-400 text-center py-2">{t("openingBalance.noItemsYet", { namespace: "accounting", fallback: "لا توجد بنود بعد" })}</p>
       )}
       {rows.map((l) => {
         const isEditing = editingKeys.has(l.key);
@@ -123,7 +125,7 @@ export function WizardLineEditor({
                 <Input
                   value={l.amount}
                   onChange={(e) => updateLine(setter, l.key, { amount: e.target.value })}
-                  placeholder="الرصيد الافتتاحي"
+                  placeholder={t("openingBalance.openingBalanceLabel", { namespace: "accounting", fallback: "الرصيد الافتتاحي" })}
                   type="number"
                   min="0"
                   step="0.01"

@@ -2,6 +2,7 @@ import { ReactNode } from "react";
 import { cn } from "@shared/lib/utils";
 import { PageHeader } from "./PageHeader";
 import { TemplateDetailPanel } from "./TemplateDetailPanel";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 interface HierarchicalTreeTemplateProps {
   /** Page Title (e.g., "دليل الحسابات") */
@@ -41,7 +42,7 @@ export function HierarchicalTreeTemplate({
   badge,
   toolbar,
   treeContent,
-  treeHeaderTitle = "شجرة البيانات الهيكلية",
+  treeHeaderTitle,
   treeHeaderActions,
   sidePanel,
   isPanelOpen = false,
@@ -49,6 +50,8 @@ export function HierarchicalTreeTemplate({
   children,
   treePresentation = "default",
 }: HierarchicalTreeTemplateProps) {
+  const { t } = useLocalization();
+  const resolvedTreeHeaderTitle = treeHeaderTitle ?? t('labels.hierarchicalTree', { fallback: 'شجرة البيانات الهيكلية' });
   return (
     <div className={cn("flex flex-col h-full w-full bg-muted/30", className)} dir="rtl">
       <PageHeader title={title} badge={badge} actions={toolbar} pinAction pinLabel={title} />
@@ -81,7 +84,7 @@ export function HierarchicalTreeTemplate({
                     treePresentation === "explorer" ? "text-slate-100" : "text-foreground",
                   )}
                 >
-                  {treeHeaderTitle}
+                  {resolvedTreeHeaderTitle}
                 </h2>
               </div>
               {treeHeaderActions && (

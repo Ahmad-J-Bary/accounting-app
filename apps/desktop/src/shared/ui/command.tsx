@@ -5,6 +5,7 @@ import { Search } from 'lucide-react';
 
 import { cn } from '@shared/lib/utils';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@shared/ui/dialog';
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 const Command = React.forwardRef<
   React.ElementRef<typeof CommandPrimitive>,
@@ -22,12 +23,13 @@ const Command = React.forwardRef<
 Command.displayName = CommandPrimitive.displayName;
 
 const CommandDialog = ({ children, ...props }: DialogProps) => {
+  const { t } = useLocalization();
   return (
     <Dialog {...props}>
       <DialogContent className="overflow-hidden p-0 shadow-lg">
         <div className="sr-only">
-          <DialogTitle>نافذة البحث السريع</DialogTitle>
-          <DialogDescription>استخدم هذه النافذة للبحث والوصول السريع للأوامر والصفحات.</DialogDescription>
+          <DialogTitle>{t('labels.quickSearchTitle', { fallback: 'نافذة البحث السريع' })}</DialogTitle>
+          <DialogDescription>{t('labels.quickSearchDesc', { fallback: 'استخدم هذه النافذة للبحث والوصول السريع للأوامر والصفحات.' })}</DialogDescription>
         </div>
         <Command className="[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground [&_[cmdk-group]:not([hidden])_~[cmdk-group]]:pt-0 [&_[cmdk-group]]:px-2 [&_[cmdk-input-wrapper]_svg]:h-5 [&_[cmdk-input-wrapper]_svg]_w-5 [&_[cmdk-input]]:h-12 [&_[cmdk-item]]:px-2 [&_[cmdk-item]]:py-3 [&_[cmdk-item]_svg]:h-5 [&_[cmdk-item]_svg]_w-5">
           {children}

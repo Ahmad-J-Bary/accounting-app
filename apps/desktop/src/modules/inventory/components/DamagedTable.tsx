@@ -6,6 +6,7 @@ import type { SummaryColumn } from '@widgets/table-shell/TableSummary';
 import { formatCurrency, formatDateTime, formatNumber, toLocalString } from '@shared/lib/format';
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { useBaseCurrencyColumns } from "@shared/hooks";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 import type { DamagedItem } from "@erp/shared-types";
 
 interface DamagedTableProps {
@@ -33,6 +34,7 @@ export function DamagedTable({
 }: DamagedTableProps) {
   const { formatAmount, currencies } = useCurrencyContext();
   const { isBaseCurrency, currencySuffix: cs } = useBaseCurrencyColumns();
+  const { t } = useLocalization();
 
   const originalLossLabel = (i: DamagedItem) => {
     const amount = parseFloat(i.loss || i.cost_impact || "0");
@@ -45,29 +47,29 @@ export function DamagedTable({
     const cols: UnifiedColumn<DamagedItem>[] = [
       {
         id: "id",
-        header: "الرقم",
-        label: "الرقم",
+        header: t("damaged.columnId", { namespace: "inventory", fallback: "الرقم" }),
+        label: t("damaged.columnId", { namespace: "inventory", fallback: "الرقم" }),
         accessor: (i) => i.reference ? formatNumber(parseInt(i.reference) || 0) : "—",
         className: "font-black text-slate-900 text-center"
       },
       {
         id: "material_name",
-        header: "المادة",
-        label: "المادة",
+        header: t("damaged.columnMaterial", { namespace: "inventory", fallback: "المادة" }),
+        label: t("damaged.columnMaterial", { namespace: "inventory", fallback: "المادة" }),
         accessor: (i) => i.material_name || i.material_id || "",
         className: "font-bold text-slate-800"
       },
 {
         id: "quantity",
-        header: "الكمية",
-        label: "الكمية التالفة",
+        header: t("damaged.columnQuantity", { namespace: "inventory", fallback: "الكمية" }),
+        label: t("damaged.columnQuantityDamaged", { namespace: "inventory", fallback: "الكمية التالفة" }),
         accessor: (i) => toLocalString(Math.round(parseFloat(i.quantity || "0"))),
         className: "tabular-nums font-black text-amber-600"
       },
       {
         id: "loss_original",
-        header: "الخسارة",
-        label: "الخسارة بالعملة الأصلية",
+        header: t("damaged.columnLoss", { namespace: "inventory", fallback: "الخسارة" }),
+        label: t("damaged.columnLossOriginal", { namespace: "inventory", fallback: "الخسارة بالعملة الأصلية" }),
         accessor: (i) => originalLossLabel(i),
         className: "tabular-nums font-black text-rose-700"
       },
@@ -90,16 +92,16 @@ export function DamagedTable({
     });
 
     cols.push({
-      id: "reason",
-      header: "السبب",
-      label: "سبب التلف",
+        id: "reason",
+        header: t("damaged.columnReason", { namespace: "inventory", fallback: "السبب" }),
+        label: t("damaged.columnReasonDamaged", { namespace: "inventory", fallback: "سبب التلف" }),
       accessor: (i) => i.reason || "",
       className: "text-slate-500 italic"
     });
     cols.push({
-      id: "damage_date",
-      header: "التاريخ",
-      label: "تاريخ التسجيل",
+        id: "damage_date",
+        header: t("damaged.columnDate", { namespace: "inventory", fallback: "التاريخ" }),
+        label: t("damaged.columnDateRegistered", { namespace: "inventory", fallback: "تاريخ التسجيل" }),
       accessor: (i) => formatDateTime(i.damage_date),
       className: "text-slate-500 tabular-nums"
     });
@@ -107,8 +109,8 @@ export function DamagedTable({
     if (onView || onEdit || onDelete) {
       cols.push({
         id: "actions",
-        header: "إجراءات",
-        label: "إجراءات",
+        header: t("labels.actions", { namespace: "inventory", fallback: "إجراءات" }),
+        label: t("labels.actions", { namespace: "inventory", fallback: "إجراءات" }),
         accessor: (i) => (
           <TableActions
             onView={onView ? () => onView(i) : undefined}
@@ -120,7 +122,7 @@ export function DamagedTable({
     }
 
     return cols;
-  }, [formatAmount, currencies, isBaseCurrency, onView, onEdit, onDelete, cs]);
+  }, [formatAmount, currencies, isBaseCurrency, onView, onEdit, onDelete, cs, t]);
 
   const defaultVisible = useMemo(() => {
     const ids: string[] = ["id", "material_name", "quantity", "loss_original"];
@@ -139,7 +141,7 @@ export function DamagedTable({
     const colIds = allColumns.map(c => c.id);
     return colIds.map(id => {
       if (id === "material_name") {
-        return { id: 'count', columnId: id, label: '', value: `${items.length} سجل`, className: 'text-slate-500 font-medium' };
+        return { id: 'count', columnId: id, label: '', value: `${items.length} ${t("damaged.records", { namespace: "inventory", fallback: "سجل" })}`, className: 'text-slate-500 font-medium' };
       }
       const costMatch = id.match(/^cost_(.+)$/);
       if (costMatch) {
@@ -149,14 +151,14 @@ export function DamagedTable({
         return {
           id: `${id}_summary`,
           columnId: id,
-          label: `إجمالي الخسارة ${cs(sym)}`,
+          label: `${t("damaged.totalLoss", { namespace: "inventory", fallback: "إجمالي الخسارة" })} ${cs(sym)}`,
           value: totalCost > 0 ? formatAmount(totalCost, { currencyCode: currCode }) : "—",
           className: isBase ? 'text-rose-600 font-black' as const : 'text-rose-300 font-bold' as const,
         };
       }
       return { id: `${id}_spacer`, columnId: id, label: '', value: '' };
     });
-  }, [items, allColumns, currencies, formatAmount, isBaseCurrency, cs]);
+  }, [items, allColumns, currencies, formatAmount, isBaseCurrency, cs, t]);
 
   const sortFn = (a: DamagedItem, b: DamagedItem, field: string, direction: 'asc' | 'desc') => {
     let comparison = 0;
@@ -177,13 +179,13 @@ export function DamagedTable({
       loading={loading}
       search={search}
       onSearchChange={onSearchChange}
-      searchPlaceholder="بحث بالمنتج أو السبب..."
+      searchPlaceholder={t("damaged.searchPlaceholder", { namespace: "inventory", fallback: "بحث بالمنتج أو السبب..." })}
       tableId="damaged"
       sortConfig={{ field: "damage_date", direction: "desc", sortFn }}
       sortableFields={["material_name", "damage_date", "quantity", "cost_impact"]}
       selectedId={selectedId}
       onRowClick={onView}
-      emptyMessage={search ? "لا توجد نتائج للبحث" : "لا توجد سجلات تالف"}
+      emptyMessage={search ? t("damaged.noSearchResults", { namespace: "inventory", fallback: "لا توجد نتائج للبحث" }) : t("damaged.empty", { namespace: "inventory", fallback: "لا توجد سجلات تالف" })}
       summary={summaryColumns}
       onVisibleColumnsChange={onVisibleColumnsChange}
     />

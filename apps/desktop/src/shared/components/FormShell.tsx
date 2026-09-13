@@ -5,6 +5,7 @@ import { Button } from '@shared/ui/button';
 import { Card } from '@shared/ui/card';
 import { Separator } from '@shared/ui/separator';
 import type { UseFormConfig } from '@shared/types/form';
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 interface FormShellProps<T extends Record<string, unknown>>
   extends Omit<UseFormConfig<T>, 'onSubmit'> {
@@ -38,8 +39,8 @@ export function FormShell<T extends Record<string, unknown>>({
   layout = 'stacked',
   showSubmit = true,
   showReset = false,
-  submitLabel = 'حفظ',
-  resetLabel = 'إعادة تعيين',
+  submitLabel,
+  resetLabel,
   loading = false,
   className,
   onCancel,
@@ -48,6 +49,9 @@ export function FormShell<T extends Record<string, unknown>>({
   children,
   ...formConfig
 }: FormShellProps<T>) {
+  const { t } = useLocalization();
+  const resolvedSubmitLabel = submitLabel ?? t('actions.save', { fallback: 'حفظ' });
+  const resolvedResetLabel = resetLabel ?? t('actions.reset', { fallback: 'إعادة تعيين' });
   const form = useForm(formConfig);
 
   const layoutClasses = {
@@ -92,7 +96,7 @@ export function FormShell<T extends Record<string, unknown>>({
                 onClick={onCancel}
                 disabled={loading}
               >
-                إلغاء
+                {t('actions.cancel', { fallback: 'إلغاء' })}
               </Button>
             )}
             {showReset && (
@@ -102,12 +106,12 @@ export function FormShell<T extends Record<string, unknown>>({
                 onClick={() => form.reset()}
                 disabled={loading}
               >
-                {resetLabel}
+                {resolvedResetLabel}
               </Button>
             )}
             {showSubmit && (
               <Button type="submit" disabled={loading || !form.isValid}>
-                {loading ? 'جاري الحفظ...' : submitLabel}
+                {loading ? t('states.saving', { fallback: 'جاري الحفظ...' }) : resolvedSubmitLabel}
               </Button>
             )}
           </div>

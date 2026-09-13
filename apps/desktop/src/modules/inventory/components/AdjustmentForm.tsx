@@ -11,6 +11,7 @@ import { Calculator } from "lucide-react";
 import { toast } from "sonner";
 import { useCurrencyField } from "@shared/hooks/useCurrencyField";
 import { CurrencyField } from "@shared/ui/CurrencyField";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 interface AdjustmentFormProps {
   onClose: () => void;
@@ -30,6 +31,7 @@ export function AdjustmentForm({ onClose, products, onSave, saving, initialValue
   });
 
   const { currencies, baseCurrencyCode, getDefaultCurrency, setCurrency: setCurrencyFn, convertBetween } = currencyField;
+  const { t } = useLocalization();
 
   const [form, setForm] = useState<Partial<CreateStockAdjustmentRequest>>({
     adjustment_date: new Date().toISOString(),
@@ -81,11 +83,11 @@ export function AdjustmentForm({ onClose, products, onSave, saving, initialValue
         : convertBetween(baseCost, matCurrency, selectedCurrency);
       setForm(p => ({ ...p, unit_cost: String(converted) }));
     } catch {
-      toast.error("فشل تحميل رصيد المخزون");
+      toast.error(t("adjustments.loadStockError", { namespace: "inventory", fallback: "فشل تحميل رصيد المخزون" }));
     } finally {
       setLoadingBalance(false);
     }
-  }, [products, baseCurrencyCode, getDefaultCurrencyFor, setCurrencyFn, convertBetween]);
+  }, [products, baseCurrencyCode, getDefaultCurrencyFor, setCurrencyFn, convertBetween, t]);
 
   const fetchBalanceRef = useRef(fetchBalance);
   fetchBalanceRef.current = fetchBalance;
@@ -184,19 +186,19 @@ export function AdjustmentForm({ onClose, products, onSave, saving, initialValue
 
   return (
     <FormPanel
-      title={isEditMode ? "تعديل تسوية جرد" : "تسوية جرد جديدة"}
+      title={isEditMode ? t("adjustments.editTitle", { namespace: "inventory", fallback: "تعديل تسوية جرد" }) : t("adjustments.newTitle", { namespace: "inventory", fallback: "تسوية جرد جديدة" })}
       onClose={onClose}
       onSave={handleSave}
       isSaving={saving}
       saveDisabled={saving || !form.material_id || form.actual_quantity === undefined || form.actual_quantity === null}
-      saveLabel={isEditMode ? "حفظ التعديل" : "تسوية"}
+      saveLabel={isEditMode ? t("adjustments.saveEdit", { namespace: "inventory", fallback: "حفظ التعديل" }) : t("adjustments.adjust", { namespace: "inventory", fallback: "تسوية" })}
     >
-      <SidebarSection title="بيانات التسوية" defaultOpen={true}>
+      <SidebarSection title={t("adjustments.dataTitle", { namespace: "inventory", fallback: "بيانات التسوية" })} defaultOpen={true}>
         <div className="space-y-4 text-right">
           <div className="space-y-2">
-            <FieldLabel required>المادة</FieldLabel>
+            <FieldLabel required>{t("adjustments.material", { namespace: "inventory", fallback: "المادة" })}</FieldLabel>
             <Select value={form.material_id ?? ""} onValueChange={handleMaterialChange}>
-              <SelectTrigger className="w-full bg-white border-slate-200"><SelectValue placeholder="اختر المادة..." /></SelectTrigger>
+              <SelectTrigger className="w-full bg-white border-slate-200"><SelectValue placeholder={t("adjustments.selectMaterial", { namespace: "inventory", fallback: "اختر المادة..." })} /></SelectTrigger>
               <SelectContent>
                 {products.map(p => (
                   <SelectItem key={p.id} value={p.id}>{p.name} ({p.code})</SelectItem>
@@ -207,21 +209,21 @@ export function AdjustmentForm({ onClose, products, onSave, saving, initialValue
           {form.material_id && (
             <div className="flex items-center gap-2 p-2 rounded-lg bg-slate-50 border border-slate-100 text-xs text-slate-600">
               <Calculator className="w-3.5 h-3.5 text-slate-400" />
-              <span>رصيد النظام: <strong className="text-slate-800">{systemQuantity.toFixed(2)}</strong></span>
+              <span>{t("adjustments.systemBalance", { namespace: "inventory", fallback: "رصيد النظام" })}: <strong className="text-slate-800">{systemQuantity.toFixed(2)}</strong></span>
               <span className="text-slate-300">|</span>
-              <span>تكلفة الوحدة: <strong className="text-slate-800">{unitCostPerUnit.toFixed(2)} {currencyField.symbol}</strong></span>
+              <span>{t("adjustments.unitCost", { namespace: "inventory", fallback: "تكلفة الوحدة" })}: <strong className="text-slate-800">{unitCostPerUnit.toFixed(2)} {currencyField.symbol}</strong></span>
             </div>
           )}
           <div className="space-y-2">
-            <FieldLabel required>الكمية المجرودة</FieldLabel>
+            <FieldLabel required>{t("adjustments.countedQuantity", { namespace: "inventory", fallback: "الكمية المجرودة" })}</FieldLabel>
             <Input type="number" min="0" step="1"
               value={form.actual_quantity ?? ""}
               onChange={e => handleActualQuantityChange(parseFloat(e.target.value))}
               className="bg-white border-slate-200 h-9 text-xs tabular-nums"
-              placeholder="أدخل الكمية..." />
+              placeholder={t("adjustments.enterQuantity", { namespace: "inventory", fallback: "أدخل الكمية..." })} />
           </div>
           <CurrencyField
-            label="التكلفة (محسوبة تلقائياً)"
+            label={t("adjustments.costAutoCalculated", { namespace: "inventory", fallback: "التكلفة (محسوبة تلقائياً)" })}
             currency={currencyField.currency}
             onCurrencyChange={currencyField.setCurrency}
             amount={form.unit_cost ?? ""}
@@ -241,15 +243,15 @@ export function AdjustmentForm({ onClose, products, onSave, saving, initialValue
             currencies={currencyField.currencies}
           />
           <div className="space-y-2">
-            <FieldLabel>تاريخ التسوية</FieldLabel>
+            <FieldLabel>{t("adjustments.adjustmentDate", { namespace: "inventory", fallback: "تاريخ التسوية" })}</FieldLabel>
             <Input type="date"
               value={form.adjustment_date?.slice(0, 10) ?? ""}
               onChange={e => setForm(p => ({ ...p, adjustment_date: new Date(e.target.value).toISOString() }))}
               className="bg-white border-slate-200" />
           </div>
           <div className="space-y-2">
-            <FieldLabel>ملاحظة</FieldLabel>
-            <Textarea value={form.notes ?? ""} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))} className="bg-white border-slate-200 min-h-[60px]" placeholder="سبب التسوية..." />
+            <FieldLabel>{t("adjustments.note", { namespace: "inventory", fallback: "ملاحظة" })}</FieldLabel>
+            <Textarea value={form.notes ?? ""} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))} className="bg-white border-slate-200 min-h-[60px]" placeholder={t("adjustments.reasonPlaceholder", { namespace: "inventory", fallback: "سبب التسوية..." })} />
           </div>
         </div>
       </SidebarSection>

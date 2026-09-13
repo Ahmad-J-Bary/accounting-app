@@ -6,6 +6,7 @@ import { materialService } from '@modules/inventory/api/materialService';
 import type { MaterialDto, MaterialUnitDto } from "@erp/shared-types";
 import { UnitCard } from './UnitCard';
 import { AddUnitForm } from './AddUnitForm';
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 interface MaterialUnitsManagerProps {
   material: MaterialDto | null;
@@ -14,6 +15,7 @@ interface MaterialUnitsManagerProps {
 }
 
 export function MaterialUnitsManager({ material, onClose, onUnitsUpdated }: MaterialUnitsManagerProps) {
+  const { t } = useLocalization();
   const [showAddForm, setShowAddForm] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [localUnits, setLocalUnits] = useState<MaterialUnitDto[] | null>(null);
@@ -37,18 +39,18 @@ export function MaterialUnitsManager({ material, onClose, onUnitsUpdated }: Mate
   const secondaryUnits = displayUnits.filter(u => !u.is_base);
 
   const handleDeleteUnit = async (unitId: string) => {
-    if (!confirm("هل أنت متأكد من حذف هذه الوحدة؟")) return;
+    if (!confirm(t("units.deleteConfirm", { namespace: "inventory", fallback: "هل أنت متأكد من حذف هذه الوحدة؟" }))) return;
     setDeletingId(unitId);
     const deletedUnit = displayUnits.find(u => u.id === unitId);
     setLocalUnits(prev => (prev ?? material.units ?? []).filter(u => u.id !== unitId));
     try {
       await materialService.deleteMaterialUnit(unitId);
-      toast.success("تم حذف الوحدة");
+      toast.success(t("units.deleted", { namespace: "inventory", fallback: "تم حذف الوحدة" }));
       onUnitsUpdated();
       setPendingServerSync(true);
     } catch (err) {
       if (deletedUnit) setLocalUnits(prev => [...(prev ?? material.units ?? []), deletedUnit]);
-      toast.error("فشل حذف الوحدة: " + err);
+      toast.error(t("units.deleteFailed", { namespace: "inventory", fallback: "فشل حذف الوحدة" }) + ": " + err);
     } finally {
       setDeletingId(null);
     }
@@ -56,7 +58,7 @@ export function MaterialUnitsManager({ material, onClose, onUnitsUpdated }: Mate
 
   const handleAddUnit = async (unit: { name: string; conversion_factor: string; barcode: string }) => {
     if (displayUnits.some(u => u.name.toLowerCase() === unit.name.trim().toLowerCase())) {
-      toast.error("يوجد وحدة بنفس الاسم مسبقاً");
+      toast.error(t("units.duplicateName", { namespace: "inventory", fallback: "يوجد وحدة بنفس الاسم مسبقاً" }));
       return;
     }
     const tempId = `temp_${Date.now()}`;
@@ -77,7 +79,7 @@ export function MaterialUnitsManager({ material, onClose, onUnitsUpdated }: Mate
         conversion_factor: unit.conversion_factor,
         barcode: unit.barcode || null,
       });
-      toast.success("تمت إضافة الوحدة بنجاح");
+      toast.success(t("units.added", { namespace: "inventory", fallback: "تمت إضافة الوحدة بنجاح" }));
       onUnitsUpdated();
       setPendingServerSync(true);
     } catch (err) {
@@ -107,7 +109,7 @@ export function MaterialUnitsManager({ material, onClose, onUnitsUpdated }: Mate
         <div className="flex flex-col gap-1 text-right">
           <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
             <Scale className="w-5 h-5 text-blue-600" />
-            إدارة وحدات القياس
+            {t("units.manageTitle", { namespace: "inventory", fallback: "إدارة وحدات القياس" })}
           </h2>
           <span className="text-xs text-muted-foreground">{material.name}</span>
         </div>
@@ -132,17 +134,17 @@ export function MaterialUnitsManager({ material, onClose, onUnitsUpdated }: Mate
         {/* Secondary Units Section */}
         <div>
           <div className="flex items-center justify-between border-b pb-2">
-            <h3 className="text-sm font-bold text-slate-800">الوحدات الحالية ({secondaryUnits.length})</h3>
-            <Button type="button" size="sm" onClick={() => setShowAddForm(true)} className="bg-blue-600 hover:bg-blue-700 gap-1.5 h-8 text-xs font-bold rounded-lg shadow-sm"><Plus className="w-3.5 h-3.5" /> إضافة وحدة</Button>
+            <h3 className="text-sm font-bold text-slate-800">{t("units.currentUnits", { namespace: "inventory", fallback: "الوحدات الحالية" })} ({secondaryUnits.length})</h3>
+            <Button type="button" size="sm" onClick={() => setShowAddForm(true)} className="bg-blue-600 hover:bg-blue-700 gap-1.5 h-8 text-xs font-bold rounded-lg shadow-sm"><Plus className="w-3.5 h-3.5" /> {t("units.addUnit", { namespace: "inventory", fallback: "إضافة وحدة" })}</Button>
           </div>
 
           {secondaryUnits.length === 0 && !showAddForm ? (
             <div className="text-center py-10 bg-slate-50/50 rounded-xl border border-dashed mt-3">
               <Boxes className="w-8 h-8 mx-auto mb-2 opacity-30 text-slate-400" />
-              <p className="text-xs text-slate-400 mb-3">لا توجد وحدات إضافية معرفة لهذه المادة.</p>
+              <p className="text-xs text-slate-400 mb-3">{t("units.noAdditionalUnits", { namespace: "inventory", fallback: "لا توجد وحدات إضافية معرفة لهذه المادة." })}</p>
               <Button variant="outline" size="sm" onClick={() => setShowAddForm(true)}>
                 <Plus className="w-3.5 h-3.5 ml-1.5" />
-                إضافة أول وحدة
+                {t("units.addFirstUnit", { namespace: "inventory", fallback: "إضافة أول وحدة" })}
               </Button>
             </div>
           ) : (
@@ -184,7 +186,7 @@ export function MaterialUnitsManager({ material, onClose, onUnitsUpdated }: Mate
         <div className="bg-amber-50/55 border border-amber-100 p-3.5 rounded-2xl flex gap-3 text-right">
           <Shuffle className="w-4.5 h-4.5 text-amber-600 shrink-0 mt-0.5" />
           <p className="text-[10px] text-amber-800 leading-relaxed font-semibold">
-            <strong>تنبيه:</strong> الوحدة الأولى تعتبر <strong>الوحدة الأساسية</strong> للمستودعات. الوحدات الإضافية تُحسب كمعادلات تعادل كمية من الوحدة الأساسية (مثلاً: دزينة = 12 قطعة).
+            <strong>{t("units.warning", { namespace: "inventory", fallback: "تنبيه:" })}</strong> {t("units.warningText", { namespace: "inventory", fallback: "الوحدة الأولى تعتبر الوحدة الأساسية للمستودعات. الوحدات الإضافية تُحسب كمعادلات تعادل كمية من الوحدة الأساسية (مثلاً: دزينة = 12 قطعة)." })}
           </p>
         </div>
       </div>

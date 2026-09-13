@@ -5,6 +5,7 @@ import { Badge } from "@shared/ui/badge";
 import { Checkbox } from "@shared/ui/checkbox";
 import { Popover, PopoverTrigger, PopoverContent } from "@shared/ui/popover";
 import { Filter, X } from "lucide-react";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 import { MOVEMENT_TYPE_CONFIG, MOVEMENT_TYPE_KEYS, PARENT_CHILD_MAP, CHILD_PARENT_MAP } from '../constants/movementTypes';
 
 interface MovementTypeFilterProps {
@@ -14,6 +15,7 @@ interface MovementTypeFilterProps {
 }
 
 export function MovementTypeFilter({ value, onChange, excludeKeys }: MovementTypeFilterProps) {
+  const { t } = useLocalization();
   const [open, setOpen] = useState(false);
   const visibleKeys = excludeKeys && excludeKeys.length > 0
     ? MOVEMENT_TYPE_KEYS.filter((k) => !excludeKeys.includes(k))
@@ -76,7 +78,7 @@ export function MovementTypeFilter({ value, onChange, excludeKeys }: MovementTyp
           )}
         >
           <Filter className="w-3.5 h-3.5 shrink-0" />
-          <span>النوع</span>
+          <span>{t("movements.filterType", { namespace: "inventory", fallback: "النوع" })}</span>
           {!noneSelected && (
             <Badge variant="secondary" className="h-4 px-1 text-[10px] font-bold">
               {value.length}
@@ -91,7 +93,7 @@ export function MovementTypeFilter({ value, onChange, excludeKeys }: MovementTyp
             className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-xs font-medium text-slate-600 hover:bg-slate-100 transition-colors"
           >
             <Checkbox checked={allSelected} />
-            <span>{allSelected ? 'إلغاء الكل' : 'تحديد الكل'}</span>
+            <span>{allSelected ? t("movements.deselectAll", { namespace: "inventory", fallback: "إلغاء الكل" }) : t("movements.selectAll", { namespace: "inventory", fallback: "تحديد الكل" })}</span>
           </button>
           <div className="h-px bg-slate-100 my-1" />
           {visibleKeys.map(key => {
@@ -125,7 +127,7 @@ export function MovementTypeFilter({ value, onChange, excludeKeys }: MovementTyp
                 className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-xs font-medium text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
               >
                 <X className="w-3 h-3" />
-                <span>إزالة الفلتر</span>
+                <span>{t("movements.clearFilter", { namespace: "inventory", fallback: "إزالة الفلتر" })}</span>
               </button>
             </>
           )}

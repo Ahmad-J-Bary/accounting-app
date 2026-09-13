@@ -1,6 +1,7 @@
 import { Card, CardContent } from "@shared/ui/card";
 import { Circle, CheckCircle2 } from "lucide-react";
 import { cn } from "@shared/lib/utils";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 export interface ChecklistItem {
   key: string;
@@ -18,13 +19,14 @@ interface OpeningProgressChecklistProps {
  * is derived from wizard data + the reached step, never from user memory.
  */
 export function OpeningProgressChecklist({ items }: OpeningProgressChecklistProps) {
+  const { t } = useLocalization();
   const doneCount = items.filter((i) => i.done).length;
   const pct = items.length ? Math.round((doneCount / items.length) * 100) : 0;
   return (
     <Card className="border-slate-200 shadow-sm">
       <CardContent className="space-y-1.5 pt-3">
         <div className="flex items-center justify-between gap-2">
-          <span className="text-sm font-bold text-slate-800">اكتمال الإعداد</span>
+          <span className="text-sm font-bold text-slate-800">{t("openingBalance.checklistTitle", { namespace: "accounting", fallback: "اكتمال الإعداد" })}</span>
           <span className="text-2xs font-bold text-slate-500 tabular-nums">
             {doneCount}/{items.length}
           </span>

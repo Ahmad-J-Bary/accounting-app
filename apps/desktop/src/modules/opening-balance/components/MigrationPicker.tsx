@@ -3,6 +3,7 @@ import { FieldLabel } from "@widgets/sidebar-shell/FieldLabel";
 import { STATUS_LABEL } from "@shared/ui/status";
 import { toLocalDateStr } from "@shared/lib/format";
 import type { OpeningBalanceMigrationDto } from "../../accounting/api/openingBalanceService";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 interface MigrationPickerProps {
   id: string;
@@ -14,12 +15,13 @@ interface MigrationPickerProps {
 
 /** Shared migration selector: cutover date — status — line count. */
 export function MigrationPicker({ id, label, candidates, value, onChange }: MigrationPickerProps) {
+  const { t } = useLocalization();
   return (
     <div className="space-y-1.5">
       <FieldLabel htmlFor={id}>{label}</FieldLabel>
       <Select value={value} onValueChange={onChange}>
         <SelectTrigger id={id} className="h-9 bg-white border-slate-200 text-xs">
-          <SelectValue placeholder={candidates.length ? "اختر ترحيلاً..." : "لا توجد ترحيلات"} />
+          <SelectValue placeholder={candidates.length ? t("openingBalance.selectMigrationPlaceholder", { namespace: "accounting", fallback: "اختر ترحيلاً..." }) : t("openingBalance.noMigrations", { namespace: "accounting", fallback: "لا توجد ترحيلات" })} />
         </SelectTrigger>
         <SelectContent>
           {candidates.map((m) => (

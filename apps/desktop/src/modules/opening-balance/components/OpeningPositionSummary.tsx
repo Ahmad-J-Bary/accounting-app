@@ -4,6 +4,7 @@ import { Card, CardContent } from "@shared/ui/card";
 import { Scale, AlertTriangle } from "lucide-react";
 import { StatusBadge } from "@shared/ui/status-badge";
 import { fmtMoney } from "@shared/lib/format";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 export interface OpeningPositionSummaryProps {
   cash: number;
@@ -64,6 +65,7 @@ export function OpeningPositionSummary({
   balanced,
   hints = [],
 }: OpeningPositionSummaryProps) {
+  const { t } = useLocalization();
   const totalAssets = cash + bank + receivables + inventory + fixedAssets;
   const totalLiabilities = suppliers + loans + otherLiabilities;
   const netAssets = totalAssets - totalLiabilities;
@@ -76,11 +78,11 @@ export function OpeningPositionSummary({
         <div className="flex items-center justify-between gap-2">
           <span className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
             <Scale className="w-4 h-4 text-blue-600" />
-            المركز الافتتاحي
+            {t("openingBalance.balanceSummary", { namespace: "accounting", fallback: "المركز الافتتاحي" })}
           </span>
           <StatusBadge
-            status={balanced ? "متوازن" : "فرق"}
-            label={balanced ? "متوازن ✓" : "يوجد فرق"}
+            status={balanced ? t("openingBalance.statusBalanced", { namespace: "accounting", fallback: "متوازن" }) : t("openingBalance.statusDiff", { namespace: "accounting", fallback: "فرق" })}
+            label={balanced ? t("openingBalance.balanced", { namespace: "accounting", fallback: "متوازن ✓" }) : t("openingBalance.positionDiff", { namespace: "accounting", fallback: "يوجد فرق" })}
             tone={balanced ? "green" : "red"}
           />
         </div>
@@ -97,39 +99,39 @@ export function OpeningPositionSummary({
         )}
 
         <div className="border border-blue-100 rounded-lg p-2 space-y-1 bg-blue-50/40">
-          <SectionLabel color="text-blue-700">الأصول (A)</SectionLabel>
-          <Row label="النقد والصندوق" value={cash} />
-          <Row label="البنوك" value={bank} />
-          <Row label="الذمم المدينة (العملاء)" value={receivables} />
-          <Row label="رصيد المخزون" value={inventory} />
-          <Row label="الأصول الثابتة (صافي)" value={fixedAssets} />
+          <SectionLabel color="text-blue-700">{t("openingBalance.assets", { namespace: "accounting", fallback: "الأصول (A)" })}</SectionLabel>
+          <Row label={t("openingBalance.cashAndBanks", { namespace: "accounting", fallback: "النقد والصندوق" })} value={cash} />
+          <Row label={t("openingBalance.banks", { namespace: "accounting", fallback: "البنوك" })} value={bank} />
+          <Row label={t("openingBalance.receivables", { namespace: "accounting", fallback: "الذمم المدينة (العملاء)" })} value={receivables} />
+          <Row label={t("openingBalance.inventoryBalance", { namespace: "accounting", fallback: "رصيد المخزون" })} value={inventory} />
+          <Row label={t("openingBalance.fixedAssetsNet", { namespace: "accounting", fallback: "الأصول الثابتة (صافي)" })} value={fixedAssets} />
           <div className="pt-1 border-t border-blue-100">
-            <Row label="إجمالي الأصول" value={totalAssets} strong />
+            <Row label={t("openingBalance.totalAssets", { namespace: "accounting", fallback: "إجمالي الأصول" })} value={totalAssets} strong />
           </div>
         </div>
 
         <div className="border border-emerald-100 rounded-lg p-2 space-y-1 bg-emerald-50/40">
-          <SectionLabel color="text-emerald-700">الخصوم (L)</SectionLabel>
-          <Row label="الذمم الدائنة (الموردون)" value={suppliers} />
-          <Row label="قروض وتسليفات" value={loans} />
-          <Row label="خصوم أخرى" value={otherLiabilities} />
+          <SectionLabel color="text-emerald-700">{t("openingBalance.liabilities", { namespace: "accounting", fallback: "الخصوم (L)" })}</SectionLabel>
+          <Row label={t("openingBalance.suppliers", { namespace: "accounting", fallback: "الذمم الدائنة (الموردون)" })} value={suppliers} />
+          <Row label={t("openingBalance.loans", { namespace: "accounting", fallback: "قروض وتسليفات" })} value={loans} />
+          <Row label={t("openingBalance.otherLiabilities", { namespace: "accounting", fallback: "خصوم أخرى" })} value={otherLiabilities} />
           <div className="pt-1 border-t border-emerald-100">
-            <Row label="إجمالي الخصوم" value={totalLiabilities} strong />
+            <Row label={t("openingBalance.totalLiabilities", { namespace: "accounting", fallback: "إجمالي الخصوم" })} value={totalLiabilities} strong />
           </div>
         </div>
 
         <div className="rounded-lg bg-indigo-50 border border-indigo-100 px-2 py-1.5">
-          <Row label="صافي الأصول (A − L)" value={netAssets} strong />
+          <Row label={t("openingBalance.netAssets", { namespace: "accounting", fallback: "صافي الأصول (A − L)" })} value={netAssets} strong />
         </div>
 
         <div className="border border-indigo-100 rounded-lg p-2 space-y-1 bg-indigo-50/40">
-          <SectionLabel color="text-indigo-700">حقوق الملكية (E)</SectionLabel>
-          <Row label="رأس مال الشركاء" value={partnerCapital} />
-          <Row label="الحسابات الجارية" value={partnerCurrent} />
-          <Row label="حقوق ملكية أخرى" value={otherEquity} />
-          {plugAmount > 0 && <Row label="تسوية الرصيد الافتتاحي (53)" value={plugAmount} />}
+          <SectionLabel color="text-indigo-700">{t("openingBalance.equity", { namespace: "accounting", fallback: "حقوق الملكية (E)" })}</SectionLabel>
+          <Row label={t("openingBalance.partnerCapital", { namespace: "accounting", fallback: "رأس مال الشركاء" })} value={partnerCapital} />
+          <Row label={t("openingBalance.currentAccounts", { namespace: "accounting", fallback: "الحسابات الجارية" })} value={partnerCurrent} />
+          <Row label={t("openingBalance.otherEquity", { namespace: "accounting", fallback: "حقوق ملكية أخرى" })} value={otherEquity} />
+          {plugAmount > 0 && <Row label={t("openingBalance.openingAdjustment", { namespace: "accounting", fallback: "تسوية الرصيد الافتتاحي (53)" })} value={plugAmount} />}
           <div className="pt-1 border-t border-indigo-100">
-            <Row label="إجمالي حقوق الملكية (المصنّف)" value={equityWithPlug} strong />
+            <Row label={t("openingBalance.totalRecognizedEquity", { namespace: "accounting", fallback: "إجمالي حقوق الملكية (المصنّف)" })} value={equityWithPlug} strong />
           </div>
         </div>
 
@@ -139,13 +141,12 @@ export function OpeningPositionSummary({
             balanced ? "bg-green-50 text-green-700 border border-green-200" : "bg-amber-50 text-amber-700 border border-amber-200",
           )}
         >
-          <span>{balanced ? "الفرق = 0 — متوازن ✓" : "الفرق (رصيد غير مصنّف):"}</span>
+          <span>{balanced ? t("openingBalance.balancedCheck", { namespace: "accounting", fallback: "الفرق = 0 — متوازن ✓" }) : t("openingBalance.unclassifiedDifference", { namespace: "accounting", fallback: "الفرق (رصيد غير مصنّف):" })}</span>
           <span className="tabular-nums font-black">{fmtMoney(balanced ? 0 : residual)}</span>
         </div>
 
         <p className="text-2xs text-slate-400">
-          الفرق = صافي الأصول − حقوق الملكية المعترف بها — لا يُسوى تلقائياً؛ صُنّفه صراحةً من
-          تصنيفات الرصيد المتبقي.
+          {t("openingBalance.residualExplanation", { namespace: "accounting", fallback: "الفرق = صافي الأصول − حقوق الملكية المعترف بها — لا يُسوى تلقائياً؛ صُنّفه صراحةً من تصنيفات الرصيد المتبقي." })}
         </p>
       </CardContent>
     </Card>

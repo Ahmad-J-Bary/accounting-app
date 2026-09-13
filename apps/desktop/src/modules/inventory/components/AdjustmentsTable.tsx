@@ -10,6 +10,7 @@ import { useUnifiedColumns, useSortable } from "@shared/hooks";
 import { formatDateTime, formatNumber, toFixed } from '@shared/lib/format';
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { useBaseCurrencyColumns } from "@shared/hooks";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 interface AdjustmentsTableProps {
   data: StockAdjustment[];
@@ -27,6 +28,7 @@ interface AdjustmentsTableProps {
 export function AdjustmentsTable({ data, loading, search, onSearchChange, selectedId, onView, onEdit, onDelete, onRowClick, onVisibleColumnsChange }: AdjustmentsTableProps) {
   const { currencies, formatAmount } = useCurrencyContext();
   const { isBaseCurrency, currencySuffix: cs } = useBaseCurrencyColumns();
+  const { t } = useLocalization();
   type SortField = "material_name" | "system_quantity" | "actual_quantity" | "difference" | "total_cost" | "adjustment_date" | "notes";
 
   const { sortedData, sortField, sortDirection, handleSort } = useSortable({
@@ -52,36 +54,36 @@ export function AdjustmentsTable({ data, loading, search, onSearchChange, select
     const cols: UnifiedColumn<StockAdjustment>[] = [
       {
         id: "id",
-        header: "الرقم",
-        label: "الرقم",
+        header: t("adjustments.columnId", { namespace: "inventory", fallback: "الرقم" }),
+        label: t("adjustments.columnId", { namespace: "inventory", fallback: "الرقم" }),
         accessor: (a, idx) => a.reference ? formatNumber(parseInt(a.reference) || 0) : (idx + 1).toString(),
         className: "font-black text-slate-900 text-center"
       },
       {
         id: "material_name",
-        header: "المادة",
-        label: "المادة",
+        header: t("adjustments.columnMaterial", { namespace: "inventory", fallback: "المادة" }),
+        label: t("adjustments.columnMaterial", { namespace: "inventory", fallback: "المادة" }),
         accessor: (a) => a.material_name ?? a.material_id,
         className: "font-bold text-slate-800"
       },
       {
         id: "system_quantity",
-        header: "كمية النظام",
-        label: "كمية النظام",
+        header: t("adjustments.columnSystemQuantity", { namespace: "inventory", fallback: "كمية النظام" }),
+        label: t("adjustments.columnSystemQuantity", { namespace: "inventory", fallback: "كمية النظام" }),
         accessor: (a) => toFixed(parseFloat(a.system_quantity), 2),
         className: "tabular-nums text-slate-600"
       },
       {
         id: "actual_quantity",
-        header: "الكمية المجرودة",
-        label: "الكمية المجرودة",
+        header: t("adjustments.columnCountedQuantity", { namespace: "inventory", fallback: "الكمية المجرودة" }),
+        label: t("adjustments.columnCountedQuantity", { namespace: "inventory", fallback: "الكمية المجرودة" }),
         accessor: (a) => toFixed(parseFloat(a.actual_quantity), 2),
         className: "tabular-nums font-bold text-slate-800"
       },
       {
         id: "difference",
-        header: "الفارق",
-        label: "الفارق",
+        header: t("adjustments.columnDifference", { namespace: "inventory", fallback: "الفارق" }),
+        label: t("adjustments.columnDifference", { namespace: "inventory", fallback: "الفارق" }),
         accessor: (a) => {
           const diff = parseFloat(a.difference);
           return (
@@ -99,8 +101,8 @@ export function AdjustmentsTable({ data, loading, search, onSearchChange, select
         const symbol = curr.symbol || curr.code;
         return {
           id: `total_cost_${curr.code}`,
-          header: `التكلفة ${cs(symbol)}`,
-          label: `التكلفة ${cs(symbol)}`,
+          header: `${t("adjustments.columnCost", { namespace: "inventory", fallback: "التكلفة" })} ${cs(symbol)}`,
+          label: `${t("adjustments.columnCost", { namespace: "inventory", fallback: "التكلفة" })} ${cs(symbol)}`,
           accessor: (a: StockAdjustment) => {
             const cost = parseFloat(a.total_cost_base || "0");
             return Math.abs(cost) > 0 ? (
@@ -114,15 +116,15 @@ export function AdjustmentsTable({ data, loading, search, onSearchChange, select
       }),
       {
         id: "notes",
-        header: "ملاحظة",
-        label: "ملاحظة",
+        header: t("adjustments.columnNote", { namespace: "inventory", fallback: "ملاحظة" }),
+        label: t("adjustments.columnNote", { namespace: "inventory", fallback: "ملاحظة" }),
         accessor: (a) => a.notes ?? a.reason ?? "",
         className: "text-slate-500"
       },
       {
         id: "adjustment_date",
-        header: "التاريخ",
-        label: "تاريخ التسوية",
+        header: t("adjustments.columnDate", { namespace: "inventory", fallback: "التاريخ" }),
+        label: t("adjustments.columnDateAdjustment", { namespace: "inventory", fallback: "تاريخ التسوية" }),
         accessor: (a) => formatDateTime(a.adjustment_date),
         className: "tabular-nums text-slate-500"
       },
@@ -131,8 +133,8 @@ export function AdjustmentsTable({ data, loading, search, onSearchChange, select
     if (onView || onEdit || onDelete) {
       cols.push({
         id: "actions",
-        header: "إجراءات",
-        label: "إجراءات",
+        header: t("labels.actions", { namespace: "inventory", fallback: "إجراءات" }),
+        label: t("labels.actions", { namespace: "inventory", fallback: "إجراءات" }),
         accessor: (a) => (
           <TableActions
             onView={onView ? () => onView(a) : undefined}
@@ -144,7 +146,7 @@ export function AdjustmentsTable({ data, loading, search, onSearchChange, select
     }
 
     return cols;
-  }, [onView, onEdit, onDelete, formatAmount, currencies, cs]);
+  }, [onView, onEdit, onDelete, formatAmount, currencies, cs, t]);
 
   const defaultVisible = useMemo(() => {
     const ids: string[] = ["id", "material_name", "system_quantity", "actual_quantity",
@@ -172,20 +174,20 @@ export function AdjustmentsTable({ data, loading, search, onSearchChange, select
     return enrichedColumns.map(col => {
       const id = col.id;
       if (id === "material_name") {
-        return { id: "count", columnId: id, label: "", value: `${sortedData.length} تسوية`, className: "text-slate-500 font-medium" };
+        return { id: "count", columnId: id, label: "", value: `${sortedData.length} ${t("adjustments.adjustments", { namespace: "inventory", fallback: "تسوية" })}`, className: "text-slate-500 font-medium" };
       }
       if (id.startsWith("total_cost_")) {
         const total = sortedData.reduce((s, a) => s + parseFloat(a.total_cost_base || "0"), 0);
         const totalCostId = id;
         return {
-          id: `cost_summary_${totalCostId}`, columnId: id, label: "الإجمالي",
+          id: `cost_summary_${totalCostId}`, columnId: id, label: t("adjustments.total", { namespace: "inventory", fallback: "الإجمالي" }),
           value: total !== 0 ? formatAmount(total, { currencyCode: id.replace("total_cost_", "") }) : "—",
           className: "text-slate-900 font-black"
         };
       }
       return { id: `${id}_spacer`, columnId: id, label: "", value: "" };
     });
-  }, [sortedData, enrichedColumns, formatAmount]);
+  }, [sortedData, enrichedColumns, formatAmount, t]);
 
   const sortableFields: SortField[] = [
     "material_name", "system_quantity", "actual_quantity",
@@ -207,7 +209,7 @@ export function AdjustmentsTable({ data, loading, search, onSearchChange, select
     <TableShell
       search={search}
       onSearchChange={onSearchChange}
-      searchPlaceholder="بحث بالمنتج أو الملاحظة..."
+      searchPlaceholder={t("adjustments.searchPlaceholder", { namespace: "inventory", fallback: "بحث بالمنتج أو الملاحظة..." })}
       columns={toolbarColumns}
       onColumnToggle={toggleColumn}
       onColumnsReset={resetToDefault}
@@ -231,7 +233,7 @@ export function AdjustmentsTable({ data, loading, search, onSearchChange, select
         }}
         selectedId={selectedId}
         onRowClick={onRowClick}
-        emptyMessage={search ? "لا توجد نتائج للبحث" : "لا توجد تسويات مسجّلة"}
+        emptyMessage={search ? t("adjustments.noSearchResults", { namespace: "inventory", fallback: "لا توجد نتائج للبحث" }) : t("adjustments.empty", { namespace: "inventory", fallback: "لا توجد تسويات مسجّلة" })}
         summary={summaryColumns}
       />
     </TableShell>
