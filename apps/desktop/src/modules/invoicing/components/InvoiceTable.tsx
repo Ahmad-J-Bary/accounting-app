@@ -93,8 +93,8 @@ export function InvoiceTable({
     const cols: UnifiedColumn<InvoiceDto>[] = [
       {
         id: "invoice_number",
-        header: t("invoice.colNumber", { namespace: "invoicing", fallback: "الرقم" }),
-        label: t("document.invoiceNumber", { namespace: "invoicing", fallback: "رقم الفاتورة" }),
+        header: t("invoice.colNumber", { namespace: "invoicing",  }),
+        label: t("document.invoiceNumber", { namespace: "invoicing",  }),
         accessor: (inv) => formatNumber(parseInt(inv.invoice_number) || 0),
         className: "font-black text-slate-900 text-center"
       },
@@ -109,8 +109,8 @@ export function InvoiceTable({
         const isBase = isBaseCurrency(curr.code);
         return {
           id: `subtotal_${curr.code}`,
-          header: `${t("invoice.baseSubtotal", { namespace: "invoicing", fallback: "مجموع الأسعار" })}${cs(curr.symbol || curr.code)}`,
-          label: `${t("invoice.baseSubtotal", { namespace: "invoicing", fallback: "مجموع الأسعار" })}${cs(curr.symbol || curr.code)}`,
+          header: `${t("invoice.baseSubtotal", { namespace: "invoicing",  })}${cs(curr.symbol || curr.code)}`,
+          label: `${t("invoice.baseSubtotal", { namespace: "invoicing",  })}${cs(curr.symbol || curr.code)}`,
           accessor: (inv: InvoiceDto) => {
             const baseAmt = getInvoiceBaseAmount(
               inv.subtotal_amount,
@@ -131,8 +131,8 @@ export function InvoiceTable({
         const isBase = isBaseCurrency(curr.code);
         return {
           id: `discount_granted_${curr.code}`,
-          header: `${t("invoice.baseDiscountGranted", { namespace: "invoicing", fallback: "خصوم ممنوحة" })}${cs(curr.symbol || curr.code)}`,
-          label: `${t("invoice.baseDiscountGranted", { namespace: "invoicing", fallback: "خصوم ممنوحة" })}${cs(curr.symbol || curr.code)}`,
+          header: `${t("invoice.baseDiscountGranted", { namespace: "invoicing",  })}${cs(curr.symbol || curr.code)}`,
+          label: `${t("invoice.baseDiscountGranted", { namespace: "invoicing",  })}${cs(curr.symbol || curr.code)}`,
           accessor: (inv: InvoiceDto) => {
             const baseAmt = getInvoiceBaseAmount(
               inv.discount_amount,
@@ -153,8 +153,8 @@ export function InvoiceTable({
         const isBase = isBaseCurrency(curr.code);
         return {
           id: `discount_${curr.code}`,
-          header: `${t("invoice.baseDiscountEarned", { namespace: "invoicing", fallback: "خصوم مكتسبة" })}${cs(curr.symbol || curr.code)}`,
-          label: `${t("invoice.baseDiscountEarned", { namespace: "invoicing", fallback: "خصوم مكتسبة" })}${cs(curr.symbol || curr.code)}`,
+          header: `${t("invoice.baseDiscountEarned", { namespace: "invoicing",  })}${cs(curr.symbol || curr.code)}`,
+          label: `${t("invoice.baseDiscountEarned", { namespace: "invoicing",  })}${cs(curr.symbol || curr.code)}`,
           accessor: (inv: InvoiceDto) => {
             const baseAmt = getInvoiceBaseAmount(
               inv.discount_amount,
@@ -175,8 +175,8 @@ export function InvoiceTable({
         const isBase = isBaseCurrency(curr.code);
         return {
           id: `extra_costs_${curr.code}`,
-          header: `${t("invoice.baseExtraCosts", { namespace: "invoicing", fallback: "تكاليف إضافية" })}${cs(curr.symbol || curr.code)}`,
-          label: `${t("invoice.baseExtraCostsFull", { namespace: "invoicing", fallback: "التكاليف الإضافية" })}${cs(curr.symbol || curr.code)}`,
+          header: `${t("invoice.baseExtraCosts", { namespace: "invoicing",  })}${cs(curr.symbol || curr.code)}`,
+          label: `${t("invoice.baseExtraCostsFull", { namespace: "invoicing",  })}${cs(curr.symbol || curr.code)}`,
           accessor: (inv: InvoiceDto) => {
             const baseAmt = getInvoiceBaseAmount(
               inv.extra_costs,
@@ -197,8 +197,8 @@ export function InvoiceTable({
         const isBase = isBaseCurrency(curr.code);
         return {
           id: `total_${curr.code}`,
-          header: `${t("invoice.baseTotal", { namespace: "invoicing", fallback: "المجموع الكلي" })}${cs(curr.symbol || curr.code)}`,
-          label: `${t("invoice.baseTotal", { namespace: "invoicing", fallback: "المجموع الكلي" })}${cs(curr.symbol || curr.code)}`,
+          header: `${t("invoice.baseTotal", { namespace: "invoicing",  })}${cs(curr.symbol || curr.code)}`,
+          label: `${t("invoice.baseTotal", { namespace: "invoicing",  })}${cs(curr.symbol || curr.code)}`,
           accessor: (inv: InvoiceDto) => {
             const baseSubtotal = getInvoiceBaseAmount(inv.subtotal_amount, inv.subtotal_amount_v2, inv.currency_code, inv.exchange_rate, baseCurrency?.code);
             const baseDiscount = getInvoiceBaseAmount(inv.discount_amount, inv.discount_amount_v2, inv.currency_code, inv.exchange_rate, baseCurrency?.code);
@@ -216,8 +216,8 @@ export function InvoiceTable({
         const isBase = isBaseCurrency(curr.code);
         return {
           id: `paid_${curr.code}`,
-          header: `${t("invoice.basePaid", { namespace: "invoicing", fallback: "المبلغ المدفوع" })}${cs(curr.symbol || curr.code)}`,
-          label: `${t("invoice.basePaid", { namespace: "invoicing", fallback: "المبلغ المدفوع" })}${cs(curr.symbol || curr.code)}`,
+          header: `${t("invoice.basePaid", { namespace: "invoicing",  })}${cs(curr.symbol || curr.code)}`,
+          label: `${t("invoice.basePaid", { namespace: "invoicing",  })}${cs(curr.symbol || curr.code)}`,
           accessor: (inv: InvoiceDto) => {
             const baseAmt = getInvoiceBaseAmount(
               inv.amount_paid,
@@ -238,8 +238,8 @@ export function InvoiceTable({
         const isBase = isBaseCurrency(curr.code);
         return {
           id: `remaining_${curr.code}`,
-          header: `${t("invoice.baseRemaining", { namespace: "invoicing", fallback: "المبلغ المتبقي" })}${cs(curr.symbol || curr.code)}`,
-          label: `${t("invoice.baseRemaining", { namespace: "invoicing", fallback: "المبلغ المتبقي" })}${cs(curr.symbol || curr.code)}`,
+          header: `${t("invoice.baseRemaining", { namespace: "invoicing",  })}${cs(curr.symbol || curr.code)}`,
+          label: `${t("invoice.baseRemaining", { namespace: "invoicing",  })}${cs(curr.symbol || curr.code)}`,
           accessor: (inv: InvoiceDto) => {
             const baseSubtotal = getInvoiceBaseAmount(inv.subtotal_amount, inv.subtotal_amount_v2, inv.currency_code, inv.exchange_rate, baseCurrency?.code);
             const baseDiscount = getInvoiceBaseAmount(inv.discount_amount, inv.discount_amount_v2, inv.currency_code, inv.exchange_rate, baseCurrency?.code);
@@ -257,21 +257,21 @@ export function InvoiceTable({
       }),
       {
         id: "status",
-        header: t("invoice.colStatus", { namespace: "invoicing", fallback: "الحالة" }),
-        label: t("invoice.labelStatus", { namespace: "invoicing", fallback: "حالة الفاتورة" }),
+        header: t("invoice.colStatus", { namespace: "invoicing",  }),
+        label: t("invoice.labelStatus", { namespace: "invoicing",  }),
         accessor: (inv) => <DocumentStatusBadge status={inv.status} />
       },
       {
         id: "notes",
-        header: t("invoice.colDescription", { namespace: "invoicing", fallback: "التوصيف" }),
-        label: t("invoice.colDescription", { namespace: "invoicing", fallback: "التوصيف" }),
+        header: t("invoice.colDescription", { namespace: "invoicing",  }),
+        label: t("invoice.colDescription", { namespace: "invoicing",  }),
         accessor: (inv) => inv.notes || "",
         className: "text-slate-500 italic"
       },
       {
         id: "issued_at",
-        header: t("invoice.colDate", { namespace: "invoicing", fallback: "التاريخ" }),
-        label: t("invoice.labelDate", { namespace: "invoicing", fallback: "تاريخ الفاتورة" }),
+        header: t("invoice.colDate", { namespace: "invoicing",  }),
+        label: t("invoice.labelDate", { namespace: "invoicing",  }),
         accessor: (inv) => formatDateTime(inv.issued_at),
         className: "text-slate-500 tabular-nums"
       },
@@ -284,19 +284,19 @@ export function InvoiceTable({
       })),
       {
         id: "actions",
-        header: t("actions.actions", { namespace: "invoicing", fallback: "إجراءات" }),
-        label: t("actions.actions", { namespace: "invoicing", fallback: "إجراءات" }),
+        header: t("actions.actions", { namespace: "invoicing",  }),
+        label: t("actions.actions", { namespace: "invoicing",  }),
         accessor: (inv) => {
           const extraActions = [];
           if (inv.status === "Draft") {
             extraActions.push({
-              label: t("invoice.actionPostNow", { namespace: "invoicing", fallback: "ترحيل الآن" }),
+              label: t("invoice.actionPostNow", { namespace: "invoicing",  }),
               icon: CheckCircle2,
               onClick: () => onPost(inv.id),
             });
           } else if (inv.status === "Posted") {
             extraActions.push({
-              label: t("invoice.actionReopen", { namespace: "invoicing", fallback: "إلغاء الترحيل" }),
+              label: t("invoice.actionReopen", { namespace: "invoicing",  }),
               icon: History,
               onClick: () => onReopen(inv.id),
             });
@@ -307,7 +307,7 @@ export function InvoiceTable({
               onView={() => isOpeningBalance && onViewOpeningBalance ? onViewOpeningBalance(inv) : onView(inv)}
               onEdit={() => isOpeningBalance && onEditOpeningBalance ? onEditOpeningBalance(inv) : onEdit(inv)}
               onDelete={() => {
-                if (window.confirm(t("invoice.confirmDeleteRow", { namespace: "invoicing", fallback: "هل أنت متأكد من حذف هذه الفاتورة؟" }))) {
+                if (window.confirm(t("invoice.confirmDeleteRow", { namespace: "invoicing",  }))) {
                   onDelete(inv.id);
                 }
               }}
@@ -462,13 +462,13 @@ export function InvoiceTable({
     };
 
     const labels: Record<string, string> = {
-      subtotal: t("invoice.baseSubtotal", { namespace: "invoicing", fallback: "مجموع الأسعار" }),
-      discount_granted: t("invoice.baseDiscountGranted", { namespace: "invoicing", fallback: "خصوم ممنوحة" }),
-      discount: t("invoice.baseDiscountEarned", { namespace: "invoicing", fallback: "خصوم مكتسبة" }),
-      extra_costs: t("invoice.baseExtraCosts", { namespace: "invoicing", fallback: "تكاليف إضافية" }),
-      total: t("invoice.baseTotal", { namespace: "invoicing", fallback: "المجموع الكلي" }),
-      paid: t("invoice.basePaid", { namespace: "invoicing", fallback: "المبلغ المدفوع" }),
-      remaining: t("invoice.baseRemaining", { namespace: "invoicing", fallback: "المبلغ المتبقي" }),
+      subtotal: t("invoice.baseSubtotal", { namespace: "invoicing",  }),
+      discount_granted: t("invoice.baseDiscountGranted", { namespace: "invoicing",  }),
+      discount: t("invoice.baseDiscountEarned", { namespace: "invoicing",  }),
+      extra_costs: t("invoice.baseExtraCosts", { namespace: "invoicing",  }),
+      total: t("invoice.baseTotal", { namespace: "invoicing",  }),
+      paid: t("invoice.basePaid", { namespace: "invoicing",  }),
+      remaining: t("invoice.baseRemaining", { namespace: "invoicing",  }),
     };
 
     const allMetricCols = Object.entries(baseAccessors).flatMap(([prefix, accessor]) =>
@@ -544,7 +544,7 @@ export function InvoiceTable({
         };
       });
 
-    const exportTitle = partyType === "supplier" ? t("invoice.exportListPurchase", { namespace: "invoicing", fallback: "قائمة فواتير المشتريات" }) : t("invoice.exportListSales", { namespace: "invoicing", fallback: "قائمة فواتير المبيعات" });
+    const exportTitle = partyType === "supplier" ? t("invoice.exportListPurchase", { namespace: "invoicing",  }) : t("invoice.exportListSales", { namespace: "invoicing",  });
 
     await executeExport(exportData, {
       sheetName: exportTitle,
@@ -552,7 +552,7 @@ export function InvoiceTable({
       data: sortedData as unknown as Record<string, unknown>[],
       columns: exportColumns,
       summary: Object.keys(summary).length > 0 ? summary : undefined,
-      summaryLabel: t("document.summaryLabel", { namespace: "invoicing", fallback: "المجموع" }),
+      summaryLabel: t("document.summaryLabel", { namespace: "invoicing",  }),
       currencyRatesSheet: ratesSheet,
     });
   }, [enrichedColumns, partyField, partyType, defaultName, extraColumns, sortedData, exportData, ratesSheet, currencies, formatAmount, baseCurrency, currencyMode, rateMap, showDiscount, showDiscountGranted, showExtraCosts, t]);
@@ -575,7 +575,7 @@ export function InvoiceTable({
     const colIds = enrichedColumns.map(c => c.id);
     return colIds.map(id => {
       if (id === 'invoice_number') {
-        return { id: 'count', columnId: 'invoice_number', label: '', value: t("invoice.countInvoices", { namespace: "invoicing", vars: { count: data.length }, fallback: `{{count}} فاتورة` }), className: 'text-slate-600 font-bold' };
+        return { id: 'count', columnId: 'invoice_number', label: '', value: t("invoice.countInvoices", { namespace: "invoicing", vars: { count: data.length },  }), className: 'text-slate-600 font-bold' };
       }
 
       const subtotalMatch = id.match(/^subtotal_(.+)$/);
@@ -586,7 +586,7 @@ export function InvoiceTable({
         return {
           id: `${id}_summary`,
           columnId: id,
-          label: `${t("invoice.baseSubtotal", { namespace: "invoicing", fallback: "مجموع الأسعار" })}${cs(sym)}`,
+          label: `${t("invoice.baseSubtotal", { namespace: "invoicing",  })}${cs(sym)}`,
           value: baseSubtotalTotal > 0 ? formatAmount(baseSubtotalTotal, { currencyCode: currCode }) : "—",
           className: isBase
             ? 'font-bold text-slate-700'
@@ -602,7 +602,7 @@ export function InvoiceTable({
         return {
           id: `${id}_summary`,
           columnId: id,
-          label: `${t("invoice.baseDiscountGranted", { namespace: "invoicing", fallback: "خصوم ممنوحة" })}${cs(sym)}`,
+          label: `${t("invoice.baseDiscountGranted", { namespace: "invoicing",  })}${cs(sym)}`,
           value: baseDiscountTotal > 0 ? formatAmount(baseDiscountTotal, { currencyCode: currCode }) : "—",
           className: isBase
             ? 'font-bold text-rose-600'
@@ -618,7 +618,7 @@ export function InvoiceTable({
         return {
           id: `${id}_summary`,
           columnId: id,
-          label: `${t("invoice.baseDiscountEarned", { namespace: "invoicing", fallback: "خصوم مكتسبة" })}${cs(sym)}`,
+          label: `${t("invoice.baseDiscountEarned", { namespace: "invoicing",  })}${cs(sym)}`,
           value: baseDiscountTotal > 0 ? formatAmount(baseDiscountTotal, { currencyCode: currCode }) : "—",
           className: isBase
             ? 'font-bold text-blue-600'
@@ -634,7 +634,7 @@ export function InvoiceTable({
         return {
           id: `${id}_summary`,
           columnId: id,
-          label: `${t("invoice.baseExtraCosts", { namespace: "invoicing", fallback: "تكاليف إضافية" })}${cs(sym)}`,
+          label: `${t("invoice.baseExtraCosts", { namespace: "invoicing",  })}${cs(sym)}`,
           value: baseExtraCostsTotal > 0 ? formatAmount(baseExtraCostsTotal, { currencyCode: currCode }) : "—",
           className: isBase
             ? 'font-bold text-rose-600'
@@ -650,7 +650,7 @@ export function InvoiceTable({
         return {
           id: `${id}_summary`,
           columnId: id,
-          label: `${t("invoice.baseTotal", { namespace: "invoicing", fallback: "المجموع الكلي" })}${cs(sym)}`,
+          label: `${t("invoice.baseTotal", { namespace: "invoicing",  })}${cs(sym)}`,
           value: baseComputedTotal > 0 ? formatAmount(baseComputedTotal, { currencyCode: currCode }) : "—",
           className: isBase
             ? 'font-black text-slate-900'
@@ -666,7 +666,7 @@ export function InvoiceTable({
         return {
           id: `${id}_summary`,
           columnId: id,
-          label: `${t("invoice.basePaid", { namespace: "invoicing", fallback: "المبلغ المدفوع" })}${cs(sym)}`,
+          label: `${t("invoice.basePaid", { namespace: "invoicing",  })}${cs(sym)}`,
           value: basePaidTotal > 0 ? formatAmount(basePaidTotal, { currencyCode: currCode }) : "—",
           className: isBase
             ? 'font-bold text-emerald-600'
@@ -682,7 +682,7 @@ export function InvoiceTable({
         return {
           id: `${id}_summary`,
           columnId: id,
-          label: `${t("invoice.baseRemaining", { namespace: "invoicing", fallback: "المبلغ المتبقي" })}${cs(sym)}`,
+          label: `${t("invoice.baseRemaining", { namespace: "invoicing",  })}${cs(sym)}`,
           value: baseComputedRemaining > 0 ? formatAmount(baseComputedRemaining, { currencyCode: currCode }) : "—",
           className: isBase
             ? 'font-bold text-orange-600'
@@ -712,17 +712,17 @@ export function InvoiceTable({
           onClick={handleExport}
         >
           <Download className="w-3.5 h-3.5 ml-1.5 text-emerald-600" />
-          {t("actions.exportExcel", { namespace: "invoicing", fallback: "تصدير إكسل" })}
+          {t("actions.exportExcel", { namespace: "invoicing",  })}
         </Button>
       )}
       filterBar={
         <Select value={statusFilter} onValueChange={onStatusFilterChange}>
           <SelectTrigger className="w-[130px] h-8 bg-white font-bold shadow-sm border-slate-200 text-xs">
             <Filter className="w-3.5 h-3.5 ml-1.5 text-slate-400" />
-            <SelectValue placeholder={t("invoice.filterStatusPlaceholder", { namespace: "invoicing", fallback: "الحالة" })} />
+            <SelectValue placeholder={t("invoice.filterStatusPlaceholder", { namespace: "invoicing",  })} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all" className="text-xs font-bold">{t("invoice.filterAll", { namespace: "invoicing", fallback: "الكل" })}</SelectItem>
+            <SelectItem value="all" className="text-xs font-bold">{t("invoice.filterAll", { namespace: "invoicing",  })}</SelectItem>
             <SelectItem value="Draft" className="text-xs font-bold text-amber-600">مسودة</SelectItem>
             <SelectItem value="Posted" className="text-xs font-bold text-emerald-600">مرحلة</SelectItem>
           </SelectContent>

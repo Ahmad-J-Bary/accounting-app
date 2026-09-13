@@ -59,8 +59,8 @@ export function ReturnsTable({
     const cols: UnifiedColumn<SalesReturnDto | PurchaseReturnDto>[] = [
       {
         id: "return_number",
-        header: t("return.colNumber", { namespace: "invoicing", fallback: "الرقم" }),
-        label: t("return.labelNumber", { namespace: "invoicing", fallback: "رقم المرتجع" }),
+        header: t("return.colNumber", { namespace: "invoicing",  }),
+        label: t("return.labelNumber", { namespace: "invoicing",  }),
         accessor: (ret) => formatNumber(parseInt(ret.return_number) || 0),
         className: "font-black text-slate-900 text-center"
       },
@@ -79,8 +79,8 @@ export function ReturnsTable({
         const isBase = isBaseCurrency(curr.code);
         return {
           id: `total_amount_${curr.code}`,
-          header: `${t("return.totalBase", { namespace: "invoicing", fallback: "الإجمالي" })}${cs(curr.symbol || curr.code)}`,
-          label: `${t("return.totalBase", { namespace: "invoicing", fallback: "الإجمالي" })}${cs(curr.symbol || curr.code)}`,
+          header: `${t("return.totalBase", { namespace: "invoicing",  })}${cs(curr.symbol || curr.code)}`,
+          label: `${t("return.totalBase", { namespace: "invoicing",  })}${cs(curr.symbol || curr.code)}`,
           accessor: (ret: SalesReturnDto | PurchaseReturnDto) => {
             const val = parseFloat(ret.total_amount || "0");
             if (val === 0) return "";
@@ -93,29 +93,29 @@ export function ReturnsTable({
       }),
       {
         id: "notes",
-        header: t("return.colDescription", { namespace: "invoicing", fallback: "التوصيف" }),
-        label: t("return.colDescription", { namespace: "invoicing", fallback: "التوصيف" }),
+        header: t("return.colDescription", { namespace: "invoicing",  }),
+        label: t("return.colDescription", { namespace: "invoicing",  }),
         accessor: (ret) => ret.notes || "",
         className: "text-slate-500 italic"
       },
       {
         id: "return_date",
-        header: t("return.colDate", { namespace: "invoicing", fallback: "التاريخ" }),
-        label: t("return.colDate", { namespace: "invoicing", fallback: "التاريخ" }),
+        header: t("return.colDate", { namespace: "invoicing",  }),
+        label: t("return.colDate", { namespace: "invoicing",  }),
         accessor: (ret) => formatDateTime(ret.return_date),
         className: "text-slate-500 tabular-nums"
       },
       ...((onView || onEdit || onDelete) ? [{
         id: "actions",
-        header: t("return.colActions", { namespace: "invoicing", fallback: "إجراءات" }),
-        label: t("return.colActions", { namespace: "invoicing", fallback: "إجراءات" }),
+        header: t("return.colActions", { namespace: "invoicing",  }),
+        label: t("return.colActions", { namespace: "invoicing",  }),
         accessor: (ret: SalesReturnDto | PurchaseReturnDto) => {
           return (
             <TableActions
               onView={onView ? () => onView(ret) : undefined}
               onEdit={onEdit ? () => onEdit(ret) : undefined}
               onDelete={onDelete ? () => {
-                if (window.confirm(t("return.confirmDelete", { namespace: "invoicing", fallback: "هل أنت متأكد من حذف هذا المرتجع؟" }))) {
+                if (window.confirm(t("return.confirmDelete", { namespace: "invoicing",  }))) {
                   onDelete(ret.id);
                 }
               } : undefined}
@@ -185,7 +185,7 @@ export function ReturnsTable({
   const handleExport = useCallback(async () => {
     const summary: Record<string, 'sum' | 'subtotal' | 'average' | null> = {};
 
-    const currCols = currencyAmountCols("total_amount", t("return.totalBase", { namespace: "invoicing", fallback: "الإجمالي" }), (row) => parseFloat((row as unknown as (SalesReturnDto | PurchaseReturnDto)).total_amount || "0") || 0, currencies, formatAmount, "", true, currencies.length > 1, currencyMode, baseCode, rateMap);
+    const currCols = currencyAmountCols("total_amount", t("return.totalBase", { namespace: "invoicing",  }), (row) => parseFloat((row as unknown as (SalesReturnDto | PurchaseReturnDto)).total_amount || "0") || 0, currencies, formatAmount, "", true, currencies.length > 1, currencyMode, baseCode, rateMap);
     const currColMap = new Map(currCols.map(c => [c.id, c]));
 
     const exportColumns: ExcelExportColumn[] = enrichedColumns
@@ -237,7 +237,7 @@ export function ReturnsTable({
         };
       });
 
-    const exportTitle = partnerLabel.includes("مورد") ? t("return.exportListPurchase", { namespace: "invoicing", fallback: "قائمة مرتجعات المشتريات" }) : t("return.exportListSales", { namespace: "invoicing", fallback: "قائمة مرتجعات المبيعات" });
+    const exportTitle = partnerLabel.includes("مورد") ? t("return.exportListPurchase", { namespace: "invoicing",  }) : t("return.exportListSales", { namespace: "invoicing",  });
 
     await executeExport(exportData, {
       sheetName: exportTitle,
@@ -245,7 +245,7 @@ export function ReturnsTable({
       data: sortedData as unknown as Record<string, unknown>[],
       columns: exportColumns,
       summary: Object.keys(summary).length > 0 ? summary : undefined,
-      summaryLabel: t("document.summaryLabel", { namespace: "invoicing", fallback: "المجموع" }),
+      summaryLabel: t("document.summaryLabel", { namespace: "invoicing",  }),
       currencyRatesSheet: ratesSheet,
     });
   }, [enrichedColumns, partnerLabel, sortedData, exportData, ratesSheet, currencies, formatAmount, currencyMode, baseCode, rateMap, t]);
@@ -258,7 +258,7 @@ export function ReturnsTable({
     const colIds = enrichedColumns.map(c => c.id);
     return colIds.map(id => {
       if (id === "return_number") {
-        return { id: "count", columnId: "return_number", label: "", value: t("return.countReturns", { namespace: "invoicing", vars: { count: sortedData.length }, fallback: `{{count}} مرتجع` }), className: "text-slate-500 font-medium" };
+        return { id: "count", columnId: "return_number", label: "", value: t("return.countReturns", { namespace: "invoicing", vars: { count: sortedData.length },  }), className: "text-slate-500 font-medium" };
       }
       const match = id.match(/^total_amount_(.+)$/);
       if (match) {
@@ -267,7 +267,7 @@ export function ReturnsTable({
         return {
           id: `${id}_summary`,
           columnId: id,
-          label: `${t("return.totalBase", { namespace: "invoicing", fallback: "الإجمالي" })}${cs(currCode)}`,
+          label: `${t("return.totalBase", { namespace: "invoicing",  })}${cs(currCode)}`,
           value: baseTotal > 0 ? formatAmount(baseTotal, { currencyCode: currCode }) : "—",
           className: isBase
             ? "font-black text-slate-900"
@@ -282,7 +282,7 @@ export function ReturnsTable({
     <TableShell
       search={search}
       onSearchChange={onSearchChange}
-      searchPlaceholder={t("return.searchPlaceholderDefault", { namespace: "invoicing", fallback: "بحث برقم المرتجع أو الاسم..." })}
+      searchPlaceholder={t("return.searchPlaceholderDefault", { namespace: "invoicing",  })}
       columns={toolbarColumns}
       onColumnToggle={toggleColumn}
       onColumnsReset={resetToDefault}
@@ -296,7 +296,7 @@ export function ReturnsTable({
           onClick={handleExport}
         >
           <Download className="w-3.5 h-3.5 ml-1.5 text-emerald-600" />
-          {t("actions.exportExcel", { namespace: "invoicing", fallback: "تصدير إكسل" })}
+          {t("actions.exportExcel", { namespace: "invoicing",  })}
         </Button>
       )}
     >
@@ -318,7 +318,7 @@ export function ReturnsTable({
         onRowClick={(ret) => onSelect?.(ret.id)}
         selectedId={selectedId}
         summary={summaryColumns}
-        emptyMessage={emptyMessage ?? t("return.emptyDefault", { namespace: "invoicing", fallback: "لا توجد بيانات" })}
+        emptyMessage={emptyMessage ?? t("return.emptyDefault", { namespace: "invoicing",  })}
       />
     </TableShell>
   );

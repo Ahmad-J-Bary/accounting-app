@@ -104,7 +104,7 @@ export default function Accounting() {
 
   const visibleTree = useMemo(() => getVisibleRootTree(computedTree, searchQuery), [computedTree, searchQuery]);
   const rootNode = useMemo<AccountTreeNode>(() => ({
-    id: ROOT_ACCOUNT_ID, code: "", name_ar: t("chartOfAccounts.title", { namespace: "accounting", fallback: "دليل الحسابات" }), name_en: t("chartOfAccounts.title", { namespace: "accounting", fallback: "Chart of Accounts" }),
+    id: ROOT_ACCOUNT_ID, code: "", name_ar: t("chartOfAccounts.title", { namespace: "accounting",  }), name_en: t("chartOfAccounts.title", { namespace: "accounting",  }),
     account_type: "Assets", parent_id: null, category: "Summary", level: 0, opening_balance: "0",
     balance: String(rootBalance), notes: null, is_active: true, is_default: false, is_final: false,
     linked_customer_id: null, linked_supplier_id: null, debit: "0", credit: "0", children: visibleTree,
@@ -206,7 +206,7 @@ export default function Accounting() {
   const handleOpenNew = useCallback(() => {
     if (!resolved.capabilities.canCreate || !resolved.capabilities.createPanelKind) return;
     if (resolved.capabilities.createPanelKind === "account" && selected?.is_final) {
-      toast.error(t("chartOfAccounts.error.cannotAddUnderFinal", { namespace: "accounting", fallback: "لا يمكن إضافة حسابات فرعية تحت حساب نهائي (ورقة)" }));
+      toast.error(t("chartOfAccounts.error.cannotAddUnderFinal", { namespace: "accounting",  }));
       return;
     }
     setCreateParent(selected && selected.id !== ROOT_ACCOUNT_ID ? selected : null);
@@ -223,7 +223,7 @@ export default function Accounting() {
     if (!canOperate || !selected) return;
     openTab({
       id: `ledger-${selected.id}`,
-      title: t("ledger.tab", { namespace: "accounting", vars: { name: selected.name_ar }, fallback: `حركة: ${selected.name_ar}` }),
+      title: t("ledger.tab", { namespace: "accounting", vars: { name: selected.name_ar },  }),
       path: `/accounting/account-ledger/${selected.id}`,
       closable: true,
     });
@@ -241,7 +241,7 @@ export default function Accounting() {
     if (target.type === "ledger") {
       openTab({
         id: `ledger-${target.accountId}`,
-        title: t("ledger.tab", { namespace: "accounting", vars: { name: node.name_ar }, fallback: `حركة: ${node.name_ar}` }),
+        title: t("ledger.tab", { namespace: "accounting", vars: { name: node.name_ar },  }),
         path: `/accounting/account-ledger/${target.accountId}`,
         closable: true,
       });
@@ -271,12 +271,12 @@ export default function Accounting() {
     try {
       await accountingService.deleteAccount(selected.id);
       await invalidateKeys(queryClient, CHART_MUTATION_KEYS);
-      toast.success(t("chartOfAccounts.toast.accountDeleted", { namespace: "accounting", fallback: "تم حذف الحساب بنجاح" }));
+      toast.success(t("chartOfAccounts.toast.accountDeleted", { namespace: "accounting",  }));
       setSelected(null);
       setPanelMode(null);
       setDeleteOpen(false);
     } catch (error) {
-      toast.error(t("chartOfAccounts.toast.operationFailed", { namespace: "accounting", vars: { error: getErrorMessage(error) }, fallback: "فشلت العملية: {{error}}" }));
+      toast.error(t("chartOfAccounts.toast.operationFailed", { namespace: "accounting", vars: { error: getErrorMessage(error) },  }));
     }
   }, [selected, isRootSelected, queryClient, t]);
 
@@ -306,11 +306,11 @@ export default function Accounting() {
         currency: payload.currency || undefined,
         is_active: true,
       });
-      toast.success(t("chartOfAccounts.toast.customerAdded", { namespace: "accounting", fallback: "تم إضافة العميل الجديد بنجاح" }));
+      toast.success(t("chartOfAccounts.toast.customerAdded", { namespace: "accounting",  }));
       await invalidateKeys(queryClient, [...ALL_PARTY_KEYS, ...CHART_MUTATION_KEYS]);
       backToView();
     } catch (error) {
-      toast.error(t("chartOfAccounts.toast.operationFailed", { namespace: "accounting", vars: { error: getErrorMessage(error) }, fallback: "فشلت العملية: {{error}}" }));
+      toast.error(t("chartOfAccounts.toast.operationFailed", { namespace: "accounting", vars: { error: getErrorMessage(error) },  }));
     } finally {
       setEntitySaving(false);
     }
@@ -331,11 +331,11 @@ export default function Accounting() {
         currency: payload.currency || undefined,
         is_active: true,
       });
-      toast.success(t("chartOfAccounts.toast.supplierAdded", { namespace: "accounting", fallback: "تم إضافة المورد الجديد بنجاح" }));
+      toast.success(t("chartOfAccounts.toast.supplierAdded", { namespace: "accounting",  }));
       await invalidateKeys(queryClient, [...ALL_PARTY_KEYS, ...CHART_MUTATION_KEYS]);
       backToView();
     } catch (error) {
-      toast.error(t("chartOfAccounts.toast.operationFailed", { namespace: "accounting", vars: { error: getErrorMessage(error) }, fallback: "فشلت العملية: {{error}}" }));
+      toast.error(t("chartOfAccounts.toast.operationFailed", { namespace: "accounting", vars: { error: getErrorMessage(error) },  }));
     } finally {
       setEntitySaving(false);
     }
@@ -358,11 +358,11 @@ export default function Accounting() {
         currency: payload.currency || undefined,
         is_active: payload.is_active,
       });
-      toast.success(t("chartOfAccounts.toast.customerUpdated", { namespace: "accounting", fallback: "تم تحديث بيانات العميل بنجاح" }));
+      toast.success(t("chartOfAccounts.toast.customerUpdated", { namespace: "accounting",  }));
       await invalidateKeys(queryClient, [...ALL_PARTY_KEYS, ...CHART_MUTATION_KEYS]);
       backToView();
     } catch (error) {
-      toast.error(t("chartOfAccounts.toast.operationFailed", { namespace: "accounting", vars: { error: getErrorMessage(error) }, fallback: "فشلت العملية: {{error}}" }));
+      toast.error(t("chartOfAccounts.toast.operationFailed", { namespace: "accounting", vars: { error: getErrorMessage(error) },  }));
     } finally {
       setEntitySaving(false);
     }
@@ -385,11 +385,11 @@ export default function Accounting() {
         currency: payload.currency || undefined,
         is_active: payload.is_active,
       });
-      toast.success(t("chartOfAccounts.toast.supplierUpdated", { namespace: "accounting", fallback: "تم تحديث بيانات المورد بنجاح" }));
+      toast.success(t("chartOfAccounts.toast.supplierUpdated", { namespace: "accounting",  }));
       await invalidateKeys(queryClient, [...ALL_PARTY_KEYS, ...CHART_MUTATION_KEYS]);
       backToView();
     } catch (error) {
-      toast.error(t("chartOfAccounts.toast.operationFailed", { namespace: "accounting", vars: { error: getErrorMessage(error) }, fallback: "فشلت العملية: {{error}}" }));
+      toast.error(t("chartOfAccounts.toast.operationFailed", { namespace: "accounting", vars: { error: getErrorMessage(error) },  }));
     } finally {
       setEntitySaving(false);
     }
@@ -440,11 +440,11 @@ export default function Accounting() {
         currency: payload.currency,
         exchange_rate: exchangeRate.toString(),
       });
-      toast.success(t("chartOfAccounts.toast.expenseAdded", { namespace: "accounting", fallback: "تم إضافة بند المصروف بنجاح" }));
+      toast.success(t("chartOfAccounts.toast.expenseAdded", { namespace: "accounting",  }));
       await invalidateKeys(queryClient, [...CHART_MUTATION_KEYS, QUERY_KEYS.expenseItems]);
       backToView();
     } catch (error) {
-      toast.error(t("chartOfAccounts.toast.operationFailed", { namespace: "accounting", vars: { error: getErrorMessage(error) }, fallback: "فشلت العملية: {{error}}" }));
+      toast.error(t("chartOfAccounts.toast.operationFailed", { namespace: "accounting", vars: { error: getErrorMessage(error) },  }));
     } finally {
       setEntitySaving(false);
     }
@@ -454,11 +454,11 @@ export default function Accounting() {
     setEntitySaving(true);
     try {
       await partnerService.addPartner(payload);
-      toast.success(t("chartOfAccounts.toast.partnerAdded", { namespace: "accounting", fallback: "تم إضافة الشريك بنجاح" }));
+      toast.success(t("chartOfAccounts.toast.partnerAdded", { namespace: "accounting",  }));
       await invalidateKeys(queryClient, [...PARTNER_MUTATION_KEYS, ...CHART_MUTATION_KEYS]);
       backToView();
     } catch (error) {
-      toast.error(t("chartOfAccounts.toast.operationFailed", { namespace: "accounting", vars: { error: getErrorMessage(error) }, fallback: "فشلت العملية: {{error}}" }));
+      toast.error(t("chartOfAccounts.toast.operationFailed", { namespace: "accounting", vars: { error: getErrorMessage(error) },  }));
     } finally {
       setEntitySaving(false);
     }
@@ -493,9 +493,9 @@ export default function Accounting() {
   return (
     <ErrorBoundary>
     <HierarchicalTreeTemplate
-      title={t("chartOfAccounts.title", { namespace: "accounting", fallback: "دليل الحسابات" })}
+      title={t("chartOfAccounts.title", { namespace: "accounting",  })}
       treePresentation={treePresentation}
-      treeHeaderTitle={treePresentation === "explorer" ? t("chartOfAccounts.tree.explorer", { namespace: "accounting", fallback: "Explorer: دليل الحسابات" }) : t("chartOfAccounts.tree.header", { namespace: "accounting", fallback: "شجرة دليل الحسابات" })}
+      treeHeaderTitle={treePresentation === "explorer" ? t("chartOfAccounts.tree.explorer", { namespace: "accounting",  }) : t("chartOfAccounts.tree.header", { namespace: "accounting",  })}
       toolbar={
         <>
           {actionDescriptors.map((action) => {
@@ -529,7 +529,7 @@ export default function Accounting() {
               onClick={() => setTreePresentation("default")}
               className={`rounded-md px-2 py-1 text-[11px] font-bold transition-colors ${treePresentation === "default" ? "bg-blue-600 text-white" : "text-slate-500 hover:bg-slate-100"}`}
             >
-              {t("chartOfAccounts.tree.presentation", { namespace: "accounting", fallback: "عادي" })}
+              {t("chartOfAccounts.tree.presentation", { namespace: "accounting",  })}
             </button>
             <button
               type="button"
@@ -543,13 +543,13 @@ export default function Accounting() {
             onClick={expandAll}
             className="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-bold text-slate-500 hover:text-slate-800 hover:bg-slate-200/70 transition-colors"
           >
-            <ChevronLeft className="w-3 h-3" /> {t("chartOfAccounts.tree.expand", { namespace: "accounting", fallback: "توسيع" })}
+            <ChevronLeft className="w-3 h-3" /> {t("chartOfAccounts.tree.expand", { namespace: "accounting",  })}
           </button>
           <button
             onClick={collapseAll}
             className="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-bold text-slate-500 hover:text-slate-800 hover:bg-slate-200/70 transition-colors"
           >
-            {t("chartOfAccounts.tree.collapse", { namespace: "accounting", fallback: "طي" })} <ChevronRight className="w-3 h-3" />
+            {t("chartOfAccounts.tree.collapse", { namespace: "accounting",  })} <ChevronRight className="w-3 h-3" />
           </button>
         </>
       }
@@ -605,14 +605,14 @@ export default function Accounting() {
       <ConfirmDialog
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
-        title={t("chartOfAccounts.confirmDelete.title", { namespace: "accounting", fallback: "حذف/تعطيل الحساب" })}
+        title={t("chartOfAccounts.confirmDelete.title", { namespace: "accounting",  })}
         description={
           selected
-            ? t("chartOfAccounts.confirmDelete.description", { namespace: "accounting", vars: { name: selected.name_ar }, fallback: `هل تريد حذف/تعطيل الحساب «${selected.name_ar}»؟` })
+            ? t("chartOfAccounts.confirmDelete.description", { namespace: "accounting", vars: { name: selected.name_ar },  })
             : undefined
         }
-        confirmLabel={t("chartOfAccounts.confirmDelete.confirm", { namespace: "accounting", fallback: "حذف" })}
-        cancelLabel={t("chartOfAccounts.confirmDelete.cancel", { namespace: "accounting", fallback: "إلغاء" })}
+        confirmLabel={t("chartOfAccounts.confirmDelete.confirm", { namespace: "accounting",  })}
+        cancelLabel={t("chartOfAccounts.confirmDelete.cancel", { namespace: "accounting",  })}
         destructive
         onConfirm={() => void handleConfirmDelete()}
       />

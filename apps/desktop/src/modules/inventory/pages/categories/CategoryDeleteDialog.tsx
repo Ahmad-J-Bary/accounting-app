@@ -32,67 +32,67 @@ export function CategoryDeleteDialog({
   let tone: "amber" | "rose" = "rose";
 
   if (kind.type === "sub_empty") {
-    title = t("categories.delete.subTitle", { namespace: "inventory", fallback: "حذف التصنيف الفرعي" });
+    title = t("categories.delete.subTitle", { namespace: "inventory",  });
     description = (
       <span>
-        {t("categories.delete.confirmSub", { namespace: "inventory", fallback: "هل تريد بالتأكيد حذف التصنيف الفرعي" })}{" "}
+        {t("categories.delete.confirmSub", { namespace: "inventory",  })}{" "}
         <span className="font-bold text-slate-900">«{categoryName}»</span>؟
-        {t("categories.delete.noMaterials", { namespace: "inventory", fallback: "لا توجد مواد مرتبطة به." })}
+        {t("categories.delete.noMaterials", { namespace: "inventory",  })}
       </span>
     );
-    confirmLabel = t("actions.delete", { namespace: "common", fallback: "حذف" });
+    confirmLabel = t("actions.delete", { namespace: "common",  });
     tone = "amber";
   } else if (kind.type === "sub_with_materials") {
-    title = t("categories.delete.hasMaterialsTitle", { namespace: "inventory", fallback: "تنبيه: التصنيف يحتوي على مواد" });
+    title = t("categories.delete.hasMaterialsTitle", { namespace: "inventory",  });
     description = (
       <div className="space-y-2 text-right">
         <p>
-          {t("categories.delete.subCategory", { namespace: "inventory", fallback: "التصنيف الفرعي" })} <span className="font-bold text-slate-900">«{categoryName}»</span>{" "}
-          {t("categories.delete.contains", { namespace: "inventory", fallback: "يحتوي على" })} <span className="font-black text-rose-600">{kind.materialCount}</span> {t("categories.delete.materialNoun", { namespace: "inventory", fallback: "مادة." })}
+          {t("categories.delete.subCategory", { namespace: "inventory",  })} <span className="font-bold text-slate-900">«{categoryName}»</span>{" "}
+          {t("categories.delete.contains", { namespace: "inventory",  })} <span className="font-black text-rose-600">{kind.materialCount}</span> {t("categories.delete.materialNoun", { namespace: "inventory",  })}
         </p>
         <p className="text-slate-700">
           {kind.isGeneralSub
-            ? <>{t("categories.delete.reassignToDefault", { namespace: "inventory", vars: { name: "غير مصنف" }, fallback: "سيتم تعديل تصنيفات هذه المواد إلى التصنيف الافتراضي «غير مصنف»." })}</>
-            : <>{t("categories.delete.reassignToGeneralSub", { namespace: "inventory", vars: { name: kind.targetName }, fallback: `سيتم تعديل تصنيفات هذه المواد إلى التصنيف الفرعي العام «${kind.targetName}» ضمن نفس التصنيف الرئيسي.` })}</>
+            ? <>{t("categories.delete.reassignToDefault", { namespace: "inventory", vars: { name: "غير مصنف" },  })}</>
+            : <>{t("categories.delete.reassignToGeneralSub", { namespace: "inventory", vars: { name: kind.targetName },  })}</>
           }
         </p>
-        <p className="text-xs text-slate-500">{t("categories.delete.continue", { namespace: "inventory", fallback: "هل تريد المتابعة؟" })}</p>
+        <p className="text-xs text-slate-500">{t("categories.delete.continue", { namespace: "inventory",  })}</p>
       </div>
     );
-    confirmLabel = t("categories.delete.confirmReassign", { namespace: "inventory", fallback: "نعم، احذف وأعد توزيع المواد" });
+    confirmLabel = t("categories.delete.confirmReassign", { namespace: "inventory",  });
     tone = "rose";
   } else if (kind.type === "root_no_subs") {
-    title = t("categories.delete.rootTitle", { namespace: "inventory", fallback: "حذف التصنيف الرئيسي" });
+    title = t("categories.delete.rootTitle", { namespace: "inventory",  });
     description = (
       <span>
-        {t("categories.delete.confirmRoot", { namespace: "inventory", fallback: "هل تريد بالتأكيد حذف التصنيف الرئيسي" })}{" "}
+        {t("categories.delete.confirmRoot", { namespace: "inventory",  })}{" "}
         <span className="font-bold text-slate-900">«{categoryName}»</span>؟
       </span>
     );
-    confirmLabel = t("actions.delete", { namespace: "common", fallback: "حذف" });
+    confirmLabel = t("actions.delete", { namespace: "common",  });
     tone = "amber";
   } else {
-    title = t("categories.delete.includesSubsTitle", { namespace: "inventory", fallback: "تنبيه: الحذف سيشمل التصنيفات الفرعية" });
+    title = t("categories.delete.includesSubsTitle", { namespace: "inventory",  });
     description = (
       <div className="space-y-2 text-right">
         <p>
-          {t("categories.delete.rootCategory", { namespace: "inventory", fallback: "التصنيف الرئيسي" })} <span className="font-bold text-slate-900">«{categoryName}»</span>{" "}
-          {t("categories.delete.contains", { namespace: "inventory", fallback: "يحتوي على" })} <span className="font-black text-rose-600">{kind.subCount}</span> {t("categories.delete.subCategoryNoun", { namespace: "inventory", fallback: "تصنيف فرعي." })}
+          {t("categories.delete.rootCategory", { namespace: "inventory",  })} <span className="font-bold text-slate-900">«{categoryName}»</span>{" "}
+          {t("categories.delete.contains", { namespace: "inventory",  })} <span className="font-black text-rose-600">{kind.subCount}</span> {t("categories.delete.subCategoryNoun", { namespace: "inventory",  })}
         </p>
         <p className="text-slate-700">
-          {t("categories.delete.deleteRootAndSubs", { namespace: "inventory", fallback: "سيتم حذف التصنيف الرئيسي وجميع التصنيفات الفرعية الخاصة به." })}
+          {t("categories.delete.deleteRootAndSubs", { namespace: "inventory",  })}
         </p>
         {kind.subMaterialCount > 0 && (
           <p className="text-amber-800 bg-amber-50 border border-amber-200 rounded-md p-2 text-xs">
-            {t("categories.delete.subsContain", { namespace: "inventory", fallback: "تنبيه: تحتوي التصنيفات الفرعية على" })}{" "}
+            {t("categories.delete.subsContain", { namespace: "inventory",  })}{" "}
             <span className="font-black">{kind.subMaterialCount}</span>{" "}
-            {t("categories.delete.materialsReassignedTo", { namespace: "inventory", vars: { name: kind.targetName }, fallback: `مادة سيتم تعديل تصنيفها إلى «${kind.targetName}».` })}
+            {t("categories.delete.materialsReassignedTo", { namespace: "inventory", vars: { name: kind.targetName },  })}
           </p>
         )}
-        <p className="text-xs text-slate-500">{t("categories.delete.continue", { namespace: "inventory", fallback: "هل تريد المتابعة؟" })}</p>
+        <p className="text-xs text-slate-500">{t("categories.delete.continue", { namespace: "inventory",  })}</p>
       </div>
     );
-    confirmLabel = t("categories.delete.confirmAll", { namespace: "inventory", fallback: "نعم، احذف الكل" });
+    confirmLabel = t("categories.delete.confirmAll", { namespace: "inventory",  });
     tone = "rose";
   }
 
@@ -117,7 +117,7 @@ export function CategoryDeleteDialog({
         </AlertDialogHeader>
         <AlertDialogFooter className="gap-2 flex-row-reverse">
           <AlertDialogCancel disabled={confirming} className="font-bold">
-            {t("actions.cancel", { namespace: "common", fallback: "إلغاء" })}
+            {t("actions.cancel", { namespace: "common",  })}
           </AlertDialogCancel>
           <AlertDialogAction
             onClick={(e) => { e.preventDefault(); onConfirm(); }}
@@ -127,7 +127,7 @@ export function CategoryDeleteDialog({
               : "bg-amber-600 hover:bg-amber-700 font-bold gap-1.5"}
           >
             <Trash2 className="w-3.5 h-3.5" />
-            {confirming ? t("states.deleting", { namespace: "common", fallback: "جاري الحذف..." }) : confirmLabel}
+            {confirming ? t("states.deleting", { namespace: "common",  }) : confirmLabel}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

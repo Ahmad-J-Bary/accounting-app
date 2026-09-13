@@ -157,7 +157,7 @@ export const TableSummary: React.FC<TableSummaryProps> = ({
       >
         {hasAnyActive && (
           <div className="absolute top-0 right-4 -translate-y-1/2 px-2 py-0.5 bg-slate-700 text-white text-3xs font-black uppercase tracking-wider rounded-full shadow-sm">
-            {t('labels.summary', { fallback: 'ملخص' })}
+            {t('labels.summary', )}
           </div>
         )}
         {labelRow}

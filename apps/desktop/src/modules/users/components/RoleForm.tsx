@@ -62,30 +62,30 @@ export function RoleForm({ open, onOpenChange, role, onSave, saving }: RoleFormP
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-md" dir="rtl">
         <DialogHeader>
-          <DialogTitle>{role ? t("users.form.titleEdit", { namespace: "users", fallback: "تعديل صلاحية" }) : t("users.form.titleAddRole", { namespace: "users", fallback: "إضافة صلاحية جديدة" })}</DialogTitle>
-          <DialogDescription>{t("users.form.descriptionRole", { namespace: "users", fallback: "تحديد اسم الصلاحية واختيار الأذونات المرتبطة بها." })}</DialogDescription>
+          <DialogTitle>{role ? t("users.form.titleEdit", { namespace: "users",  }) : t("users.form.titleAddRole", { namespace: "users",  })}</DialogTitle>
+          <DialogDescription>{t("users.form.descriptionRole", { namespace: "users",  })}</DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-2">
           <div className="space-y-1">
-            <Label>{t("users.form.nameLabel", { namespace: "users", fallback: "اسم الدور/الصلاحية *" })}</Label>
+            <Label>{t("users.form.nameLabel", { namespace: "users",  })}</Label>
             <Input 
               value={form.name} 
               onChange={e => setForm(p => ({ ...p, name: e.target.value }))} 
-              placeholder={t("users.form.namePlaceholder", { namespace: "users", fallback: "مثال: محاسب، أمين مستودع..." })} 
+              placeholder={t("users.form.namePlaceholder", { namespace: "users",  })} 
               disabled={role?.is_system_role}
             />
           </div>
           <div className="space-y-1">
-            <Label>{t("users.form.descriptionLabel", { namespace: "users", fallback: "الوصف" })}</Label>
+            <Label>{t("users.form.descriptionLabel", { namespace: "users",  })}</Label>
             <Input 
               value={form.description} 
               onChange={e => setForm(p => ({ ...p, description: e.target.value }))} 
-              placeholder={t("users.form.descriptionPlaceholder", { namespace: "users", fallback: "وصف مختصر للمهام..." })} 
+              placeholder={t("users.form.descriptionPlaceholder", { namespace: "users",  })} 
             />
           </div>
           
           <div className="space-y-3 pt-2">
-            <Label className="text-sm font-bold">{t("users.form.permissionsLabel", { namespace: "users", fallback: "الأذونات المتاحة *" })}</Label>
+            <Label className="text-sm font-bold">{t("users.form.permissionsLabel", { namespace: "users",  })}</Label>
             <div className="grid grid-cols-2 gap-3 bg-slate-50 p-3 rounded-lg border border-slate-100">
               {AVAILABLE_PERMISSIONS.map(p => (
                 <div key={p.id} className="flex items-center space-x-2 space-x-reverse">
@@ -94,16 +94,16 @@ export function RoleForm({ open, onOpenChange, role, onSave, saving }: RoleFormP
                     checked={form.permissions.includes(p.id)}
                     onCheckedChange={() => handleTogglePermission(p.id)}
                   />
-                  <label htmlFor={p.id} className="text-xs cursor-pointer select-none">{t(p.labelPath, { namespace: "users", fallback: p.id })}</label>
+                  <label htmlFor={p.id} className="text-xs cursor-pointer select-none">{t(p.labelPath, { namespace: "users"})}</label>
                 </div>
               ))}
             </div>
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>{t("users.form.cancel", { namespace: "users", fallback: "إلغاء" })}</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>{t("users.form.cancel", { namespace: "users",  })}</Button>
           <Button onClick={handleSave} disabled={saving || !form.name || form.permissions.length === 0}>
-            {saving ? t("users.form.saving", { namespace: "users", fallback: "جاري الحفظ..." }) : t("users.form.saveRole", { namespace: "users", fallback: "حفظ الدور" })}
+            {saving ? t("users.form.saving", { namespace: "users",  }) : t("users.form.saveRole", { namespace: "users",  })}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -39,9 +39,9 @@ export function MaterialSearchPanel({
   const { t } = useLocalization();
 
   const fieldConfig = {
-    material_code:   { icon: Hash,      label: t('labels.code', { fallback: 'الكود' }),      key: "code" as const,     render: (m: MaterialDto) => m.code },
-    unit_barcode:    { icon: Barcode,   label: t('labels.barcode', { fallback: 'الباركود' }),   key: "barcode" as const,  render: (m: MaterialDto) => m.barcode || (m.units.find(u => u.is_base)?.barcode) || "—" },
-    material_name:   { icon: Package,   label: t('labels.materialNameAr', { fallback: 'الصنف (عربي)' }), key: "name" as const,   render: (m: MaterialDto) => m.name },
+    material_code:   { icon: Hash,      label: t('labels.code', ),      key: "code" as const,     render: (m: MaterialDto) => m.code },
+    unit_barcode:    { icon: Barcode,   label: t('labels.barcode', ),   key: "barcode" as const,  render: (m: MaterialDto) => m.barcode || (m.units.find(u => u.is_base)?.barcode) || "—" },
+    material_name:   { icon: Package,   label: t('labels.materialNameAr', ), key: "name" as const,   render: (m: MaterialDto) => m.name },
   } as const;
 
   type FieldId = keyof typeof fieldConfig;
@@ -80,12 +80,12 @@ export function MaterialSearchPanel({
           <Search className="w-3.5 h-3.5" />
         </div>
         <span className="text-[11px] font-black text-slate-500 tracking-wider">
-          {t('labels.searchResults', { fallback: 'نتائج البحث' })}
+          {t('labels.searchResults', )}
         </span>
         <span className="text-2xs tabular-nums font-bold px-1.5 py-0.5 rounded bg-blue-50 text-blue-600">
           {filtered.length}
         </span>
-        <span className="text-2xs text-slate-400 font-semibold">{t('labels.item', { fallback: 'صنف' })}</span>
+        <span className="text-2xs text-slate-400 font-semibold">{t('labels.item', )}</span>
         <button
           onClick={onClose}
           className="mr-auto p-1 rounded-lg text-slate-300 hover:text-slate-500 hover:bg-slate-100 transition-all"
@@ -100,7 +100,7 @@ export function MaterialSearchPanel({
           <div className="flex flex-col items-center justify-center py-10 px-4 text-center">
             <Search className="w-8 h-8 text-slate-200 mb-2" />
             <p className="text-xs text-slate-400 font-semibold">
-              {search ? t('labels.noMatchingSearchResults', { fallback: 'لا توجد نتائج مطابقة لبحثك' }) : t('states.startTypingToSearch', { fallback: 'ابدأ بكتابة النص للبحث' })}
+              {search ? t('labels.noMatchingSearchResults', ) : t('states.startTypingToSearch', )}
             </p>
           </div>
         ) : (
@@ -138,15 +138,15 @@ export function MaterialSearchPanel({
 
                 {/* ── Cost Row ── */}
                 <div className="flex items-center gap-3 mt-2 pt-1.5 border-t border-slate-50 flex-wrap" dir="ltr">
-                  <span className="flex items-center gap-1 text-2xs tabular-nums text-amber-600 font-bold" title={t('labels.unitCost', { fallback: 'تكلفة الوحدة' })}>
+                  <span className="flex items-center gap-1 text-2xs tabular-nums text-amber-600 font-bold" title={t('labels.unitCost', )}>
                     <DollarSign className="w-2.5 h-2.5 opacity-60" />
                     {formatCost(m.average_cost_base)} {sym}
                   </span>
-                  <span className="flex items-center gap-1 text-2xs tabular-nums text-emerald-600 font-bold" title={t('labels.lastPurchasePrice', { fallback: 'آخر سعر شراء' })}>
+                  <span className="flex items-center gap-1 text-2xs tabular-nums text-emerald-600 font-bold" title={t('labels.lastPurchasePrice', )}>
                     <ShoppingCart className="w-2.5 h-2.5 opacity-60" />
                     {formatCost(m.last_purchase_price_base)} {sym}
                   </span>
-                  <span className="flex items-center gap-1 text-2xs tabular-nums text-blue-600 font-bold" title={t('labels.lastSalePrice', { fallback: 'آخر سعر مبيع' })}>
+                  <span className="flex items-center gap-1 text-2xs tabular-nums text-blue-600 font-bold" title={t('labels.lastSalePrice', )}>
                     <TrendingUp className="w-2.5 h-2.5 opacity-60" />
                     {formatCost(m.last_sale_price_base)} {sym}
                   </span>

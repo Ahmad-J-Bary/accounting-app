@@ -61,7 +61,7 @@ export default function Settings() {
     return (
       <div className="flex flex-col items-center justify-center h-[70vh] space-y-4">
         <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
-        <p className="font-black text-slate-400">{t("settings.loading", { namespace: "settings", fallback: "جاري تحميل الإعدادات..." })}</p>
+        <p className="font-black text-slate-400">{t("loading", { namespace: "settings",  })}</p>
       </div>
     );
   }
@@ -69,24 +69,24 @@ export default function Settings() {
   if (!settings) return null;
 
   const sidebarItems = [
-    { id: "company", label: t("settings.nav.company", { namespace: "settings", fallback: "بيانات الشركة" }), icon: Building },
-    { id: "prefixes", label: t("settings.nav.prefixes", { namespace: "settings", fallback: "الأرقام التسلسلية" }), icon: FileText },
-    { id: "currencies", label: t("settings.nav.currencies", { namespace: "settings", fallback: "إدارة العملات" }), icon: DollarSign },
-    { id: "financial", label: t("settings.nav.financial", { namespace: "settings", fallback: "الإعدادات المالية" }), icon: SettingsIcon },
-    { id: "warehouses", label: t("settings.nav.warehouses", { namespace: "settings", fallback: "المستودعات" }), icon: Building },
-    { id: "localization", label: t("settings.nav.localization", { namespace: "settings", fallback: "اللغة والمنطقة" }), icon: Globe },
-    { id: "export", label: t("settings.nav.export", { namespace: "settings", fallback: "إعدادات التصدير" }), icon: FileDown },
-    { id: "backups", label: t("settings.nav.backups", { namespace: "settings", fallback: "البيانات والنسخ الاحتياطية" }), icon: Database },
-    { id: "security", label: t("settings.nav.security", { namespace: "settings", fallback: "الأمان والوصول" }), icon: ShieldCheck },
-    { id: "about", label: t("settings.nav.about", { namespace: "settings", fallback: "حول التطبيق" }), icon: SettingsIcon },
+    { id: "company", label: t("nav.company", { namespace: "settings",  }), icon: Building },
+    { id: "prefixes", label: t("nav.prefixes", { namespace: "settings",  }), icon: FileText },
+    { id: "currencies", label: t("nav.currencies", { namespace: "settings",  }), icon: DollarSign },
+    { id: "financial", label: t("nav.financial", { namespace: "settings",  }), icon: SettingsIcon },
+    { id: "warehouses", label: t("nav.warehouses", { namespace: "settings",  }), icon: Building },
+    { id: "localization", label: t("nav.localization", { namespace: "settings",  }), icon: Globe },
+    { id: "export", label: t("nav.export", { namespace: "settings",  }), icon: FileDown },
+    { id: "backups", label: t("nav.backups", { namespace: "settings",  }), icon: Database },
+    { id: "security", label: t("nav.security", { namespace: "settings",  }), icon: ShieldCheck },
+    { id: "about", label: t("nav.about", { namespace: "settings",  }), icon: SettingsIcon },
   ];
 
   const appearanceItems = [
-    { id: "tables", label: t("settings.nav.tables", { namespace: "settings", fallback: "مظهر الجداول" }), icon: Table2 },
-    { id: "navbar", label: t("settings.nav.navbar", { namespace: "settings", fallback: "مظهر قائمة التنقل الجانبي" }), icon: PanelRightOpen },
-    { id: "sidebar-content", label: t("settings.nav.sidebarContent", { namespace: "settings", fallback: "محتوى وترتيب القائمة" }), icon: Sliders },
-    { id: "panel", label: t("settings.nav.panel", { namespace: "settings", fallback: "لوحة العمليات والنماذج" }), icon: PanelRightOpen },
-    { id: "appearance", label: t("settings.nav.appearance", { namespace: "settings", fallback: "المظهر العام" }), icon: Palette },
+    { id: "tables", label: t("nav.tables", { namespace: "settings",  }), icon: Table2 },
+    { id: "navbar", label: t("nav.navbar", { namespace: "settings",  }), icon: PanelRightOpen },
+    { id: "sidebar-content", label: t("nav.sidebarContent", { namespace: "settings",  }), icon: Sliders },
+    { id: "panel", label: t("nav.panel", { namespace: "settings",  }), icon: PanelRightOpen },
+    { id: "appearance", label: t("nav.appearance", { namespace: "settings",  }), icon: Palette },
   ];
 
   const renderSection = () => {
@@ -129,8 +129,8 @@ export default function Settings() {
 
   return (
     <SettingsLayout
-      title={t("settings.pageTitle", { namespace: "settings", fallback: "إعدادات النظام" })}
-      description={t("settings.pageDescription", { namespace: "settings", fallback: "تخصيص الخيارات الأساسية، الهوية البصرية، والقواعد المحاسبية للمنشأة." })}
+      title={t("pageTitle", { namespace: "settings",  })}
+      description={t("pageDescription", { namespace: "settings",  })}
       sidebar={
         <nav className="space-y-2">
           {sidebarItems.map(item => (
@@ -157,7 +157,7 @@ export default function Settings() {
             >
               <div className="flex items-center gap-3">
                 <Palette className="w-4.5 h-4.5" />
-                <span>{t("settings.nav.appearanceCategory", { namespace: "settings", fallback: "المظهر" })}</span>
+                <span>{t("nav.appearanceCategory", { namespace: "settings",  })}</span>
               </div>
               {appearanceExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
             </button>

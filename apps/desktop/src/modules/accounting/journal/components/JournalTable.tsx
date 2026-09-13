@@ -162,8 +162,8 @@ export function JournalTable({
     const cols: UnifiedColumn<JournalTableRow>[] = [
       {
         id: "entry_number",
-        header: t("journal.table.colEntryNumber", { namespace: "accounting", fallback: "رقم القيد" }),
-        label: t("journal.table.colEntryNumber", { namespace: "accounting", fallback: "رقم القيد" }),
+        header: t("journal.table.colEntryNumber", { namespace: "accounting",  }),
+        label: t("journal.table.colEntryNumber", { namespace: "accounting",  }),
         accessor: (e) => e.isFirstInGroup ? (
           onEntryClick ? (
             <button
@@ -181,8 +181,8 @@ export function JournalTable({
       },
       {
         id: "journal_type",
-        header: t("journal.table.colType", { namespace: "accounting", fallback: "نوع الحركة" }),
-        label: t("journal.table.colType", { namespace: "accounting", fallback: "نوع الحركة" }),
+        header: t("journal.table.colType", { namespace: "accounting",  }),
+        label: t("journal.table.colType", { namespace: "accounting",  }),
         accessor: (e) => e.isFirstInGroup ? (
           <span className="inline-flex flex-col items-start gap-0.5">
             <span className="inline-flex items-center gap-1">
@@ -191,22 +191,22 @@ export function JournalTable({
               </span>
               {e.is_contra && (
                 <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black bg-amber-100 text-amber-700">
-                  {t("journal.table.badgeContra", { namespace: "accounting", fallback: "عكس" })}
+                  {t("journal.table.badgeContra", { namespace: "accounting",  })}
                 </span>
               )}
               {e.status === "Reversed" && (
                 <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black bg-red-100 text-red-600">
-                  {t("journal.table.badgeReversed", { namespace: "accounting", fallback: "معكوس" })}
+                  {t("journal.table.badgeReversed", { namespace: "accounting",  })}
                 </span>
               )}
               {e.status === "Draft" && (
                 <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black bg-slate-200 text-slate-600">
-                  {t("journal.table.badgeDraft", { namespace: "accounting", fallback: "مسودة" })}
+                  {t("journal.table.badgeDraft", { namespace: "accounting",  })}
                 </span>
               )}
               {e.status === "Cancelled" && (
                 <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black bg-slate-300 text-slate-700">
-                  {t("journal.table.badgeCancelled", { namespace: "accounting", fallback: "ملغي" })}
+                  {t("journal.table.badgeCancelled", { namespace: "accounting",  })}
                 </span>
               )}
               {e.status === "Posted" && !e.is_contra && !isOpeningEntry(e) && onReverse && (
@@ -218,15 +218,15 @@ export function JournalTable({
                   className="h-6 px-2 text-[10px] font-bold text-red-600 hover:bg-red-50"
                 >
                   <Undo2 className="w-3 h-3 ms-1" />
-                  {reversingId === e.id ? t("journal.table.reverseInProgress", { namespace: "accounting", fallback: "جارٍ..." }) : t("journal.table.reverse", { namespace: "accounting", fallback: "عكس" })}
+                  {reversingId === e.id ? t("journal.table.reverseInProgress", { namespace: "accounting",  }) : t("journal.table.reverse", { namespace: "accounting",  })}
                 </Button>
               )}
             </span>
             {e.reversal_entry_number && (
               <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-slate-50 text-slate-500">
                 {e.is_contra
-                  ? t("journal.table.reversalOf", { namespace: "accounting", vars: { number: e.reversal_entry_number }, fallback: `عكس القيد #${e.reversal_entry_number}` })
-                  : t("journal.table.reversedBy", { namespace: "accounting", vars: { number: e.reversal_entry_number }, fallback: `عكسه القيد #${e.reversal_entry_number}` })}
+                  ? t("journal.table.reversalOf", { namespace: "accounting", vars: { number: e.reversal_entry_number },  })
+                  : t("journal.table.reversedBy", { namespace: "accounting", vars: { number: e.reversal_entry_number },  })}
               </span>
             )}
           </span>
@@ -239,8 +239,8 @@ export function JournalTable({
       const isBase = isBaseCurrency(curr.code);
       cols.push({
         id: `debit_${curr.code}`,
-        header: t("journal.table.debitHeader", { namespace: "accounting", vars: { currency: cs(symbol) }, fallback: `عليه / مدين${cs(symbol)}` }),
-        label: t("journal.table.debitHeader", { namespace: "accounting", vars: { currency: cs(symbol) }, fallback: `عليه / مدين${cs(symbol)}` }),
+        header: t("journal.table.debitHeader", { namespace: "accounting", vars: { currency: cs(symbol) },  }),
+        label: t("journal.table.debitHeader", { namespace: "accounting", vars: { currency: cs(symbol) },  }),
         accessor: (e: JournalTableRow) => {
           if (e.side !== "debit") return "";
           return e.amount_base > 0 ? formatAmount(e.amount_base, { currencyCode: curr.code }) : "";
@@ -256,8 +256,8 @@ export function JournalTable({
       const isBase = isBaseCurrency(curr.code);
       cols.push({
         id: `credit_${curr.code}`,
-        header: t("journal.table.creditHeader", { namespace: "accounting", vars: { currency: cs(symbol) }, fallback: `له / دائن${cs(symbol)}` }),
-        label: t("journal.table.creditHeader", { namespace: "accounting", vars: { currency: cs(symbol) }, fallback: `له / دائن${cs(symbol)}` }),
+        header: t("journal.table.creditHeader", { namespace: "accounting", vars: { currency: cs(symbol) },  }),
+        label: t("journal.table.creditHeader", { namespace: "accounting", vars: { currency: cs(symbol) },  }),
         accessor: (e: JournalTableRow) => {
           if (e.side !== "credit") return "";
           return e.amount_base > 0 ? formatAmount(e.amount_base, { currencyCode: curr.code }) : "";
@@ -271,15 +271,15 @@ export function JournalTable({
     cols.push(
       {
         id: "description",
-        header: t("journal.table.colDescription", { namespace: "accounting", fallback: "البيان" }),
-        label: t("journal.table.colDescription", { namespace: "accounting", fallback: "البيان" }),
+        header: t("journal.table.colDescription", { namespace: "accounting",  }),
+        label: t("journal.table.colDescription", { namespace: "accounting",  }),
         accessor: (e) => e.isFirstInGroup ? e.description : "",
         className: "text-slate-700 font-bold"
       },
       {
         id: "account",
-        header: t("journal.table.colAccount", { namespace: "accounting", fallback: "الحساب" }),
-        label: t("journal.table.colAccount", { namespace: "accounting", fallback: "الحساب" }),
+        header: t("journal.table.colAccount", { namespace: "accounting",  }),
+        label: t("journal.table.colAccount", { namespace: "accounting",  }),
         accessor: (e: JournalTableRow) => (
           <span className={e.side === "debit" ? "text-blue-600 font-bold" : "text-emerald-600 font-bold"}>
             {e.account_name}
@@ -288,8 +288,8 @@ export function JournalTable({
       },
       {
         id: "entry_date",
-        header: t("journal.table.colDate", { namespace: "accounting", fallback: "التاريخ" }),
-        label: t("journal.table.colDate", { namespace: "accounting", fallback: "التاريخ" }),
+        header: t("journal.table.colDate", { namespace: "accounting",  }),
+        label: t("journal.table.colDate", { namespace: "accounting",  }),
         accessor: (e) => e.isFirstInGroup ? formatDateTime(e.entry_date) : "",
         className: "text-slate-500 tabular-nums"
       },
@@ -301,8 +301,8 @@ export function JournalTable({
     const cols: UnifiedColumn<JournalSingleLineTableRow>[] = [
       {
         id: "entry_number",
-        header: t("journal.table.colEntryNumber", { namespace: "accounting", fallback: "رقم القيد" }),
-        label: t("journal.table.colEntryNumber", { namespace: "accounting", fallback: "رقم القيد" }),
+        header: t("journal.table.colEntryNumber", { namespace: "accounting",  }),
+        label: t("journal.table.colEntryNumber", { namespace: "accounting",  }),
         accessor: (e) => onEntryClick ? (
           <button
             type="button"
@@ -318,8 +318,8 @@ export function JournalTable({
       },
       {
         id: "journal_type",
-        header: t("journal.table.colType", { namespace: "accounting", fallback: "نوع الحركة" }),
-        label: t("journal.table.colType", { namespace: "accounting", fallback: "نوع الحركة" }),
+        header: t("journal.table.colType", { namespace: "accounting",  }),
+        label: t("journal.table.colType", { namespace: "accounting",  }),
         accessor: (e) => (
           <span className="inline-flex flex-col items-start gap-0.5">
             <span className="inline-flex items-center gap-1">
@@ -328,22 +328,22 @@ export function JournalTable({
               </span>
               {e.is_contra && (
                 <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black bg-amber-100 text-amber-700">
-                  {t("journal.table.badgeContra", { namespace: "accounting", fallback: "عكس" })}
+                  {t("journal.table.badgeContra", { namespace: "accounting",  })}
                 </span>
               )}
               {e.status === "Reversed" && (
                 <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black bg-red-100 text-red-600">
-                  {t("journal.table.badgeReversed", { namespace: "accounting", fallback: "معكوس" })}
+                  {t("journal.table.badgeReversed", { namespace: "accounting",  })}
                 </span>
               )}
               {e.status === "Draft" && (
                 <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black bg-slate-200 text-slate-600">
-                  {t("journal.table.badgeDraft", { namespace: "accounting", fallback: "مسودة" })}
+                  {t("journal.table.badgeDraft", { namespace: "accounting",  })}
                 </span>
               )}
               {e.status === "Cancelled" && (
                 <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black bg-slate-300 text-slate-700">
-                  {t("journal.table.badgeCancelled", { namespace: "accounting", fallback: "ملغي" })}
+                  {t("journal.table.badgeCancelled", { namespace: "accounting",  })}
                 </span>
               )}
               {e.status === "Posted" && !e.is_contra && !isOpeningEntry(e) && onReverse && (
@@ -355,15 +355,15 @@ export function JournalTable({
                   className="h-6 px-2 text-[10px] font-bold text-red-600 hover:bg-red-50"
                 >
                   <Undo2 className="w-3 h-3 ms-1" />
-                  {reversingId === e.id ? t("journal.table.reverseInProgress", { namespace: "accounting", fallback: "جارٍ..." }) : t("journal.table.reverse", { namespace: "accounting", fallback: "عكس" })}
+                  {reversingId === e.id ? t("journal.table.reverseInProgress", { namespace: "accounting",  }) : t("journal.table.reverse", { namespace: "accounting",  })}
                 </Button>
               )}
             </span>
             {e.reversal_entry_number && (
               <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-slate-50 text-slate-500">
                 {e.is_contra
-                  ? t("journal.table.reversalOf", { namespace: "accounting", vars: { number: e.reversal_entry_number }, fallback: `عكس القيد #${e.reversal_entry_number}` })
-                  : t("journal.table.reversedBy", { namespace: "accounting", vars: { number: e.reversal_entry_number }, fallback: `عكسه القيد #${e.reversal_entry_number}` })}
+                  ? t("journal.table.reversalOf", { namespace: "accounting", vars: { number: e.reversal_entry_number },  })
+                  : t("journal.table.reversedBy", { namespace: "accounting", vars: { number: e.reversal_entry_number },  })}
               </span>
             )}
           </span>
@@ -376,8 +376,8 @@ export function JournalTable({
       const isBase = isBaseCurrency(curr.code);
       cols.push({
         id: `debit_${curr.code}`,
-        header: t("journal.table.debitHeader", { namespace: "accounting", vars: { currency: cs(symbol) }, fallback: `عليه / مدين${cs(symbol)}` }),
-        label: t("journal.table.debitHeader", { namespace: "accounting", vars: { currency: cs(symbol) }, fallback: `عليه / مدين${cs(symbol)}` }),
+        header: t("journal.table.debitHeader", { namespace: "accounting", vars: { currency: cs(symbol) },  }),
+        label: t("journal.table.debitHeader", { namespace: "accounting", vars: { currency: cs(symbol) },  }),
         accessor: (e: JournalSingleLineTableRow) =>
           e.debit_amount_base > 0 ? formatAmount(e.debit_amount_base, { currencyCode: curr.code }) : "",
         className: isBase
@@ -391,8 +391,8 @@ export function JournalTable({
       const isBase = isBaseCurrency(curr.code);
       cols.push({
         id: `credit_${curr.code}`,
-        header: t("journal.table.creditHeader", { namespace: "accounting", vars: { currency: cs(symbol) }, fallback: `له / دائن${cs(symbol)}` }),
-        label: t("journal.table.creditHeader", { namespace: "accounting", vars: { currency: cs(symbol) }, fallback: `له / دائن${cs(symbol)}` }),
+        header: t("journal.table.creditHeader", { namespace: "accounting", vars: { currency: cs(symbol) },  }),
+        label: t("journal.table.creditHeader", { namespace: "accounting", vars: { currency: cs(symbol) },  }),
         accessor: (e: JournalSingleLineTableRow) =>
           e.credit_amount_base > 0 ? formatAmount(e.credit_amount_base, { currencyCode: curr.code }) : "",
         className: isBase
@@ -403,31 +403,31 @@ export function JournalTable({
 
     cols.push({
         id: "description",
-        header: t("journal.table.colDescription", { namespace: "accounting", fallback: "البيان" }),
-        label: t("journal.table.colDescription", { namespace: "accounting", fallback: "البيان" }),
+        header: t("journal.table.colDescription", { namespace: "accounting",  }),
+        label: t("journal.table.colDescription", { namespace: "accounting",  }),
         accessor: (e) => e.description,
         className: "text-slate-700 font-bold"
       },
       {
         id: "debit_accounts",
-        header: t("journal.table.colDebitAccounts", { namespace: "accounting", fallback: "الحساب المدين / الوجهة" }),
-        label: t("journal.table.colDebitAccounts", { namespace: "accounting", fallback: "الحساب المدين / الوجهة" }),
+        header: t("journal.table.colDebitAccounts", { namespace: "accounting",  }),
+        label: t("journal.table.colDebitAccounts", { namespace: "accounting",  }),
         accessor: (e: JournalSingleLineTableRow) => (
           <span className="text-blue-600 font-bold">{e.debit_account_names}</span>
         ),
       },
       {
         id: "credit_accounts",
-        header: t("journal.table.colCreditAccounts", { namespace: "accounting", fallback: "الحساب الدائن / المصدر" }),
-        label: t("journal.table.colCreditAccounts", { namespace: "accounting", fallback: "الحساب الدائن / المصدر" }),
+        header: t("journal.table.colCreditAccounts", { namespace: "accounting",  }),
+        label: t("journal.table.colCreditAccounts", { namespace: "accounting",  }),
         accessor: (e: JournalSingleLineTableRow) => (
           <span className="text-emerald-600 font-bold">{e.credit_account_names}</span>
         ),
       },
       {
         id: "entry_date",
-        header: t("journal.table.colDate", { namespace: "accounting", fallback: "التاريخ" }),
-        label: t("journal.table.colDate", { namespace: "accounting", fallback: "التاريخ" }),
+        header: t("journal.table.colDate", { namespace: "accounting",  }),
+        label: t("journal.table.colDate", { namespace: "accounting",  }),
         accessor: (e) => formatDateTime(e.entry_date),
         className: "text-slate-500 tabular-nums"
       },
@@ -662,7 +662,7 @@ export function JournalTable({
     return enrichedColumns.map((col) => {
       const id = col.id;
       if (id === "entry_number") {
-        return { id: "count", columnId: "entry_number", label: "", value: t("journal.table.count", { namespace: "accounting", vars: { count: sortedData.length }, fallback: `${sortedData.length} سطر` }), className: "text-slate-500 font-medium" };
+        return { id: "count", columnId: "entry_number", label: "", value: t("journal.table.count", { namespace: "accounting", vars: { count: sortedData.length },  }), className: "text-slate-500 font-medium" };
       }
       if (id === "journal_type" || id === "description") {
         return { id: `${id}_spacer`, columnId: id, label: "", value: "" };
@@ -671,8 +671,8 @@ export function JournalTable({
       if (isTwoLine) {
         if (id === "account") {
           const signKey = baseBalance > 0 ? "debit" : baseBalance < 0 ? "credit" : "balanced";
-          const sign = t(`journal.sign.${signKey}`, { namespace: "accounting", fallback: baseBalance > 0 ? "مدين" : baseBalance < 0 ? "دائن" : "متزن" });
-          const label = t("journal.table.balanceLabel", { namespace: "accounting", vars: { sign, currency: cs(baseSymbol) }, fallback: `الرصيد / ${sign}${cs(baseSymbol)}` });
+          const sign = t(`journal.sign.${signKey}`, { namespace: "accounting"});
+          const label = t("journal.table.balanceLabel", { namespace: "accounting", vars: { sign, currency: cs(baseSymbol) },  });
           const value = formatAmount(Math.abs(baseBalance), { currencyCode: baseCurrency?.code || "" });
           const valueClass = baseBalance > 0
             ? "text-blue-700 font-black"
@@ -687,8 +687,8 @@ export function JournalTable({
           const code = curr?.code || "";
           const sym = curr?.symbol || code;
           const signKey = baseBalance > 0 ? "debit" : baseBalance < 0 ? "credit" : "balanced";
-          const sign = t(`journal.sign.${signKey}`, { namespace: "accounting", fallback: baseBalance > 0 ? "مدين" : baseBalance < 0 ? "دائن" : "متزن" });
-          const label = t("journal.table.balanceLabel", { namespace: "accounting", vars: { sign, currency: cs(sym) }, fallback: `الرصيد / ${sign}${cs(sym)}` });
+          const sign = t(`journal.sign.${signKey}`, { namespace: "accounting"});
+          const label = t("journal.table.balanceLabel", { namespace: "accounting", vars: { sign, currency: cs(sym) },  });
           const value = formatAmount(Math.abs(baseBalance), { currencyCode: code });
           const valueClass = baseBalance > 0
             ? "text-blue-700 font-black"
@@ -703,7 +703,7 @@ export function JournalTable({
       if (debitMatch) {
         const currCode = debitMatch[1];
         const isB = isBaseCurrency(currCode);
-        const label = col.label || t("journal.debitColumn", { namespace: "accounting", fallback: `عليه / مدين${cs(currCode)}` });
+        const label = col.label || t("journal.debitColumn", { namespace: "accounting",  });
         return {
           id: `${id}_total`,
           columnId: id,
@@ -719,7 +719,7 @@ export function JournalTable({
       if (creditMatch) {
         const currCode = creditMatch[1];
         const isB = isBaseCurrency(currCode);
-        const label = col.label || t("journal.creditColumn", { namespace: "accounting", fallback: `له / دائن${cs(currCode)}` });
+        const label = col.label || t("journal.creditColumn", { namespace: "accounting",  });
         return {
           id: `${id}_total`,
           columnId: id,
@@ -889,12 +889,12 @@ export function JournalTable({
     });
 
     await executeExport(exportData, {
-      sheetName: t("journal.table.sheetName", { namespace: "accounting", fallback: "القيود اليومية" }),
-      filename: t("journal.table.filename", { namespace: "accounting", fallback: "القيود اليومية" }),
+      sheetName: t("journal.table.sheetName", { namespace: "accounting",  }),
+      filename: t("journal.table.filename", { namespace: "accounting",  }),
       data: sortedData as unknown as Record<string, unknown>[],
       columns: exportColumns,
       summary: Object.keys(summary).length > 0 ? summary : undefined,
-      summaryLabel: t("journal.table.summaryLabel", { namespace: "accounting", fallback: "المجموع" }),
+      summaryLabel: t("journal.table.summaryLabel", { namespace: "accounting",  }),
       currencyRatesSheet: ratesSheet,
       mergeCells: isTwoLine ? buildJournalMergeRanges(
         sortedData as JournalTableRow[],
@@ -1028,7 +1028,7 @@ export function JournalTable({
     }
 
     if (groupedData.length === 0) {
-      return <EmptyState message={t("journal.table.empty", { namespace: "accounting", fallback: "لا توجد قيود يومية مسجلة" })} />;
+      return <EmptyState message={t("journal.table.empty", { namespace: "accounting",  })} />;
     }
 
     return groupedData.map((group, groupIdx) => renderGroupGrid(group, groupIdx, "group"));
@@ -1038,7 +1038,7 @@ export function JournalTable({
     <TableShell
       search={search}
       onSearchChange={onSearchChange}
-      searchPlaceholder={t("journal.table.searchPlaceholder", { namespace: "accounting", fallback: "بحث برقم القيد أو البيان..." })}
+      searchPlaceholder={t("journal.table.searchPlaceholder", { namespace: "accounting",  })}
       columns={toolbarColumns}
       onColumnToggle={toggleColumn}
       onColumnsReset={resetToDefault}
@@ -1052,7 +1052,7 @@ export function JournalTable({
           onClick={handleExport}
         >
           <Download className="w-3.5 h-3.5 ms-1.5 text-slate-500" />
-          {t("journal.table.export", { namespace: "accounting", fallback: "تصدير إكسل" })}
+          {t("journal.table.export", { namespace: "accounting",  })}
         </Button>
       )}
     >
@@ -1083,8 +1083,8 @@ export function JournalTable({
         {auditGroupedData.length > 0 && (
           <div dir="rtl">
             <div className="flex items-center justify-between px-4 py-2 bg-amber-50 border-y-2 border-amber-300" style={{ fontFamily: settings.fontFamily, fontSize: settings.fontSize }}>
-              <span className="text-sm font-black text-amber-800">{t("journal.table.auditTitle", { namespace: "accounting", fallback: "أرشيف التدقيق — القيود المعكوسة والملغاة" })}</span>
-              <span className="text-xs font-bold text-amber-700">{t("journal.table.auditCount", { namespace: "accounting", vars: { count: (auditEntries || []).length }, fallback: `${(auditEntries || []).length} قيد` })}</span>
+              <span className="text-sm font-black text-amber-800">{t("journal.table.auditTitle", { namespace: "accounting",  })}</span>
+              <span className="text-xs font-bold text-amber-700">{t("journal.table.auditCount", { namespace: "accounting", vars: { count: (auditEntries || []).length },  })}</span>
             </div>
             {auditGroupedData.map((group, groupIdx) => renderGroupGrid(group, groupIdx, "audit"))}
           </div>

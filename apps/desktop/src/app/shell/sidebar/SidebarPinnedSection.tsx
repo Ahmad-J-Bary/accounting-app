@@ -40,7 +40,7 @@ export function SidebarPinnedSection({
         <div className="flex items-center gap-1.5 px-2 mb-1.5">
           <Pin className={cn("w-2.5 h-2.5", "text-amber-400")} />
           <span className={cn("text-[10px] font-bold uppercase tracking-[0.1em]", sectionHeaderClass)}>
-            {t("pinnedSection", { namespace: "shell", fallback: "المثبتات" })}
+            {t("pinnedSection", { namespace: "shell",  })}
           </span>
         </div>
       )}

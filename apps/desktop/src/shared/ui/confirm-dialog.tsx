@@ -33,8 +33,8 @@ export function ConfirmDialog({
   onConfirm,
 }: ConfirmDialogProps) {
   const { t } = useLocalization();
-  const resolvedConfirmLabel = confirmLabel ?? t('actions.confirm', { fallback: 'تأكيد' });
-  const resolvedCancelLabel = cancelLabel ?? t('actions.cancel', { fallback: 'إلغاء' });
+  const resolvedConfirmLabel = confirmLabel ?? t('actions.confirm', );
+  const resolvedCancelLabel = cancelLabel ?? t('actions.cancel', );
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>

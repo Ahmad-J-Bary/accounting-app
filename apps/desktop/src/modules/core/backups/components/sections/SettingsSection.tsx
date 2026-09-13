@@ -13,7 +13,7 @@ interface Props {
 export function SettingsSection({ config, operating, onConfigChange, onApplyRetention }: Props) {
   const { t } = useLocalization();
   return (
-    <LayoutSection title={t("settings.backups.settingsTitle", { namespace: "settings", fallback: "إعدادات النسخ الاحتياطي" })}>
+    <LayoutSection title={t("backups.settingsTitle", { namespace: "settings",  })}>
       <BackupSettingsPanel
         config={config}
         operating={operating}

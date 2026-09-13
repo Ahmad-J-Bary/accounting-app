@@ -12,7 +12,7 @@ export default function TrialBalanceReport() {
 
   return (
     <OperationalTableTemplate
-      title={t("trialBalance.title", { namespace: "reports", fallback: "ميزان المراجعة" })}
+      title={t("trialBalance.title", { namespace: "reports",  })}
       toolbar={
         <ReportFilterBar
           filters={filters}

@@ -24,7 +24,7 @@ export function DatabaseStatusSection({ dbInfo, backups, health, healthMsg, load
   const healthErr = friendlyBackupError(healthMsg || "integrity check failed");
 
   return (
-    <SettingsSection title={t("settings.backups.statusTitle", { namespace: "settings", fallback: "حالة البيانات" })}>
+    <SettingsSection title={t("backups.statusTitle", { namespace: "settings",  })}>
       <div className="space-y-3">
         {loading || !dbInfo ? (
           <div className="flex items-center justify-center py-8">
@@ -34,7 +34,7 @@ export function DatabaseStatusSection({ dbInfo, backups, health, healthMsg, load
           <div className="flex items-start gap-3 p-4 rounded-xl border border-red-200 bg-red-50 text-red-700">
             <AlertTriangle className="w-5 h-5 mt-0.5 shrink-0" />
             <div className="space-y-1">
-              <p className="font-bold">{t("settings.backups.needsAttention", { namespace: "settings", fallback: "يحتاج إلى انتباه" })}</p>
+              <p className="font-bold">{t("backups.needsAttention", { namespace: "settings",  })}</p>
               <p className="text-sm">{healthErr.friendly}</p>
               <ErrorDetails detail={healthErr.detail} />
             </div>
@@ -42,7 +42,7 @@ export function DatabaseStatusSection({ dbInfo, backups, health, healthMsg, load
         ) : health === "checking" ? (
           <div className="flex items-center gap-3 p-4 rounded-xl border border-slate-200 bg-slate-50">
             <Loader2 className="w-5 h-5 text-slate-400 animate-spin" />
-            <p className="text-sm text-slate-500">{t("settings.backups.checking", { namespace: "settings", fallback: "جاري الفحص..." })}</p>
+            <p className="text-sm text-slate-500">{t("backups.checking", { namespace: "settings",  })}</p>
           </div>
         ) : (
           <div className="flex items-start gap-3 p-4 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-700">
@@ -50,8 +50,8 @@ export function DatabaseStatusSection({ dbInfo, backups, health, healthMsg, load
               <ShieldCheck className="w-5 h-5 text-emerald-600" />
             </div>
             <div className="space-y-1">
-              <p className="font-bold text-emerald-800">{t("settings.backups.dataIntact", { namespace: "settings", fallback: "البيانات سليمة" })}</p>
-              <p className="text-sm text-emerald-700">{t("settings.backups.dataIntactDesc", { namespace: "settings", fallback: "بياناتك محفوظة بشكل آمن ومتسق." })}</p>
+              <p className="font-bold text-emerald-800">{t("backups.dataIntact", { namespace: "settings",  })}</p>
+              <p className="text-sm text-emerald-700">{t("backups.dataIntactDesc", { namespace: "settings",  })}</p>
             </div>
           </div>
         )}
@@ -60,26 +60,26 @@ export function DatabaseStatusSection({ dbInfo, backups, health, healthMsg, load
         {dbInfo && (
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-bold text-slate-500 px-1">
             <span className={dbInfo.auto_backup_enabled ? "text-emerald-600" : "text-slate-400"}>
-              {dbInfo.auto_backup_enabled ? t("settings.backups.autoEnabled", { namespace: "settings", fallback: "النسخ التلقائي مفعّل" }) : t("settings.backups.autoDisabled", { namespace: "settings", fallback: "النسخ التلقائي معطّل" })}
+              {dbInfo.auto_backup_enabled ? t("backups.autoEnabled", { namespace: "settings",  }) : t("backups.autoDisabled", { namespace: "settings",  })}
             </span>
             {dbInfo.last_auto_backup && (
               <span className="text-slate-400">
-                {t("settings.backups.lastDaily", { namespace: "settings", fallback: "آخر نسخة يومية:" })} {formatDayToken(dbInfo.last_auto_backup)}
+                {t("backups.lastDaily", { namespace: "settings",  })} {formatDayToken(dbInfo.last_auto_backup)}
               </span>
             )}
             {latest && (
               <span className="text-slate-400">
-                {t("settings.backups.lastBackup", { namespace: "settings", fallback: "آخر نسخة احتياطية:" })} {formatTimestamp(latest.timestamp)}
+                {t("backups.lastBackup", { namespace: "settings",  })} {formatTimestamp(latest.timestamp)}
               </span>
             )}
             {dbInfo.last_restore_status === "rolled_back" && (
               <span className="text-rose-600">
-                {t("settings.backups.rolledBack", { namespace: "settings", fallback: "⚠ تم التراجع عن استعادة سابقة" })}
+                {t("backups.rolledBack", { namespace: "settings",  })}
               </span>
             )}
             {dbInfo.last_restore_status === "applied" && (
               <span className="text-emerald-600 flex items-center gap-1">
-                <CheckCircle2 className="w-3.5 h-3.5" /> {t("settings.backups.restoreComplete", { namespace: "settings", fallback: "اكتملت استعادة سابقة" })}
+                <CheckCircle2 className="w-3.5 h-3.5" /> {t("backups.restoreComplete", { namespace: "settings",  })}
               </span>
             )}
           </div>

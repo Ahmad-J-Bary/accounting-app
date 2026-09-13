@@ -196,27 +196,27 @@ export function LayoutSettings({
 }: LayoutSettingsProps) {
   const { t } = useLocalization();
   const L = {
-    navMenu: t("settings.layout.navMenu", { namespace: "settings", fallback: "قائمة التنقل" }),
-    sidebar: t("settings.layout.navMenuOptions.sidebar", { namespace: "settings", fallback: "شريط جانبي" }),
-    topbar: t("settings.layout.navMenuOptions.topbar", { namespace: "settings", fallback: "شريط علوي" }),
-    combo: t("settings.layout.navMenuOptions.combo", { namespace: "settings", fallback: "مدمج" }),
-    sidenavShape: t("settings.layout.sidenavShape", { namespace: "settings", fallback: "شكل الشريط العمودي" }),
-    topnavShape: t("settings.layout.topnavShape", { namespace: "settings", fallback: "شكل الشريط الأفقي" }),
-    sidenavAppearance: t("settings.layout.sidenavAppearance", { namespace: "settings", fallback: "مظهر الشريط العمودي" }),
-    topnavAppearance: t("settings.layout.topnavAppearance", { namespace: "settings", fallback: "مظهر الشريط الأفقي" }),
-    full: t("settings.layout.shapes.full", { namespace: "settings", fallback: "كامل" }),
-    slim: t("settings.layout.shapes.slim", { namespace: "settings", fallback: "نحيف" }),
-    stacked: t("settings.layout.shapes.stacked", { namespace: "settings", fallback: "مكدس" }),
-    light: t("settings.layout.appearances.light", { namespace: "settings", fallback: "فاتح" }),
-    dark: t("settings.layout.appearances.dark", { namespace: "settings", fallback: "داكن" }),
-    preview: t("settings.layout.preview", { namespace: "settings", fallback: "معاينة التخطيط المختار" }),
-    tagNav: t("settings.layout.tags.nav", { namespace: "settings", fallback: "جانبي" }),
-    tagTop: t("settings.layout.tags.top", { namespace: "settings", fallback: "علوي" }),
-    tagCombo: t("settings.layout.tags.combo", { namespace: "settings", fallback: "مدمج" }),
-    tagSidenav: t("settings.layout.tags.sidenav", { namespace: "settings", fallback: "جانبي: {{shape}}" }),
-    tagTopnav: t("settings.layout.tags.topnav", { namespace: "settings", fallback: "علوي: {{shape}}" }),
-    tagHorizontal: t("settings.layout.tags.horizontal", { namespace: "settings", fallback: "أفقي: {{appearance}}" }),
-    tagVertical: t("settings.layout.tags.vertical", { namespace: "settings", fallback: "عمودي: {{appearance}}" }),
+    navMenu: t("layout.navMenu", { namespace: "settings",  }),
+    sidebar: t("layout.navMenuOptions.sidebar", { namespace: "settings",  }),
+    topbar: t("layout.navMenuOptions.topbar", { namespace: "settings",  }),
+    combo: t("layout.navMenuOptions.combo", { namespace: "settings",  }),
+    sidenavShape: t("layout.sidenavShape", { namespace: "settings",  }),
+    topnavShape: t("layout.topnavShape", { namespace: "settings",  }),
+    sidenavAppearance: t("layout.sidenavAppearance", { namespace: "settings",  }),
+    topnavAppearance: t("layout.topnavAppearance", { namespace: "settings",  }),
+    full: t("layout.shapes.full", { namespace: "settings",  }),
+    slim: t("layout.shapes.slim", { namespace: "settings",  }),
+    stacked: t("layout.shapes.stacked", { namespace: "settings",  }),
+    light: t("layout.appearances.light", { namespace: "settings",  }),
+    dark: t("layout.appearances.dark", { namespace: "settings",  }),
+    preview: t("layout.preview", { namespace: "settings",  }),
+    tagNav: t("layout.tags.nav", { namespace: "settings",  }),
+    tagTop: t("layout.tags.top", { namespace: "settings",  }),
+    tagCombo: t("layout.tags.combo", { namespace: "settings",  }),
+    tagSidenav: t("layout.tags.sidenav", { namespace: "settings",  }),
+    tagTopnav: t("layout.tags.topnav", { namespace: "settings",  }),
+    tagHorizontal: t("layout.tags.horizontal", { namespace: "settings",  }),
+    tagVertical: t("layout.tags.vertical", { namespace: "settings",  }),
   };
   const layoutType = computeLayoutType({ navMenuType, sidenavShape, topnavShape, verticalNavbarAppearance, horizontalNavbarAppearance });
   const layoutDef = getLayoutDefinition(layoutType);
@@ -332,12 +332,12 @@ export function LayoutSettings({
             <div className="flex flex-wrap gap-1 mt-0.5">
               {([
                 navMenuType === 'sidenav' ? L.tagNav : navMenuType === 'topnav' ? L.tagTop : L.tagCombo,
-                navMenuType !== 'topnav'  ? t("settings.layout.tags.sidenav", { namespace: "settings", fallback: "جانبي: {{shape}}", vars: { shape: sidenavShape === 'default' ? L.full : L.stacked } }) : null,
-                navMenuType !== 'sidenav' ? t("settings.layout.tags.topnav", { namespace: "settings", fallback: "علوي: {{shape}}", vars: { shape: topnavShape === 'default' ? L.full : topnavShape === 'slim' ? L.slim : L.stacked } }) : null,
-                t("settings.layout.tags.horizontal", { namespace: "settings", fallback: "أفقي: {{appearance}}", vars: { appearance: horizontalNavbarAppearance === 'dark' ? L.dark : L.light } }),
+                navMenuType !== 'topnav'  ? t("layout.tags.sidenav", { namespace: "settings", vars: { shape: sidenavShape === 'default' ? L.full : L.stacked } }) : null,
+                navMenuType !== 'sidenav' ? t("layout.tags.topnav", { namespace: "settings", vars: { shape: topnavShape === 'default' ? L.full : topnavShape === 'slim' ? L.slim : L.stacked } }) : null,
+                t("layout.tags.horizontal", { namespace: "settings", vars: { appearance: horizontalNavbarAppearance === 'dark' ? L.dark : L.light } }),
                 verticalNavbarAppearance === 'dark'
-                  ? t("settings.layout.tags.vertical", { namespace: "settings", fallback: "عمودي: {{appearance}}", vars: { appearance: L.dark } })
-                  : t("settings.layout.tags.vertical", { namespace: "settings", fallback: "عمودي: {{appearance}}", vars: { appearance: L.light } }),
+                  ? t("layout.tags.vertical", { namespace: "settings", vars: { appearance: L.dark } })
+                  : t("layout.tags.vertical", { namespace: "settings", vars: { appearance: L.light } }),
               ].filter(Boolean) as string[]).map(tag => (
                 <span key={tag} className="px-1 py-px rounded bg-slate-100 text-[7px] font-semibold text-slate-500">
                   {tag}

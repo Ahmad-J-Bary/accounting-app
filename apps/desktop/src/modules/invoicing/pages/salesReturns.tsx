@@ -48,10 +48,10 @@ export default function SalesReturns() {
   const handleDelete = useCallback(async (id: string) => {
     try {
       await returnService.deleteSalesReturn(id);
-      toast.success(t("return.deleteSuccess", { namespace: "invoicing", fallback: "تم حذف المرتجع بنجاح" }));
+      toast.success(t("return.deleteSuccess", { namespace: "invoicing",  }));
       loadData(false);
     } catch (e) {
-      toast.error(t("return.deleteError", { namespace: "invoicing", vars: { error: String(e) }, fallback: "فشل الحذف: {{error}}" }));
+      toast.error(t("return.deleteError", { namespace: "invoicing", vars: { error: String(e) },  }));
     }
   }, [loadData, t]);
 
@@ -85,25 +85,25 @@ export default function SalesReturns() {
     });
 
     const returnCols: DocumentColumn[] = [
-      { key: "material_image", header: t("return.colImage", { namespace: "invoicing", fallback: "صورة" }), width: "w-[40px]", align: "center", type: "image", defaultVisible: false },
-      { key: "material_code", header: t("return.colCode", { namespace: "invoicing", fallback: "الكود" }), width: "w-[100px]", type: "material_code" },
-      { key: "material_name", header: t("return.colMaterial", { namespace: "invoicing", fallback: "الصنف" }), width: "flex-[2]", type: "material" },
-      { key: "quantity", header: t("labels.quantity", { namespace: "common", fallback: "الكمية" }), width: "w-[80px]", type: "number" },
-      { key: "unit_name", header: t("labels.unit", { namespace: "common", fallback: "الوحدة" }), width: "w-[70px]", type: "unit_select" },
+      { key: "material_image", header: t("return.colImage", { namespace: "invoicing",  }), width: "w-[40px]", align: "center", type: "image", defaultVisible: false },
+      { key: "material_code", header: t("return.colCode", { namespace: "invoicing",  }), width: "w-[100px]", type: "material_code" },
+      { key: "material_name", header: t("return.colMaterial", { namespace: "invoicing",  }), width: "flex-[2]", type: "material" },
+      { key: "quantity", header: t("labels.quantity", { namespace: "common",  }), width: "w-[80px]", type: "number" },
+      { key: "unit_name", header: t("labels.unit", { namespace: "common",  }), width: "w-[70px]", type: "unit_select" },
       ...availableCurrencies.map(curr => ({
         key: baseCode === curr.code ? 'unit_price' : `unit_price_${curr.code}`,
-        header: t("return.colPrice", { namespace: "invoicing", vars: { currency: curr.symbol || curr.code }, fallback: `السعر (${curr.symbol || curr.code})` }),
+        header: t("return.colPrice", { namespace: "invoicing", vars: { currency: curr.symbol || curr.code },  }),
         width: "w-[100px]",
         type: "number" as const,
       })),
       ...availableCurrencies.map(curr => ({
         key: `line_total_${curr.code}`,
-        header: t("return.colTotal", { namespace: "invoicing", vars: { currency: curr.symbol || curr.code }, fallback: `الإجمالي (${curr.symbol || curr.code})` }),
+        header: t("return.colTotal", { namespace: "invoicing", vars: { currency: curr.symbol || curr.code },  }),
         width: "w-[110px]",
         type: "number" as const,
       })),
-      { key: "expiry_date", header: t("return.colExpiry", { namespace: "invoicing", fallback: "تاريخ الانتهاء" }), width: "w-[110px]", type: "date" },
-      { key: "notes", header: t("labels.notes", { namespace: "common", fallback: "ملاحظات" }), width: "flex-[1]", type: "text" },
+      { key: "expiry_date", header: t("return.colExpiry", { namespace: "invoicing",  }), width: "w-[110px]", type: "date" },
+      { key: "notes", header: t("labels.notes", { namespace: "common",  }), width: "flex-[1]", type: "text" },
     ];
 
     const hiddenColumnIds = returnCols.filter(c => c.defaultVisible === false).map(c => c.key);
@@ -123,14 +123,14 @@ export default function SalesReturns() {
     const totalVal = parseFloat(fullReturn.total_amount || "0");
 
     await executeExport(exportData, {
-      sheetName: t("return.salesSheetTitle", { namespace: "invoicing", fallback: "مرتجع مبيعات" }),
-      filename: t("return.salesFilename", { namespace: "invoicing", vars: { number: fullReturn.return_number }, fallback: `مرتجع_مبيعات_${fullReturn.return_number}` }),
+      sheetName: t("return.salesSheetTitle", { namespace: "invoicing",  }),
+      filename: t("return.salesFilename", { namespace: "invoicing", vars: { number: fullReturn.return_number },  }),
       data: enrichedLines,
       columns,
       summary,
-      summaryLabel: t("document.summaryLabel", { namespace: "invoicing", fallback: "المجموع" }),
+      summaryLabel: t("document.summaryLabel", { namespace: "invoicing",  }),
       additionalSummary: [
-        { label: t("labels.total", { namespace: "common", fallback: "الإجمالي" }), value: totalVal }
+        { label: t("labels.total", { namespace: "common",  }), value: totalVal }
       ],
       currencyRatesSheet: ratesSheet,
     });
@@ -162,23 +162,23 @@ export default function SalesReturns() {
       onRefresh={() => loadData(false)}
       onCreate={() => {
         const uniqueId = `/sales-returns/new-${Date.now()}`;
-        openTab({ id: uniqueId, title: t("return.newSalesReturn", { namespace: "invoicing", fallback: "مرتجع مبيعات جديد" }), path: uniqueId, closable: true });
+        openTab({ id: uniqueId, title: t("return.newSalesReturn", { namespace: "invoicing",  }), path: uniqueId, closable: true });
       }}
       onEdit={(ret) => {
-        openTab({ id: `/sales-returns/${ret.id}`, title: t("return.editTabTitle", { namespace: "invoicing", vars: { number: ret.return_number }, fallback: `تعديل ${ret.return_number}` }), path: `/sales-returns/${ret.id}`, closable: true });
+        openTab({ id: `/sales-returns/${ret.id}`, title: t("return.editTabTitle", { namespace: "invoicing", vars: { number: ret.return_number },  }), path: `/sales-returns/${ret.id}`, closable: true });
       }}
       onView={(ret) => {
-        openTab({ id: `/sales-returns/${ret.id}-view`, title: t("return.viewTabTitle", { namespace: "invoicing", vars: { number: ret.return_number }, fallback: `عرض ${ret.return_number}` }), path: `/sales-returns/${ret.id}?mode=view`, closable: true });
+        openTab({ id: `/sales-returns/${ret.id}-view`, title: t("return.viewTabTitle", { namespace: "invoicing", vars: { number: ret.return_number },  }), path: `/sales-returns/${ret.id}?mode=view`, closable: true });
       }}
       onDelete={handleDelete}
       onExportRow={handleExportRow}
       formatMonetaryAmount={formatMonetaryAmount}
       partyType="customer"
-      title={t("return.salesListTitle", { namespace: "invoicing", fallback: "مرتجعات المبيعات" })}
-      createLabel={t("return.createLabel", { namespace: "invoicing", fallback: "مرتجع جديد" })}
-      searchPlaceholder={t("return.salesSearchPlaceholder", { namespace: "invoicing", fallback: "بحث برقم المرتجع أو الزبون..." })}
-      emptyMessage={t("return.salesEmpty", { namespace: "invoicing", fallback: "لا توجد مرتجعات مبيعات مسجلة" })}
-      statsLabel={t("return.statsLabel", { namespace: "invoicing", fallback: "إجمالي المرتجعات" })}
+      title={t("return.salesListTitle", { namespace: "invoicing",  })}
+      createLabel={t("return.createLabel", { namespace: "invoicing",  })}
+      searchPlaceholder={t("return.salesSearchPlaceholder", { namespace: "invoicing",  })}
+      emptyMessage={t("return.salesEmpty", { namespace: "invoicing",  })}
+      statsLabel={t("return.statsLabel", { namespace: "invoicing",  })}
       statsColor="text-blue-600"
       preferenceKey="sales-returns"
     />

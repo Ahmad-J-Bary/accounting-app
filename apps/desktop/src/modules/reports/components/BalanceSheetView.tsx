@@ -23,14 +23,14 @@ function SummaryCards({ computed, formatValue }: { computed: BalanceSheetCompute
 
   return (
     <div className="grid grid-cols-1 gap-2 px-4 pt-4 pb-2 md:grid-cols-2 xl:grid-cols-5">
-      <StatCard label={t("balanceSheet.statTotalAssets", { namespace: "reports", fallback: "إجمالي الأصول" })} value={formatValue(computed.totalAssets)} icon={Building2} />
-      <StatCard label={t("balanceSheet.statTotalLiabilities", { namespace: "reports", fallback: "إجمالي الخصوم" })} value={formatValue(computed.totalLiabilities)} icon={Wallet} />
-      <StatCard label={t("balanceSheet.statTotalEquity", { namespace: "reports", fallback: "حقوق الملكية" })} value={formatValue(computed.totalEquity)} icon={Users} />
-      <StatCard label={t("balanceSheet.statTotalLiabilitiesEquity", { namespace: "reports", fallback: "الخصوم + حقوق الملكية" })} value={formatValue(computed.totalLiabilitiesEquity)} icon={Scale} />
+      <StatCard label={t("balanceSheet.statTotalAssets", { namespace: "reports",  })} value={formatValue(computed.totalAssets)} icon={Building2} />
+      <StatCard label={t("balanceSheet.statTotalLiabilities", { namespace: "reports",  })} value={formatValue(computed.totalLiabilities)} icon={Wallet} />
+      <StatCard label={t("balanceSheet.statTotalEquity", { namespace: "reports",  })} value={formatValue(computed.totalEquity)} icon={Users} />
+      <StatCard label={t("balanceSheet.statTotalLiabilitiesEquity", { namespace: "reports",  })} value={formatValue(computed.totalLiabilitiesEquity)} icon={Scale} />
       {isBalanced ? (
-        <StatCard label={t("balanceSheet.statBalanced", { namespace: "reports", fallback: "الميزانية متوازنة" })} value="" icon={CheckCircle2} variant="positive" />
+        <StatCard label={t("balanceSheet.statBalanced", { namespace: "reports",  })} value="" icon={CheckCircle2} variant="positive" />
       ) : (
-        <StatCard label={t("balanceSheet.statUnbalanced", { namespace: "reports", fallback: "الميزانية غير متوازنة" })} value={t("balanceSheet.differenceLabel", { namespace: "reports", fallback: "فرق {{value}}", vars: { value: formatValue(diff) } })} icon={AlertCircle} variant="negative" />
+        <StatCard label={t("balanceSheet.statUnbalanced", { namespace: "reports",  })} value={t("balanceSheet.differenceLabel", { namespace: "reports", vars: { value: formatValue(diff) } })} icon={AlertCircle} variant="negative" />
       )}
     </div>
   );
@@ -133,7 +133,7 @@ export function BalanceSheetView(props: BalanceSheetViewProps) {
 
   return (
     <div className="flex flex-col h-full">
-      <ReportMeta title={t("balanceSheet.title", { namespace: "reports", fallback: "الميزانية العمومية" })} description={t("balanceSheet.metaDescription", { namespace: "reports", fallback: "قائمة تبين الموقف المالي للشركة على مبدأ (الأصول = الخصوم + حقوق الملكية)" })} />
+      <ReportMeta title={t("balanceSheet.title", { namespace: "reports",  })} description={t("balanceSheet.metaDescription", { namespace: "reports",  })} />
       <SummaryCards computed={computed} formatValue={formatValue} />
 
       <div className="flex-1 min-h-0 overflow-y-auto grid grid-cols-1 lg:grid-cols-2 gap-3 px-4 pb-4 custom-scrollbar">
@@ -146,7 +146,7 @@ export function BalanceSheetView(props: BalanceSheetViewProps) {
               <SectionCard key={s.id} section={s} formatValue={formatValue} />
             ))}
           </div>
-          <TotalRow label={t("balanceSheet.statTotalAssets", { namespace: "reports", fallback: "إجمالي الأصول" })} value={computed.totalAssets} formatValue={formatValue} highlight />
+          <TotalRow label={t("balanceSheet.statTotalAssets", { namespace: "reports",  })} value={computed.totalAssets} formatValue={formatValue} highlight />
         </div>
 
         <div className="flex flex-col gap-2 h-full">
@@ -161,7 +161,7 @@ export function BalanceSheetView(props: BalanceSheetViewProps) {
               <SectionCard key={s.id} section={s} formatValue={formatValue} />
             ))}
           </div>
-          <TotalRow label={t("balanceSheet.totalLiabilitiesEquity", { namespace: "reports", fallback: "إجمالي الخصوم + حقوق الملكية" })} value={computed.totalLiabilitiesEquity} formatValue={formatValue} highlight />
+          <TotalRow label={t("balanceSheet.totalLiabilitiesEquity", { namespace: "reports",  })} value={computed.totalLiabilitiesEquity} formatValue={formatValue} highlight />
         </div>
       </div>
 

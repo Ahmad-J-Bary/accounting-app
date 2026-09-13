@@ -77,20 +77,20 @@ export function ReturnsEditor({ returnType, partyType, parties, materials, wareh
     lines.reduce((sum, l) => sum + (parseFloat(l.quantity || "0") * parseFloat(l.unit_price || "0")), 0), [lines]);
 
   const returnGridColumns = useMemo<DocumentColumn[]>(() => [
-    { key: "material_image", header: t("return.colImage", { namespace: "invoicing", fallback: "صورة" }), width: "w-[40px]", type: "image", defaultVisible: false },
-    { key: "material_code", header: t("return.colCode", { namespace: "invoicing", fallback: "الكود" }), width: "w-[100px]", type: "material_code", defaultVisible: true },
-    { key: "unit_barcode", header: t("return.colBarcode", { namespace: "invoicing", fallback: "الباركود" }), width: "w-[120px]", type: "material_barcode", defaultVisible: false },
-    { key: "material_name", header: t("return.colMaterialAr", { namespace: "invoicing", fallback: "الصنف (عربي)" }), width: "flex-[2]", type: "material", defaultVisible: true },
-    { key: "name_en", header: t("return.colMaterialEn", { namespace: "invoicing", fallback: "الصنف (EN)" }), width: "flex-[1.5]", type: "readonly", defaultVisible: false },
-    { key: "warehouse_qty", header: t("return.colAvailable", { namespace: "invoicing", fallback: "المتوفر" }), width: "w-[70px]", type: "readonly", defaultVisible: true },
-    { key: "original_quantity", header: t("return.colOriginalQty", { namespace: "invoicing", fallback: "الكمية الأصلية" }), width: "w-[120px]", type: "readonly", defaultVisible: true },
-    { key: "original_price", header: t("return.colOriginalPrice", { namespace: "invoicing", fallback: "السعر الأصلي" }), width: "w-[90px]", type: "readonly", defaultVisible: true },
-    { key: "quantity", header: t("return.colReturnQty", { namespace: "invoicing", fallback: "كمية المرتجع" }), width: "w-[90px]", type: "number", defaultVisible: true },
-    { key: "unit_name", header: t("return.colUnit", { namespace: "invoicing", fallback: "الوحدة" }), width: "w-[100px]", type: "unit_select", defaultVisible: true },
-    { key: "warehouse_id", header: t("return.colWarehouse", { namespace: "invoicing", fallback: "المستودع" }), width: "w-[140px]", type: "warehouse_select", defaultVisible: true },
-    { key: "unit_price", header: t("return.colReturnPrice", { namespace: "invoicing", fallback: "سعر المرتجع" }), width: "w-[100px]", type: "number", defaultVisible: true },
-    { key: "line_total", header: t("return.totalBase", { namespace: "invoicing", fallback: "الإجمالي" }), width: "w-[110px]", type: "readonly", defaultVisible: true },
-    { key: "notes", header: t("return.colNotes", { namespace: "invoicing", fallback: "ملاحظات" }), width: "flex-[1]", type: "text", defaultVisible: true },
+    { key: "material_image", header: t("return.colImage", { namespace: "invoicing",  }), width: "w-[40px]", type: "image", defaultVisible: false },
+    { key: "material_code", header: t("return.colCode", { namespace: "invoicing",  }), width: "w-[100px]", type: "material_code", defaultVisible: true },
+    { key: "unit_barcode", header: t("return.colBarcode", { namespace: "invoicing",  }), width: "w-[120px]", type: "material_barcode", defaultVisible: false },
+    { key: "material_name", header: t("return.colMaterialAr", { namespace: "invoicing",  }), width: "flex-[2]", type: "material", defaultVisible: true },
+    { key: "name_en", header: t("return.colMaterialEn", { namespace: "invoicing",  }), width: "flex-[1.5]", type: "readonly", defaultVisible: false },
+    { key: "warehouse_qty", header: t("return.colAvailable", { namespace: "invoicing",  }), width: "w-[70px]", type: "readonly", defaultVisible: true },
+    { key: "original_quantity", header: t("return.colOriginalQty", { namespace: "invoicing",  }), width: "w-[120px]", type: "readonly", defaultVisible: true },
+    { key: "original_price", header: t("return.colOriginalPrice", { namespace: "invoicing",  }), width: "w-[90px]", type: "readonly", defaultVisible: true },
+    { key: "quantity", header: t("return.colReturnQty", { namespace: "invoicing",  }), width: "w-[90px]", type: "number", defaultVisible: true },
+    { key: "unit_name", header: t("return.colUnit", { namespace: "invoicing",  }), width: "w-[100px]", type: "unit_select", defaultVisible: true },
+    { key: "warehouse_id", header: t("return.colWarehouse", { namespace: "invoicing",  }), width: "w-[140px]", type: "warehouse_select", defaultVisible: true },
+    { key: "unit_price", header: t("return.colReturnPrice", { namespace: "invoicing",  }), width: "w-[100px]", type: "number", defaultVisible: true },
+    { key: "line_total", header: t("return.totalBase", { namespace: "invoicing",  }), width: "w-[110px]", type: "readonly", defaultVisible: true },
+    { key: "notes", header: t("return.colNotes", { namespace: "invoicing",  }), width: "flex-[1]", type: "text", defaultVisible: true },
   ], [t]);
 
     const dynamicVisibleColumns = useMemo<string[]>(() => {
@@ -107,7 +107,7 @@ export function ReturnsEditor({ returnType, partyType, parties, materials, wareh
 
   const handleExport = useCallback(async () => {
     if (lines.length === 0) {
-      toast.error(t("document.noLinesToExport", { namespace: "invoicing", fallback: "لا توجد بنود للتصدير" }));
+      toast.error(t("document.noLinesToExport", { namespace: "invoicing",  }));
       return;
     }
 
@@ -155,19 +155,19 @@ export function ReturnsEditor({ returnType, partyType, parties, materials, wareh
     const summary: Record<string, 'sum' | 'subtotal' | 'average' | null> = {};
     addCurrencySummary(summary, "line_total", currencies);
 
-    const settlementModeLabel = settlementMode === "deduct_from_debt" ? t("return.settlementDeductFromDebt", { namespace: "invoicing", fallback: "خصم من الدين" }) : settlementMode === "full_cash_return" ? t("return.settlementFullCashReturn", { namespace: "invoicing", fallback: "مرتجع نقدي كامل" }) : t("return.settlementPartial", { namespace: "invoicing", fallback: "تسوية جزئية" });
+    const settlementModeLabel = settlementMode === "deduct_from_debt" ? t("return.settlementDeductFromDebt", { namespace: "invoicing",  }) : settlementMode === "full_cash_return" ? t("return.settlementFullCashReturn", { namespace: "invoicing",  }) : t("return.settlementPartial", { namespace: "invoicing",  });
 
     await executeExport(exportData, {
-      sheetName: t("return.sheetReturn", { namespace: "invoicing", fallback: "مرتجع" }),
-      filename: `${returnType === "SalesReturn" ? t("return.salesFilenameBase", { namespace: "invoicing", fallback: "مرتجع_مبيعات" }) : t("return.purchaseFilenameBase", { namespace: "invoicing", fallback: "مرتجع_مشتريات" })}_${returnNumber || t("return.markNew", { namespace: "invoicing", fallback: "جديد" })}`,
+      sheetName: t("return.sheetReturn", { namespace: "invoicing",  }),
+      filename: `${returnType === "SalesReturn" ? t("return.salesFilenameBase", { namespace: "invoicing",  }) : t("return.purchaseFilenameBase", { namespace: "invoicing",  })}_${returnNumber || t("return.markNew", { namespace: "invoicing",  })}`,
       data: enrichedLines,
       columns: exportCols,
       summary,
-      summaryLabel: t("document.summaryLabel", { namespace: "invoicing", fallback: "المجموع" }),
+      summaryLabel: t("document.summaryLabel", { namespace: "invoicing",  }),
       additionalSummary: [
-        { label: t("return.settlementMethod", { namespace: "invoicing", fallback: "طريقة التسوية" }), value: settlementModeLabel },
-        { label: t("return.netReturnValue", { namespace: "invoicing", fallback: "قيمة المرتجع (الصافي)" }), value: totalAmount },
-        { label: t("return.cashRefundedAmount", { namespace: "invoicing", fallback: "المبلغ المسترد نقداً" }), value: settlementMode === "partial_settlement" ? parseFloat(settlementCash) || 0 : (settlementMode === "full_cash_return" ? totalAmount : 0) }
+        { label: t("return.settlementMethod", { namespace: "invoicing",  }), value: settlementModeLabel },
+        { label: t("return.netReturnValue", { namespace: "invoicing",  }), value: totalAmount },
+        { label: t("return.cashRefundedAmount", { namespace: "invoicing",  }), value: settlementMode === "partial_settlement" ? parseFloat(settlementCash) || 0 : (settlementMode === "full_cash_return" ? totalAmount : 0) }
       ],
       currencyRatesSheet: ratesSheet,
     });
@@ -337,7 +337,7 @@ export function ReturnsEditor({ returnType, partyType, parties, materials, wareh
         setLines(gridLines);
       })
       .catch(() => {
-        toast.error(t("return.loadReturnError", { namespace: "invoicing", fallback: "فشل تحميل بيانات المرتجع" }));
+        toast.error(t("return.loadReturnError", { namespace: "invoicing",  }));
       })
       .finally(() => setLoadingExisting(false));
   }, [returnId, materials, isSales, readOnly, setLines, t]);
@@ -466,10 +466,10 @@ export function ReturnsEditor({ returnType, partyType, parties, materials, wareh
   }, [partyId, parties, isSales]);
 
   const handleSave = async () => {
-    if (!partyId && isSales) { toast.error(t("return.chooseCustomer", { namespace: "invoicing", fallback: "الرجاء اختيار الزبون" })); return; }
-    if (!partyId && !isSales) { toast.error(t("return.chooseSupplier", { namespace: "invoicing", fallback: "الرجاء اختيار المورد" })); return; }
+    if (!partyId && isSales) { toast.error(t("return.chooseCustomer", { namespace: "invoicing",  })); return; }
+    if (!partyId && !isSales) { toast.error(t("return.chooseSupplier", { namespace: "invoicing",  })); return; }
     const validLines = lines.filter(l => l.material_id);
-    if (!validLines.length) { toast.error(t("return.addAtLeastOneMaterial", { namespace: "invoicing", fallback: "الرجاء إضافة مادة واحدة على الأقل" })); return; }
+    if (!validLines.length) { toast.error(t("return.addAtLeastOneMaterial", { namespace: "invoicing",  })); return; }
 
     setSaving(true);
     try {
@@ -503,21 +503,21 @@ export function ReturnsEditor({ returnType, partyType, parties, materials, wareh
         });
       }
 
-      toast.success(returnId ? t("return.updateSuccess", { namespace: "invoicing", fallback: "تم تحديث المرتجع بنجاح" }) : t("return.createSuccess", { namespace: "invoicing", fallback: "تم تسجيل المرتجع بنجاح" }));
+      toast.success(returnId ? t("return.updateSuccess", { namespace: "invoicing",  }) : t("return.createSuccess", { namespace: "invoicing",  }));
       await invalidateKeys(queryClient, [...SALE_KEYS, ...PURCHASE_KEYS]);
       onSaved();
     } catch (e) {
-      toast.error(returnId ? t("return.saveErrorUpdate", { namespace: "invoicing", vars: { error: String(e) }, fallback: "فشل تحديث المرتجع: {{error}}" }) : t("return.saveErrorCreate", { namespace: "invoicing", vars: { error: String(e) }, fallback: "فشل تسجيل المرتجع: {{error}}" }));
+      toast.error(returnId ? t("return.saveErrorUpdate", { namespace: "invoicing", vars: { error: String(e) },  }) : t("return.saveErrorCreate", { namespace: "invoicing", vars: { error: String(e) },  }));
     } finally {
       setSaving(false);
     }
   };
 
   const editorTitle = readOnly
-    ? `${t("return.viewPrefix", { namespace: "invoicing", fallback: "عرض " })}${returnType === "SalesReturn" ? t("return.salesSheetTitle", { namespace: "invoicing", fallback: "مرتجع مبيعات" }) : t("return.purchaseSheetTitle", { namespace: "invoicing", fallback: "مرتجع مشتريات" })}${returnNumber ? ` - ${returnNumber}` : ""}`
+    ? `${t("return.viewPrefix", { namespace: "invoicing",  })}${returnType === "SalesReturn" ? t("return.salesSheetTitle", { namespace: "invoicing",  }) : t("return.purchaseSheetTitle", { namespace: "invoicing",  })}${returnNumber ? ` - ${returnNumber}` : ""}`
     : returnId
-      ? `${t("return.editPrefix", { namespace: "invoicing", fallback: "تعديل " })}${returnType === "SalesReturn" ? t("return.salesSheetTitle", { namespace: "invoicing", fallback: "مرتجع مبيعات" }) : t("return.purchaseSheetTitle", { namespace: "invoicing", fallback: "مرتجع مشتريات" })}${returnNumber ? ` - ${returnNumber}` : ""}`
-      : returnType === "SalesReturn" ? t("return.newSalesReturn", { namespace: "invoicing", fallback: "مرتجع مبيعات جديد" }) : t("return.newPurchaseReturn", { namespace: "invoicing", fallback: "مرتجع مشتريات جديد" });
+      ? `${t("return.editPrefix", { namespace: "invoicing",  })}${returnType === "SalesReturn" ? t("return.salesSheetTitle", { namespace: "invoicing",  }) : t("return.purchaseSheetTitle", { namespace: "invoicing",  })}${returnNumber ? ` - ${returnNumber}` : ""}`
+      : returnType === "SalesReturn" ? t("return.newSalesReturn", { namespace: "invoicing",  }) : t("return.newPurchaseReturn", { namespace: "invoicing",  });
 
   if (loadingExisting) {
     return (
@@ -526,11 +526,11 @@ export function ReturnsEditor({ returnType, partyType, parties, materials, wareh
         toolbar={
           <div className="flex items-center gap-2">
             <Button size="sm" variant="outline" onClick={onClose} className="h-9 border-slate-200 hover:bg-slate-50">
-              <X className="w-4 h-4 ml-2" /> {t("actions.cancel", { namespace: "invoicing", fallback: "إلغاء" })}
+              <X className="w-4 h-4 ml-2" /> {t("actions.cancel", { namespace: "invoicing",  })}
             </Button>
           </div>
         }
-        headerFields={<div className="flex items-center gap-2 text-slate-400 py-8"><Loader2 className="w-5 h-5 animate-spin" /> {t("return.loadingReturn", { namespace: "invoicing", fallback: "جاري تحميل بيانات المرتجع..." })}</div>}
+        headerFields={<div className="flex items-center gap-2 text-slate-400 py-8"><Loader2 className="w-5 h-5 animate-spin" /> {t("return.loadingReturn", { namespace: "invoicing",  })}</div>}
         lineItemsGrid={null}
         summaryPanel={null}
         sidebar={null}
@@ -544,23 +544,23 @@ export function ReturnsEditor({ returnType, partyType, parties, materials, wareh
       toolbar={
         <div className="flex items-center gap-2">
           <Button size="sm" variant="outline" onClick={onClose} className="h-9 border-slate-200 hover:bg-slate-50">
-            <X className="w-4 h-4 ml-2" /> {readOnly ? t("actions.close", { namespace: "invoicing", fallback: "إغلاق" }) : t("actions.cancel", { namespace: "invoicing", fallback: "إلغاء" })}
+            <X className="w-4 h-4 ml-2" /> {readOnly ? t("actions.close", { namespace: "invoicing",  }) : t("actions.cancel", { namespace: "invoicing",  })}
           </Button>
           {!readOnly && (
             <Button size="sm" onClick={handleSave} disabled={saving} className="h-9 bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100">
-              <Save className="w-4 h-4 ml-2" /> {saving ? t("return.saving", { namespace: "invoicing", fallback: "جاري الحفظ..." }) : t("return.saveReturn", { namespace: "invoicing", fallback: "حفظ المرتجع" })}
+              <Save className="w-4 h-4 ml-2" /> {saving ? t("return.saving", { namespace: "invoicing",  }) : t("return.saveReturn", { namespace: "invoicing",  })}
             </Button>
           )}
           <Button variant="outline" size="sm" onClick={handleExport} className="h-9 border-slate-200 hover:bg-slate-50">
-            <Download className="w-4 h-4 ml-2" /> {t("actions.exportExcel", { namespace: "invoicing", fallback: "تصدير إكسل" })}
+            <Download className="w-4 h-4 ml-2" /> {t("actions.exportExcel", { namespace: "invoicing",  })}
           </Button>
         </div>
       }
       headerFields={
         <>
-          <HeaderField label={t("return.returnDateLabel", { namespace: "invoicing", fallback: "تاريخ المرتجع" })} type="date" value={returnDate} onChange={setReturnDate} disabled={readOnly} inputClassName="font-bold" />
+          <HeaderField label={t("return.returnDateLabel", { namespace: "invoicing",  })} type="date" value={returnDate} onChange={setReturnDate} disabled={readOnly} inputClassName="font-bold" />
 
-          <HeaderField label={isSales ? t("party.customer", { namespace: "partners", fallback: "العميل" }) : t("party.supplier", { namespace: "partners", fallback: "المورد" })} className="lg:col-span-2">
+          <HeaderField label={isSales ? t("party.customer", { namespace: "partners",  }) : t("party.supplier", { namespace: "partners",  })} className="lg:col-span-2">
             <InvoicePartySelector
               type={partyType}
               parties={parties}
@@ -574,7 +574,7 @@ export function ReturnsEditor({ returnType, partyType, parties, materials, wareh
             />
           </HeaderField>
 
-          <HeaderField label={t("return.colNotes", { namespace: "invoicing", fallback: "ملاحظات" })} value={notes} onChange={setNotes} disabled={readOnly} placeholder={t("return.notesAdditionalPlaceholder", { namespace: "invoicing", fallback: "ملاحظات إضافية..." })} className="lg:col-span-3" />
+          <HeaderField label={t("return.colNotes", { namespace: "invoicing",  })} value={notes} onChange={setNotes} disabled={readOnly} placeholder={t("return.notesAdditionalPlaceholder", { namespace: "invoicing",  })} className="lg:col-span-3" />
         </>
       }
       lineItemsGrid={

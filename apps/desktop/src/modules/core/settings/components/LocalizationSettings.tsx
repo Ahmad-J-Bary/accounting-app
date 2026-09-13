@@ -30,8 +30,8 @@ export function LocalizationSettings({ settings, onChange }: LocalizationSetting
   const { t, language, setLanguage } = useLocalization();
 
   const numeralLabels: Record<string, string> = {
-    arabic: t("settings.localization.numeralSystems.arabic", { namespace: "settings", fallback: "أرقام عربية" }),
-    western: t("settings.localization.numeralSystems.western", { namespace: "settings", fallback: "أرقام أجنبية" }),
+    arabic: t("localization.numeralSystems.arabic", { namespace: "settings",  }),
+    western: t("localization.numeralSystems.western", { namespace: "settings",  }),
   };
 
   const handleChange = (value: string) => {
@@ -62,23 +62,23 @@ export function LocalizationSettings({ settings, onChange }: LocalizationSetting
       });
       setNumberingSystem(settings.numeral_system || "western");
       publishSettingsUpdated();
-      toast.success(t("settings.toasts.saved", { namespace: "settings", fallback: "تم الحفظ" }), { description: t("settings.toasts.savedNumeralSystem", { namespace: "settings", fallback: "تم حفظ نظام الأرقام بنجاح" }) });
+      toast.success(t("toasts.saved", { namespace: "settings",  }), { description: t("toasts.savedNumeralSystem", { namespace: "settings",  }) });
     } catch (e) {
-      toast.error(t("settings.toasts.saveError", { namespace: "settings", fallback: "خطأ في الحفظ" }), { description: String(e) });
+      toast.error(t("toasts.saveError", { namespace: "settings",  }), { description: String(e) });
     }
   };
 
   return (
-    <SettingsSection title={t("settings.localization.title", { namespace: "settings", fallback: "اللغة والمنطقة" })} description={t("settings.localization.description", { namespace: "settings", fallback: "تحديد نظام الأرقام المعروض في جميع أنحاء التطبيق." })}>
+    <SettingsSection title={t("localization.title", { namespace: "settings",  })} description={t("localization.description", { namespace: "settings",  })}>
       <div className="space-y-6">
         <div className="space-y-3">
           <Label className="font-black text-slate-700 flex items-center gap-2">
-            <Languages className="w-4 h-4 text-blue-600" /> {t("settings.localization.interfaceLanguage", { namespace: "settings", fallback: "لغة الواجهة" })}
+            <Languages className="w-4 h-4 text-blue-600" /> {t("localization.interfaceLanguage", { namespace: "settings",  })}
           </Label>
           <div className="flex gap-3">
             {[
-              { id: "ar", label: t("settings.localization.languages.ar", { namespace: "settings", fallback: "العربية" }) },
-              { id: "en", label: t("settings.localization.languages.en", { namespace: "settings", fallback: "English" }) },
+              { id: "ar", label: t("localization.languages.ar", { namespace: "settings",  }) },
+              { id: "en", label: t("localization.languages.en", { namespace: "settings",  }) },
             ].map((option) => (
               <button
                 key={option.id}
@@ -99,10 +99,10 @@ export function LocalizationSettings({ settings, onChange }: LocalizationSetting
 
         <div className="space-y-3">
           <Label className="font-black text-slate-700 flex items-center gap-2">
-            <Hash className="w-4 h-4 text-emerald-600" /> {t("settings.localization.numeralSystem", { namespace: "settings", fallback: "نظام الأرقام" })}
+            <Hash className="w-4 h-4 text-emerald-600" /> {t("localization.numeralSystem", { namespace: "settings",  })}
           </Label>
           <p className="text-xs text-slate-400 font-medium">
-            {t("settings.localization.numeralHint", { namespace: "settings", fallback: "يُطبّق على جميع الأرقام في الجداول والتقارير والبطاقات." })}
+            {t("localization.numeralHint", { namespace: "settings",  })}
           </p>
         </div>
 
@@ -139,7 +139,7 @@ export function LocalizationSettings({ settings, onChange }: LocalizationSetting
                 "text-xs font-medium",
                 current === sys.value ? "text-blue-500" : "text-slate-400"
               )}>
-                {t("settings.localization.example", { namespace: "settings", fallback: "مثال: " })}{formatNumberWithSystem(1234.56)}
+                {t("localization.example", { namespace: "settings",  })}{formatNumberWithSystem(1234.56)}
               </div>
             </button>
           ))}
@@ -148,7 +148,7 @@ export function LocalizationSettings({ settings, onChange }: LocalizationSetting
         <div className="flex justify-end mt-6 pt-6 border-t border-slate-100">
           <Button onClick={handleSave} className="gap-2 h-11 px-6">
             <Save className="w-4 h-4" />
-            {t("settings.saveEdits", { namespace: "settings", fallback: "حفظ التعديلات" })}
+            {t("saveEdits", { namespace: "settings",  })}
           </Button>
         </div>
       </div>

@@ -78,7 +78,7 @@ export function MovementTypeFilter({ value, onChange, excludeKeys }: MovementTyp
           )}
         >
           <Filter className="w-3.5 h-3.5 shrink-0" />
-          <span>{t("movements.filterType", { namespace: "inventory", fallback: "النوع" })}</span>
+          <span>{t("movementTypes.filter.label", { namespace: "inventory",  })}</span>
           {!noneSelected && (
             <Badge variant="secondary" className="h-4 px-1 text-[10px] font-bold">
               {value.length}
@@ -93,7 +93,7 @@ export function MovementTypeFilter({ value, onChange, excludeKeys }: MovementTyp
             className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-xs font-medium text-slate-600 hover:bg-slate-100 transition-colors"
           >
             <Checkbox checked={allSelected} />
-            <span>{allSelected ? t("movements.deselectAll", { namespace: "inventory", fallback: "إلغاء الكل" }) : t("movements.selectAll", { namespace: "inventory", fallback: "تحديد الكل" })}</span>
+            <span>{allSelected ? t("movementTypes.filter.clearAll", { namespace: "inventory",  }) : t("movementTypes.filter.selectAll", { namespace: "inventory",  })}</span>
           </button>
           <div className="h-px bg-slate-100 my-1" />
           {visibleKeys.map(key => {
@@ -127,7 +127,7 @@ export function MovementTypeFilter({ value, onChange, excludeKeys }: MovementTyp
                 className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-xs font-medium text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
               >
                 <X className="w-3 h-3" />
-                <span>{t("movements.clearFilter", { namespace: "inventory", fallback: "إزالة الفلتر" })}</span>
+                <span>{t("movementTypes.filter.clear", { namespace: "inventory",  })}</span>
               </button>
             </>
           )}

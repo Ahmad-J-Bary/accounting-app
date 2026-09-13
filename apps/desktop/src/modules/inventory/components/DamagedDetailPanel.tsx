@@ -37,17 +37,17 @@ export function DamagedDetailPanel({
 
   const actionItems: SidebarAction[] = [
     {
-      label: t("labels.edit", { namespace: "inventory", fallback: "تعديل" }),
+      label: t("labels.edit", { namespace: "inventory",  }),
       icon: <Pencil className="w-4 h-4" />,
       variant: "warning",
       onClick: () => onEdit(item),
     },
     {
-      label: t("labels.delete", { namespace: "inventory", fallback: "حذف" }),
+      label: t("labels.delete", { namespace: "inventory",  }),
       icon: <Trash2 className="w-4 h-4" />,
       variant: "danger",
       onClick: () => {
-        if (confirm(t("damaged.deleteConfirm", { namespace: "inventory", fallback: "هل أنت متأكد من حذف سجل التالف هذا؟ سيتم حذف حركة المخزون المرتبطة به." }))) {
+        if (confirm(t("damaged.deleteConfirm", { namespace: "inventory",  }))) {
           onDelete(item.id);
         }
       },
@@ -56,21 +56,21 @@ export function DamagedDetailPanel({
 
   return (
     <SidebarShell isOpen={true} onClose={onClose}>
-      <SidebarHeader title={t("damaged.detailTitle", { namespace: "inventory", fallback: "تفاصيل التالف" })} onClose={onClose} />
+      <SidebarHeader title={t("damaged.detailTitle", { namespace: "inventory",  })} onClose={onClose} />
       <SidebarActionBar actions={actionItems} />
       <SidebarBody>
         <div className="space-y-4 text-right">
           <SidebarDetailGrid
             columns={2}
             fields={[
-              { label: t("labels.material", { namespace: "inventory", fallback: "المادة" }), value: item.material_name || item.material_id },
-              { label: t("damaged.registerDate", { namespace: "inventory", fallback: "تاريخ التسجيل" }), value: formatDateTime(item.damage_date) },
+              { label: t("labels.material", { namespace: "inventory",  }), value: item.material_name || item.material_id },
+              { label: t("damaged.registerDate", { namespace: "inventory",  }), value: formatDateTime(item.damage_date) },
             ]}
           />
           <div className="p-4 border border-rose-100 rounded-2xl bg-rose-50/40">
             <div className="p-3 bg-white rounded-xl border border-rose-100">
               <div className="text-[10px] text-slate-400 font-bold uppercase mb-1">
-                {t("damaged.loss", { namespace: "inventory", fallback: "الخسارة" })}
+                {t("damaged.loss", { namespace: "inventory",  })}
               </div>
               <div className="text-base font-black text-rose-600 tabular-nums">
                 {lossBase > 0
@@ -79,19 +79,19 @@ export function DamagedDetailPanel({
               </div>
             </div>
             <div className="mt-3 text-[11px] text-rose-400 font-bold">
-              {t("damaged.quantityLabel", { namespace: "inventory", fallback: "الكمية التالفة" })}: {toLocalString(Math.round(parseFloat(item.quantity || "0")))}
+              {t("damaged.quantityLabel", { namespace: "inventory",  })}: {toLocalString(Math.round(parseFloat(item.quantity || "0")))}
             </div>
           </div>
           <SidebarDetailGrid
             fields={[
-              { label: t("damaged.reason", { namespace: "inventory", fallback: "سبب التلف" }), value: item.reason || "—" },
+              { label: t("damaged.reason", { namespace: "inventory",  }), value: item.reason || "—" },
             ]}
           />
           <SidebarDetailGrid
-            title={t("transfers.extraInfo", { namespace: "inventory", fallback: "معلومات إضافية" })}
+            title={t("damaged.extraInfo", { namespace: "inventory",  })}
             fields={[
-              { label: t("labels.reference", { namespace: "inventory", fallback: "المرجع" }), value: item.reference ? formatNumber(parseInt(item.reference) || 0) : "—" },
-              ...(item.notes ? [{ label: t("labels.notes", { namespace: "inventory", fallback: "ملاحظات" }), value: item.notes }] : []),
+              { label: t("labels.reference", { namespace: "inventory",  }), value: item.reference ? formatNumber(parseInt(item.reference) || 0) : "—" },
+              ...(item.notes ? [{ label: t("labels.notes", { namespace: "inventory",  }), value: item.notes }] : []),
             ]}
           />
         </div>

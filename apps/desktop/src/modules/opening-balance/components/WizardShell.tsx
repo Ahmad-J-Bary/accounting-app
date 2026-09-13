@@ -137,10 +137,10 @@ export function WizardShell({
           disabled={!canPrev || stepIndex === 0}
           className="border-slate-200 text-slate-700 font-bold"
         >
-               <ChevronRight className="w-4 h-4 ms-1.5" /> {t("openingBalance.prevButton", { namespace: "accounting", fallback: "السابق" })}
+               <ChevronRight className="w-4 h-4 ms-1.5" /> {t("openingBalance.prevButton", { namespace: "accounting",  })}
         </Button>
         <span className="text-xs font-semibold text-slate-500 tabular-nums">
-          {t("openingBalance.progressStep", { namespace: "accounting", vars: { current: currentVisualPos + 1, total: steps.length }, fallback: `الخطوة ${currentVisualPos + 1} من ${steps.length}` })}
+          {t("openingBalance.progressStep", { namespace: "accounting", vars: { current: currentVisualPos + 1, total: steps.length },  })}
         </span>
         {!canNext && canNextHint && (
           <span className="basis-full text-2xs font-semibold text-amber-600">
@@ -154,7 +154,7 @@ export function WizardShell({
           title={!canNext ? canNextHint : undefined}
           className="bg-blue-600 hover:bg-blue-700 text-white font-bold"
         >
-          {isNexting ? t("openingBalance.executingShort", { namespace: "accounting", fallback: "جارٍ التنفيذ..." }) : (nextLabel || (isFinal ? t("openingBalance.finishButton", { namespace: "accounting", fallback: "إنهاء" }) : t("openingBalance.nextButton", { namespace: "accounting", fallback: "التالي" })))}
+          {isNexting ? t("openingBalance.executingShort", { namespace: "accounting",  }) : (nextLabel || (isFinal ? t("openingBalance.finishButton", { namespace: "accounting",  }) : t("openingBalance.nextButton", { namespace: "accounting",  })))}
           {!isFinal && <ChevronLeft className="w-4 h-4 me-1.5" />}
         </Button>
       </div>

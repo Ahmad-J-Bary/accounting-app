@@ -69,7 +69,7 @@ export function ReportFilterBar({
     if (fallbackBase && !options.find((o) => o.code === fallbackBase)) {
       options.unshift({
         code: fallbackBase,
-        label: `${t('labels.baseCurrencyLabel', { fallback: 'العملة الأساسية' })} (${fallbackBase})`,
+        label: `${t('labels.baseCurrencyLabel', )} (${fallbackBase})`,
       });
     }
 
@@ -92,7 +92,7 @@ export function ReportFilterBar({
       {showSelect && (
         <Select value={effectiveValue} onValueChange={onCurrencyChange}>
           <SelectTrigger className="h-9 w-auto min-w-[130px] rounded-lg border-slate-200 bg-white text-xs">
-            <SelectValue placeholder={t('labels.chooseCurrency', { fallback: 'اختر العملة' })} />
+            <SelectValue placeholder={t('labels.chooseCurrency', )} />
           </SelectTrigger>
           <SelectContent>
             {currencyOptions.map((opt) => (
@@ -121,18 +121,18 @@ export function ReportFilterBar({
           onClick={() => void onRefresh()}
         >
           <RefreshCw className="h-3.5 w-3.5" />
-          {t('actions.refresh', { fallback: 'تحديث' })}
+          {t('actions.refresh', )}
         </Button>
       )}
       {refreshing && (
         <span className="flex h-9 items-center gap-1.5 rounded-lg bg-white px-2.5 text-xs text-slate-500">
           <Loader2 className="h-3.5 w-3.5 animate-spin" />
-          {t('states.refreshing', { fallback: 'جارٍ التحديث…' })}
+          {t('states.refreshing', )}
         </span>
       )}
       {lastLoadedAt && !refreshing && (
         <span className="text-xs text-slate-400">
-          {t('labels.lastUpdate', { fallback: 'آخر تحديث:' })}{" "}
+          {t('labels.lastUpdate', )}{" "}
           {lastLoadedAt.toLocaleTimeString("ar-EG", {
             hour: "2-digit",
             minute: "2-digit",

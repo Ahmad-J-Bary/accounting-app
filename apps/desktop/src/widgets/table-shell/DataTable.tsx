@@ -40,7 +40,7 @@ export function DataTable<T>({
   selectedId,
 }: DataTableProps<T>) {
   const { t } = useLocalization();
-  const resolvedEmptyMessage = emptyMessage ?? t('states.noDataAvailable', { fallback: 'لا توجد بيانات متاحة' });
+  const resolvedEmptyMessage = emptyMessage ?? t('states.noDataAvailable', );
   const getAlignment = (colIdx: number, explicitAlign?: "right" | "left" | "center") => {
     if (explicitAlign) return explicitAlign;
     if (colIdx === 0) return "right";

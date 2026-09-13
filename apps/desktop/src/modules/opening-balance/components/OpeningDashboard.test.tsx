@@ -56,11 +56,11 @@ describe("OpeningDashboard", () => {
   it("renders the accounting-equation totals and the 8 sections", () => {
     const snapshot = deriveOpeningSnapshot({ status: "Posted", position: samplePosition() });
     render(<OpeningDashboard snapshot={snapshot} />);
-    expect(screen.getByText("إجمالي الأصول")).toBeInTheDocument();
-    expect(screen.getByText("إجمالي الخصوم")).toBeInTheDocument();
-    expect(screen.getByText("إجمالي حقوق الملكية")).toBeInTheDocument();
-    expect(screen.getByText("متوازن ✓")).toBeInTheDocument();
-    expect(screen.getByText("جاهز للترحيل والقفل ✓")).toBeInTheDocument();
+    expect(screen.getByText("openingBalance.totalAssets")).toBeInTheDocument();
+    expect(screen.getByText("openingBalance.totalLiabilities")).toBeInTheDocument();
+    expect(screen.getByText("openingBalance.totalEquity")).toBeInTheDocument();
+    expect(screen.getByText("openingBalance.balanced")).toBeInTheDocument();
+    expect(screen.getByText("openingBalance.readyToPost")).toBeInTheDocument();
     for (const label of ["النقد والبنوك", "الذمم المدينة (العملاء)", "المخزون", "الأصول الثابتة", "الذمم الدائنة (الموردون)", "الالتزامات الأخرى", "رؤوس أموال الشركاء", "حقوق الملكية الأخرى"]) {
       expect(screen.getByText(label)).toBeInTheDocument();
     }
@@ -74,15 +74,15 @@ describe("OpeningDashboard", () => {
     ];
     const snapshot = deriveOpeningSnapshot({ status: "Draft", position: pos });
     const { container } = render(<OpeningDashboard snapshot={snapshot} />);
-    expect(screen.getByText("غير متوازن")).toBeInTheDocument();
-    expect(screen.queryByText("جاهز للترحيل والقفل ✓")).not.toBeInTheDocument();
+    expect(screen.getByText("openingBalance.unbalanced")).toBeInTheDocument();
+    expect(screen.queryByText("openingBalance.readyToPost")).not.toBeInTheDocument();
     expect(container.textContent).toContain("الذمم المدينة (العملاء)");
   });
 
   it("renders the empty placeholder when no position data exists yet", () => {
     const snapshot = deriveOpeningSnapshot({ status: null, position: null });
     render(<OpeningDashboard snapshot={snapshot} />);
-    expect(screen.getByText("لا توجد أرصدة مفتوحة بعد")).toBeInTheDocument();
+    expect(screen.getByText("openingBalance.noOpenBalances")).toBeInTheDocument();
   });
 
   it("fires onOpenSection when a section card is clicked", () => {

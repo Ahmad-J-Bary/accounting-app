@@ -53,7 +53,7 @@ interface HeaderState {
 const defaultHeader = (t: LocalizationContextValue["t"]): HeaderState => ({
   docNumber: "...",
   issued_at: toLocalDateStr(new Date().toISOString()),
-  notes: t("openingBalance.defaultNotes", { namespace: "accounting", fallback: "مواد أول المدة- رصيد افتتاحي للمواد" }),
+  notes: t("openingBalance.defaultNotes", { namespace: "accounting",  }),
   currency_code: "",
   exchange_rate: "1",
   discount_amount: "0",
@@ -116,7 +116,7 @@ export default function OpeningBalance() {
       setWarehouses(whData);
       setAppSettings(settingsData);
     } catch (e: unknown) {
-      toast.error(t("openingBalance.loadError", { namespace: "accounting", vars: { error: String(e) }, fallback: "فشل تحميل البيانات: " + e }));
+      toast.error(t("openingBalance.loadError", { namespace: "accounting", vars: { error: String(e) } }));
     } finally {
       setLoading(false);
     }
@@ -173,7 +173,7 @@ export default function OpeningBalance() {
         return line;
       }));
     }).catch((e) => {
-      toast.error(t("openingBalance.loadOpeningError", { namespace: "accounting", vars: { error: String(e) }, fallback: "فشل تحميل الرصيد الافتتاحي: " + e }));
+      toast.error(t("openingBalance.loadOpeningError", { namespace: "accounting", vars: { error: String(e) } }));
     }).finally(() => {
       setLoading(false);
     });
@@ -193,12 +193,12 @@ export default function OpeningBalance() {
     setSavingMaterial(true);
     try {
       await materialService.create(data as CreateMaterialRequest);
-      toast.success(t("openingBalance.materialAdded", { namespace: "accounting", fallback: "تم إضافة المادة بنجاح" }));
+      toast.success(t("openingBalance.materialAdded", { namespace: "accounting",  }));
       setMaterialFormOpen(false);
       invalidateAccountingMutationQueries(queryClient);
       loadData();
     } catch (e) {
-      toast.error(t("openingBalance.materialAddFailed", { namespace: "accounting", vars: { error: String(e) }, fallback: "فشل إضافة المادة: " + e }));
+      toast.error(t("openingBalance.materialAddFailed", { namespace: "accounting", vars: { error: String(e) } }));
     } finally {
       setSavingMaterial(false);
     }
@@ -206,11 +206,11 @@ export default function OpeningBalance() {
 
   const handleSave = async (andPost = true) => {
     if (!header.currency_code) {
-      toast.error(t("openingBalance.currencyRequired", { namespace: "accounting", fallback: "الرجاء اختيار العملات أولاً من إعدادات العملات" }));
+      toast.error(t("openingBalance.currencyRequired", { namespace: "accounting",  }));
       return;
     }
     if (lines.length === 0) {
-      toast.error(t("openingBalance.addAtLeastOne", { namespace: "accounting", fallback: "أضف صنفاً واحداً على الأقل" }));
+      toast.error(t("openingBalance.addAtLeastOne", { namespace: "accounting",  }));
       return;
     }
 
@@ -240,9 +240,9 @@ export default function OpeningBalance() {
 
       if (andPost) {
         await invoiceService.postInvoice(result.id);
-        toast.success(t("openingBalance.postedSuccess", { namespace: "accounting", fallback: "تم ترحيل الرصيد الافتتاحي للمخزون بنجاح" }));
+        toast.success(t("openingBalance.postedSuccess", { namespace: "accounting",  }));
       } else {
-        toast.success(t("openingBalance.draftSaved", { namespace: "accounting", fallback: "تم حفظ المسودة" }));
+        toast.success(t("openingBalance.draftSaved", { namespace: "accounting",  }));
       }
 
       invalidateAccountingMutationQueries(queryClient);
@@ -250,12 +250,12 @@ export default function OpeningBalance() {
       closeTab(activeTabId);
       openTab({
         id: "purchase-invoices",
-        title: t("openingBalance.purchaseInvoicesTab", { namespace: "accounting", fallback: "فواتير المشتريات" }),
+        title: t("openingBalance.purchaseInvoicesTab", { namespace: "accounting",  }),
         path: "/purchase-invoices",
         closable: true,
       });
     } catch (e: unknown) {
-      toast.error(t("openingBalance.saveFailed", { namespace: "accounting", vars: { error: String(e) }, fallback: "فشل الحفظ: " + e }));
+      toast.error(t("openingBalance.saveFailed", { namespace: "accounting", vars: { error: String(e) } }));
     } finally {
       setSaving(false);
     }
@@ -266,11 +266,11 @@ export default function OpeningBalance() {
     setSaving(true);
     try {
       await invoiceService.reopenInvoice(header.id);
-      toast.success(t("openingBalance.reopenSuccess", { namespace: "accounting", fallback: "تم إلغاء الترحيل بنجاح" }));
+      toast.success(t("openingBalance.reopenSuccess", { namespace: "accounting",  }));
       setHeader(s => ({ ...s, status: "Draft" }));
       invalidateAccountingMutationQueries(queryClient);
     } catch (e: unknown) {
-      toast.error(t("openingBalance.reopenFailed", { namespace: "accounting", vars: { error: String(e) }, fallback: "فشل إلغاء الترحيل: " + e }));
+      toast.error(t("openingBalance.reopenFailed", { namespace: "accounting", vars: { error: String(e) } }));
     } finally {
       setSaving(false);
     }
@@ -280,7 +280,7 @@ export default function OpeningBalance() {
     return [
       {
         key: "expiry_date",
-        header: t("openingBalance.expiryDate", { namespace: "accounting", fallback: "تاريخ الانتهاء" }),
+        header: t("openingBalance.expiryDate", { namespace: "accounting",  }),
         width: "w-[110px]",
         align: "center",
         type: "date",
@@ -288,7 +288,7 @@ export default function OpeningBalance() {
       },
       {
         key: "notes",
-        header: t("openingBalance.notes", { namespace: "accounting", fallback: "ملاحظات" }),
+        header: t("openingBalance.notes", { namespace: "accounting",  }),
         width: "flex-[1]",
         align: "right",
         type: "text",
@@ -329,14 +329,14 @@ export default function OpeningBalance() {
     setHeaderState: setHeader,
     currencies,
     invoiceType: "OpeningBalance",
-        priceLabel: t("openingBalance.priceLabel", { namespace: "accounting", fallback: "التكلفة" }),
+        priceLabel: t("openingBalance.priceLabel", { namespace: "accounting",  }),
     extraColumns: extraCols,
     materials,
   });
 
   const handleExport = useCallback(async () => {
     if (enrichedLines.length === 0) {
-      toast.error(t("openingBalance.noLinesToExport", { namespace: "accounting", fallback: "لا توجد بنود للتصدير" }));
+      toast.error(t("openingBalance.noLinesToExport", { namespace: "accounting",  }));
       return;
     }
 
@@ -375,14 +375,14 @@ export default function OpeningBalance() {
     addCurrencySummary(summary, "line_total", currencies);
 
     await executeExport(exportData, {
-      sheetName: t("openingBalance.sheetName", { namespace: "accounting", fallback: "بضاعة أول المدة" }),
-      filename: t("openingBalance.filename", { namespace: "accounting", vars: { number: header.docNumber || "جديد" }, fallback: `بضاعة_أول_المدة_${header.docNumber || "جديد"}` }),
+      sheetName: t("openingBalance.sheetName", { namespace: "accounting",  }),
+      filename: t("openingBalance.filename", { namespace: "accounting", vars: { number: header.docNumber || "جديد" },  }),
       data: enrichedForExport,
       columns,
       summary,
-      summaryLabel: t("openingBalance.summaryTotal", { namespace: "accounting", fallback: "المجموع" }),
+      summaryLabel: t("openingBalance.summaryTotal", { namespace: "accounting",  }),
       additionalSummary: [
-        { label: t("openingBalance.summaryGrandTotal", { namespace: "accounting", fallback: "المجموع الكلي (الصافي)" }), value: net }
+        { label: t("openingBalance.summaryGrandTotal", { namespace: "accounting",  }), value: net }
       ],
       currencyRatesSheet: ratesSheet,
     });
@@ -404,7 +404,7 @@ export default function OpeningBalance() {
   return (
     <ErrorBoundary>
     <FinancialDocumentTemplate
-      title={t("openingBalance.title", { namespace: "accounting", fallback: "بضاعة أول المدة" })}
+      title={t("openingBalance.title", { namespace: "accounting",  })}
       statusBadge={<DocumentStatusBadge status={header.status} />}
       toolbar={
         <DocumentToolbar
@@ -416,7 +416,7 @@ export default function OpeningBalance() {
             closeTab(activeTabId);
             openTab({
               id: `/opening-balance/${header.id}`,
-              title: t("openingBalance.editTabTitle", { namespace: "accounting", fallback: "تعديل بضاعة أول المدة" }),
+              title: t("openingBalance.editTabTitle", { namespace: "accounting",  }),
               path: `/opening-balance/${header.id}`,
               closable: true,
             });
@@ -425,16 +425,16 @@ export default function OpeningBalance() {
           onSaveAndPost={() => handleSave(true)}
           onReopen={handleReopen}
           onExport={handleExport}
-          saveAndPostLabel={t("openingBalance.saveAndPostLabel", { namespace: "accounting", fallback: "حفظ وترحيل الرصيد" })}
+          saveAndPostLabel={t("openingBalance.saveAndPostLabel", { namespace: "accounting",  })}
         />
       }
       headerFields={
         <>
-          <HeaderField label={t("openingBalance.entryNumber", { namespace: "accounting", fallback: "رقم القيد" })} value={formatNumber(parseInt(header.docNumber) || 0)} readOnly inputClassName="font-mono font-bold" />
+          <HeaderField label={t("openingBalance.entryNumber", { namespace: "accounting",  })} value={formatNumber(parseInt(header.docNumber) || 0)} readOnly inputClassName="font-mono font-bold" />
 
-          <HeaderField label={t("openingBalance.date", { namespace: "accounting", fallback: "التاريخ" })} type="date" value={header.issued_at} onChange={v => setHeader(s => ({ ...s, issued_at: v }))} disabled={isReadOnly} inputClassName="font-bold" />
+          <HeaderField label={t("openingBalance.date", { namespace: "accounting",  })} type="date" value={header.issued_at} onChange={v => setHeader(s => ({ ...s, issued_at: v }))} disabled={isReadOnly} inputClassName="font-bold" />
 
-          <HeaderField label={t("openingBalance.notes", { namespace: "accounting", fallback: "ملاحظات" })} value={header.notes} onChange={v => setHeader(s => ({ ...s, notes: v }))} disabled={isReadOnly} placeholder={t("openingBalance.notesPlaceholder", { namespace: "accounting", fallback: "أدخل أي ملاحظات هنا..." })} className="lg:col-span-4" />
+          <HeaderField label={t("openingBalance.notes", { namespace: "accounting",  })} value={header.notes} onChange={v => setHeader(s => ({ ...s, notes: v }))} disabled={isReadOnly} placeholder={t("openingBalance.notesPlaceholder", { namespace: "accounting",  })} className="lg:col-span-4" />
         </>
       }
       lineItemsGrid={

@@ -86,20 +86,20 @@ export function CapitalSourceDialog({
 
   const sourceLabels: Record<CapitalSource, { label: string; hint: string }> = {
     Cash: {
-      label: t("capitalSource.options.cashLabel", { namespace: "partners", fallback: "نقداً" }),
-      hint: t("capitalSource.options.cashHint", { namespace: "partners", fallback: "إيداع نقدي في الصندوق (خزينة)" }),
+      label: t("capitalSource.options.cashLabel", { namespace: "partners",  }),
+      hint: t("capitalSource.options.cashHint", { namespace: "partners",  }),
     },
     Bank: {
-      label: t("capitalSource.options.bankLabel", { namespace: "partners", fallback: "بنكي" }),
-      hint: t("capitalSource.options.bankHint", { namespace: "partners", fallback: "تحويل إلى حساب بنكي" }),
+      label: t("capitalSource.options.bankLabel", { namespace: "partners",  }),
+      hint: t("capitalSource.options.bankHint", { namespace: "partners",  }),
     },
     InKind: {
-      label: t("capitalSource.options.inKindLabel", { namespace: "partners", fallback: "أصل عيني" }),
-      hint: t("capitalSource.options.inKindHint", { namespace: "partners", fallback: "تقديم أصل (سيارة/معدات/مخزون)" }),
+      label: t("capitalSource.options.inKindLabel", { namespace: "partners",  }),
+      hint: t("capitalSource.options.inKindHint", { namespace: "partners",  }),
     },
     Owed: {
-      label: t("capitalSource.options.owedLabel", { namespace: "partners", fallback: "ذمة برأس المال" }),
-      hint: t("capitalSource.options.owedHint", { namespace: "partners", fallback: "رأس المال معلق على الشريك — يُسدد لاحقاً (ذمة مدين للشركة)" }),
+      label: t("capitalSource.options.owedLabel", { namespace: "partners",  }),
+      hint: t("capitalSource.options.owedHint", { namespace: "partners",  }),
     },
   };
 
@@ -107,9 +107,9 @@ export function CapitalSourceDialog({
     <Dialog open={open} onOpenChange={(v) => !v && !submitting && onClose()}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>{t("capitalSource.title", { namespace: "partners", fallback: "كيف تم تقديم رأس المال؟" })}</DialogTitle>
+          <DialogTitle>{t("capitalSource.title", { namespace: "partners",  })}</DialogTitle>
           <DialogDescription>
-            {t("capitalSource.description", { namespace: "partners", vars: { amount: amount || '0' }, fallback: "تسجيل مساهمة رأس مال الشريك (المبلغ: {{amount}}) — اختر مصدر التمويل وحسابه." })}
+            {t("capitalSource.description", { namespace: "partners", vars: { amount: amount || '0' },  })}
           </DialogDescription>
         </DialogHeader>
 
@@ -137,13 +137,13 @@ export function CapitalSourceDialog({
           </div>
 
           <div className="space-y-1.5">
-            <Label className="text-xs font-bold text-slate-600">{t("capitalSource.fundingAccount", { namespace: "partners", fallback: "حساب التمويل (الجانب المدين)" })}</Label>
+            <Label className="text-xs font-bold text-slate-600">{t("capitalSource.fundingAccount", { namespace: "partners",  })}</Label>
             {candidates.length === 0 ? (
-              <p className="text-[11px] text-amber-600">{t("capitalSource.noAccounts", { namespace: "partners", fallback: "لا توجد حسابات مطابقة لهذا المصدر — اختر مصدراً آخر." })}</p>
+              <p className="text-[11px] text-amber-600">{t("capitalSource.noAccounts", { namespace: "partners",  })}</p>
             ) : (
               <Select value={fundingAccountId} onValueChange={setFundingAccountId}>
                 <SelectTrigger className="h-9 bg-white border-slate-200 text-xs">
-                  <SelectValue placeholder={t("capitalSource.selectPlaceholder", { namespace: "partners", fallback: "اختر حساب التمويل..." })} />
+                  <SelectValue placeholder={t("capitalSource.selectPlaceholder", { namespace: "partners",  })} />
                 </SelectTrigger>
                 <SelectContent>
                   {candidates.map((a) => (
@@ -158,13 +158,13 @@ export function CapitalSourceDialog({
         </div>
 
         <DialogFooter className="gap-2">
-          <Button variant="outline" onClick={onClose} disabled={submitting}>{t("actions.cancel", { namespace: "partners", fallback: "إلغاء" })}</Button>
+          <Button variant="outline" onClick={onClose} disabled={submitting}>{t("actions.cancel", { namespace: "partners",  })}</Button>
           <Button
             onClick={() => onConfirm(source, fundingAccountId)}
             disabled={!canSubmit || submitting}
             className="bg-blue-600 hover:bg-blue-700 text-white font-bold"
           >
-            {submitting ? t("capitalSource.submitting", { namespace: "partners", fallback: "جارٍ التسجيل..." }) : t("capitalSource.confirm", { namespace: "partners", fallback: "تسجيل المساهمة" })}
+            {submitting ? t("capitalSource.submitting", { namespace: "partners",  }) : t("capitalSource.confirm", { namespace: "partners",  })}
           </Button>
         </DialogFooter>
       </DialogContent>

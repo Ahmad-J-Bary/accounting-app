@@ -30,10 +30,10 @@ function SummaryCards({
   const { t } = useLocalization();
   return (
     <div className="grid grid-cols-1 gap-2 px-4 pt-4 pb-2 md:grid-cols-2 xl:grid-cols-4">
-      <StatCard label={t("incomeStatement.statTotalRevenue", { namespace: "reports", fallback: "إجمالي الإيرادات" })} value={formatValue(computed.totalRevenue)} icon={TrendingUp} />
-      <StatCard label={t("incomeStatement.statTotalCosts", { namespace: "reports", fallback: "إجمالي التكاليف" })} value={formatValue(computed.totalLiabilities)} icon={TrendingDown} />
-      <StatCard label={t("incomeStatement.statTotalProfit", { namespace: "reports", fallback: "إجمالي الأرباح" })} value={formatValue(computed.grossProfit)} icon={Coins} />
-      <StatCard label={t("incomeStatement.statNetProfit", { namespace: "reports", fallback: "صافي الأرباح" })} value={formatValue(computed.netProfit)} icon={BarChart3} variant={computed.netProfit >= 0 ? "positive" : "negative"} />
+      <StatCard label={t("incomeStatement.statTotalRevenue", { namespace: "reports",  })} value={formatValue(computed.totalRevenue)} icon={TrendingUp} />
+      <StatCard label={t("incomeStatement.statTotalCosts", { namespace: "reports",  })} value={formatValue(computed.totalLiabilities)} icon={TrendingDown} />
+      <StatCard label={t("incomeStatement.statTotalProfit", { namespace: "reports",  })} value={formatValue(computed.grossProfit)} icon={Coins} />
+      <StatCard label={t("incomeStatement.statNetProfit", { namespace: "reports",  })} value={formatValue(computed.netProfit)} icon={BarChart3} variant={computed.netProfit >= 0 ? "positive" : "negative"} />
     </div>
   );
 }
@@ -100,7 +100,7 @@ export function IncomeStatementView(props: IncomeStatementViewProps) {
   const { t } = useLocalization();
   return (
     <div className="flex flex-col h-full">
-      <ReportMeta title={t("incomeStatement.title", { namespace: "reports", fallback: "قائمة الدخل" })} description={t("incomeStatement.metaDescription", { namespace: "reports", fallback: "قائمة تبين إجمالي الأرباح وصافي الربح والنشاط التشغيلي، وتظهر فيها تكلفة المبيعات والمصروفات التشغيلية" })} />
+      <ReportMeta title={t("incomeStatement.title", { namespace: "reports",  })} description={t("incomeStatement.metaDescription", { namespace: "reports",  })} />
       <SummaryCards computed={computed} formatValue={formatValue} />
       <div className="flex-1 min-h-0 overflow-y-auto space-y-3 px-4 pb-4 custom-scrollbar">
         {computed.sections.map((section) => (

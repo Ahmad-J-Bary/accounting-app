@@ -110,8 +110,7 @@ export function ProfitDistributionWorkflow({
         t("profitDistribution.toast.distributed", {
           namespace: "accounting",
           vars: { number: res.entry_number },
-          fallback: `تم توزيع الأرباح على الشركاء — ${res.entry_number}`,
-        })
+          })
       );
       await invalidateKeys(qc, PROFIT_DISTRIBUTION_KEYS);
       await refetchDistributable();
@@ -122,7 +121,6 @@ export function ProfitDistributionWorkflow({
         t("profitDistribution.toast.failed", {
           namespace: "accounting",
           vars: { error: String(e) },
-          fallback: "فشل توزيع الأرباح: " + e,
         })
       );
     },
@@ -138,7 +136,7 @@ export function ProfitDistributionWorkflow({
             onClick={onClose}
             className="h-9 px-4 rounded-lg text-slate-600 border-slate-200 text-xs font-bold"
           >
-            {t("profitDistribution.cancel", { namespace: "accounting", fallback: "إلغاء" })}
+            {t("profitDistribution.cancel", { namespace: "accounting",  })}
           </Button>
           <Button
             type="button"
@@ -146,7 +144,7 @@ export function ProfitDistributionWorkflow({
             disabled={overCap || isZero || amount === ""}
             className="h-9 px-4 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md shadow-blue-100"
           >
-            {t("profitDistribution.review", { namespace: "accounting", fallback: "مراجعة" })}
+            {t("profitDistribution.review", { namespace: "accounting",  })}
           </Button>
         </div>
       );
@@ -162,7 +160,7 @@ export function ProfitDistributionWorkflow({
             disabled={confirm.isPending}
             className="h-9 px-4 rounded-lg text-slate-600 border-slate-200 text-xs font-bold"
           >
-            {t("profitDistribution.back", { namespace: "accounting", fallback: "رجوع" })}
+            {t("profitDistribution.back", { namespace: "accounting",  })}
           </Button>
           <Button
             type="button"
@@ -171,8 +169,8 @@ export function ProfitDistributionWorkflow({
             className="h-9 px-4 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md shadow-blue-100"
           >
             {confirm.isPending
-              ? t("profitDistribution.distributing", { namespace: "accounting", fallback: "جارٍ التوزيع..." })
-              : t("profitDistribution.confirm", { namespace: "accounting", fallback: "تأكيد التوزيع" })}
+              ? t("profitDistribution.distributing", { namespace: "accounting",  })
+              : t("profitDistribution.confirm", { namespace: "accounting",  })}
           </Button>
         </div>
       );
@@ -187,7 +185,7 @@ export function ProfitDistributionWorkflow({
             onClick={onClose}
             className="h-9 px-4 rounded-lg text-slate-600 border-slate-200 text-xs font-bold"
           >
-            {t("profitDistribution.close", { namespace: "accounting", fallback: "إغلاق" })}
+            {t("profitDistribution.close", { namespace: "accounting",  })}
           </Button>
         </div>
       );
@@ -201,17 +199,15 @@ export function ProfitDistributionWorkflow({
     if (step === 2)
       return t("profitDistribution.subtitle.step2", {
         namespace: "accounting",
-        fallback: "مراجعة ومعاينة التوزيع على الشركاء",
-      });
+        });
     return t("profitDistribution.subtitle.step3", {
       namespace: "accounting",
-      fallback: "تم التوزيع بنجاح",
-    });
+      });
   };
 
   return (
     <FormPanel
-      title={t("profitDistribution.title", { namespace: "accounting", fallback: "توزيع الأرباح" })}
+      title={t("profitDistribution.title", { namespace: "accounting",  })}
       subtitle={getSubtitle()}
       icon={<Coins className="w-5 h-5 text-blue-600" />}
       onClose={onClose}
@@ -223,7 +219,7 @@ export function ProfitDistributionWorkflow({
           <div className="flex flex-col items-center justify-center py-16 text-slate-400">
             <RefreshCw className="w-6 h-6 mb-3 animate-spin" />
             <p className="text-sm font-medium">
-              {t("profitDistribution.loading", { namespace: "accounting", fallback: "جارٍ تحميل بيانات الأرباح..." })}
+              {t("profitDistribution.loading", { namespace: "accounting",  })}
             </p>
           </div>
         )}
@@ -233,12 +229,12 @@ export function ProfitDistributionWorkflow({
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <AlertTriangle className="w-10 h-10 text-red-400 mb-3" />
             <p className="text-sm font-semibold text-red-600 mb-2">
-              {t("profitDistribution.loadError", { namespace: "accounting", fallback: "تعذر تحميل بيانات الأرباح." })}
+              {t("profitDistribution.loadError", { namespace: "accounting",  })}
             </p>
             <p className="text-xs text-slate-500 mb-4">{String(error)}</p>
             <Button size="sm" variant="outline" onClick={refetch} className="border-red-200 text-red-700 hover:bg-red-50">
               <RefreshCw className="w-3 h-3 me-1" />
-              {t("profitDistribution.retry", { namespace: "accounting", fallback: "إعادة المحاولة" })}
+              {t("profitDistribution.retry", { namespace: "accounting",  })}
             </Button>
           </div>
         )}
@@ -248,13 +244,12 @@ export function ProfitDistributionWorkflow({
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <Coins className="w-10 h-10 text-slate-300 mb-3" />
             <p className="text-sm font-semibold text-slate-500">
-              {t("profitDistribution.empty", { namespace: "accounting", fallback: "لا توجد أرباح قابلة للتوزيع حالياً." })}
+              {t("profitDistribution.empty", { namespace: "accounting",  })}
             </p>
             <p className="text-xs text-slate-400 mt-1 max-w-[240px] leading-relaxed">
               {t("profitDistribution.emptyHint", {
                 namespace: "accounting",
-                fallback: "تأكد من ترحيل الرصيد الافتتاحي أو إغلاق فترة مالية.",
-              })}
+                })}
             </p>
           </div>
         )}
@@ -264,37 +259,37 @@ export function ProfitDistributionWorkflow({
           <>
         {step === 1 && (
           <>
-            <SidebarSection title={t("profitDistribution.sectionAvailable", { namespace: "accounting", fallback: "بيانات الأرباح المتاحة" })} icon={<Coins className="w-3.5 h-3.5" />}>
+            <SidebarSection title={t("profitDistribution.sectionAvailable", { namespace: "accounting",  })} icon={<Coins className="w-3.5 h-3.5" />}>
               <div className="grid grid-cols-2 gap-3">
                 <div className="rounded-lg border border-slate-100 bg-slate-50/60 p-3 space-y-1">
-                  <p className="text-[11px] font-semibold text-slate-500">{t("profitDistribution.retained", { namespace: "accounting", fallback: "الأرباح المبقاة" })}</p>
+                  <p className="text-[11px] font-semibold text-slate-500">{t("profitDistribution.retained", { namespace: "accounting",  })}</p>
                   <p className="text-lg font-black tabular-nums text-slate-800">{fmtMoney(retained)}</p>
                 </div>
                 <div className="rounded-lg border border-emerald-200 bg-emerald-50/60 p-3 space-y-1">
-                  <p className="text-[11px] font-semibold text-emerald-600">{t("profitDistribution.available", { namespace: "accounting", fallback: "المتاح للتوزيع" })}</p>
+                  <p className="text-[11px] font-semibold text-emerald-600">{t("profitDistribution.available", { namespace: "accounting",  })}</p>
                   <p className="text-lg font-black tabular-nums text-emerald-700">{fmtMoney(available)}</p>
                 </div>
                 <div className="rounded-lg border border-slate-100 bg-slate-50/60 p-3 space-y-1">
-                  <p className="text-[11px] font-semibold text-slate-500">{t("profitDistribution.allocatedSoFar", { namespace: "accounting", fallback: "المُوزَّع سابقاً" })}</p>
+                  <p className="text-[11px] font-semibold text-slate-500">{t("profitDistribution.allocatedSoFar", { namespace: "accounting",  })}</p>
                   <p className="text-lg font-black tabular-nums text-slate-800">{fmtMoney(distributed)}</p>
                 </div>
                 <div className="rounded-lg border border-indigo-200 bg-indigo-50/60 p-3 space-y-1">
-                  <p className="text-[11px] font-semibold text-indigo-600">{t("profitDistribution.remaining", { namespace: "accounting", fallback: "المتبقي للتوزيع" })}</p>
+                  <p className="text-[11px] font-semibold text-indigo-600">{t("profitDistribution.remaining", { namespace: "accounting",  })}</p>
                   <p className="text-lg font-black tabular-nums text-indigo-700">{fmtMoney(available)}</p>
                 </div>
               </div>
               <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs">
                 <span className="font-bold text-slate-700">
-                  {t("profitDistribution.source", { namespace: "accounting", vars: { label: sourceLabel }, fallback: `المصدر: ${sourceLabel}` })}
+                  {t("profitDistribution.source", { namespace: "accounting", vars: { label: sourceLabel },  })}
                 </span>
               </div>
             </SidebarSection>
 
-            <SidebarSection title={t("profitDistribution.sectionAmount", { namespace: "accounting", fallback: "مبلغ التوزيع" })} icon={<Calculator className="w-3.5 h-3.5" />}>
+            <SidebarSection title={t("profitDistribution.sectionAmount", { namespace: "accounting",  })} icon={<Calculator className="w-3.5 h-3.5" />}>
               <div className="space-y-3">
                 <div className="space-y-1.5">
                   <FieldLabel htmlFor="distribution-amount">
-                    {t("profitDistribution.amountField", { namespace: "accounting", fallback: "المبلغ المطلوب توزيعه" })}
+                    {t("profitDistribution.amountField", { namespace: "accounting",  })}
                   </FieldLabel>
                   <div className="flex gap-2">
                     <Input
@@ -315,7 +310,7 @@ export function ProfitDistributionWorkflow({
                       disabled={available <= 0}
                       className="border-indigo-200 text-indigo-700 hover:bg-indigo-50 font-bold shrink-0 h-9"
                     >
-                      {t("profitDistribution.distributeAll", { namespace: "accounting", fallback: "توزيع كامل المتبقي" })}
+                      {t("profitDistribution.distributeAll", { namespace: "accounting",  })}
                     </Button>
                   </div>
                 </div>
@@ -326,8 +321,7 @@ export function ProfitDistributionWorkflow({
                       {t("profitDistribution.overCap", {
                         namespace: "accounting",
                         vars: { amount: fmtMoney(amountNum), excess: fmtMoney(amountNum - available) },
-                        fallback: `المبلغ المطلوب توزيعه (${fmtMoney(amountNum)}) يتجاوز الأرباح المتاحة للتوزيع بمقدار ${fmtMoney(amountNum - available)} — لا يُسمح بتوزيع أكثر من المتاح.`,
-                      })}
+                        })}
                     </AlertDescription>
                   </Alert>
                 )}
@@ -336,8 +330,7 @@ export function ProfitDistributionWorkflow({
                   <p className="text-xs text-slate-500 font-medium">
                     {t("profitDistribution.zeroAmount", {
                       namespace: "accounting",
-                      fallback: "مبلغ صفر لا يُنشئ قيداً ولا يسجَّل توزيعاً.",
-                    })}
+                      })}
                   </p>
                 )}
               </div>
@@ -349,7 +342,7 @@ export function ProfitDistributionWorkflow({
           <>
             <div className="rounded-xl border border-blue-100 bg-blue-50/50 p-4 flex flex-col items-center justify-center space-y-1 text-center">
               <span className="text-xs font-semibold text-blue-600">
-                {t("profitDistribution.previewAmount", { namespace: "accounting", fallback: "المبلغ المراد توزيعه" })}
+                {t("profitDistribution.previewAmount", { namespace: "accounting",  })}
               </span>
               <span className="text-2xl font-black text-blue-800 tabular-nums">{fmtMoney(amountNum)}</span>
             </div>
@@ -358,7 +351,7 @@ export function ProfitDistributionWorkflow({
               <div className="flex flex-col items-center justify-center py-16 text-slate-400">
                 <RefreshCw className="w-6 h-6 mb-3 animate-spin" />
                 <p className="text-sm font-medium">
-                  {t("profitDistribution.previewLoading", { namespace: "accounting", fallback: "جارٍ احتساب المعاينة..." })}
+                  {t("profitDistribution.previewLoading", { namespace: "accounting",  })}
                 </p>
               </div>
             )}
@@ -369,8 +362,7 @@ export function ProfitDistributionWorkflow({
                   {t("profitDistribution.previewFailed", {
                     namespace: "accounting",
                     vars: { error: String(preview.error) },
-                    fallback: `فشل احتساب المعاينة: ${String(preview.error)}`,
-                  })}
+                    })}
                 </AlertDescription>
               </Alert>
             )}
@@ -381,9 +373,9 @@ export function ProfitDistributionWorkflow({
                   <Table>
                     <TableHeader className="bg-slate-50/50">
                       <TableRow>
-                        <TableHead className="text-end text-xs font-bold text-slate-500 py-3">{t("profitDistribution.colPartner", { namespace: "accounting", fallback: "الشريك" })}</TableHead>
-                        <TableHead className="text-center text-xs font-bold text-slate-500 py-3">{t("profitDistribution.colRatio", { namespace: "accounting", fallback: "النسبة" })}</TableHead>
-                        <TableHead className="text-start text-xs font-bold text-slate-500 py-3">{t("profitDistribution.colShare", { namespace: "accounting", fallback: "الحصة" })}</TableHead>
+                        <TableHead className="text-end text-xs font-bold text-slate-500 py-3">{t("profitDistribution.colPartner", { namespace: "accounting",  })}</TableHead>
+                        <TableHead className="text-center text-xs font-bold text-slate-500 py-3">{t("profitDistribution.colRatio", { namespace: "accounting",  })}</TableHead>
+                        <TableHead className="text-start text-xs font-bold text-slate-500 py-3">{t("profitDistribution.colShare", { namespace: "accounting",  })}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -403,14 +395,14 @@ export function ProfitDistributionWorkflow({
                     </TableBody>
                     <TableFooter className="bg-slate-50/30 font-bold border-t border-slate-100">
                       <TableRow>
-                        <TableCell className="text-end py-3 text-xs text-slate-600">{t("profitDistribution.totalAllocated", { namespace: "accounting", fallback: "المجموع الموزع" })}</TableCell>
+                        <TableCell className="text-end py-3 text-xs text-slate-600">{t("profitDistribution.totalAllocated", { namespace: "accounting",  })}</TableCell>
                         <TableCell className="text-center py-3 text-xs text-slate-400">-</TableCell>
                         <TableCell className="text-start py-3 text-xs text-blue-700 font-extrabold tabular-nums">
                           {fmtMoney(parseSafeNumber(preview.data.allocated_total))}
                         </TableCell>
                       </TableRow>
                       <TableRow>
-                        <TableCell className="text-end py-3 text-xs text-slate-600">{t("profitDistribution.remainingAmount", { namespace: "accounting", fallback: "المبلغ المتبقي" })}</TableCell>
+                        <TableCell className="text-end py-3 text-xs text-slate-600">{t("profitDistribution.remainingAmount", { namespace: "accounting",  })}</TableCell>
                         <TableCell className="text-center py-3 text-xs text-slate-400">-</TableCell>
                         <TableCell className="text-start py-3 text-xs text-emerald-700 font-extrabold tabular-nums">
                           {fmtMoney(available - parseSafeNumber(preview.data.allocated_total))}
@@ -423,8 +415,7 @@ export function ProfitDistributionWorkflow({
                 <div className="rounded-lg border border-slate-100 bg-slate-50/50 p-3 text-xs text-slate-500">
                   {t("profitDistribution.footnote", {
                     namespace: "accounting",
-                    fallback: "* يتم احتساب وتوزيع المبالغ بناءً على نسب رأس المال المعتمدة لكل شريك في النظام.",
-                  })}
+                    })}
                 </div>
               </div>
             )}
@@ -438,32 +429,31 @@ export function ProfitDistributionWorkflow({
                 <CheckCircle2 className="w-10 h-10" />
               </div>
               <h3 className="text-base font-extrabold text-green-700">
-                {t("profitDistribution.successTitle", { namespace: "accounting", fallback: "تم توزيع الأرباح بنجاح" })}
+                {t("profitDistribution.successTitle", { namespace: "accounting",  })}
               </h3>
               <p className="text-xs text-slate-500 max-w-[280px] leading-relaxed">
                 {t("profitDistribution.successDescription", {
                   namespace: "accounting",
-                  fallback: "تم ترحيل قيد التوزيع بنجاح تحت رقم القيد",
-                })}{" "}
+                  })}{" "}
                 <span className="font-extrabold text-slate-800">{postedResult?.entry_number}</span>.
               </p>
             </div>
 
             <div className="border border-slate-100 rounded-xl bg-slate-50/30 overflow-hidden divide-y divide-slate-100">
               <div className="p-3.5 flex justify-between items-center text-xs">
-                <span className="font-semibold text-slate-500">{t("profitDistribution.allocatedAmount", { namespace: "accounting", fallback: "المبلغ الموزع" })}</span>
+                <span className="font-semibold text-slate-500">{t("profitDistribution.allocatedAmount", { namespace: "accounting",  })}</span>
                 <span className="font-black text-slate-800 tabular-nums">
                   {fmtMoney(parseSafeNumber(postedResult?.allocated_total ?? "0"))}
                 </span>
               </div>
               <div className="p-3.5 flex justify-between items-center text-xs">
-                <span className="font-semibold text-slate-500">{t("profitDistribution.partnerCount", { namespace: "accounting", fallback: "عدد الشركاء الموزع لهم" })}</span>
+                <span className="font-semibold text-slate-500">{t("profitDistribution.partnerCount", { namespace: "accounting",  })}</span>
                 <span className="font-black text-slate-800 tabular-nums">
                   {postedResult?.shares.length ?? 0}
                 </span>
               </div>
               <div className="p-3.5 flex justify-between items-center text-xs">
-                <span className="font-semibold text-slate-500">{t("profitDistribution.remainingSuccess", { namespace: "accounting", fallback: "المبلغ المتبقي" })}</span>
+                <span className="font-semibold text-slate-500">{t("profitDistribution.remainingSuccess", { namespace: "accounting",  })}</span>
                 <span className="font-black text-emerald-700 tabular-nums">
                   {fmtMoney(available - parseSafeNumber(postedResult?.allocated_total ?? "0"))}
                 </span>
@@ -475,8 +465,8 @@ export function ProfitDistributionWorkflow({
                 <Table>
                   <TableHeader className="bg-slate-50/50">
                     <TableRow>
-                      <TableHead className="text-end text-xs font-bold text-slate-500 py-3">{t("profitDistribution.colPartner", { namespace: "accounting", fallback: "الشريك" })}</TableHead>
-                      <TableHead className="text-start text-xs font-bold text-slate-500 py-3">{t("profitDistribution.shareCol", { namespace: "accounting", fallback: "الحصة الموزعة" })}</TableHead>
+                      <TableHead className="text-end text-xs font-bold text-slate-500 py-3">{t("profitDistribution.colPartner", { namespace: "accounting",  })}</TableHead>
+                      <TableHead className="text-start text-xs font-bold text-slate-500 py-3">{t("profitDistribution.shareCol", { namespace: "accounting",  })}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>

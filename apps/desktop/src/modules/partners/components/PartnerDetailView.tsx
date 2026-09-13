@@ -42,7 +42,7 @@ export function PartnerDetailView({
     ...(onEdit
       ? [
           {
-            label: t("actions.edit", { namespace: "partners", fallback: "تعديل" }),
+            label: t("actions.edit", { namespace: "partners",  }),
             icon: <Pencil className="w-4 h-4" />,
             variant: "warning" as const,
             onClick: () => onEdit(),
@@ -52,11 +52,11 @@ export function PartnerDetailView({
     ...(onDelete
       ? [
           {
-            label: t("actions.delete", { namespace: "partners", fallback: "حذف" }),
+            label: t("actions.delete", { namespace: "partners",  }),
             icon: <Trash2 className="w-4 h-4" />,
             variant: "danger" as const,
             onClick: () => {
-              if (confirm(t("confirm.delete", { namespace: "partners", fallback: "هل أنت متأكد من حذف هذا الشريك؟" }))) {
+              if (confirm(t("confirm.delete", { namespace: "partners",  }))) {
                 onDelete(partner.id);
               }
             },
@@ -69,7 +69,7 @@ export function PartnerDetailView({
     <SidebarShell isOpen={true} onClose={onClose}>
       <SidebarHeader
         title={partner.name}
-        subtitle={t("view.subtitle", { namespace: "partners", fallback: "ملف الشريك" })}
+        subtitle={t("view.subtitle", { namespace: "partners",  })}
         onClose={onClose}
       />
       <SidebarActionBar actions={actions} />
@@ -77,12 +77,12 @@ export function PartnerDetailView({
         <div className="text-right space-y-6">
           <div className="p-5 border border-slate-100 rounded-2xl bg-slate-50/30">
             <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-2 mb-4">
-              {t("view.investmentSection", { namespace: "partners", fallback: "معلومات الاستثمار" })}
+              {t("view.investmentSection", { namespace: "partners",  })}
             </h4>
             <div className="grid grid-cols-2 gap-3">
               <div className="p-3 bg-white rounded-xl border border-slate-100">
                 <div className="text-[10px] text-slate-400 font-bold uppercase mb-1">
-                  {t("view.fields.originalAmount", { namespace: "partners", fallback: "المبلغ الأصلي" })}
+                  {t("view.fields.originalAmount", { namespace: "partners",  })}
                 </div>
                 <div className="text-lg font-black text-slate-900 tabular-nums">
                   {formatWithLocale(parseFloat(partner.amount_original || "0"), partnerCurrency?.decimals ?? 2)} {partnerCurrency?.symbol || partner.currency || ""}
@@ -90,7 +90,7 @@ export function PartnerDetailView({
               </div>
               <div className="p-3 bg-white rounded-xl border border-slate-100">
                 <div className="text-[10px] text-slate-400 font-bold uppercase mb-1">
-                  {t("view.fields.baseEquivalent", { namespace: "partners", vars: { currency: baseCurrency?.symbol || baseCurrency?.code || "" }, fallback: "المعادل بالعملة الأساسية ({{currency}})" })}
+                  {t("view.fields.baseEquivalent", { namespace: "partners", vars: { currency: baseCurrency?.symbol || baseCurrency?.code || "" },  })}
                 </div>
                 <div className="text-lg font-black text-slate-900 tabular-nums">
                   {formatAmount(partner.displayAmountBase, { currencyCode: baseCurrency?.code || "" })}
@@ -100,7 +100,7 @@ export function PartnerDetailView({
             <div className="grid grid-cols-2 gap-3 mt-4">
               <div className="p-3 bg-white rounded-xl border border-slate-100">
                 <div className="text-[10px] text-slate-400 font-bold uppercase mb-1">
-                  {t("view.fields.capitalRatio", { namespace: "partners", fallback: "نسبة رأس المال" })}
+                  {t("view.fields.capitalRatio", { namespace: "partners",  })}
                 </div>
                 <div className="text-sm font-black text-blue-700 tabular-nums">
                   {toFixed(partner.calculatedCapitalRatio, 2) || "0.00"}%
@@ -108,7 +108,7 @@ export function PartnerDetailView({
               </div>
               <div className="p-3 bg-white rounded-xl border border-slate-100">
                 <div className="text-[10px] text-slate-400 font-bold uppercase mb-1">
-                  {t("view.fields.profitRatio", { namespace: "partners", fallback: "نسبة الأرباح" })}
+                  {t("view.fields.profitRatio", { namespace: "partners",  })}
                 </div>
                 <div className="text-sm font-black text-emerald-700 tabular-nums">
                   {toFixed(actualProfitRatio, 2)}%
@@ -119,7 +119,7 @@ export function PartnerDetailView({
           {partner.notes && (
             <div className="p-5 border border-slate-100 rounded-2xl bg-slate-50/30">
               <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-2 mb-4">
-                {t("view.fields.notes", { namespace: "partners", fallback: "ملاحظات" })}
+                {t("view.fields.notes", { namespace: "partners",  })}
               </h4>
               <p className="text-sm text-slate-700 whitespace-pre-wrap">{partner.notes}</p>
             </div>

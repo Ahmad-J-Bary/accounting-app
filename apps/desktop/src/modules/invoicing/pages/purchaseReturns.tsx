@@ -48,10 +48,10 @@ export default function PurchaseReturns() {
   const handleDelete = useCallback(async (id: string) => {
     try {
       await returnService.deletePurchaseReturn(id);
-      toast.success(t("return.deleteSuccess", { namespace: "invoicing", fallback: "تم حذف المرتجع بنجاح" }));
+      toast.success(t("return.deleteSuccess", { namespace: "invoicing",  }));
       loadData(false);
     } catch (e) {
-      toast.error(t("return.deleteError", { namespace: "invoicing", vars: { error: String(e) }, fallback: "فشل الحذف: {{error}}" }));
+      toast.error(t("return.deleteError", { namespace: "invoicing", vars: { error: String(e) },  }));
     }
   }, [loadData, t]);
 
@@ -86,25 +86,25 @@ export default function PurchaseReturns() {
 
     // Build a simple column set for returns (no gridColumns from useDocumentFinancials)
     const returnCols: DocumentColumn[] = [
-      { key: "material_image", header: t("return.colImage", { namespace: "invoicing", fallback: "صورة" }), width: "w-[40px]", align: "center", type: "image", defaultVisible: false },
-      { key: "material_code", header: t("return.colCode", { namespace: "invoicing", fallback: "الكود" }), width: "w-[100px]", type: "material_code" },
-      { key: "material_name", header: t("return.colMaterial", { namespace: "invoicing", fallback: "الصنف" }), width: "flex-[2]", type: "material" },
-      { key: "quantity", header: t("return.colQuantity", { namespace: "invoicing", fallback: "الكمية" }), width: "w-[80px]", type: "number" },
-      { key: "unit_name", header: t("return.colUnit", { namespace: "invoicing", fallback: "الوحدة" }), width: "w-[70px]", type: "unit_select" },
+      { key: "material_image", header: t("return.colImage", { namespace: "invoicing",  }), width: "w-[40px]", align: "center", type: "image", defaultVisible: false },
+      { key: "material_code", header: t("return.colCode", { namespace: "invoicing",  }), width: "w-[100px]", type: "material_code" },
+      { key: "material_name", header: t("return.colMaterial", { namespace: "invoicing",  }), width: "flex-[2]", type: "material" },
+      { key: "quantity", header: t("return.colQuantity", { namespace: "invoicing",  }), width: "w-[80px]", type: "number" },
+      { key: "unit_name", header: t("return.colUnit", { namespace: "invoicing",  }), width: "w-[70px]", type: "unit_select" },
       ...availableCurrencies.map(curr => ({
         key: baseCode === curr.code ? 'unit_price' : `unit_price_${curr.code}`,
-        header: t("return.colPrice", { namespace: "invoicing", vars: { currency: curr.symbol || curr.code }, fallback: `السعر (${curr.symbol || curr.code})` }),
+        header: t("return.colPrice", { namespace: "invoicing", vars: { currency: curr.symbol || curr.code },  }),
         width: "w-[100px]",
         type: "number" as const,
       })),
       ...availableCurrencies.map(curr => ({
         key: `line_total_${curr.code}`,
-        header: t("return.colTotal", { namespace: "invoicing", vars: { currency: curr.symbol || curr.code }, fallback: `الإجمالي (${curr.symbol || curr.code})` }),
+        header: t("return.colTotal", { namespace: "invoicing", vars: { currency: curr.symbol || curr.code },  }),
         width: "w-[110px]",
         type: "number" as const,
       })),
-      { key: "expiry_date", header: t("return.colExpiry", { namespace: "invoicing", fallback: "تاريخ الانتهاء" }), width: "w-[110px]", type: "date" },
-      { key: "notes", header: t("return.colNotes", { namespace: "invoicing", fallback: "ملاحظات" }), width: "flex-[1]", type: "text" },
+      { key: "expiry_date", header: t("return.colExpiry", { namespace: "invoicing",  }), width: "w-[110px]", type: "date" },
+      { key: "notes", header: t("return.colNotes", { namespace: "invoicing",  }), width: "flex-[1]", type: "text" },
     ];
 
     const hiddenColumnIds = returnCols.filter(c => c.defaultVisible === false).map(c => c.key);
@@ -124,14 +124,14 @@ export default function PurchaseReturns() {
     const totalVal = parseFloat(fullReturn.total_amount || "0");
 
     await executeExport(exportData, {
-      sheetName: t("return.purchaseSheetTitle", { namespace: "invoicing", fallback: "مرتجع مشتريات" }),
-      filename: t("return.purchaseFilename", { namespace: "invoicing", vars: { number: fullReturn.return_number }, fallback: `مرتجع_مشتريات_${fullReturn.return_number}` }),
+      sheetName: t("return.purchaseSheetTitle", { namespace: "invoicing",  }),
+      filename: t("return.purchaseFilename", { namespace: "invoicing", vars: { number: fullReturn.return_number },  }),
       data: enrichedLines,
       columns,
       summary,
-      summaryLabel: t("document.summaryLabel", { namespace: "invoicing", fallback: "المجموع" }),
+      summaryLabel: t("document.summaryLabel", { namespace: "invoicing",  }),
       additionalSummary: [
-        { label: t("return.totalLabel", { namespace: "invoicing", fallback: "الإجمالي" }), value: totalVal }
+        { label: t("return.totalLabel", { namespace: "invoicing",  }), value: totalVal }
       ],
       currencyRatesSheet: ratesSheet,
     });
@@ -163,23 +163,23 @@ export default function PurchaseReturns() {
       onRefresh={() => loadData(false)}
       onCreate={() => {
         const uniqueId = `/purchase-returns/new-${Date.now()}`;
-        openTab({ id: uniqueId, title: t("return.newPurchaseReturn", { namespace: "invoicing", fallback: "مرتجع مشتريات جديد" }), path: uniqueId, closable: true });
+        openTab({ id: uniqueId, title: t("return.newPurchaseReturn", { namespace: "invoicing",  }), path: uniqueId, closable: true });
       }}
       onEdit={(ret) => {
-        openTab({ id: `/purchase-returns/${ret.id}`, title: t("return.editTabTitle", { namespace: "invoicing", vars: { number: ret.return_number }, fallback: `تعديل ${ret.return_number}` }), path: `/purchase-returns/${ret.id}`, closable: true });
+        openTab({ id: `/purchase-returns/${ret.id}`, title: t("return.editTabTitle", { namespace: "invoicing", vars: { number: ret.return_number },  }), path: `/purchase-returns/${ret.id}`, closable: true });
       }}
       onView={(ret) => {
-        openTab({ id: `/purchase-returns/${ret.id}-view`, title: t("return.viewTabTitle", { namespace: "invoicing", vars: { number: ret.return_number }, fallback: `عرض ${ret.return_number}` }), path: `/purchase-returns/${ret.id}?mode=view`, closable: true });
+        openTab({ id: `/purchase-returns/${ret.id}-view`, title: t("return.viewTabTitle", { namespace: "invoicing", vars: { number: ret.return_number },  }), path: `/purchase-returns/${ret.id}?mode=view`, closable: true });
       }}
       onDelete={handleDelete}
       onExportRow={handleExportRow}
       formatMonetaryAmount={formatMonetaryAmount}
       partyType="supplier"
-      title={t("return.purchaseListTitle", { namespace: "invoicing", fallback: "مرتجعات المشتريات" })}
-      createLabel={t("return.createLabel", { namespace: "invoicing", fallback: "مرتجع جديد" })}
-      searchPlaceholder={t("return.purchaseSearchPlaceholder", { namespace: "invoicing", fallback: "بحث برقم المرتجع أو المورد..." })}
-      emptyMessage={t("return.purchaseEmpty", { namespace: "invoicing", fallback: "لا توجد مرتجعات مشتريات مسجلة" })}
-      statsLabel={t("return.statsLabel", { namespace: "invoicing", fallback: "إجمالي المرتجعات" })}
+      title={t("return.purchaseListTitle", { namespace: "invoicing",  })}
+      createLabel={t("return.createLabel", { namespace: "invoicing",  })}
+      searchPlaceholder={t("return.purchaseSearchPlaceholder", { namespace: "invoicing",  })}
+      emptyMessage={t("return.purchaseEmpty", { namespace: "invoicing",  })}
+      statsLabel={t("return.statsLabel", { namespace: "invoicing",  })}
       statsColor="text-amber-600"
       preferenceKey="purchase-returns"
     />

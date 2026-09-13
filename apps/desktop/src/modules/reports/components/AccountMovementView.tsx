@@ -23,19 +23,19 @@ export function AccountMovementView({ data, loading, search, onSearchChange, sym
 
   return (
     <div className="flex flex-col h-full">
-      <ReportMeta title={t("accountMovements.ledgerTitle", { namespace: "reports", fallback: "دفتر الأستاذ / كشف حركات الحساب" })} description={t("accountMovements.metaDescription", { namespace: "reports", fallback: "عرض تفصيلي لجميع الحركات المالية والقيود المؤثرة على حساب معين خلال فترة" })} />
+      <ReportMeta title={t("accountMovements.ledgerTitle", { namespace: "reports",  })} description={t("accountMovements.metaDescription", { namespace: "reports",  })} />
 
       <div className="grid grid-cols-4 gap-2 px-4 pt-4 pb-2">
-        <StatCard label={t("accountMovements.stat.openingDebit", { namespace: "reports", fallback: "افتتاحي / مدين" })} value={formatCurrency(openingDebitTotal, symbol)} icon={ArrowUpRight} />
-        <StatCard label={t("accountMovements.stat.openingCredit", { namespace: "reports", fallback: "افتتاحي / دائن" })} value={formatCurrency(openingCreditTotal, symbol)} icon={ArrowDownLeft} />
+        <StatCard label={t("accountMovements.stat.openingDebit", { namespace: "reports",  })} value={formatCurrency(openingDebitTotal, symbol)} icon={ArrowUpRight} />
+        <StatCard label={t("accountMovements.stat.openingCredit", { namespace: "reports",  })} value={formatCurrency(openingCreditTotal, symbol)} icon={ArrowDownLeft} />
         <StatCard
-          label={t("accountMovements.stat.netOpening", { namespace: "reports", fallback: "صافي الافتتاحي / {{sign}}", vars: { sign: openingClosing.sign } })}
+          label={t("accountMovements.stat.netOpening", { namespace: "reports", vars: { sign: openingClosing.sign } })}
           value={formatCurrency(Math.abs(openingClosing.net), symbol)}
           icon={Landmark}
           variant={openingClosing.net >= 0 ? "positive" : "negative"}
         />
         <StatCard
-          label={t("accountMovements.stat.closing", { namespace: "reports", fallback: "الختامي / {{sign}}", vars: { sign: closing.sign } })}
+          label={t("accountMovements.stat.closing", { namespace: "reports", vars: { sign: closing.sign } })}
           value={formatCurrency(Math.abs(closing.net), symbol)}
           icon={FileText}
           variant="accent"

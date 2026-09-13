@@ -45,7 +45,7 @@ describe("PartnerFormPanel (customers & suppliers)", () => {
 
   it("NEW company: customer form never shows opening receivable fields", () => {
     renderForm("customer", COMPANY_TYPE_NEW);
-    expect(screen.getByText("إضافة عميل جديد")).toBeInTheDocument();
+    expect(screen.getByText("partyForm.customerTitleCreate")).toBeInTheDocument();
     expect(screen.queryByText("البيانات المالية")).not.toBeInTheDocument();
     expect(screen.queryByText("الرصيد الافتتاحي")).not.toBeInTheDocument();
     expect(screen.queryByText("اتجاه الرصيد")).not.toBeInTheDocument();
@@ -53,7 +53,7 @@ describe("PartnerFormPanel (customers & suppliers)", () => {
 
   it("NEW company: supplier form never shows opening payable fields", () => {
     renderForm("supplier", COMPANY_TYPE_NEW);
-    expect(screen.getByText("إضافة مورد جديد")).toBeInTheDocument();
+    expect(screen.getByText("partyForm.supplierTitleCreate")).toBeInTheDocument();
     expect(screen.queryByText("البيانات المالية")).not.toBeInTheDocument();
     expect(screen.queryByText("الرصيد الافتتاحي")).not.toBeInTheDocument();
     expect(screen.queryByText("اتجاه الرصيد")).not.toBeInTheDocument();
@@ -61,29 +61,29 @@ describe("PartnerFormPanel (customers & suppliers)", () => {
 
   it("EXISTING company: customer form still exposes the opening receivable fields", () => {
     renderForm("customer", COMPANY_TYPE_EXISTING);
-    expect(screen.getByText("البيانات المالية")).toBeInTheDocument();
-    expect(screen.getByText("الرصيد الافتتاحي")).toBeInTheDocument();
-    expect(screen.getByText("اتجاه الرصيد")).toBeInTheDocument();
+    expect(screen.getByText("partyForm.financialSection")).toBeInTheDocument();
+    expect(screen.getByText("partyForm.openingBalance")).toBeInTheDocument();
+    expect(screen.getByText("partyForm.balanceDirection")).toBeInTheDocument();
   });
 
   it("EXISTING company: supplier form still exposes the opening payable fields", () => {
     renderForm("supplier", COMPANY_TYPE_EXISTING);
-    expect(screen.getByText("البيانات المالية")).toBeInTheDocument();
-    expect(screen.getByText("الرصيد الافتتاحي")).toBeInTheDocument();
+    expect(screen.getByText("partyForm.financialSection")).toBeInTheDocument();
+    expect(screen.getByText("partyForm.openingBalance")).toBeInTheDocument();
   });
 
   it("EXISTING company: supplier form defaults the balance direction to credit (دائن)", () => {
     renderForm("supplier", COMPANY_TYPE_EXISTING);
-    const creditBtn = screen.getByRole("button", { name: "دائن" });
-    const debitBtn = screen.getByRole("button", { name: "مدين" });
+    const creditBtn = screen.getByRole("button", { name: "directions.credit" });
+    const debitBtn = screen.getByRole("button", { name: "directions.debit" });
     expect(creditBtn.className).toContain("bg-emerald-100");
     expect(debitBtn.className).not.toContain("bg-blue-100");
   });
 
   it("EXISTING company: customer form keeps the debit (مدين) default", () => {
     renderForm("customer", COMPANY_TYPE_EXISTING);
-    const debitBtn = screen.getByRole("button", { name: "مدين" });
-    const creditBtn = screen.getByRole("button", { name: "دائن" });
+    const debitBtn = screen.getByRole("button", { name: "directions.debit" });
+    const creditBtn = screen.getByRole("button", { name: "directions.credit" });
     expect(debitBtn.className).toContain("bg-blue-100");
     expect(creditBtn.className).not.toContain("bg-emerald-100");
   });
@@ -105,14 +105,14 @@ describe("PartnerDetailPanel (customer/supplier detail)", () => {
 
   it("NEW company: detail hides the opening balance rows", () => {
     renderDetail(COMPANY_TYPE_NEW);
-    expect(screen.getByText("بيانات العميل")).toBeInTheDocument();
+    expect(screen.getByText("detail.titleCustomer")).toBeInTheDocument();
     expect(screen.queryByText("الرصيد الافتتاحي")).not.toBeInTheDocument();
     expect(screen.queryByText("اتجاه الرصيد")).not.toBeInTheDocument();
   });
 
   it("EXISTING company: detail shows the opening balance rows", () => {
     renderDetail(COMPANY_TYPE_EXISTING);
-    expect(screen.getByText("الرصيد الافتتاحي")).toBeInTheDocument();
+    expect(screen.getByText("detail.fields.openingBalance")).toBeInTheDocument();
   });
 });
 
@@ -127,7 +127,7 @@ describe("PartnerForm (capital / equity workflow)", () => {
       />,
       COMPANY_TYPE_NEW as never,
     );
-    expect(screen.getByText("إضافة شريك جديد")).toBeInTheDocument();
+    expect(screen.getByText("form.createTitle")).toBeInTheDocument();
     expect(screen.queryByText("الرصيد الافتتاحي")).not.toBeInTheDocument();
   });
 

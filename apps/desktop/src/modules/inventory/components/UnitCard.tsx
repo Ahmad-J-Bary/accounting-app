@@ -65,7 +65,7 @@ export function UnitCard({
           </div>
           <div className="flex-1 min-w-0">
             <span className="font-bold text-sm text-slate-700">{unit.name}</span>
-            {isBase && <span className="text-blue-600 font-bold text-xs mr-1">({t("materials.detail.base", { namespace: "inventory", fallback: "أساسية" })})</span>}
+            {isBase && <span className="text-blue-600 font-bold text-xs mr-1">({t("materials.detail.base", { namespace: "inventory",  })})</span>}
             <span className="text-[11px] text-slate-500 block truncate">1 {unit.name} = {unit.conversion_factor} {baseUnitName || unit.name}</span>
           </div>
           {unit.barcode && mode === "view" && (
@@ -86,7 +86,7 @@ export function UnitCard({
                 type="button"
                 onClick={onEdit}
                 className="w-6 h-6 rounded-full bg-blue-50/70 flex items-center justify-center hover:bg-blue-100/70 transition-colors"
-                title={t("labels.edit", { namespace: "inventory", fallback: "تعديل الوحدة" })}
+                title={t("labels.edit", { namespace: "inventory",  })}
               >
                 <Pencil className="w-3 h-3 text-blue-500" />
               </button>
@@ -131,7 +131,7 @@ export function UnitCard({
           type="button"
           onClick={onCancelEdit}
           className="absolute left-3 top-3 w-6 h-6 rounded-full bg-green-50 flex items-center justify-center hover:bg-green-100 transition-colors z-10 border border-green-200"
-          title={t("labels.save", { namespace: "inventory", fallback: "حفظ" })}
+          title={t("labels.save", { namespace: "inventory",  })}
         >
           <Check className="w-3.5 h-3.5 text-green-600" />
         </button>
@@ -151,14 +151,14 @@ export function UnitCard({
         </div>
         <div className="flex-1">
           <p className="text-[10px] font-bold mb-1">
-            <span className="text-slate-500">{t("materials.addUnit.name", { namespace: "inventory", fallback: "اسم الوحدة" })} </span>
-            {isBase && <span className="text-blue-600 font-bold">({t("materials.detail.base", { namespace: "inventory", fallback: "أساسية" })})</span>}
+            <span className="text-slate-500">{t("materials.addUnit.name", { namespace: "inventory",  })} </span>
+            {isBase && <span className="text-blue-600 font-bold">({t("materials.detail.base", { namespace: "inventory",  })})</span>}
           </p>
           <Input
             value={unit.name}
             onChange={e => onUpdate?.("name", e.target.value)}
             className="h-8 font-bold bg-white"
-            placeholder={t("materials.addUnit.namePlaceholder", { namespace: "inventory", fallback: "مثلاً: قطعة" })}
+            placeholder={t("materials.addUnit.namePlaceholder", { namespace: "inventory",  })}
             disabled={disabled}
           />
         </div>
@@ -166,7 +166,7 @@ export function UnitCard({
 
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-1.5">
-          <p className="text-[10px] font-bold text-slate-500">{t("materials.form.manageUnits", { namespace: "inventory", fallback: "معامل التعبئة" })}</p>
+          <p className="text-[10px] font-bold text-slate-500">{t("materials.form.manageUnits", { namespace: "inventory",  })}</p>
           <Input
             type="number"
             value={unit.conversion_factor}
@@ -176,15 +176,15 @@ export function UnitCard({
             min="0"
             step="any"
           />
-          {isBase && <p className="text-[8px] text-blue-500 font-bold mt-0.5">{t("materials.form.unitsNotice", { namespace: "inventory", fallback: "دائماً 1 للوحدة الأساسية" })}</p>}
+          {isBase && <p className="text-[8px] text-blue-500 font-bold mt-0.5">{t("materials.form.unitsNotice", { namespace: "inventory",  })}</p>}
         </div>
         <div className="space-y-1.5">
-          <p className="text-[10px] font-bold text-slate-500">{t("materials.export.barcode", { namespace: "inventory", fallback: "باركود الوحدة" })}</p>
+          <p className="text-[10px] font-bold text-slate-500">{t("materials.addUnit.barcodeOptional", { namespace: "inventory",  })}</p>
           <Input
             value={unit.barcode}
             onChange={e => onUpdate?.("barcode", e.target.value)}
             className="h-8 font-mono text-xs bg-white"
-            placeholder={t("materials.addUnit.barcodeOptional", { namespace: "inventory", fallback: "اختياري" })}
+            placeholder={t("materials.addUnit.barcodeOptional", { namespace: "inventory",  })}
             dir="ltr"
             disabled={disabled}
           />

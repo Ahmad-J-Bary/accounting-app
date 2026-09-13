@@ -26,7 +26,7 @@ export function OpeningProgressChecklist({ items }: OpeningProgressChecklistProp
     <Card className="border-slate-200 shadow-sm">
       <CardContent className="space-y-1.5 pt-3">
         <div className="flex items-center justify-between gap-2">
-          <span className="text-sm font-bold text-slate-800">{t("openingBalance.checklistTitle", { namespace: "accounting", fallback: "اكتمال الإعداد" })}</span>
+          <span className="text-sm font-bold text-slate-800">{t("openingBalance.checklistTitle", { namespace: "accounting",  })}</span>
           <span className="text-2xs font-bold text-slate-500 tabular-nums">
             {doneCount}/{items.length}
           </span>

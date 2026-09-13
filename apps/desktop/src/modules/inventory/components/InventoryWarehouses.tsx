@@ -31,10 +31,10 @@ export function InventoryWarehouses({
 }: InventoryWarehousesProps) {
   const { t } = useLocalization();
   const handleDelete = async (id: string, name: string) => {
-    if (!window.confirm(t("warehouses.deleteConfirm", { namespace: "inventory", vars: { name }, fallback: `هل أنت متأكد من حذف المستودع "${name}"؟` }))) return;
+    if (!window.confirm(t("warehouses.deleteConfirm", { namespace: "inventory", vars: { name },  }))) return;
     try {
       await warehouseService.delete(id);
-      toast.success(t("warehouses.deletedToast", { namespace: "inventory", vars: { name }, fallback: `تم حذف المستودع "${name}"` }));
+      toast.success(t("warehouses.deletedToast", { namespace: "inventory", vars: { name },  }));
       onRefresh();
     } catch (e) {
       toast.error(e as string);
@@ -103,10 +103,10 @@ export function InventoryWarehouses({
     return (
       <div className="flex flex-col items-center justify-center py-20 text-slate-400">
         <Warehouse className="w-16 h-16 mb-4 opacity-30" />
-        <p className="font-bold text-slate-600">{t("warehouses.empty", { namespace: "inventory", fallback: "لا توجد مستودعات" })}</p>
-        <p className="text-sm text-slate-400">{t("warehouses.emptyHint", { namespace: "inventory", fallback: "قم بإضافة مستودع جديد للبدء" })}</p>
+        <p className="font-bold text-slate-600">{t("warehouses.empty", { namespace: "inventory",  })}</p>
+        <p className="text-sm text-slate-400">{t("warehouses.emptyHint", { namespace: "inventory",  })}</p>
         <Button size="sm" variant="outline" onClick={onAdd} className="mt-4 border-dashed border-slate-300">
-          <Plus className="w-4 h-4 ml-2 shrink-0" />{t("warehouses.addFirst", { namespace: "inventory", fallback: "إضافة أول مستودع" })}
+          <Plus className="w-4 h-4 ml-2 shrink-0" />{t("warehouses.addFirst", { namespace: "inventory",  })}
         </Button>
       </div>
     );
@@ -117,15 +117,15 @@ export function InventoryWarehouses({
   const renderActions = (w: WarehouseDto) => (
     <div className="flex gap-2 pt-4 border-t border-slate-100">
       <Button variant="outline" size="sm" className="flex-1 border-slate-200 bg-white text-slate-700 hover:bg-slate-50" onClick={() => onEdit(w)}>
-        <Pencil className="w-3.5 h-3.5 ml-1.5 shrink-0" />{t("labels.edit", { namespace: "inventory", fallback: "تعديل" })}
+        <Pencil className="w-3.5 h-3.5 ml-1.5 shrink-0" />{t("labels.edit", { namespace: "inventory",  })}
       </Button>
       {onViewMaterials && (
         <Button variant="outline" size="sm" className="flex-1 border-slate-200 bg-white text-slate-700 hover:bg-slate-50" onClick={() => onViewMaterials(w)}>
-          <Package className="w-3.5 h-3.5 ml-1.5 shrink-0" />{t("warehouses.materials", { namespace: "inventory", fallback: "المواد" })}
+          <Package className="w-3.5 h-3.5 ml-1.5 shrink-0" />{t("warehouses.materials", { namespace: "inventory",  })}
         </Button>
       )}
-      <Button variant="outline" size="sm" className={cn("flex-1", w.is_default ? "text-slate-300 border-slate-200 cursor-not-allowed" : "text-rose-600 hover:bg-rose-50 border-rose-200 hover:border-rose-300")} onClick={() => handleDelete(w.id, w.name)} disabled={w.is_default} title={w.is_default ? t('warehouses.deleteMainDisabled', { namespace: 'inventory', fallback: 'لا يمكن حذف المستودع الرئيسي' }) : ''}>
-        <Trash2 className="w-3.5 h-3.5 ml-1.5 shrink-0" />{t("labels.delete", { namespace: "inventory", fallback: "حذف" })}
+      <Button variant="outline" size="sm" className={cn("flex-1", w.is_default ? "text-slate-300 border-slate-200 cursor-not-allowed" : "text-rose-600 hover:bg-rose-50 border-rose-200 hover:border-rose-300")} onClick={() => handleDelete(w.id, w.name)} disabled={w.is_default} title={w.is_default ? t('warehouses.deleteMainDisabled', { namespace: 'inventory',  }) : ''}>
+        <Trash2 className="w-3.5 h-3.5 ml-1.5 shrink-0" />{t("labels.delete", { namespace: "inventory",  })}
       </Button>
     </div>
   );
@@ -157,10 +157,10 @@ export function InventoryWarehouses({
         <table className="w-full">
           <thead>
             <tr className="bg-slate-50/80">
-              <th className="whitespace-nowrap px-4 py-2.5 text-right text-[11px] font-black text-slate-500 border-b border-slate-200">{t("labels.name", { namespace: "inventory", fallback: "الاسم" })}</th>
-              <th className="whitespace-nowrap px-4 py-2.5 text-right text-[11px] font-black text-slate-500 border-b border-slate-200">{t("labels.address", { namespace: "inventory", fallback: "العنوان" })}</th>
-              <th className="whitespace-nowrap px-4 py-2.5 text-center text-[11px] font-black text-slate-500 border-b border-slate-200">{t("labels.status", { namespace: "inventory", fallback: "الحالة" })}</th>
-              <th className="whitespace-nowrap px-4 py-2.5 text-center text-[11px] font-black text-slate-500 border-b border-slate-200">{t("labels.actions", { namespace: "inventory", fallback: "إجراءات" })}</th>
+              <th className="whitespace-nowrap px-4 py-2.5 text-right text-[11px] font-black text-slate-500 border-b border-slate-200">{t("labels.name", { namespace: "inventory",  })}</th>
+              <th className="whitespace-nowrap px-4 py-2.5 text-right text-[11px] font-black text-slate-500 border-b border-slate-200">{t("labels.address", { namespace: "inventory",  })}</th>
+              <th className="whitespace-nowrap px-4 py-2.5 text-center text-[11px] font-black text-slate-500 border-b border-slate-200">{t("labels.status", { namespace: "inventory",  })}</th>
+              <th className="whitespace-nowrap px-4 py-2.5 text-center text-[11px] font-black text-slate-500 border-b border-slate-200">{t("labels.actions", { namespace: "inventory",  })}</th>
             </tr>
           </thead>
           <tbody>
@@ -181,7 +181,7 @@ export function InventoryWarehouses({
                 <td className="px-4 py-3 text-sm text-slate-500">{w.address || '—'}</td>
                 <td className="px-4 py-3 text-center">
                   <span className={cn("inline-block px-2 py-0.5 rounded-full text-[10px] font-bold", w.is_active ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600")}>
-                    {w.is_active ? t('labels.active', { namespace: 'inventory', fallback: 'نشط' }) : t('labels.inactive', { namespace: 'inventory', fallback: 'غير نشط' })}
+                    {w.is_active ? t('labels.active', { namespace: 'inventory',  }) : t('labels.inactive', { namespace: 'inventory',  })}
                   </span>
                 </td>
                 <td className="px-4 py-3">
@@ -222,7 +222,7 @@ export function InventoryWarehouses({
                   <div className="flex items-center gap-2">
                     <span className="font-bold text-slate-800">{w.name}</span>
                     <span className={cn("text-[9px] font-bold px-1.5 py-0.5 rounded-full", w.is_active ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600")}>
-                      {w.is_active ? t('labels.active', { namespace: 'inventory', fallback: 'نشط' }) : t('labels.inactive', { namespace: 'inventory', fallback: 'غير نشط' })}
+                      {w.is_active ? t('labels.active', { namespace: 'inventory',  }) : t('labels.inactive', { namespace: 'inventory',  })}
                     </span>
                     {w.is_default && <span className="text-[9px] font-black text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">رئيسي</span>}
                   </div>
@@ -231,15 +231,15 @@ export function InventoryWarehouses({
               </div>
               <div className="flex items-center gap-1.5 shrink-0">
                 <Button variant="ghost" size="sm" className="h-8 text-slate-600 hover:text-blue-600 hover:bg-blue-50" onClick={() => onEdit(w)}>
-                  <Pencil className="w-3.5 h-3.5 ml-1" />{t("labels.edit", { namespace: "inventory", fallback: "تعديل" })}
+                  <Pencil className="w-3.5 h-3.5 ml-1" />{t("labels.edit", { namespace: "inventory",  })}
                 </Button>
                 {onViewMaterials && (
                   <Button variant="ghost" size="sm" className="h-8 text-slate-600 hover:text-emerald-600 hover:bg-emerald-50" onClick={() => onViewMaterials(w)}>
-                    <Package className="w-3.5 h-3.5 ml-1" />{t("warehouses.materials", { namespace: "inventory", fallback: "المواد" })}
+                    <Package className="w-3.5 h-3.5 ml-1" />{t("warehouses.materials", { namespace: "inventory",  })}
                   </Button>
                 )}
                 <Button variant="ghost" size="sm" className={cn("h-8", w.is_default ? "text-slate-300 cursor-not-allowed" : "text-rose-600 hover:bg-rose-50")} onClick={() => handleDelete(w.id, w.name)} disabled={w.is_default}>
-                  <Trash2 className="w-3.5 h-3.5 ml-1" />{t("labels.delete", { namespace: "inventory", fallback: "حذف" })}
+                  <Trash2 className="w-3.5 h-3.5 ml-1" />{t("labels.delete", { namespace: "inventory",  })}
                 </Button>
               </div>
             </div>
@@ -306,7 +306,7 @@ export function InventoryWarehouses({
               "inline-flex items-center rounded-lg text-[10px] font-black bg-emerald-50 text-emerald-700 border border-emerald-100",
               isSmall ? "px-2 py-0.5 mb-3" : isLarge ? "px-3 py-1.5 mb-5" : "px-2.5 py-1 mb-4"
             )}>
-              {t("labels.main", { namespace: "inventory", fallback: "رئيسي" })}
+              {t("labels.main", { namespace: "inventory",  })}
             </div>
           )}
 

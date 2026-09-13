@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { Plus, Download } from "lucide-react";
 import { transferService } from '@modules/inventory/api/transferService';
 import { Button } from "@shared/ui/button";
-import type { StockMovement, WarehouseDto, MaterialDto, CreateTransferRequest } from '@erp/shared-types';
+import type { StockMovement, CreateTransferRequest } from '@erp/shared-types';
 import type { TransferRow } from '@modules/inventory/components/TransferTable';
 import { TransferDetailPanel } from '@modules/inventory/components/TransferDetailPanel';
 import { TransferTable } from '@modules/inventory/components/TransferTable';
@@ -42,7 +42,7 @@ export default function Transfers() {
     setSavingTransfer(true);
     try {
       await transferService.create(req);
-      toast.success(t('transfers.created', { namespace: "inventory", fallback: 'تم إنشاء التحويل بنجاح' }));
+      toast.success(t('transfers.created', { namespace: "inventory",  }));
       setTransferFormOpen(false);
       setTransferFormData(null);
       void invalidateKeys(queryClient, INVENTORY_MUTATION_KEYS);
@@ -58,7 +58,7 @@ export default function Transfers() {
     setSavingTransfer(true);
     try {
       await transferService.update({ ...req, reference: transferFormData.reference });
-      toast.success(t('transfers.updated', { namespace: "inventory", fallback: 'تم تحديث التحويل بنجاح' }));
+      toast.success(t('transfers.updated', { namespace: "inventory",  }));
       setTransferFormOpen(false);
       setTransferFormData(null);
       void invalidateKeys(queryClient, INVENTORY_MUTATION_KEYS);
@@ -72,7 +72,7 @@ export default function Transfers() {
   const handleDeleteTransfer = useCallback(async (reference: string) => {
     try {
       await transferService.delete(reference);
-      toast.success(t('transfers.deleted', { namespace: "inventory", fallback: 'تم حذف التحويل بنجاح' }));
+      toast.success(t('transfers.deleted', { namespace: "inventory",  }));
       setTransferDetailData(null);
       void invalidateKeys(queryClient, INVENTORY_MUTATION_KEYS);
     } catch (e) {
@@ -151,35 +151,35 @@ export default function Transfers() {
 
   const handleExport = useCallback(async () => {
     const columns: ExcelExportColumn[] = [
-      { id: "material_name", label: t("labels.material", { namespace: "inventory", fallback: "المادة" }), accessor: (row) => String((row as unknown as TransferRow).material_name ?? "") },
-      { id: "source", label: t("transfers.fromWarehouse", { namespace: "inventory", fallback: "من مستودع" }), accessor: (row) => String((row as unknown as TransferRow).source_warehouse_name ?? "") },
-      { id: "dest", label: t("transfers.toWarehouse", { namespace: "inventory", fallback: "إلى مستودع" }), accessor: (row) => String((row as unknown as TransferRow).dest_warehouse_name ?? "") },
-      { id: "quantity", label: t("labels.quantity", { namespace: "common", fallback: "الكمية" }), accessor: (row) => parseFloat((row as unknown as TransferRow).quantity || "0"), numeric: true, decimalPlaces: 2 },
-      { id: "reference", label: t("labels.reference", { namespace: "common", fallback: "المرجع" }), accessor: (row) => parseInt((row as unknown as TransferRow).reference ?? "0", 10) || 0 },
-      { id: "notes", label: t("labels.note", { namespace: "inventory", fallback: "ملاحظة" }), accessor: (row) => String((row as unknown as TransferRow).notes ?? "") },
-      dateCol("date", t("labels.date", { namespace: "common", fallback: "التاريخ" }), (row) => (row as unknown as TransferRow).transfer_date),
+      { id: "material_name", label: t("labels.material", { namespace: "inventory",  }), accessor: (row) => String((row as unknown as TransferRow).material_name ?? "") },
+      { id: "source", label: t("transfers.fromWarehouse", { namespace: "inventory",  }), accessor: (row) => String((row as unknown as TransferRow).source_warehouse_name ?? "") },
+      { id: "dest", label: t("transfers.toWarehouse", { namespace: "inventory",  }), accessor: (row) => String((row as unknown as TransferRow).dest_warehouse_name ?? "") },
+      { id: "quantity", label: t("labels.quantity", { namespace: "common",  }), accessor: (row) => parseFloat((row as unknown as TransferRow).quantity || "0"), numeric: true, decimalPlaces: 2 },
+      { id: "reference", label: t("labels.reference", { namespace: "common",  }), accessor: (row) => parseInt((row as unknown as TransferRow).reference ?? "0", 10) || 0 },
+      { id: "notes", label: t("labels.note", { namespace: "inventory",  }), accessor: (row) => String((row as unknown as TransferRow).notes ?? "") },
+      dateCol("date", t("labels.date", { namespace: "common",  }), (row) => (row as unknown as TransferRow).transfer_date),
     ];
     await executeExport(exportData, {
-      sheetName: t("transfers.title", { namespace: "inventory", fallback: "التحويلات" }),
-      filename: t("transfers.title", { namespace: "inventory", fallback: "التحويلات" }),
+      sheetName: t("transfers.title", { namespace: "inventory",  }),
+      filename: t("transfers.title", { namespace: "inventory",  }),
       data: exportRows as unknown as Record<string, unknown>[],
       columns,
       summary: { quantity: 'subtotal' },
-      summaryLabel: t("labels.summary", { namespace: "inventory", fallback: "المجموع" }),
+      summaryLabel: t("labels.summary", { namespace: "inventory",  }),
       numeralSystem: getNumberingSystem(),
     });
   }, [exportRows, exportData, t]);
 
   return (
     <OperationalTableTemplate
-      title={t("transfers.title", { namespace: "inventory", fallback: "التحويلات" })}
+      title={t("transfers.title", { namespace: "inventory",  })}
       toolbar={
         <div className="flex items-center gap-2">
           <Button size="sm" onClick={() => { setTransferDetailData(null); setTransferFormMode('create'); setTransferFormData(null); setWarehouseTransferPreset(null); setTransferFormOpen(true); }} className="bg-amber-600 hover:bg-amber-700 text-white shadow-lg shadow-amber-100 font-bold">
-            <Plus className="w-4 h-4 ml-2" />{t("transfers.add", { namespace: "inventory", fallback: "إضافة تحويل" })}
+            <Plus className="w-4 h-4 ml-2" />{t("transfers.add", { namespace: "inventory",  })}
           </Button>
           <Button variant="outline" size="sm" onClick={handleExport} className="border-slate-200 hover:bg-slate-50 font-bold">
-            <Download className="w-4 h-4 ml-2 text-slate-500" /> {t("labels.exportExcel", { namespace: "inventory", fallback: "تصدير إكسل" })}
+            <Download className="w-4 h-4 ml-2 text-slate-500" /> {t("labels.exportExcel", { namespace: "inventory",  })}
           </Button>
         </div>
       }

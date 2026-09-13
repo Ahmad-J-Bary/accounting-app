@@ -51,7 +51,7 @@ export function JournalLineEditor({
     <div className="space-y-2">
       {lines.length === 0 && (
         <p className="text-xs text-slate-400 text-center py-3">
-          {t("journal.lineEditor.empty", { namespace: "accounting", fallback: "لا توجد بنود — أضف سطراً واحداً على الأقل" })}
+          {t("journal.lineEditor.empty", { namespace: "accounting",  })}
         </p>
       )}
 
@@ -77,7 +77,7 @@ export function JournalLineEditor({
         className="h-8 shrink-0 rounded-full border-emerald-300 bg-emerald-50 px-3 text-xs font-bold text-emerald-700 hover:bg-emerald-100 hover:border-emerald-400 transition-all"
       >
         <Plus className="h-3.5 w-3.5 ms-1" />
-        {t("journal.lineEditor.add", { namespace: "accounting", fallback: "إضافة سطر" })}
+        {t("journal.lineEditor.add", { namespace: "accounting",  })}
       </Button>
     </div>
   );

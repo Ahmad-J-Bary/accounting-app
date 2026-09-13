@@ -67,12 +67,12 @@ export function ReturnsList({
     }), [returns, search, partyIdFilter, partyType]);
 
   const partyLabel = partyType === "supplier"
-    ? t("return.partySupplier", { namespace: "invoicing", fallback: "المورد" })
-    : t("return.partyCustomer", { namespace: "invoicing", fallback: "الزبون" });
+    ? t("return.partySupplier", { namespace: "invoicing",  })
+    : t("return.partyCustomer", { namespace: "invoicing",  });
 
   const handleDeleteSelected = async () => {
     if (!selectedId) return;
-    if (!window.confirm(t("return.confirmDelete", { namespace: "invoicing", fallback: "هل أنت متأكد من حذف هذا المرتجع؟" }))) return;
+    if (!window.confirm(t("return.confirmDelete", { namespace: "invoicing",  }))) return;
     await onDelete(selectedId);
     setSelectedId(null);
   };
@@ -92,7 +92,7 @@ export function ReturnsList({
               if (ret) onView(ret);
             }}
             className="h-9 border-slate-200 hover:bg-slate-50 font-bold">
-            <Eye className="w-4 h-4 ml-2 text-blue-500" /> {t("actions.view", { namespace: "invoicing", fallback: "عرض" })}
+            <Eye className="w-4 h-4 ml-2 text-blue-500" /> {t("actions.view", { namespace: "invoicing",  })}
           </Button>
           <Button variant="outline" size="sm" disabled={!selectedId}
             onClick={() => {
@@ -100,17 +100,17 @@ export function ReturnsList({
               if (ret) onEdit(ret);
             }}
             className="h-9 border-slate-200 hover:bg-slate-50 font-bold">
-            <Settings2 className="w-4 h-4 ml-2 text-amber-500" /> {t("actions.edit", { namespace: "invoicing", fallback: "تعديل" })}
+            <Settings2 className="w-4 h-4 ml-2 text-amber-500" /> {t("actions.edit", { namespace: "invoicing",  })}
           </Button>
           <Button variant="outline" size="sm" disabled={!selectedId}
             onClick={handleDeleteSelected}
             className="h-9 border-slate-200 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 font-bold transition-all">
-            <Trash2 className="w-4 h-4 ml-2 text-rose-500" /> {t("actions.delete", { namespace: "invoicing", fallback: "حذف" })}
+            <Trash2 className="w-4 h-4 ml-2 text-rose-500" /> {t("actions.delete", { namespace: "invoicing",  })}
           </Button>
           <Button variant="outline" size="sm" disabled={!selectedId}
             onClick={() => { window.dispatchEvent(new Event("app:prepare-print")); requestAnimationFrame(() => window.print()); }}
             className="h-9 border-slate-200 hover:bg-slate-50 font-bold">
-            <Printer className="w-4 h-4 ml-2 text-slate-500" /> {t("actions.print", { namespace: "invoicing", fallback: "طباعة" })}
+            <Printer className="w-4 h-4 ml-2 text-slate-500" /> {t("actions.print", { namespace: "invoicing",  })}
           </Button>
         </div>
       }

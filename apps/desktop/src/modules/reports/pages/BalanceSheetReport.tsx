@@ -68,7 +68,7 @@ export default function BalanceSheetReport() {
 
   return (
     <OperationalTableTemplate
-      title={t("balanceSheet.title", { namespace: "reports", fallback: "الميزانية العمومية" })}
+      title={t("balanceSheet.title", { namespace: "reports",  })}
       toolbar={
         <ReportFilterBar
           filters={filters}

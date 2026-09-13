@@ -106,9 +106,9 @@ export function PaymentForm({ customers, suppliers, accounts, onSave, onClose, s
     if (form.payment_type === "Receipt") {
       return (
         <div className="space-y-1.5">
-          <FieldLabel required>{t("payment.debitFromCustomer", { namespace: "invoicing", fallback: "من الحساب الدائن (العميل)" })}</FieldLabel>
+          <FieldLabel required>{t("payment.debitFromCustomer", { namespace: "invoicing",  })}</FieldLabel>
           <Select value={form.customer_id} onValueChange={val => setForm(p => ({ ...p, customer_id: val }))}>
-            <SelectTrigger className="h-9 font-bold bg-white"><SelectValue placeholder={t("payment.selectCustomer", { namespace: "invoicing", fallback: "اختر العميل" })} /></SelectTrigger>
+            <SelectTrigger className="h-9 font-bold bg-white"><SelectValue placeholder={t("payment.selectCustomer", { namespace: "invoicing",  })} /></SelectTrigger>
             <SelectContent>
               {customers.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
             </SelectContent>
@@ -118,8 +118,8 @@ export function PaymentForm({ customers, suppliers, accounts, onSave, onClose, s
     }
     return (
       <div className="space-y-1.5">
-        <FieldLabel>{t("payment.debitFrom", { namespace: "invoicing", fallback: "من الحساب الدائن" })}</FieldLabel>
-        <Input value={t("payment.treasury", { namespace: "invoicing", fallback: "الخزينة (الصندوق)" })} disabled className="h-9 bg-slate-50 text-slate-500 font-bold" />
+        <FieldLabel>{t("payment.debitFrom", { namespace: "invoicing",  })}</FieldLabel>
+        <Input value={t("payment.treasury", { namespace: "invoicing",  })} disabled className="h-9 bg-slate-50 text-slate-500 font-bold" />
       </div>
     );
   };
@@ -128,9 +128,9 @@ export function PaymentForm({ customers, suppliers, accounts, onSave, onClose, s
     if (form.payment_type === "SupplierPayment") {
       return (
         <div className="space-y-1.5">
-          <FieldLabel required>{t("payment.debitToSupplier", { namespace: "invoicing", fallback: "إلى الحساب المدين (المورد)" })}</FieldLabel>
+          <FieldLabel required>{t("payment.debitToSupplier", { namespace: "invoicing",  })}</FieldLabel>
           <Select value={form.supplier_id} onValueChange={val => setForm(p => ({ ...p, supplier_id: val }))}>
-            <SelectTrigger className="h-9 font-bold bg-white"><SelectValue placeholder={t("payment.selectSupplier", { namespace: "invoicing", fallback: "اختر المورد" })} /></SelectTrigger>
+            <SelectTrigger className="h-9 font-bold bg-white"><SelectValue placeholder={t("payment.selectSupplier", { namespace: "invoicing",  })} /></SelectTrigger>
             <SelectContent>
               {suppliers.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
             </SelectContent>
@@ -141,9 +141,9 @@ export function PaymentForm({ customers, suppliers, accounts, onSave, onClose, s
     if (form.payment_type === "ExpenseVoucher") {
       return (
         <div className="space-y-1.5">
-          <FieldLabel required>{t("payment.debitToExpense", { namespace: "invoicing", fallback: "إلى الحساب المدين (المصروف)" })}</FieldLabel>
+          <FieldLabel required>{t("payment.debitToExpense", { namespace: "invoicing",  })}</FieldLabel>
           <Select value={form.debit_account_id} onValueChange={val => setForm(p => ({ ...p, debit_account_id: val }))}>
-            <SelectTrigger className="h-9 font-bold bg-white"><SelectValue placeholder={t("payment.selectExpenseAccount", { namespace: "invoicing", fallback: "اختر حساب المصروف" })} /></SelectTrigger>
+            <SelectTrigger className="h-9 font-bold bg-white"><SelectValue placeholder={t("payment.selectExpenseAccount", { namespace: "invoicing",  })} /></SelectTrigger>
             <SelectContent>
               {expenseAccounts.map(a => <SelectItem key={a.id} value={a.id}>{a.name_ar}</SelectItem>)}
             </SelectContent>
@@ -154,9 +154,9 @@ export function PaymentForm({ customers, suppliers, accounts, onSave, onClose, s
     if (form.payment_type === "DrawingsVoucher") {
       return (
         <div className="space-y-1.5">
-          <FieldLabel required>{t("payment.debitToDrawings", { namespace: "invoicing", fallback: "إلى الحساب المدين (مسحوبات)" })}</FieldLabel>
+          <FieldLabel required>{t("payment.debitToDrawings", { namespace: "invoicing",  })}</FieldLabel>
           <Select value={form.debit_account_id} onValueChange={val => setForm(p => ({ ...p, debit_account_id: val }))}>
-            <SelectTrigger className="h-9 font-bold bg-white"><SelectValue placeholder={t("payment.selectDrawingsAccount", { namespace: "invoicing", fallback: "اختر حساب المسحوبات" })} /></SelectTrigger>
+            <SelectTrigger className="h-9 font-bold bg-white"><SelectValue placeholder={t("payment.selectDrawingsAccount", { namespace: "invoicing",  })} /></SelectTrigger>
             <SelectContent>
               {drawingAccounts.map(a => <SelectItem key={a.id} value={a.id}>{a.name_ar}</SelectItem>)}
             </SelectContent>
@@ -167,8 +167,8 @@ export function PaymentForm({ customers, suppliers, accounts, onSave, onClose, s
     if (form.payment_type === "Receipt") {
       return (
         <div className="space-y-1.5">
-          <FieldLabel>{t("payment.debitTo", { namespace: "invoicing", fallback: "إلى الحساب المدين" })}</FieldLabel>
-          <Input value={t("payment.treasury", { namespace: "invoicing", fallback: "الخزينة (الصندوق)" })} disabled className="h-9 bg-slate-50 text-slate-500 font-bold" />
+          <FieldLabel>{t("payment.debitTo", { namespace: "invoicing",  })}</FieldLabel>
+          <Input value={t("payment.treasury", { namespace: "invoicing",  })} disabled className="h-9 bg-slate-50 text-slate-500 font-bold" />
         </div>
       );
     }
@@ -177,19 +177,19 @@ export function PaymentForm({ customers, suppliers, accounts, onSave, onClose, s
 
   return (
     <FormPanel
-      title={t("payment.formTitle", { namespace: "invoicing", fallback: "إضافة سند نقدي" })}
+      title={t("payment.formTitle", { namespace: "invoicing",  })}
       icon={<Receipt className="w-5 h-5 text-blue-600" />}
       onClose={onClose}
       onSave={handleSave}
       isSaving={saving}
       saveDisabled={isSaveDisabled}
-      saveLabel={t("payment.save", { namespace: "invoicing", fallback: "حفظ السند" })}
+      saveLabel={t("payment.save", { namespace: "invoicing",  })}
     >
       <div className="space-y-6 text-right">
-        <SidebarSection title={t("payment.details", { namespace: "invoicing", fallback: "تفاصيل السند" })}>
+        <SidebarSection title={t("payment.details", { namespace: "invoicing",  })}>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5 col-span-2">
-              <FieldLabel>{t("payment.voucherType", { namespace: "invoicing", fallback: "نوع السند" })}</FieldLabel>
+              <FieldLabel>{t("payment.voucherType", { namespace: "invoicing",  })}</FieldLabel>
               <Select 
                 value={form.payment_type} 
                 onValueChange={v => setForm(p => ({ 
@@ -203,8 +203,8 @@ export function PaymentForm({ customers, suppliers, accounts, onSave, onClose, s
               >
                 <SelectTrigger className="h-9 font-bold bg-white border-blue-200 focus:ring-blue-500"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {Object.entries(PAYMENT_TYPE_LABELS).filter(([k]) => initialValues ? true : !HIDDEN_PAYMENT_TYPES.includes(k)).map(([k, v]) => (
-                    <SelectItem key={k} value={k}>{t(`paymentTypeLabel.${k}`, { namespace: "invoicing", fallback: v })}</SelectItem>
+                  {Object.entries(PAYMENT_TYPE_LABELS).filter(([k]) => initialValues ? true : !HIDDEN_PAYMENT_TYPES.includes(k)).map(([k]) => (
+                    <SelectItem key={k} value={k}>{t(`paymentTypeLabel.${k}`, { namespace: "invoicing"})}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -212,7 +212,7 @@ export function PaymentForm({ customers, suppliers, accounts, onSave, onClose, s
 
             {currencies.length > 1 && (
             <div className="space-y-1.5">
-              <FieldLabel>{t("payment.defaultCurrency", { namespace: "invoicing", fallback: "العملة الافتراضية" })}</FieldLabel>
+              <FieldLabel>{t("payment.defaultCurrency", { namespace: "invoicing",  })}</FieldLabel>
               <Select value={form.currency_code} onValueChange={handleCurrencyChange}>
                 <SelectTrigger className="h-9 font-bold bg-white"><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -225,7 +225,7 @@ export function PaymentForm({ customers, suppliers, accounts, onSave, onClose, s
             )}
 
             <div className={`space-y-1.5 ${currencies.length > 1 ? "" : "col-span-2"}`}>
-              <FieldLabel required>{t("labels.amount", { namespace: "common", fallback: "المبلغ" })}</FieldLabel>
+              <FieldLabel required>{t("labels.amount", { namespace: "common",  })}</FieldLabel>
               <Input 
                 type="number" 
                 min="0" 
@@ -242,7 +242,7 @@ export function PaymentForm({ customers, suppliers, accounts, onSave, onClose, s
             </div>
 
             <div className="space-y-1.5 col-span-2">
-              <FieldLabel>{t("labels.date", { namespace: "common", fallback: "التاريخ" })}</FieldLabel>
+              <FieldLabel>{t("labels.date", { namespace: "common",  })}</FieldLabel>
               <Input 
                 type="date"
                 value={form.payment_date?.slice(0, 10) ?? ""}
@@ -257,11 +257,11 @@ export function PaymentForm({ customers, suppliers, accounts, onSave, onClose, s
             </div>
 
             <div className="space-y-1.5 col-span-2">
-              <FieldLabel>{t("payment.notesField", { namespace: "invoicing", fallback: "البيان / ملاحظات" })}</FieldLabel>
+              <FieldLabel>{t("payment.notesField", { namespace: "invoicing",  })}</FieldLabel>
               <Textarea 
                 value={form.notes ?? ""} 
                 onChange={e => setForm(p => ({ ...p, notes: e.target.value }))} 
-                placeholder={t("payment.notesPlaceholder", { namespace: "invoicing", fallback: "بيان السند (اختياري)" })}
+                placeholder={t("payment.notesPlaceholder", { namespace: "invoicing",  })}
                 className="min-h-[60px] bg-white border-slate-200"
               />
             </div>

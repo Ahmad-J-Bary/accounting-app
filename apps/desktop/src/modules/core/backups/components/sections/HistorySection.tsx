@@ -14,7 +14,7 @@ interface Props {
 export function HistorySection({ backups, pending, operating, onRestore, onDone }: Props) {
   const { t } = useLocalization();
   return (
-    <SettingsSection title={t("settings.backups.title", { namespace: "settings", fallback: "النسخ الاحتياطية" })}>
+    <SettingsSection title={t("backups.title", { namespace: "settings",  })}>
       <BackupListPanel backups={backups} pending={pending} operating={operating} onRestore={onRestore} onDone={onDone} />
     </SettingsSection>
   );

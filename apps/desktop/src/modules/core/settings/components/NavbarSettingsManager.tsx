@@ -35,43 +35,43 @@ function NavSidebarPreview({
   density, fontSize, layoutType, groupHeaderStyle,
 }: NavPreviewProps) {
   const { t } = useLocalization();
-  const [activeItem, setActiveItem] = useState(() => t("settings.navbar.preview.items.dashboard", { namespace: "settings", fallback: "لوحة التحكم" }));
+  const [activeItem, setActiveItem] = useState(() => t("navbar.preview.items.dashboard", { namespace: "settings",  }));
   const [isCollapsed, setIsCollapsed] = useState(collapsed);
 
   const PREVIEW_GROUPS = [
     {
-      title: t("settings.navbar.preview.groups.home", { namespace: "settings", fallback: "الرئيسية" }),
+      title: t("navbar.preview.groups.home", { namespace: "settings",  }),
       items: [
-        { label: t("settings.navbar.preview.items.dashboard", { namespace: "settings", fallback: "لوحة التحكم" }), icon: LayoutDashboard, active: true },
+        { label: t("navbar.preview.items.dashboard", { namespace: "settings",  }), icon: LayoutDashboard, active: true },
       ],
     },
     {
-      title: t("settings.navbar.preview.groups.accounting", { namespace: "settings", fallback: "المحاسبة" }),
+      title: t("navbar.preview.groups.accounting", { namespace: "settings",  }),
       items: [
-        { label: t("settings.navbar.preview.items.chartOfAccounts", { namespace: "settings", fallback: "دليل الحسابات" }), icon: BookOpen, active: false },
-        { label: t("settings.navbar.preview.items.journalEntries", { namespace: "settings", fallback: "القيود اليومية" }), icon: FileText, active: false },
+        { label: t("navbar.preview.items.chartOfAccounts", { namespace: "settings",  }), icon: BookOpen, active: false },
+        { label: t("navbar.preview.items.journalEntries", { namespace: "settings",  }), icon: FileText, active: false },
       ],
     },
     {
-      title: t("settings.navbar.preview.groups.sales", { namespace: "settings", fallback: "المبيعات" }),
+      title: t("navbar.preview.groups.sales", { namespace: "settings",  }),
       items: [
-        { label: t("settings.navbar.preview.items.salesInvoices", { namespace: "settings", fallback: "فواتير المبيعات" }), icon: Receipt, active: false },
-        { label: t("settings.navbar.preview.items.purchaseInvoices", { namespace: "settings", fallback: "فواتير المشتريات" }), icon: ShoppingCart, active: false },
+        { label: t("navbar.preview.items.salesInvoices", { namespace: "settings",  }), icon: Receipt, active: false },
+        { label: t("navbar.preview.items.purchaseInvoices", { namespace: "settings",  }), icon: ShoppingCart, active: false },
       ],
     },
     {
-      title: t("settings.navbar.preview.groups.inventory", { namespace: "settings", fallback: "المخزون" }),
+      title: t("navbar.preview.groups.inventory", { namespace: "settings",  }),
       items: [
-        { label: t("settings.navbar.preview.items.materials", { namespace: "settings", fallback: "بطاقات المواد" }), icon: Package, active: false },
-        { label: t("settings.navbar.preview.items.inventoryMovements", { namespace: "settings", fallback: "حركات المخزون" }), icon: Warehouse, active: false },
+        { label: t("navbar.preview.items.materials", { namespace: "settings",  }), icon: Package, active: false },
+        { label: t("navbar.preview.items.inventoryMovements", { namespace: "settings",  }), icon: Warehouse, active: false },
       ],
     },
     {
-      title: t("settings.navbar.preview.groups.management", { namespace: "settings", fallback: "الإدارة" }),
+      title: t("navbar.preview.groups.management", { namespace: "settings",  }),
       items: [
-        { label: t("settings.navbar.preview.items.reports", { namespace: "settings", fallback: "التقارير" }), icon: BarChart3, active: false },
-        { label: t("settings.navbar.preview.items.users", { namespace: "settings", fallback: "المستخدمون" }), icon: Users, active: false },
-        { label: t("settings.navbar.preview.items.settings", { namespace: "settings", fallback: "الإعدادات" }), icon: Settings, active: false },
+        { label: t("navbar.preview.items.reports", { namespace: "settings",  }), icon: BarChart3, active: false },
+        { label: t("navbar.preview.items.users", { namespace: "settings",  }), icon: Users, active: false },
+        { label: t("navbar.preview.items.settings", { namespace: "settings",  }), icon: Settings, active: false },
       ],
     },
   ];
@@ -101,7 +101,7 @@ function NavSidebarPreview({
           <div className="w-6 h-6 rounded bg-blue-600 flex items-center justify-center shrink-0">
             <LayoutDashboard className="w-3.5 h-3.5 text-white" />
           </div>
-          <span className={cn("text-[10px] font-bold", textClass)}>{t("settings.navbar.preview.systemName", { namespace: "settings", fallback: "نظام الإدارة" })}</span>
+          <span className={cn("text-[10px] font-bold", textClass)}>{t("navbar.preview.systemName", { namespace: "settings",  })}</span>
           <div className="flex-1" />
           {PREVIEW_GROUPS.flatMap(g => g.items).slice(0, 5).map(item => (
             <button
@@ -120,7 +120,7 @@ function NavSidebarPreview({
           ))}
         </div>
         <div className="flex-1 bg-slate-50 flex items-center justify-center min-h-[120px]">
-          <span className="text-[10px] text-slate-400 font-bold">{t("settings.navbar.preview.mainContent", { namespace: "settings", fallback: "محتوى الشاشة الرئيسي" })}</span>
+          <span className="text-[10px] text-slate-400 font-bold">{t("navbar.preview.mainContent", { namespace: "settings",  })}</span>
         </div>
       </div>
     );
@@ -143,8 +143,8 @@ function NavSidebarPreview({
           </div>
           {!isCollapsed && (
             <div className="min-w-0 flex-1">
-              <div className={cn("font-bold leading-tight truncate", textClass)} style={{ fontSize: '10px' }}>{t("settings.navbar.preview.systemName", { namespace: "settings", fallback: "نظام الإدارة" })}</div>
-              <div className={cn("truncate", subtextClass)} style={{ fontSize: '8px' }}>{t("settings.navbar.preview.systemSub", { namespace: "settings", fallback: "المحاسبة والمخزون" })}</div>
+              <div className={cn("font-bold leading-tight truncate", textClass)} style={{ fontSize: '10px' }}>{t("navbar.preview.systemName", { namespace: "settings",  })}</div>
+              <div className={cn("truncate", subtextClass)} style={{ fontSize: '8px' }}>{t("navbar.preview.systemSub", { namespace: "settings",  })}</div>
             </div>
           )}
         </div>
@@ -270,31 +270,31 @@ export const NavbarSettingsManager: React.FC = () => {
     <SettingsManagerLayout resetAction={resetNavSettings}>
       <div className="space-y-5">
         <div className="flex flex-col gap-1 border-r-4 border-blue-600 pr-3 pb-1 mb-2">
-          <h2 className="text-xl font-black text-slate-800">{t("settings.navbar.title", { namespace: "settings", fallback: "قائمة التنقل الجانبي الرئيسي" })}</h2>
-          <p className="text-xs text-slate-500">{t("settings.navbar.description", { namespace: "settings", fallback: "تخصيص مظهر وتخطيط القائمة الجانبية الرئيسية للتنقل بين شاشات وفروع النظام" })}</p>
+          <h2 className="text-xl font-black text-slate-800">{t("navbar.title", { namespace: "settings",  })}</h2>
+          <p className="text-xs text-slate-500">{t("navbar.description", { namespace: "settings",  })}</p>
         </div>
 
-        <SettingsGroup title={t("settings.navbar.layoutTitle", { namespace: "settings", fallback: "تخطيط وأبعاد قائمة التنقل" })} icon={Menu} color="text-blue-600">
+        <SettingsGroup title={t("navbar.layoutTitle", { namespace: "settings",  })} icon={Menu} color="text-blue-600">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
-              <Label className="text-slate-600 font-semibold">{t("settings.navbar.layoutType", { namespace: "settings", fallback: "نوع التخطيط" })}</Label>
+              <Label className="text-slate-600 font-semibold">{t("navbar.layoutType", { namespace: "settings",  })}</Label>
               <Select
                 value={navSettings.navLayoutType}
                 onValueChange={(v) => updateNavSetting('navLayoutType', v as NavLayoutType)}
               >
                 <SelectTrigger className="h-10 rounded-lg border-slate-200">
-                  <SelectValue placeholder={t("settings.navbar.layoutPlaceholder", { namespace: "settings", fallback: "اختر نوع التخطيط" })} />
+                  <SelectValue placeholder={t("navbar.layoutPlaceholder", { namespace: "settings",  })} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="vertical">{t("settings.navbar.layouts.vertical", { namespace: "settings", fallback: "عمودي (افتراضي)" })}</SelectItem>
-                  <SelectItem value="topnav-slim">{t("settings.navbar.layouts.topnavSlim", { namespace: "settings", fallback: "شريط علوي نحيف" })}</SelectItem>
+                  <SelectItem value="vertical">{t("navbar.layouts.vertical", { namespace: "settings",  })}</SelectItem>
+                  <SelectItem value="topnav-slim">{t("navbar.layouts.topnavSlim", { namespace: "settings",  })}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-3">
               <div className="flex justify-between items-center">
-                <Label className="text-slate-600 font-semibold">{t("settings.navbar.width", { namespace: "settings", fallback: "عرض شريط التنقل ({{width}}px)", vars: { width: navSettings.navWidth } })}</Label>
+                <Label className="text-slate-600 font-semibold">{t("navbar.width", { namespace: "settings", vars: { width: navSettings.navWidth } })}</Label>
               </div>
               <Slider
                 value={[navSettings.navWidth]}
@@ -308,25 +308,25 @@ export const NavbarSettingsManager: React.FC = () => {
             </div>
 
             <div className="space-y-2">
-              <Label className="text-slate-600 font-semibold">{t("settings.navbar.density", { namespace: "settings", fallback: "تباعد الكثافة" })}</Label>
+              <Label className="text-slate-600 font-semibold">{t("navbar.density", { namespace: "settings",  })}</Label>
               <Select
                 value={navSettings.navDensity}
                 onValueChange={(v) => updateNavSetting('navDensity', v as SidebarDensityPreset)}
               >
                 <SelectTrigger className="h-10 rounded-lg border-slate-200">
-                  <SelectValue placeholder={t("settings.navbar.densityPlaceholder", { namespace: "settings", fallback: "اختر الكثافة" })} />
+                  <SelectValue placeholder={t("navbar.densityPlaceholder", { namespace: "settings",  })} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="compact">{t("settings.navbar.densities.compact", { namespace: "settings", fallback: "مكتنز (صغير)" })}</SelectItem>
-                  <SelectItem value="comfortable">{t("settings.navbar.densities.comfortable", { namespace: "settings", fallback: "مريح (متوسط)" })}</SelectItem>
-                  <SelectItem value="spacious">{t("settings.navbar.densities.spacious", { namespace: "settings", fallback: "متسع (كبير)" })}</SelectItem>
+                  <SelectItem value="compact">{t("navbar.densities.compact", { namespace: "settings",  })}</SelectItem>
+                  <SelectItem value="comfortable">{t("navbar.densities.comfortable", { namespace: "settings",  })}</SelectItem>
+                  <SelectItem value="spacious">{t("navbar.densities.spacious", { namespace: "settings",  })}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-3">
               <div className="flex justify-between items-center">
-                <Label className="text-slate-600 font-semibold">{t("settings.navbar.fontSize", { namespace: "settings", fallback: "حجم خط القائمة ({{size}}px)", vars: { size: navSettings.navFontSize } })}</Label>
+                <Label className="text-slate-600 font-semibold">{t("navbar.fontSize", { namespace: "settings", vars: { size: navSettings.navFontSize } })}</Label>
               </div>
               <Slider
                 value={[navSettings.navFontSize]}
@@ -340,70 +340,70 @@ export const NavbarSettingsManager: React.FC = () => {
           </div>
         </SettingsGroup>
 
-        <SettingsGroup title={t("settings.navbar.colorsTitle", { namespace: "settings", fallback: "ألوان ومظهر قائمة التنقل" })} icon={LayoutGrid} color="text-indigo-600">
+        <SettingsGroup title={t("navbar.colorsTitle", { namespace: "settings",  })} icon={LayoutGrid} color="text-indigo-600">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="space-y-2">
-              <Label className="text-slate-600 font-semibold">{t("settings.navbar.background", { namespace: "settings", fallback: "خلفية شريط التنقل" })}</Label>
+              <Label className="text-slate-600 font-semibold">{t("navbar.background", { namespace: "settings",  })}</Label>
               <Select
                 value={navSettings.navBackground}
                 onValueChange={(v) => updateNavSetting('navBackground', v)}
               >
                 <SelectTrigger className="h-10 rounded-lg border-slate-200">
-                  <SelectValue placeholder={t("settings.navbar.backgroundPlaceholder", { namespace: "settings", fallback: "اختر لون الخلفية" })} />
+                  <SelectValue placeholder={t("navbar.backgroundPlaceholder", { namespace: "settings",  })} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="bg-slate-900">{t("settings.navbar.backgrounds.dark", { namespace: "settings", fallback: "داكن (افتراضي)" })}</SelectItem>
-                  <SelectItem value="bg-slate-950">{t("settings.navbar.backgrounds.veryDark", { namespace: "settings", fallback: "داكن جداً" })}</SelectItem>
-                  <SelectItem value="bg-slate-800">{t("settings.navbar.backgrounds.darkGray", { namespace: "settings", fallback: "رمادي داكن" })}</SelectItem>
-                  <SelectItem value="bg-white">{t("settings.navbar.backgrounds.white", { namespace: "settings", fallback: "أبيض ناصع" })}</SelectItem>
-                  <SelectItem value="bg-slate-50">{t("settings.navbar.backgrounds.lightGray", { namespace: "settings", fallback: "رمادي فاتح" })}</SelectItem>
+                  <SelectItem value="bg-slate-900">{t("navbar.backgrounds.dark", { namespace: "settings",  })}</SelectItem>
+                  <SelectItem value="bg-slate-950">{t("navbar.backgrounds.veryDark", { namespace: "settings",  })}</SelectItem>
+                  <SelectItem value="bg-slate-800">{t("navbar.backgrounds.darkGray", { namespace: "settings",  })}</SelectItem>
+                  <SelectItem value="bg-white">{t("navbar.backgrounds.white", { namespace: "settings",  })}</SelectItem>
+                  <SelectItem value="bg-slate-50">{t("navbar.backgrounds.lightGray", { namespace: "settings",  })}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-2">
-              <Label className="text-slate-600 font-semibold">{t("settings.navbar.activeBg", { namespace: "settings", fallback: "خلفية العنصر النشط" })}</Label>
+              <Label className="text-slate-600 font-semibold">{t("navbar.activeBg", { namespace: "settings",  })}</Label>
               <Select
                 value={navSettings.navActiveBg}
                 onValueChange={(v) => updateNavSetting('navActiveBg', v)}
               >
                 <SelectTrigger className="h-10 rounded-lg border-slate-200">
-                  <SelectValue placeholder={t("settings.navbar.activePlaceholder", { namespace: "settings", fallback: "اختر اللون النشط" })} />
+                  <SelectValue placeholder={t("navbar.activePlaceholder", { namespace: "settings",  })} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="bg-blue-600">{t("settings.navbar.activeColors.royalBlue", { namespace: "settings", fallback: "أزرق ملكي" })}</SelectItem>
-                  <SelectItem value="bg-emerald-600">{t("settings.navbar.activeColors.emerald", { namespace: "settings", fallback: "أخضر زمردي" })}</SelectItem>
-                  <SelectItem value="bg-slate-700">{t("settings.navbar.activeColors.gray", { namespace: "settings", fallback: "رمادي داكن" })}</SelectItem>
-                  <SelectItem value="bg-rose-600">{t("settings.navbar.activeColors.rose", { namespace: "settings", fallback: "أحمر مرجاني" })}</SelectItem>
-                  <SelectItem value="bg-violet-600">{t("settings.navbar.activeColors.violet", { namespace: "settings", fallback: "بنفسجي ملكي" })}</SelectItem>
+                  <SelectItem value="bg-blue-600">{t("navbar.activeColors.royalBlue", { namespace: "settings",  })}</SelectItem>
+                  <SelectItem value="bg-emerald-600">{t("navbar.activeColors.emerald", { namespace: "settings",  })}</SelectItem>
+                  <SelectItem value="bg-slate-700">{t("navbar.activeColors.gray", { namespace: "settings",  })}</SelectItem>
+                  <SelectItem value="bg-rose-600">{t("navbar.activeColors.rose", { namespace: "settings",  })}</SelectItem>
+                  <SelectItem value="bg-violet-600">{t("navbar.activeColors.violet", { namespace: "settings",  })}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-2">
-              <Label className="text-slate-600 font-semibold">{t("settings.navbar.hover", { namespace: "settings", fallback: "مظهر التمرير (Hover)" })}</Label>
+              <Label className="text-slate-600 font-semibold">{t("navbar.hover", { namespace: "settings",  })}</Label>
               <Select
                 value={navSettings.navHoverBg}
                 onValueChange={(v) => updateNavSetting('navHoverBg', v)}
               >
                 <SelectTrigger className="h-10 rounded-lg border-slate-200">
-                  <SelectValue placeholder={t("settings.navbar.hoverPlaceholder", { namespace: "settings", fallback: "اختر لون التمرير" })} />
+                  <SelectValue placeholder={t("navbar.hoverPlaceholder", { namespace: "settings",  })} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="hover:bg-white/5 hover:text-white">{t("settings.navbar.hoverStyles.default", { namespace: "settings", fallback: "افتراضي (شفاف خفيف)" })}</SelectItem>
-                  <SelectItem value="hover:bg-white/10 hover:text-white">{t("settings.navbar.hoverStyles.glow", { namespace: "settings", fallback: "تأثير مضيء" })}</SelectItem>
-                  <SelectItem value="hover:bg-slate-800 hover:text-white">{t("settings.navbar.hoverStyles.dark", { namespace: "settings", fallback: "تأثير داكن" })}</SelectItem>
-                  <SelectItem value="hover:bg-transparent hover:text-white">{t("settings.navbar.hoverStyles.none", { namespace: "settings", fallback: "بدون خلفية (نص فقط)" })}</SelectItem>
+                  <SelectItem value="hover:bg-white/5 hover:text-white">{t("navbar.hoverStyles.default", { namespace: "settings",  })}</SelectItem>
+                  <SelectItem value="hover:bg-white/10 hover:text-white">{t("navbar.hoverStyles.glow", { namespace: "settings",  })}</SelectItem>
+                  <SelectItem value="hover:bg-slate-800 hover:text-white">{t("navbar.hoverStyles.dark", { namespace: "settings",  })}</SelectItem>
+                  <SelectItem value="hover:bg-transparent hover:text-white">{t("navbar.hoverStyles.none", { namespace: "settings",  })}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
         </SettingsGroup>
 
-        <SettingsGroup title={t("settings.navbar.optionsTitle", { namespace: "settings", fallback: "خيارات العرض وسلوك التنقل" })} icon={Sliders} color="text-cyan-600">
+        <SettingsGroup title={t("navbar.optionsTitle", { namespace: "settings",  })} icon={Sliders} color="text-cyan-600">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="flex items-center justify-between p-3 rounded-xl border border-slate-100 bg-slate-50/30">
-              <Label className="text-slate-700 font-semibold">{t("settings.navbar.showLabels", { namespace: "settings", fallback: "إظهار تسميات العناصر" })}</Label>
+              <Label className="text-slate-700 font-semibold">{t("navbar.showLabels", { namespace: "settings",  })}</Label>
               <Switch
                 checked={navSettings.navShowLabels}
                 onCheckedChange={(v) => updateNavSetting('navShowLabels', v)}
@@ -411,7 +411,7 @@ export const NavbarSettingsManager: React.FC = () => {
             </div>
 
             <div className="flex items-center justify-between p-3 rounded-xl border border-slate-100 bg-slate-50/30">
-              <Label className="text-slate-700 font-semibold">{t("settings.navbar.showSectionHeaders", { namespace: "settings", fallback: "إظهار عناوين الأقسام" })}</Label>
+              <Label className="text-slate-700 font-semibold">{t("navbar.showSectionHeaders", { namespace: "settings",  })}</Label>
               <Switch
                 checked={navSettings.navShowSectionHeaders}
                 onCheckedChange={(v) => updateNavSetting('navShowSectionHeaders', v)}
@@ -419,7 +419,7 @@ export const NavbarSettingsManager: React.FC = () => {
             </div>
 
             <div className="flex items-center justify-between p-3 rounded-xl border border-slate-100 bg-slate-50/30">
-              <Label className="text-slate-700 font-semibold">{t("settings.navbar.rememberState", { namespace: "settings", fallback: "حفظ حالة طي القائمة" })}</Label>
+              <Label className="text-slate-700 font-semibold">{t("navbar.rememberState", { namespace: "settings",  })}</Label>
               <Switch
                 checked={navSettings.navRemembersState}
                 onCheckedChange={(v) => updateNavSetting('navRemembersState', v)}
@@ -427,7 +427,7 @@ export const NavbarSettingsManager: React.FC = () => {
             </div>
 
             <div className="flex items-center justify-between p-3 rounded-xl border border-slate-100 bg-slate-50/30">
-              <Label className="text-slate-700 font-semibold">{t("settings.navbar.bordered", { namespace: "settings", fallback: "حدود فاصلة جانبية" })}</Label>
+              <Label className="text-slate-700 font-semibold">{t("navbar.bordered", { namespace: "settings",  })}</Label>
               <Switch
                 checked={navSettings.navBordered}
                 onCheckedChange={(v) => updateNavSetting('navBordered', v)}
@@ -436,38 +436,38 @@ export const NavbarSettingsManager: React.FC = () => {
           </div>
         </SettingsGroup>
 
-        <SettingsGroup title={t("settings.navbar.groupBehaviorTitle", { namespace: "settings", fallback: "خيارات وسلوك مجموعات القائمة" })} icon={Sliders} color="text-teal-600">
+        <SettingsGroup title={t("navbar.groupBehaviorTitle", { namespace: "settings",  })} icon={Sliders} color="text-teal-600">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
-              <Label className="text-slate-600 font-bold text-xs">{t("settings.navbar.groupCollapseBehavior", { namespace: "settings", fallback: "سلوك ضغط وتوسيع المجموعات" })}</Label>
+              <Label className="text-slate-600 font-bold text-xs">{t("navbar.groupCollapseBehavior", { namespace: "settings",  })}</Label>
               <Select
                 value={navSettings.navGroupCollapseBehavior}
                 onValueChange={(v) => updateNavSetting('navGroupCollapseBehavior', v as GroupCollapseBehavior)}
               >
                 <SelectTrigger className="h-10 rounded-lg border-slate-200 text-xs">
-                  <SelectValue placeholder={t("settings.navbar.groupBehaviorPlaceholder", { namespace: "settings", fallback: "اختر السلوك" })} />
+                  <SelectValue placeholder={t("navbar.groupBehaviorPlaceholder", { namespace: "settings",  })} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="free">{t("settings.navbar.groupBehaviors.free", { namespace: "settings", fallback: "يدوي حر (توسيع/طي أي مجموعة بشكل مستقل)" })}</SelectItem>
-                  <SelectItem value="accordion">{t("settings.navbar.groupBehaviors.accordion", { namespace: "settings", fallback: "أكورديون (مجموعة نشطة واحدة مفتوحة فقط)" })}</SelectItem>
-                  <SelectItem value="all-expanded">{t("settings.navbar.groupBehaviors.allExpanded", { namespace: "settings", fallback: "موسعة بالكامل دائمًا (تعطيل خيار الطي)" })}</SelectItem>
+                  <SelectItem value="free">{t("navbar.groupBehaviors.free", { namespace: "settings",  })}</SelectItem>
+                  <SelectItem value="accordion">{t("navbar.groupBehaviors.accordion", { namespace: "settings",  })}</SelectItem>
+                  <SelectItem value="all-expanded">{t("navbar.groupBehaviors.allExpanded", { namespace: "settings",  })}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-2">
-              <Label className="text-slate-600 font-bold text-xs">{t("settings.navbar.groupHeaderStyle", { namespace: "settings", fallback: "نمط شكل ترويسات المجموعات" })}</Label>
+              <Label className="text-slate-600 font-bold text-xs">{t("navbar.groupHeaderStyle", { namespace: "settings",  })}</Label>
               <Select
                 value={navSettings.navGroupHeaderStyle}
                 onValueChange={(v) => updateNavSetting('navGroupHeaderStyle', v as GroupHeaderStyle)}
               >
                 <SelectTrigger className="h-10 rounded-lg border-slate-200 text-xs">
-                  <SelectValue placeholder={t("settings.navbar.groupStylePlaceholder", { namespace: "settings", fallback: "اختر النمط" })} />
+                  <SelectValue placeholder={t("navbar.groupStylePlaceholder", { namespace: "settings",  })} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="classic">{t("settings.navbar.groupStyles.classic", { namespace: "settings", fallback: "كلاسيكي (نص صغير بسيط)" })}</SelectItem>
-                  <SelectItem value="line">{t("settings.navbar.groupStyles.line", { namespace: "settings", fallback: "كلاسيكي فاصل (خط يتبع النص)" })}</SelectItem>
-                  <SelectItem value="card">{t("settings.navbar.groupStyles.card", { namespace: "settings", fallback: "بطاقة مخصصة (خلفية بارزة تفاعلية)" })}</SelectItem>
+                  <SelectItem value="classic">{t("navbar.groupStyles.classic", { namespace: "settings",  })}</SelectItem>
+                  <SelectItem value="line">{t("navbar.groupStyles.line", { namespace: "settings",  })}</SelectItem>
+                  <SelectItem value="card">{t("navbar.groupStyles.card", { namespace: "settings",  })}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -475,9 +475,9 @@ export const NavbarSettingsManager: React.FC = () => {
         </SettingsGroup>
 
         {/* ── Live Preview ── */}
-        <SettingsGroup title={t("settings.navbar.previewTitle", { namespace: "settings", fallback: "معاينة حية لقائمة التنقل الجانبي" })} icon={Eye} color="text-violet-600">
+        <SettingsGroup title={t("navbar.previewTitle", { namespace: "settings",  })} icon={Eye} color="text-violet-600">
           <p className="text-xs text-slate-400 mb-4 font-medium">
-            {t("settings.navbar.previewHint", { namespace: "settings", fallback: "تعكس هذه المعاينة تغييراتك فورياً — يمكنك النقر على عناصر القائمة والضغط على زر الطي للتفاعل معها" })}
+            {t("navbar.previewHint", { namespace: "settings",  })}
           </p>
           <NavSidebarPreview
             background={navSettings.navBackground}

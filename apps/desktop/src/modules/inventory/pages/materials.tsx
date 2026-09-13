@@ -126,7 +126,7 @@ export default function Materials() {
     setSavingTransfer(true);
     try {
       await transferService.create(req);
-      toast.success(t('transfers.created', { namespace: "inventory", fallback: 'تم إنشاء التحويل بنجاح' }));
+      toast.success(t('transfers.created', { namespace: "inventory",  }));
       setTransferFormOpen(false);
       setTransferPreset(null);
       loadCategories();
@@ -134,7 +134,7 @@ export default function Materials() {
       invalidateKeys(queryClient, INVENTORY_MUTATION_KEYS);
       refresh();
     } catch (e) {
-      toast.error(t('materials.transferFailed', { namespace: "inventory", vars: { error: String(e) }, fallback: 'فشل التحويل: ' + e }));
+      toast.error(t('materials.transferFailed', { namespace: "inventory", vars: { error: String(e) } }));
     } finally {
       setSavingTransfer(false);
     }
@@ -158,9 +158,9 @@ export default function Materials() {
       loadInventoryData();
       invalidateKeys(queryClient, INVENTORY_MUTATION_KEYS);
       refresh();
-      toast.success(t(`materials.damagedCreated`, { namespace: "inventory", fallback: `تم تسجيل التالف للمادة بنجاح` }));
+      toast.success(t(`materials.damagedCreated`, { namespace: "inventory",  }));
     } catch (e: unknown) {
-      toast.error(t("materials.damagedFailed", { namespace: "inventory", vars: { error: String(e) }, fallback: "فشل تسجيل التالف: " + e }));
+      toast.error(t("materials.damagedFailed", { namespace: "inventory", vars: { error: String(e) } }));
     } finally {
       setSavingDamaged(false);
     }
@@ -175,9 +175,9 @@ export default function Materials() {
       loadInventoryData();
       invalidateKeys(queryClient, INVENTORY_MUTATION_KEYS);
       refresh();
-      toast.success(t('materials.adjustmentCreated', { namespace: "inventory", fallback: 'تم إنشاء التسوية بنجاح' }));
+      toast.success(t('materials.adjustmentCreated', { namespace: "inventory",  }));
     } catch (e: unknown) {
-      toast.error(t("materials.adjustmentFailed", { namespace: "inventory", vars: { error: String(e) }, fallback: "فشل إنشاء التسوية: " + e }));
+      toast.error(t("materials.adjustmentFailed", { namespace: "inventory", vars: { error: String(e) } }));
     } finally {
       setSavingAdjustment(false);
     }
@@ -246,11 +246,11 @@ export default function Materials() {
     addCurrencySummary(summary, "total_value", currencies);
     addCurrencySummary(summary, "available_value", currencies);
 
-    const unitPriceCols = currencyAmountCols("unit_price", t("materials.export.unitPrice", { namespace: "inventory", fallback: "السعر الإفرادي" }), (row) => rawPriceBase(row as unknown as MaterialDto), currencies, formatAmount, "", hasSecondaryCurrencies, hasSecondaryCurrencies, currencyMode, baseCurrency?.code, rateMap);
-    const extraCostCols = currencyAmountCols("extra_costs", t("materials.export.extraCosts", { namespace: "inventory", fallback: "تكاليف إضافية" }), (row) => extraCostBase(row as unknown as MaterialDto), currencies, formatAmount, "", hasSecondaryCurrencies, hasSecondaryCurrencies, currencyMode, baseCurrency?.code, rateMap);
+    const unitPriceCols = currencyAmountCols("unit_price", t("materials.export.unitPrice", { namespace: "inventory",  }), (row) => rawPriceBase(row as unknown as MaterialDto), currencies, formatAmount, "", hasSecondaryCurrencies, hasSecondaryCurrencies, currencyMode, baseCurrency?.code, rateMap);
+    const extraCostCols = currencyAmountCols("extra_costs", t("materials.export.extraCosts", { namespace: "inventory",  }), (row) => extraCostBase(row as unknown as MaterialDto), currencies, formatAmount, "", hasSecondaryCurrencies, hasSecondaryCurrencies, currencyMode, baseCurrency?.code, rateMap);
     const avgCostCols = currencies.map(curr => ({
       id: `average_cost_${curr.code}`,
-      label: t("materials.export.unitCost", { namespace: "inventory", vars: { sym: cs(curr.symbol || curr.code) }, fallback: `تكلفة الوحدة${cs(curr.symbol || curr.code)}` }),
+      label: t("materials.export.unitCost", { namespace: "inventory", vars: { sym: cs(curr.symbol || curr.code) },  }),
       formula: `{col('unit_price_${curr.code}')}{row}+{col('extra_costs_${curr.code}')}{row}`,
       numeric: true,
       decimalPlaces: 2,
@@ -262,7 +262,7 @@ export default function Materials() {
 
     const totalValueCols = currencies.map(curr => ({
       id: `total_value_${curr.code}`,
-      label: t("materials.export.totalValue", { namespace: "inventory", vars: { sym: cs(curr.symbol || curr.code) }, fallback: `المجموع${cs(curr.symbol || curr.code)}` }),
+      label: t("materials.export.totalValue", { namespace: "inventory", vars: { sym: cs(curr.symbol || curr.code) },  }),
       formula: `{col('total_received')}{row}*{col('average_cost_${curr.code}')}{row}`,
       numeric: true,
       decimalPlaces: 2,
@@ -271,7 +271,7 @@ export default function Materials() {
 
     const availValueCols = currencies.map(curr => ({
       id: `available_value_${curr.code}`,
-      label: t("materials.export.availableValue", { namespace: "inventory", vars: { sym: cs(curr.symbol || curr.code) }, fallback: `المجموع للمتوفر${cs(curr.symbol || curr.code)}` }),
+      label: t("materials.export.availableValue", { namespace: "inventory", vars: { sym: cs(curr.symbol || curr.code) },  }),
       formula: `{col('total_available')}{row}*{col('average_cost_${curr.code}')}{row}`,
       numeric: true,
       decimalPlaces: 2,
@@ -280,19 +280,19 @@ export default function Materials() {
 
     const colDefs: ExcelExportColumn[] = [
       {
-        id: 'image', label: t('materials.export.image', { namespace: "inventory", fallback: 'صورة' }), width: 8,
+        id: 'image', label: t('materials.export.image', { namespace: "inventory",  }), width: 8,
         hidden: !visibleColumnIds.includes('image'),
         accessor: () => '',
         imageDataUrl: (row) => (row as unknown as MaterialDto).image_path || null,
         imageWidth: 80,
         imageHeight: 80,
       },
-      { id: 'code', label: t('labels.code', { namespace: "common", fallback: 'الكود' }), width: 10, hidden: !visibleColumnIds.includes('code'), accessor: (row) => String(row.code ?? '') },
-      { id: 'barcode', label: t('labels.barcode', { namespace: "inventory", fallback: 'الباركود' }), width: 15, hidden: !visibleColumnIds.includes('barcode'), accessor: (row) => String(row.barcode ?? '') },
-      { id: 'name', label: t('materials.export.materialName', { namespace: "inventory", fallback: 'اسم المادة' }), width: 25, hidden: !visibleColumnIds.includes('name'), accessor: (row) => String(row.name ?? '') },
-      { id: 'name_en', label: t('materials.export.nameEn', { namespace: "inventory", fallback: 'الاسم (EN)' }), width: 20, hidden: !visibleColumnIds.includes('name_en'), accessor: (row) => String(row.name_en ?? '') },
+      { id: 'code', label: t('labels.code', { namespace: "common",  }), width: 10, hidden: !visibleColumnIds.includes('code'), accessor: (row) => String(row.code ?? '') },
+      { id: 'barcode', label: t('labels.barcode', { namespace: "inventory",  }), width: 15, hidden: !visibleColumnIds.includes('barcode'), accessor: (row) => String(row.barcode ?? '') },
+      { id: 'name', label: t('materials.export.materialName', { namespace: "inventory",  }), width: 25, hidden: !visibleColumnIds.includes('name'), accessor: (row) => String(row.name ?? '') },
+      { id: 'name_en', label: t('materials.export.nameEn', { namespace: "inventory",  }), width: 20, hidden: !visibleColumnIds.includes('name_en'), accessor: (row) => String(row.name_en ?? '') },
       {
-        id: 'categories', label: t('materials.export.category', { namespace: "inventory", fallback: 'التصنيف' }), width: 20, hidden: !visibleColumnIds.includes('categories'),
+        id: 'categories', label: t('materials.export.category', { namespace: "inventory",  }), width: 20, hidden: !visibleColumnIds.includes('categories'),
         accessor: (row) => {
           const ids = (row as unknown as MaterialDto).category_ids || [];
           return ids.map(id => categories.find(c => c.id === id)?.name).filter(Boolean).join(', ');
@@ -302,10 +302,10 @@ export default function Materials() {
       ...extraCostCols,
       ...avgCostCols,
       ...totalValueCols,
-      { id: 'total_received', label: t('materials.export.totalReceived', { namespace: "inventory", fallback: 'الكمية الكلية' }), width: 12, hidden: !visibleColumnIds.includes('total_received'), accessor: (row) => totalReceived(row as unknown as MaterialDto), numeric: true, decimalPlaces: 2 },
-      { id: 'total_sold', label: t('materials.export.totalSold', { namespace: "inventory", fallback: 'الكمية المباعة' }), width: 12, hidden: !visibleColumnIds.includes('total_sold'), accessor: (row) => parseFloat(String((row as unknown as MaterialDto).total_sold || '0')), numeric: true, decimalPlaces: 2 },
-      { id: 'total_damaged', label: t('materials.export.totalDamaged', { namespace: "inventory", fallback: 'الكمية المهدورة' }), width: 12, hidden: !visibleColumnIds.includes('total_damaged'), accessor: (row) => parseFloat(String((row as unknown as MaterialDto).total_damaged || '0')), numeric: true, decimalPlaces: 2 },
-      { id: 'total_available', label: t('materials.export.totalAvailable', { namespace: "inventory", fallback: 'الكمية المتوفرة' }), width: 12, hidden: !visibleColumnIds.includes('total_available'), formula: "{col('total_received')}{row}-{col('total_sold')}{row}-{col('total_damaged')}{row}", numeric: true, decimalPlaces: 2 },
+      { id: 'total_received', label: t('materials.export.totalReceived', { namespace: "inventory",  }), width: 12, hidden: !visibleColumnIds.includes('total_received'), accessor: (row) => totalReceived(row as unknown as MaterialDto), numeric: true, decimalPlaces: 2 },
+      { id: 'total_sold', label: t('materials.export.totalSold', { namespace: "inventory",  }), width: 12, hidden: !visibleColumnIds.includes('total_sold'), accessor: (row) => parseFloat(String((row as unknown as MaterialDto).total_sold || '0')), numeric: true, decimalPlaces: 2 },
+      { id: 'total_damaged', label: t('materials.export.totalDamaged', { namespace: "inventory",  }), width: 12, hidden: !visibleColumnIds.includes('total_damaged'), accessor: (row) => parseFloat(String((row as unknown as MaterialDto).total_damaged || '0')), numeric: true, decimalPlaces: 2 },
+      { id: 'total_available', label: t('materials.export.totalAvailable', { namespace: "inventory",  }), width: 12, hidden: !visibleColumnIds.includes('total_available'), formula: "{col('total_received')}{row}-{col('total_sold')}{row}-{col('total_damaged')}{row}", numeric: true, decimalPlaces: 2 },
       ...availValueCols,
     ];
 
@@ -320,7 +320,7 @@ export default function Materials() {
         const colId = `sale_price_${tier.id}_${curr.code}`;
         summary[colId] = 'subtotal';
         colDefs.push({
-          id: colId, label: t('materials.export.salePrice', { namespace: "inventory", vars: { tier: t(`saleTiers.${tier.id}`, { namespace: "inventory", fallback: tier.label }), sym }, fallback: `${tier.label} (${sym})` }), width: 15,
+          id: colId, label: t('materials.export.salePrice', { namespace: "inventory", vars: { tier: t(`saleTiers.${tier.id}`, { namespace: "inventory"}), sym },  }), width: 15,
           hidden: !visibleColumnIds.includes(colId),
           accessor: (row) => {
             const m = row as unknown as MaterialDto;
@@ -334,59 +334,59 @@ export default function Materials() {
 
     colDefs.push(
       {
-        id: 'units', label: t('materials.units', { namespace: "inventory", fallback: 'الوحدات' }), width: 20, hidden: !visibleColumnIds.includes('units'),
+        id: 'units', label: t('materials.units', { namespace: "inventory",  }), width: 20, hidden: !visibleColumnIds.includes('units'),
         accessor: (row) => (row as unknown as MaterialDto).units?.map(u => u.name).join(', ') || '',
       },
       {
-        id: 'minimum_stock', label: t('materials.export.minimumStock', { namespace: "inventory", fallback: 'حد الطلب' }), width: 10, hidden: !visibleColumnIds.includes('minimum_stock'),
+        id: 'minimum_stock', label: t('materials.export.minimumStock', { namespace: "inventory",  }), width: 10, hidden: !visibleColumnIds.includes('minimum_stock'),
         accessor: (row) => parseFloat(String((row as unknown as MaterialDto).minimum_stock || '0')),
         numeric: true, decimalPlaces: 2,
       },
       {
-        id: 'costing_method', label: t('materials.export.costingMethod', { namespace: "inventory", fallback: 'طريقة التكلفة' }), width: 12, hidden: !visibleColumnIds.includes('costing_method'),
-        accessor: (row) => (row as unknown as MaterialDto).costing_method === 'FIFO' ? 'FIFO' : t('materials.costingMethods.average', { namespace: "inventory", fallback: 'متوسط' }),
+        id: 'costing_method', label: t('materials.export.costingMethod', { namespace: "inventory",  }), width: 12, hidden: !visibleColumnIds.includes('costing_method'),
+        accessor: (row) => (row as unknown as MaterialDto).costing_method === 'FIFO' ? 'FIFO' : t('materials.costingMethods.average', { namespace: "inventory",  }),
       },
       {
-        id: 'default_purchase_unit', label: t('materials.export.purchaseUnit', { namespace: "inventory", fallback: 'وحدة الشراء' }), width: 12, hidden: !visibleColumnIds.includes('default_purchase_unit'),
+        id: 'default_purchase_unit', label: t('materials.export.purchaseUnit', { namespace: "inventory",  }), width: 12, hidden: !visibleColumnIds.includes('default_purchase_unit'),
         accessor: (row) => { const m = row as unknown as MaterialDto; return m.units?.find(u => u.id === m.default_purchase_unit_id)?.name || ''; },
       },
       {
-        id: 'default_sale_unit', label: t('materials.export.saleUnit', { namespace: "inventory", fallback: 'وحدة المبيع' }), width: 12, hidden: !visibleColumnIds.includes('default_sale_unit'),
+        id: 'default_sale_unit', label: t('materials.export.saleUnit', { namespace: "inventory",  }), width: 12, hidden: !visibleColumnIds.includes('default_sale_unit'),
         accessor: (row) => { const m = row as unknown as MaterialDto; return m.units?.find(u => u.id === m.default_sale_unit_id)?.name || ''; },
       },
       {
-        id: 'default_warehouse', label: t('materials.export.defaultWarehouse', { namespace: "inventory", fallback: 'المستودع الافتراضي' }), width: 15, hidden: !visibleColumnIds.includes('default_warehouse'),
+        id: 'default_warehouse', label: t('materials.export.defaultWarehouse', { namespace: "inventory",  }), width: 15, hidden: !visibleColumnIds.includes('default_warehouse'),
         accessor: (row) => String((row as unknown as MaterialDto).default_warehouse_id || ''),
       },
       {
-        id: 'default_purchase_currency', label: t('materials.export.purchaseCurrency', { namespace: "inventory", fallback: 'عملة الشراء' }), width: 12, hidden: !visibleColumnIds.includes('default_purchase_currency'),
+        id: 'default_purchase_currency', label: t('materials.export.purchaseCurrency', { namespace: "inventory",  }), width: 12, hidden: !visibleColumnIds.includes('default_purchase_currency'),
         accessor: (row) => String((row as unknown as MaterialDto).default_purchase_currency || ''),
       },
       {
-        id: 'default_sale_currency', label: t('materials.export.saleCurrency', { namespace: "inventory", fallback: 'عملة البيع' }), width: 12, hidden: !visibleColumnIds.includes('default_sale_currency'),
+        id: 'default_sale_currency', label: t('materials.export.saleCurrency', { namespace: "inventory",  }), width: 12, hidden: !visibleColumnIds.includes('default_sale_currency'),
         accessor: (row) => String((row as unknown as MaterialDto).default_sale_currency || ''),
       },
       {
-        id: 'has_expiry', label: t('materials.export.expiry', { namespace: "inventory", fallback: 'صلاحية' }), width: 12, hidden: !visibleColumnIds.includes('has_expiry'),
-        accessor: (row) => (row as unknown as MaterialDto).has_expiry ? t('materials.expiry.has', { namespace: "inventory", fallback: 'له صلاحية' }) : t('materials.expiry.none', { namespace: "inventory", fallback: 'بدون صلاحية' }),
+        id: 'has_expiry', label: t('materials.export.expiry', { namespace: "inventory",  }), width: 12, hidden: !visibleColumnIds.includes('has_expiry'),
+        accessor: (row) => (row as unknown as MaterialDto).has_expiry ? t('materials.expiry.has', { namespace: "inventory",  }) : t('materials.expiry.none', { namespace: "inventory",  }),
       },
       {
-        id: 'expiry_alert_before_days', label: t('materials.export.expiryAlert', { namespace: "inventory", fallback: 'التنبيه (أيام)' }), width: 10, hidden: !visibleColumnIds.includes('expiry_alert_before_days'),
+        id: 'expiry_alert_before_days', label: t('materials.export.expiryAlert', { namespace: "inventory",  }), width: 10, hidden: !visibleColumnIds.includes('expiry_alert_before_days'),
         accessor: (row) => { const m = row as unknown as MaterialDto; return m.has_expiry ? m.expiry_alert_before_days : ''; },
       },
       {
-        id: 'notes', label: t('labels.note', { namespace: "inventory", fallback: 'ملاحظة' }), width: 20, hidden: !visibleColumnIds.includes('notes'),
+        id: 'notes', label: t('labels.note', { namespace: "inventory",  }), width: 20, hidden: !visibleColumnIds.includes('notes'),
         accessor: (row) => String((row as unknown as MaterialDto).notes ?? ''),
       },
     );
 
     await executeExport(exportData, {
-      sheetName: t('materials.title', { namespace: "inventory", fallback: 'بطاقات المواد' }),
-      filename: t('materials.title', { namespace: "inventory", fallback: 'بطاقات المواد' }),
+      sheetName: t('materials.title', { namespace: "inventory",  }),
+      filename: t('materials.title', { namespace: "inventory",  }),
       data: materials as unknown as Record<string, unknown>[],
       columns: colDefs,
       summary,
-      summaryLabel: t("labels.summary", { namespace: "inventory", fallback: "المجموع" }),
+      summaryLabel: t("labels.summary", { namespace: "inventory",  }),
       sortBy: {
         columnId: 'code',
         direction: 'asc',
@@ -409,11 +409,11 @@ export default function Materials() {
   return (
     <>
       <OperationalTableTemplate
-        title={t("materials.title", { namespace: "inventory", fallback: "بطاقات المواد" })}
+        title={t("materials.title", { namespace: "inventory",  })}
         toolbar={
           <>
             <Button size="sm" onClick={handleOpenAdd} className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100">
-              <Plus className="w-4 h-4 ml-2" /> {t("materials.new", { namespace: "inventory", fallback: "مادة جديدة" })}
+              <Plus className="w-4 h-4 ml-2" /> {t("materials.new", { namespace: "inventory",  })}
             </Button>
 
             <Button
@@ -435,7 +435,7 @@ export default function Materials() {
               }}
             >
               <Layers className="w-4 h-4 ml-2 text-indigo-600" />
-              {t("materials.lots", { namespace: "inventory", fallback: "الدفعات" })}
+              {t("materials.lots", { namespace: "inventory",  })}
             </Button>
 
             <div className="h-6 w-px bg-slate-200 mx-1" />
@@ -448,7 +448,7 @@ export default function Materials() {
               onClick={() => handleOpenTransfer({})}
             >
               <ArrowRightLeft className="w-4 h-4 ml-2 text-amber-600" />
-              {t("materials.transferStock", { namespace: "inventory", fallback: "تحويل مخزني" })}
+              {t("materials.transferStock", { namespace: "inventory",  })}
             </Button>
 
             <div className="h-6 w-px bg-slate-200 mx-1" />
@@ -460,13 +460,13 @@ export default function Materials() {
               disabled={!selectedId}
               onClick={() => selectedMaterial && openTab({
                 id: `purchases-${selectedId}`,
-                title: t("materials.purchasesTabTitle", { namespace: "inventory", vars: { name: selectedMaterial.name }, fallback: `مشتريات: ${selectedMaterial.name}` }),
+                title: t("materials.purchasesTabTitle", { namespace: "inventory", vars: { name: selectedMaterial.name },  }),
                 path: `/inventory/purchases/${selectedId}`,
                 closable: true,
               })}
             >
               <ShoppingCart className="w-4 h-4 ml-2 text-emerald-600" />
-              {t("materials.purchasesAction", { namespace: "inventory", fallback: "مشتريات المادة" })}
+              {t("materials.purchasesAction", { namespace: "inventory",  })}
             </Button>
 
             <Button
@@ -476,13 +476,13 @@ export default function Materials() {
               disabled={!selectedId}
               onClick={() => selectedMaterial && openTab({
                 id: `sales-${selectedId}`,
-                title: t("materials.salesTabTitle", { namespace: "inventory", vars: { name: selectedMaterial.name }, fallback: `مبيعات: ${selectedMaterial.name}` }),
+                title: t("materials.salesTabTitle", { namespace: "inventory", vars: { name: selectedMaterial.name },  }),
                 path: `/inventory/sales/${selectedId}`,
                 closable: true,
               })}
             >
               <TrendingUp className="w-4 h-4 ml-2 text-blue-600" />
-              {t("materials.salesAction", { namespace: "inventory", fallback: "مبيعات المادة" })}
+              {t("materials.salesAction", { namespace: "inventory",  })}
             </Button>
 
             <Button
@@ -493,7 +493,7 @@ export default function Materials() {
               onClick={handleOpenReturn}
             >
               <Undo2 className="w-4 h-4 ml-2 text-amber-500" />
-              {t("materials.return", { namespace: "inventory", fallback: "مرتجع" })}
+              {t("materials.return", { namespace: "inventory",  })}
             </Button>
 
             <Button
@@ -507,7 +507,7 @@ export default function Materials() {
               }}
             >
               <Layers className="w-4 h-4 ml-2 text-purple-600" />
-              {t("materials.units", { namespace: "inventory", fallback: "الوحدات" })}
+              {t("materials.units", { namespace: "inventory",  })}
             </Button>
 
             <Button
@@ -522,7 +522,7 @@ export default function Materials() {
               }}
             >
               <AlertTriangle className="w-4 h-4 ml-2 text-rose-600" />
-              {t("damaged.register", { namespace: "inventory", fallback: "تسجيل تالف" })}
+              {t("damaged.register", { namespace: "inventory",  })}
             </Button>
 
             <Button
@@ -541,7 +541,7 @@ export default function Materials() {
               }}
             >
               <Scale className="w-4 h-4 ml-2 text-teal-600" />
-              {t("movementTypes.Adjustment", { namespace: "inventory", fallback: "تسوية" })}
+              {t("movementTypes.Adjustment", { namespace: "inventory",  })}
             </Button>
 
             <div className="h-6 w-px bg-slate-200 mx-1" />
@@ -552,7 +552,7 @@ export default function Materials() {
               className="bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
               onClick={handleExport}
             >
-              <Download className="w-4 h-4 ml-2 text-slate-500" /> {t("labels.exportExcel", { namespace: "inventory", fallback: "تصدير إكسل" })}
+              <Download className="w-4 h-4 ml-2 text-slate-500" /> {t("labels.exportExcel", { namespace: "inventory",  })}
             </Button>
           </>
         }

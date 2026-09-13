@@ -53,7 +53,7 @@ describe("WizardLineEditor", () => {
         detailAccounts={ACCOUNTS}
       />,
     );
-    expect(screen.getByText("لا توجد بنود بعد")).toBeInTheDocument();
+    expect(screen.getByText("openingBalance.noItemsYet")).toBeInTheDocument();
   });
 
 it("adds a row via the add button", async () => {

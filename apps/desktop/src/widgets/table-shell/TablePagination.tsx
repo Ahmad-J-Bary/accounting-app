@@ -35,7 +35,7 @@ export const TablePagination: React.FC<TablePaginationProps> = ({
       <div className="flex-1 text-sm text-slate-500 font-medium">
         {totalItems !== undefined && (
           <span>
-            {t('labels.showing', { fallback: 'عرض' })} {(currentPage - 1) * (pageSize || 0) + 1} {t('labels.to', { fallback: 'إلى' })} {Math.min(currentPage * (pageSize || 0), totalItems)} {t('labels.of', { fallback: 'من' })} {totalItems} {t('labels.record', { fallback: 'سجل' })}
+            {t('labels.showing', )} {(currentPage - 1) * (pageSize || 0) + 1} {t('labels.to', )} {Math.min(currentPage * (pageSize || 0), totalItems)} {t('labels.of', )} {totalItems} {t('labels.record', )}
           </span>
         )}
       </div>
@@ -61,7 +61,7 @@ export const TablePagination: React.FC<TablePaginationProps> = ({
         
         <div className="flex items-center gap-1 px-2">
           <span className="text-sm font-bold text-slate-700">{currentPage}</span>
-          <span className="text-sm text-slate-400">{t('labels.of', { fallback: 'من' })}</span>
+          <span className="text-sm text-slate-400">{t('labels.of', )}</span>
           <span className="text-sm font-bold text-slate-700">{totalPages}</span>
         </div>
 

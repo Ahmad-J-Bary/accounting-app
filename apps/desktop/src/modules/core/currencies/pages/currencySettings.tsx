@@ -85,7 +85,7 @@ export default function CurrencySettings() {
       }
     } catch (e) {
       console.error(e);
-      toast.error(t("settings.currencies.error", { namespace: "settings", fallback: "خطأ" }), { description: t("settings.currencies.errorLoad", { namespace: "settings", fallback: "فشل تحميل بيانات العملات" }) });
+      toast.error(t("currencies.error", { namespace: "settings",  }), { description: t("currencies.errorLoad", { namespace: "settings",  }) });
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -110,11 +110,11 @@ export default function CurrencySettings() {
         is_base: isFirst,
         is_active: true,
       });
-      toast.success(t("settings.currencies.addSuccess", { namespace: "settings", fallback: "تمت الإضافة" }), { description: t("settings.currencies.addSuccessDesc", { namespace: "settings", fallback: "تمت إضافة {{name}} ({{code}})", vars: { name: wc.name_ar, code: wc.code } }) });
+      toast.success(t("currencies.addSuccess", { namespace: "settings",  }), { description: t("currencies.addSuccessDesc", { namespace: "settings", vars: { name: wc.name_ar, code: wc.code } }) });
       await loadData();
       await refreshContext();
     } catch (e) {
-      toast.error(t("settings.currencies.error", { namespace: "settings", fallback: "خطأ" }), { description: String(e) });
+      toast.error(t("currencies.error", { namespace: "settings",  }), { description: String(e) });
       setIsAddDialogOpen(true);
     }
   };
@@ -145,18 +145,18 @@ export default function CurrencySettings() {
         decimals: editForm.decimals,
         is_active: true,
       });
-      toast.success(t("settings.currencies.editSuccess", { namespace: "settings", fallback: "تم التعديل" }), { description: t("settings.currencies.editSuccessDesc", { namespace: "settings", fallback: "تم تعديل {{name}}", vars: { name: editingCurrency.name_ar } }) });
+      toast.success(t("currencies.editSuccess", { namespace: "settings",  }), { description: t("currencies.editSuccessDesc", { namespace: "settings", vars: { name: editingCurrency.name_ar } }) });
       await loadData();
       await refreshContext();
     } catch (e) {
-      toast.error(t("settings.currencies.error", { namespace: "settings", fallback: "خطأ" }), { description: String(e) });
+      toast.error(t("currencies.error", { namespace: "settings",  }), { description: String(e) });
       await loadData();
       await refreshContext();
     }
   };
 
   const handleDeleteCurrency = async (code: string) => {
-    if (!confirm(t("settings.currencies.deleteConfirm", { namespace: "settings", fallback: "هل أنت متأكد من حذف هذه العملة؟" }))) return;
+    if (!confirm(t("currencies.deleteConfirm", { namespace: "settings",  }))) return;
     // Remove from local state immediately so the table updates right away
     setCurrencies(prev => prev.filter(c => c.code !== code));
     setRateStatus(prev => prev.filter(s => s.currency_code !== code));
@@ -164,10 +164,10 @@ export default function CurrencySettings() {
     setSelectedCurrencyForHistory(null);
     try {
       await currencyService.deleteCurrency(code);
-      toast.success(t("settings.currencies.deleteSuccess", { namespace: "settings", fallback: "تم الحذف" }), { description: t("settings.currencies.deleteSuccessDesc", { namespace: "settings", fallback: "تم حذف العملة بنجاح" }) });
+      toast.success(t("currencies.deleteSuccess", { namespace: "settings",  }), { description: t("currencies.deleteSuccessDesc", { namespace: "settings",  }) });
     } catch (e) {
       // Revert on failure by reloading from server
-      toast.error(t("settings.currencies.error", { namespace: "settings", fallback: "خطأ" }), { description: String(e) });
+      toast.error(t("currencies.error", { namespace: "settings",  }), { description: String(e) });
     }
     await loadData();
     await refreshContext();
@@ -177,11 +177,11 @@ export default function CurrencySettings() {
     setCurrencies(prev => prev.map(c => ({ ...c, is_base: c.code === code })));
     try {
       await currencyService.setBaseCurrency(code);
-      toast.success(t("settings.currencies.setBaseSuccess", { namespace: "settings", fallback: "تم التحديث" }), { description: t("settings.currencies.setBaseSuccessDesc", { namespace: "settings", fallback: "تم تعيين {{code}} كعملة أساسية", vars: { code } }) });
+      toast.success(t("currencies.setBaseSuccess", { namespace: "settings",  }), { description: t("currencies.setBaseSuccessDesc", { namespace: "settings", vars: { code } }) });
       await loadData();
       await refreshContext();
     } catch (e) {
-      toast.error(t("settings.currencies.error", { namespace: "settings", fallback: "خطأ" }), { description: String(e) });
+      toast.error(t("currencies.error", { namespace: "settings",  }), { description: String(e) });
       await loadData();
       await refreshContext();
     }
@@ -206,11 +206,11 @@ export default function CurrencySettings() {
         rate: rateToSet,
         rate_type: "Middle",
       });
-      toast.success(t("settings.currencies.rateUpdateSuccess", { namespace: "settings", fallback: "تم التحديث" }), { description: t("settings.currencies.rateUpdateSuccessDesc", { namespace: "settings", fallback: "تم تحديث سعر صرف {{code}}", vars: { code: from } }) });
+      toast.success(t("currencies.rateUpdateSuccess", { namespace: "settings",  }), { description: t("currencies.rateUpdateSuccessDesc", { namespace: "settings", vars: { code: from } }) });
       await loadData();
       await refreshContext();
     } catch (e) {
-      toast.error(t("settings.currencies.error", { namespace: "settings", fallback: "خطأ" }), { description: String(e) });
+      toast.error(t("currencies.error", { namespace: "settings",  }), { description: String(e) });
       await loadData();
       await refreshContext();
     }
@@ -232,7 +232,7 @@ export default function CurrencySettings() {
     return (
       <div className="flex items-center justify-center h-[60vh] text-muted-foreground">
         <RefreshCw className="animate-spin w-8 h-8 ml-3" />
-        {t("settings.currencies.loading", { namespace: "settings", fallback: "جاري تحميل إعدادات العملات..." })}
+        {t("currencies.loading", { namespace: "settings",  })}
       </div>
     );
   }
@@ -247,23 +247,23 @@ export default function CurrencySettings() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div>
-                <CardTitle>{t("settings.currencies.title", { namespace: "settings", fallback: "العملات" })}</CardTitle>
-                <CardDescription>{t("settings.currencies.description", { namespace: "settings", fallback: "إضافة وتعديل وحذف العملات — أول عملة تضاف تصبح الأساسية. ابدأ بإضافة عملة واحدة على الأقل." })}</CardDescription>
+                <CardTitle>{t("currencies.title", { namespace: "settings",  })}</CardTitle>
+                <CardDescription>{t("currencies.description", { namespace: "settings",  })}</CardDescription>
               </div>
             </div>
             <div className="flex items-center gap-2">
               {baseCurrency && (
                 <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20">
-                  {t("settings.currencies.baseLabel", { namespace: "settings", fallback: "الأساسية:" })} {baseCurrency.code} ({baseCurrency.symbol})
+                  {t("currencies.baseLabel", { namespace: "settings",  })} {baseCurrency.code} ({baseCurrency.symbol})
                 </Badge>
               )}
               <Button variant="outline" size="sm" onClick={() => { loadData(); refreshContext(); }} disabled={refreshing}>
                 <RefreshCw className={`w-3.5 h-3.5 ml-1 ${refreshing ? 'animate-spin' : ''}`} />
-                {t("settings.currencies.update", { namespace: "settings", fallback: "تحديث" })}
+                {t("currencies.update", { namespace: "settings",  })}
               </Button>
               <Button size="sm" onClick={() => setIsAddDialogOpen(true)}>
                 <Plus className="w-3.5 h-3.5 ml-1" />
-                {t("settings.currencies.addCurrency", { namespace: "settings", fallback: "إضافة عملة" })}
+                {t("currencies.addCurrency", { namespace: "settings",  })}
               </Button>
             </div>
           </div>
@@ -272,23 +272,23 @@ export default function CurrencySettings() {
           {currencies.length === 0 ? (
             <div className="text-center py-10 text-slate-400 space-y-3">
               <DollarSign className="w-12 h-12 mx-auto text-slate-200" />
-              <p className="font-bold">{t("settings.currencies.noCurrencies", { namespace: "settings", fallback: "لا توجد عملات مضافة بعد" })}</p>
-              <p className="text-sm">{t("settings.currencies.noCurrenciesHint", { namespace: "settings", fallback: "أضف عملتك الأولى من قائمة العملات العالمية — ستصبح تلقائياً العملة الأساسية" })}</p>
+              <p className="font-bold">{t("currencies.noCurrencies", { namespace: "settings",  })}</p>
+              <p className="text-sm">{t("currencies.noCurrenciesHint", { namespace: "settings",  })}</p>
               <Button onClick={() => setIsAddDialogOpen(true)}>
                 <Plus className="w-4 h-4 ml-2" />
-                {t("settings.currencies.addFirst", { namespace: "settings", fallback: "إضافة أول عملة" })}
+                {t("currencies.addFirst", { namespace: "settings",  })}
               </Button>
             </div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="text-right">{t("settings.currencies.table.code", { namespace: "settings", fallback: "الرمز" })}</TableHead>
-                  <TableHead className="text-right">{t("settings.currencies.table.name", { namespace: "settings", fallback: "اسم العملة" })}</TableHead>
-                  <TableHead className="text-right">{t("settings.currencies.table.symbol", { namespace: "settings", fallback: "الإشارة" })}</TableHead>
-                  <TableHead className="text-right">{t("settings.currencies.table.type", { namespace: "settings", fallback: "النوع" })}</TableHead>
-                  <TableHead className="text-right">{t("settings.currencies.table.decimals", { namespace: "settings", fallback: "العدد" })}</TableHead>
-                  <TableHead className="text-left">{t("settings.currencies.table.actions", { namespace: "settings", fallback: "الإجراءات" })}</TableHead>
+                  <TableHead className="text-right">{t("currencies.table.code", { namespace: "settings",  })}</TableHead>
+                  <TableHead className="text-right">{t("currencies.table.name", { namespace: "settings",  })}</TableHead>
+                  <TableHead className="text-right">{t("currencies.table.symbol", { namespace: "settings",  })}</TableHead>
+                  <TableHead className="text-right">{t("currencies.table.type", { namespace: "settings",  })}</TableHead>
+                  <TableHead className="text-right">{t("currencies.table.decimals", { namespace: "settings",  })}</TableHead>
+                  <TableHead className="text-left">{t("currencies.table.actions", { namespace: "settings",  })}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -300,22 +300,22 @@ export default function CurrencySettings() {
                     <TableCell>
                       {curr.is_base ? (
                         <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100 border-none gap-1">
-                          <Star className="w-3 h-3" /> {t("settings.currencies.base", { namespace: "settings", fallback: "أساسية" })}
+                          <Star className="w-3 h-3" /> {t("currencies.base", { namespace: "settings",  })}
                         </Badge>
                       ) : (
-                        <Badge variant="secondary">{t("settings.currencies.secondary", { namespace: "settings", fallback: "ثانوية" })}</Badge>
+                        <Badge variant="secondary">{t("currencies.secondary", { namespace: "settings",  })}</Badge>
                       )}
                     </TableCell>
                     <TableCell className="font-mono text-xs">{curr.decimals}</TableCell>
                     <TableCell className="text-left">
                       <div className="flex items-center justify-end gap-1">
                         <Button variant="ghost" size="sm" className="text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-50" onClick={() => openEditDialog(curr)}>
-                          <Pencil className="w-3.5 h-3.5 ml-1" /> {t("settings.currencies.edit", { namespace: "settings", fallback: "تعديل" })}
+                          <Pencil className="w-3.5 h-3.5 ml-1" /> {t("currencies.edit", { namespace: "settings",  })}
                         </Button>
                         {!curr.is_base ? (
                           <>
                             <Button variant="ghost" size="sm" className="text-xs text-amber-600 hover:text-amber-800 hover:bg-amber-50" onClick={() => handleSetBase(curr.code)}>
-                              <Star className="w-3.5 h-3.5 ml-1" /> {t("settings.currencies.setBase", { namespace: "settings", fallback: "تعيين كأساسية" })}
+                              <Star className="w-3.5 h-3.5 ml-1" /> {t("currencies.setBase", { namespace: "settings",  })}
                             </Button>
                             <Button variant="ghost" size="icon" onClick={() => handleDeleteCurrency(curr.code)} className="text-red-500 hover:text-red-700 hover:bg-red-50">
                               <Trash2 className="w-4 h-4" />
@@ -339,9 +339,9 @@ export default function CurrencySettings() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
                 <ArrowRightLeft className="w-4 h-4 text-primary" />
-                {t("settings.currencies.exchangeRates", { namespace: "settings", fallback: "أسعار الصرف" })}
+                {t("currencies.exchangeRates", { namespace: "settings",  })}
               </CardTitle>
-              <CardDescription>{t("settings.currencies.exchangeRatesDesc", { namespace: "settings", fallback: "تحديث أسعار الصرف مقابل {{code}} لليوم", vars: { code: baseCurrency?.code } })}</CardDescription>
+              <CardDescription>{t("currencies.exchangeRatesDesc", { namespace: "settings", vars: { code: baseCurrency?.code } })}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {rateStatus.map((status) => (
@@ -350,11 +350,11 @@ export default function CurrencySettings() {
                     <div className="font-semibold">{status.currency_code}</div>
                     {status.has_rate_today ? (
                       <div className="flex items-center text-xs text-green-600 gap-1">
-                        <CheckCircle2 className="w-3 h-3" /> {t("settings.currencies.updated", { namespace: "settings", fallback: "محدث" })}
+                        <CheckCircle2 className="w-3 h-3" /> {t("currencies.updated", { namespace: "settings",  })}
                       </div>
                     ) : (
                       <div className="flex items-center text-xs text-amber-600 gap-1">
-                        <AlertCircle className="w-3 h-3" /> {t("settings.currencies.needsUpdate", { namespace: "settings", fallback: "يحتاج تحديث" })}
+                        <AlertCircle className="w-3 h-3" /> {t("currencies.needsUpdate", { namespace: "settings",  })}
                       </div>
                     )}
                   </div>
@@ -372,12 +372,12 @@ export default function CurrencySettings() {
                     </div>
                     <Button size="sm" className="h-8 text-xs" onClick={() => handleSetRate(status.currency_code)}>
                       <Save className="w-3 h-3 ml-1" />
-                      {t("settings.currencies.save", { namespace: "settings", fallback: "حفظ" })}
+                      {t("currencies.save", { namespace: "settings",  })}
                     </Button>
                   </div>
                   {status.last_rate_date && (
                     <div className="text-[10px] text-muted-foreground">
-                      {t("settings.currencies.lastUpdate", { namespace: "settings", fallback: "آخر تحديث:" })} {status.last_rate_date}
+                      {t("currencies.lastUpdate", { namespace: "settings",  })} {status.last_rate_date}
                     </div>
                   )}
                 </div>
@@ -391,9 +391,9 @@ export default function CurrencySettings() {
                 <div className="space-y-1">
                   <CardTitle className="flex items-center gap-2 text-base">
                     <History className="w-4 h-4 text-primary" />
-                    {t("settings.currencies.rateHistory", { namespace: "settings", fallback: "سجل أسعار الصرف" })}
+                    {t("currencies.rateHistory", { namespace: "settings",  })}
                   </CardTitle>
-                  <CardDescription>{t("settings.currencies.rateHistoryDesc", { namespace: "settings", fallback: "تغير أسعار الصرف خلال آخر 30 يوماً" })}</CardDescription>
+                  <CardDescription>{t("currencies.rateHistoryDesc", { namespace: "settings",  })}</CardDescription>
                 </div>
                 <div className="flex items-center gap-4">
                   <div className="flex gap-1 bg-muted p-1 rounded-md">
@@ -415,8 +415,8 @@ export default function CurrencySettings() {
                     ))}
                   </div>
                   <TabsList>
-                    <TabsTrigger value="chart">{t("settings.currencies.chart", { namespace: "settings", fallback: "مخطط" })}</TabsTrigger>
-                    <TabsTrigger value="table">{t("settings.currencies.tableTab", { namespace: "settings", fallback: "جدول" })}</TabsTrigger>
+                    <TabsTrigger value="chart">{t("currencies.chart", { namespace: "settings",  })}</TabsTrigger>
+                    <TabsTrigger value="table">{t("currencies.tableTab", { namespace: "settings",  })}</TabsTrigger>
                   </TabsList>
                 </div>
               </CardHeader>
@@ -435,7 +435,7 @@ export default function CurrencySettings() {
                         <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 11}} reversed={true} />
                         <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 11}} domain={['auto', 'auto']} />
                         <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} labelStyle={{ fontWeight: 'bold', marginBottom: '4px' }} />
-                        <Area type="monotone" dataKey="rate" name={t("settings.currencies.exchangeRate", { namespace: "settings", fallback: "سعر الصرف" })} stroke="#1e3a5f" strokeWidth={2} fillOpacity={1} fill="url(#colorRate2)" />
+                        <Area type="monotone" dataKey="rate" name={t("currencies.exchangeRate", { namespace: "settings",  })} stroke="#1e3a5f" strokeWidth={2} fillOpacity={1} fill="url(#colorRate2)" />
                       </AreaChart>
                     </ResponsiveContainer>
                   </div>
@@ -444,10 +444,10 @@ export default function CurrencySettings() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="text-right">{t("settings.currencies.rateDate", { namespace: "settings", fallback: "التاريخ" })}</TableHead>
-                        <TableHead className="text-right">{t("settings.currencies.rateValue", { namespace: "settings", fallback: "سعر الصرف ({{code}})", vars: { code: baseCurrency?.code } })}</TableHead>
-                        <TableHead className="text-right">{t("settings.currencies.rateType", { namespace: "settings", fallback: "النوع" })}</TableHead>
-                        <TableHead className="text-right">{t("settings.currencies.rateSource", { namespace: "settings", fallback: "المصدر" })}</TableHead>
+                        <TableHead className="text-right">{t("currencies.rateDate", { namespace: "settings",  })}</TableHead>
+                        <TableHead className="text-right">{t("currencies.rateValue", { namespace: "settings", vars: { code: baseCurrency?.code } })}</TableHead>
+                        <TableHead className="text-right">{t("currencies.rateType", { namespace: "settings",  })}</TableHead>
+                        <TableHead className="text-right">{t("currencies.rateSource", { namespace: "settings",  })}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -455,8 +455,8 @@ export default function CurrencySettings() {
                         <TableRow key={h.id}>
                           <TableCell>{new Date(h.rate_date).toLocaleDateString("ar-SY")}</TableCell>
                           <TableCell className="font-mono font-bold">{toLocalString(parseFloat(h.rate))}</TableCell>
-                          <TableCell><Badge variant="outline">{h.rate_type === 'Market' ? t("settings.currencies.marketPrice", { namespace: "settings", fallback: "سعر السوق" }) : t("settings.currencies.officialPrice", { namespace: "settings", fallback: "سعر رسمي" })}</Badge></TableCell>
-                          <TableCell className="text-muted-foreground text-xs">{h.source || t("settings.currencies.manual", { namespace: "settings", fallback: "يدوي" })}</TableCell>
+                          <TableCell><Badge variant="outline">{h.rate_type === 'Market' ? t("currencies.marketPrice", { namespace: "settings",  }) : t("currencies.officialPrice", { namespace: "settings",  })}</Badge></TableCell>
+                          <TableCell className="text-muted-foreground text-xs">{h.source || t("currencies.manual", { namespace: "settings",  })}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -472,9 +472,9 @@ export default function CurrencySettings() {
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
         <DialogContent className="sm:max-w-[550px] max-h-[80vh] overflow-y-auto" dir="rtl">
           <DialogHeader>
-            <DialogTitle>{t("settings.currencies.addDialog", { namespace: "settings", fallback: "إضافة عملة من القائمة العالمية" })}</DialogTitle>
+            <DialogTitle>{t("currencies.addDialog", { namespace: "settings",  })}</DialogTitle>
             <DialogDescription>
-              {t("settings.currencies.addDialogHint", { namespace: "settings", fallback: "اختر عملة من القائمة — أول عملة تضاف تصبح العملة الأساسية تلقائياً." })}
+              {t("currencies.addDialogHint", { namespace: "settings",  })}
             </DialogDescription>
           </DialogHeader>
           <div className="relative mb-4">
@@ -482,14 +482,14 @@ export default function CurrencySettings() {
             <Input
               value={worldSearch}
               onChange={e => setWorldSearch(e.target.value)}
-              placeholder={t("settings.currencies.searchPlaceholder", { namespace: "settings", fallback: "ابحث عن عملة..." })}
+              placeholder={t("currencies.searchPlaceholder", { namespace: "settings",  })}
               className="pr-10 h-10"
             />
           </div>
           <div className="max-h-[400px] overflow-y-auto space-y-1">
             {filteredWorld.length === 0 ? (
               <p className="text-center text-muted-foreground py-8">
-                {worldSearch ? t("settings.currencies.noResults", { namespace: "settings", fallback: "لا توجد نتائج تطابق البحث" }) : t("settings.currencies.allAdded", { namespace: "settings", fallback: "جميع العملات العالمية مضافة بالفعل" })}
+                {worldSearch ? t("currencies.noResults", { namespace: "settings",  }) : t("currencies.allAdded", { namespace: "settings",  })}
               </p>
             ) : (
               filteredWorld.map(wc => (
@@ -505,7 +505,7 @@ export default function CurrencySettings() {
                     <div className="font-bold text-slate-800">{wc.name_ar} ({wc.code})</div>
                     <div className="text-xs text-slate-400">{wc.name_en}</div>
                   </div>
-                  <div className="text-xs text-muted-foreground">{wc.decimals} {t("settings.currencies.decimalsLabel", { namespace: "settings", fallback: "منازل" })}</div>
+                  <div className="text-xs text-muted-foreground">{wc.decimals} {t("currencies.decimalsLabel", { namespace: "settings",  })}</div>
                   <Plus className="w-4 h-4 text-primary shrink-0" />
                 </button>
               ))
@@ -513,7 +513,7 @@ export default function CurrencySettings() {
           </div>
           <DialogFooter className="border-t pt-4">
             <Button variant="outline" onClick={() => { setIsAddDialogOpen(false); setWorldSearch(""); }}>
-              {t("settings.currencies.cancel", { namespace: "settings", fallback: "إلغاء" })}
+              {t("currencies.cancel", { namespace: "settings",  })}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -523,31 +523,31 @@ export default function CurrencySettings() {
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="sm:max-w-[425px]" dir="rtl">
           <DialogHeader>
-            <DialogTitle>{t("settings.currencies.editDialog", { namespace: "settings", fallback: "تعديل العملة" })}</DialogTitle>
+            <DialogTitle>{t("currencies.editDialog", { namespace: "settings",  })}</DialogTitle>
             <DialogDescription>
-              {t("settings.currencies.editDialogDesc", { namespace: "settings", fallback: "تعديل بيانات العملة {{code}}", vars: { code: editingCurrency?.code } })}
+              {t("currencies.editDialogDesc", { namespace: "settings", vars: { code: editingCurrency?.code } })}
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="edit_name_ar" className="text-right">{t("settings.currencies.nameAr", { namespace: "settings", fallback: "الاسم (عربي)" })}</Label>
+              <Label htmlFor="edit_name_ar" className="text-right">{t("currencies.nameAr", { namespace: "settings",  })}</Label>
               <Input id="edit_name_ar" value={editForm.name_ar} onChange={e => setEditForm({...editForm, name_ar: e.target.value})} className="col-span-3" />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="edit_name_en" className="text-right">{t("settings.currencies.nameEn", { namespace: "settings", fallback: "الاسم (إنجليزي)" })}</Label>
+              <Label htmlFor="edit_name_en" className="text-right">{t("currencies.nameEn", { namespace: "settings",  })}</Label>
               <Input id="edit_name_en" value={editForm.name_en} onChange={e => setEditForm({...editForm, name_en: e.target.value})} className="col-span-3" />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="edit_symbol" className="text-right">{t("settings.currencies.symbolLabel", { namespace: "settings", fallback: "الإشارة" })}</Label>
+              <Label htmlFor="edit_symbol" className="text-right">{t("currencies.symbolLabel", { namespace: "settings",  })}</Label>
               <Input id="edit_symbol" value={editForm.symbol} onChange={e => setEditForm({...editForm, symbol: e.target.value})} className="col-span-3" />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="edit_decimals" className="text-right">{t("settings.currencies.decimalsField", { namespace: "settings", fallback: "عدد المنازل" })}</Label>
+              <Label htmlFor="edit_decimals" className="text-right">{t("currencies.decimalsField", { namespace: "settings",  })}</Label>
               <Input id="edit_decimals" type="number" min={0} max={6} value={editForm.decimals} onChange={e => setEditForm({...editForm, decimals: parseInt(e.target.value) || 2})} className="col-span-3" />
             </div>
           </div>
           <DialogFooter>
-            <Button onClick={handleEditCurrency}>{t("settings.currencies.saveEdits", { namespace: "settings", fallback: "حفظ التعديلات" })}</Button>
+            <Button onClick={handleEditCurrency}>{t("currencies.saveEdits", { namespace: "settings",  })}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

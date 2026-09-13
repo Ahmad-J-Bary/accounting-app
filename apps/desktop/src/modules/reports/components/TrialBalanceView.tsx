@@ -27,10 +27,10 @@ export function TrialBalanceView({ data, loading }: TrialBalanceViewProps) {
   const [detailLevel, setDetailLevel] = useState(3);
 
   const DETAIL_LEVELS = [
-    { level: 1, maxDepth: 0, label: t("trialBalance.detailLevel", { namespace: "reports", fallback: "مستوى {{level}}", vars: { level: 1 } }), desc: t("trialBalance.detailLevels.level1Desc", { namespace: "reports", fallback: "التصنيفات الرئيسية" }) },
-    { level: 2, maxDepth: 1, label: t("trialBalance.detailLevel", { namespace: "reports", fallback: "مستوى {{level}}", vars: { level: 2 } }), desc: t("trialBalance.detailLevels.level2Desc", { namespace: "reports", fallback: "+ التصنيفات الفرعية" }) },
-    { level: 3, maxDepth: 2, label: t("trialBalance.detailLevel", { namespace: "reports", fallback: "مستوى {{level}}", vars: { level: 3 } }), desc: t("trialBalance.detailLevels.level3Desc", { namespace: "reports", fallback: "+ الحسابات المفصلة" }) },
-    { level: 4, maxDepth: Infinity, label: t("trialBalance.detailLevel", { namespace: "reports", fallback: "مستوى {{level}}", vars: { level: 4 } }), desc: t("trialBalance.detailLevels.level4Desc", { namespace: "reports", fallback: "+ كافة التفاصيل" }) },
+    { level: 1, maxDepth: 0, label: t("trialBalance.detailLevel", { namespace: "reports", vars: { level: 1 } }), desc: t("trialBalance.detailLevels.level1Desc", { namespace: "reports",  }) },
+    { level: 2, maxDepth: 1, label: t("trialBalance.detailLevel", { namespace: "reports", vars: { level: 2 } }), desc: t("trialBalance.detailLevels.level2Desc", { namespace: "reports",  }) },
+    { level: 3, maxDepth: 2, label: t("trialBalance.detailLevel", { namespace: "reports", vars: { level: 3 } }), desc: t("trialBalance.detailLevels.level3Desc", { namespace: "reports",  }) },
+    { level: 4, maxDepth: Infinity, label: t("trialBalance.detailLevel", { namespace: "reports", vars: { level: 4 } }), desc: t("trialBalance.detailLevels.level4Desc", { namespace: "reports",  }) },
   ];
 
   const accounts = data.accounts;
@@ -73,8 +73,8 @@ export function TrialBalanceView({ data, loading }: TrialBalanceViewProps) {
     const cols: UnifiedColumn<TrialBalanceTreeRow>[] = [
       {
         id: "name",
-        header: t("trialBalance.colAccountName", { namespace: "reports", fallback: "اسم الحساب" }),
-        label: t("trialBalance.colAccountName", { namespace: "reports", fallback: "اسم الحساب" }),
+        header: t("trialBalance.colAccountName", { namespace: "reports",  }),
+        label: t("trialBalance.colAccountName", { namespace: "reports",  }),
         accessor: (row) => {
           const padClass = row.depth === 0 ? "" : row.depth === 1 ? "ps-6" : row.depth === 2 ? "ps-12" : "ps-16";
           const fontClass = row.depth === 0
@@ -99,13 +99,13 @@ export function TrialBalanceView({ data, loading }: TrialBalanceViewProps) {
       const isBase = isBaseCurrency(curr.code);
       cols.push({
         id: `opening_${curr.code}`,
-        header: t("trialBalance.openingHeader", { namespace: "reports", fallback: "الرصيد الافتتاحي {{suffix}}", vars: { suffix: ` ${cs(symbol)}` } }),
-        label: t("trialBalance.openingHeader", { namespace: "reports", fallback: "الرصيد الافتتاحي {{suffix}}", vars: { suffix: ` ${cs(symbol)}` } }),
+        header: t("trialBalance.openingHeader", { namespace: "reports", vars: { suffix: ` ${cs(symbol)}` } }),
+        label: t("trialBalance.openingHeader", { namespace: "reports", vars: { suffix: ` ${cs(symbol)}` } }),
         accessor: (row) => {
           const netOpening = row.openingDebit - row.openingCredit;
           if (netOpening === 0) return <div className={cellWrap}><span className="text-slate-300">—</span></div>;
           const status = netOpening > 0 ? "debit" : "credit";
-          const statusLabel = t("trialBalance.sign." + status, { namespace: "reports", fallback: status === "debit" ? "مدين" : "دائن" });
+          const statusLabel = t("trialBalance.sign." + status, { namespace: "reports"});
           return (
             <div className={cellWrap}>
               <span className={cn(
@@ -127,8 +127,8 @@ export function TrialBalanceView({ data, loading }: TrialBalanceViewProps) {
       const isBase = isBaseCurrency(curr.code);
       cols.push({
         id: `debit_${curr.code}`,
-        header: t("trialBalance.debitHeader", { namespace: "reports", fallback: "مدين {{suffix}}", vars: { suffix: ` ${cs(symbol)}` } }),
-        label: t("trialBalance.debitHeader", { namespace: "reports", fallback: "مدين {{suffix}}", vars: { suffix: ` ${cs(symbol)}` } }),
+        header: t("trialBalance.debitHeader", { namespace: "reports", vars: { suffix: ` ${cs(symbol)}` } }),
+        label: t("trialBalance.debitHeader", { namespace: "reports", vars: { suffix: ` ${cs(symbol)}` } }),
         accessor: (row) => (
           <div className={cellWrap}>
             {row.periodDebit > 0 ? (
@@ -149,8 +149,8 @@ export function TrialBalanceView({ data, loading }: TrialBalanceViewProps) {
       const isBase = isBaseCurrency(curr.code);
       cols.push({
         id: `credit_${curr.code}`,
-        header: t("trialBalance.creditHeader", { namespace: "reports", fallback: "دائن {{suffix}}", vars: { suffix: ` ${cs(symbol)}` } }),
-        label: t("trialBalance.creditHeader", { namespace: "reports", fallback: "دائن {{suffix}}", vars: { suffix: ` ${cs(symbol)}` } }),
+        header: t("trialBalance.creditHeader", { namespace: "reports", vars: { suffix: ` ${cs(symbol)}` } }),
+        label: t("trialBalance.creditHeader", { namespace: "reports", vars: { suffix: ` ${cs(symbol)}` } }),
         accessor: (row) => (
           <div className={cellWrap}>
             {row.periodCredit > 0 ? (
@@ -171,8 +171,8 @@ export function TrialBalanceView({ data, loading }: TrialBalanceViewProps) {
       const isBase = isBaseCurrency(curr.code);
       cols.push({
         id: `balance_${curr.code}`,
-        header: t("trialBalance.closingHeader", { namespace: "reports", fallback: "الرصيد النهائي {{suffix}}", vars: { suffix: ` ${cs(symbol)}` } }),
-        label: t("trialBalance.closingHeader", { namespace: "reports", fallback: "الرصيد النهائي {{suffix}}", vars: { suffix: ` ${cs(symbol)}` } }),
+        header: t("trialBalance.closingHeader", { namespace: "reports", vars: { suffix: ` ${cs(symbol)}` } }),
+        label: t("trialBalance.closingHeader", { namespace: "reports", vars: { suffix: ` ${cs(symbol)}` } }),
         accessor: (row) => {
           const val = row.balance;
           return (
@@ -194,8 +194,8 @@ export function TrialBalanceView({ data, loading }: TrialBalanceViewProps) {
 
     cols.push({
       id: "status",
-      header: t("trialBalance.colStatus", { namespace: "reports", fallback: "حالة الحساب" }),
-      label: t("trialBalance.colStatus", { namespace: "reports", fallback: "حالة الحساب" }),
+      header: t("trialBalance.colStatus", { namespace: "reports",  }),
+      label: t("trialBalance.colStatus", { namespace: "reports",  }),
       accessor: (row) => {
         const status = isBalanceDebit(row.balance);
         if (!status) return <div className={cellWrap}><span className="text-slate-300">—</span></div>;
@@ -205,7 +205,7 @@ export function TrialBalanceView({ data, loading }: TrialBalanceViewProps) {
               "font-bold text-xs",
               status === "مدين" ? "text-red-600" : "text-emerald-600",
             )}>
-              {t("trialBalance.sign." + status, { namespace: "reports", fallback: status })}
+              {t("trialBalance.sign." + status, { namespace: "reports"})}
             </span>
           </div>
         );
@@ -256,7 +256,7 @@ export function TrialBalanceView({ data, loading }: TrialBalanceViewProps) {
 
       if (id === "name") {
         return {
-          id: "count", columnId: "name", label: "", value: t("trialBalance.countAccounts", { namespace: "reports", fallback: "{{count}} حساب", vars: { count: totals.count } }),
+          id: "count", columnId: "name", label: "", value: t("trialBalance.countAccounts", { namespace: "reports", vars: { count: totals.count } }),
           className: "text-slate-500 font-medium",
         };
       }
@@ -269,13 +269,13 @@ export function TrialBalanceView({ data, loading }: TrialBalanceViewProps) {
       if (openingMatch) {
         const currCode = openingMatch[1];
         const sign = totals.openingNet > 0
-          ? t("trialBalance.sign.debit", { namespace: "reports", fallback: "مدين" })
+          ? t("trialBalance.sign.debit", { namespace: "reports",  })
           : totals.openingNet < 0
-            ? t("trialBalance.sign.credit", { namespace: "reports", fallback: "دائن" })
-            : t("trialBalance.sign.balanced", { namespace: "reports", fallback: "متزن" });
+            ? t("trialBalance.sign.credit", { namespace: "reports",  })
+            : t("trialBalance.sign.balanced", { namespace: "reports",  });
         return {
           id: `${id}_summary`, columnId: id,
-          label: t("trialBalance.summaryOpening", { namespace: "reports", fallback: "إجمالي الأرصدة الافتتاحية" }),
+          label: t("trialBalance.summaryOpening", { namespace: "reports",  }),
           value: totals.openingNet !== 0
             ? `${formatAmount(Math.abs(totals.openingNet), { currencyCode: currCode })} (${sign})`
             : "—",
@@ -288,7 +288,7 @@ export function TrialBalanceView({ data, loading }: TrialBalanceViewProps) {
         const currCode = debitMatch[1];
         return {
           id: `${id}_summary`, columnId: id,
-          label: t("trialBalance.summaryDebit", { namespace: "reports", fallback: "إجمالي حركات مدين" }),
+          label: t("trialBalance.summaryDebit", { namespace: "reports",  }),
           value: totals.periodDebit > 0 ? formatAmount(totals.periodDebit, { currencyCode: currCode }) : "—",
           className: "text-blue-700 font-black",
         };
@@ -299,7 +299,7 @@ export function TrialBalanceView({ data, loading }: TrialBalanceViewProps) {
         const currCode = creditMatch[1];
         return {
           id: `${id}_summary`, columnId: id,
-          label: t("trialBalance.summaryCredit", { namespace: "reports", fallback: "إجمالي حركات دائن" }),
+          label: t("trialBalance.summaryCredit", { namespace: "reports",  }),
           value: totals.periodCredit > 0 ? formatAmount(totals.periodCredit, { currencyCode: currCode }) : "—",
           className: "text-emerald-700 font-black",
         };
@@ -316,7 +316,7 @@ export function TrialBalanceView({ data, loading }: TrialBalanceViewProps) {
           : "text-slate-500 font-bold";
         return {
           id: `${id}_summary`, columnId: id,
-          label: t("trialBalance.summaryClosing", { namespace: "reports", fallback: "إجمالي الرصيد النهائي" }),
+          label: t("trialBalance.summaryClosing", { namespace: "reports",  }),
           value: totals.balance !== 0 ? formatAmount(Math.abs(totals.balance), { currencyCode: currCode }) : "—",
           className: isBase ? valClass : "text-slate-500 font-extrabold",
         };
@@ -329,11 +329,11 @@ export function TrialBalanceView({ data, loading }: TrialBalanceViewProps) {
 
   return (
     <div className="flex flex-col h-full">
-      <ReportMeta title={t("trialBalance.title", { namespace: "reports", fallback: "ميزان المراجعة" })} description={t("trialBalance.metaDescription", { namespace: "reports", fallback: "بيان يوضح إجمالي الحركة المدينة والحركة الدائنة لكل الحسابات المتضمنة في دليل الحسابات (الشجرة)" })} />
+      <ReportMeta title={t("trialBalance.title", { namespace: "reports",  })} description={t("trialBalance.metaDescription", { namespace: "reports",  })} />
 
       <div className="flex-1 min-h-0 overflow-hidden pb-4">
         <TableShell
-          searchPlaceholder={t("trialBalance.searchPlaceholder", { namespace: "reports", fallback: "بحث في الحسابات..." })}
+          searchPlaceholder={t("trialBalance.searchPlaceholder", { namespace: "reports",  })}
           columns={toolbarColumns}
           onColumnToggle={toggleColumn}
           onColumnsReset={resetToDefault}
@@ -376,7 +376,7 @@ export function TrialBalanceView({ data, loading }: TrialBalanceViewProps) {
               </div>
 
               <span className="flex-1 text-center text-[11px] font-bold text-slate-400 tracking-wider">
-                {detailLevel === 1 ? t("trialBalance.detailSummary", { namespace: "reports", fallback: "مختصر" }) : detailLevel === 4 ? t("trialBalance.detailFull", { namespace: "reports", fallback: "مفصل" }) : t("trialBalance.detailLevel", { namespace: "reports", fallback: "مستوى {{level}}", vars: { level: detailLevel } })}
+                {detailLevel === 1 ? t("trialBalance.detailSummary", { namespace: "reports",  }) : detailLevel === 4 ? t("trialBalance.detailFull", { namespace: "reports",  }) : t("trialBalance.detailLevel", { namespace: "reports", vars: { level: detailLevel } })}
               </span>
             </div>
           }
@@ -386,7 +386,7 @@ export function TrialBalanceView({ data, loading }: TrialBalanceViewProps) {
             columns={enrichedColumns}
             loading={loading}
             tableId="trial-balance"
-            emptyMessage={t("trialBalance.empty", { namespace: "reports", fallback: "لا توجد حسابات مسجلة" })}
+            emptyMessage={t("trialBalance.empty", { namespace: "reports",  })}
             summary={summaryColumns}
             enableResize
           />

@@ -70,11 +70,11 @@ export default function JournalEntryCreatePage() {
     try {
       const request = buildCreateRequest(journalType, entryDate, description, lines);
       const entry = await journalEntryService.createJournalEntry(request);
-      toast.success(t("journal.toast.created", { namespace: "accounting", vars: { number: entry.entry_number }, fallback: `تم إنشاء القيد بنجاح — رقم ${entry.entry_number}` }));
+      toast.success(t("journal.toast.created", { namespace: "accounting", vars: { number: entry.entry_number },  }));
       await invalidateKeys(queryClient, JOURNAL_MUTATION_KEYS);
       navigate(`/journal/${entry.id}`, { replace: true });
     } catch (e) {
-      toast.error(t("journal.toast.createFailed", { namespace: "accounting", vars: { error: e instanceof Error ? e.message : String(e) }, fallback: `فشل إنشاء القيد: ${e instanceof Error ? e.message : String(e)}` }));
+      toast.error(t("journal.toast.createFailed", { namespace: "accounting", vars: { error: e instanceof Error ? e.message : String(e) },  }));
     } finally {
       setIsSubmitting(false);
     }
@@ -95,13 +95,13 @@ export default function JournalEntryCreatePage() {
               size="sm"
               onClick={handleBack}
               className="h-8 w-8 p-0"
-              aria-label={t("journal.back", { namespace: "accounting", fallback: "العودة" })}
+              aria-label={t("journal.back", { namespace: "accounting",  })}
             >
               <ArrowRight className="h-4 w-4" />
             </Button>
             <div>
-              <h1 className="text-lg font-bold text-slate-800">{t("journal.create.title", { namespace: "accounting", fallback: "قيد يومية جديد" })}</h1>
-              <p className="text-xs text-slate-500">{t("journal.create.subtitle", { namespace: "accounting", fallback: "إنشاء قيد يومية جديد في دفتر الأستاذ" })}</p>
+              <h1 className="text-lg font-bold text-slate-800">{t("journal.create.title", { namespace: "accounting",  })}</h1>
+              <p className="text-xs text-slate-500">{t("journal.create.subtitle", { namespace: "accounting",  })}</p>
             </div>
           </div>
 
@@ -111,7 +111,7 @@ export default function JournalEntryCreatePage() {
             disabled={isSubmitting || !validation.isValid}
             className="h-9 px-5 font-bold bg-blue-600 hover:bg-blue-700 text-white"
           >
-            {isSubmitting ? t("journal.create.submitting", { namespace: "accounting", fallback: "جاري الإنشاء..." }) : t("journal.create.submit", { namespace: "accounting", fallback: "إنشاء القيد" })}
+            {isSubmitting ? t("journal.create.submitting", { namespace: "accounting",  }) : t("journal.create.submit", { namespace: "accounting",  })}
           </Button>
         </header>
 
@@ -128,13 +128,13 @@ export default function JournalEntryCreatePage() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">{t("journal.create.infoSection", { namespace: "accounting", fallback: "معلومات القيد" })}</CardTitle>
+              <CardTitle className="text-base">{t("journal.create.infoSection", { namespace: "accounting",  })}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-1.5">
                   <label className="text-sm font-bold text-slate-600">
-                    {t("journal.create.journalType", { namespace: "accounting", fallback: "نوع اليومية" })} <span className="text-red-500">*</span>
+                    {t("journal.create.journalType", { namespace: "accounting",  })} <span className="text-red-500">*</span>
                   </label>
                   <Select
                     value={journalType}
@@ -146,7 +146,7 @@ export default function JournalEntryCreatePage() {
                     <SelectContent>
                       {MANUAL_JOURNAL_TYPES.map((jt) => (
                         <SelectItem key={jt.value} value={jt.value} className="font-bold">
-                          {t(journalTypeKey(jt.value), { namespace: "accounting", fallback: jt.label })}
+                          {t(journalTypeKey(jt.value), { namespace: "accounting"})}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -155,7 +155,7 @@ export default function JournalEntryCreatePage() {
 
                 <div className="space-y-1.5">
                   <label className="text-sm font-bold text-slate-600">
-                    {t("journal.create.date", { namespace: "accounting", fallback: "التاريخ" })} <span className="text-red-500">*</span>
+                    {t("journal.create.date", { namespace: "accounting",  })} <span className="text-red-500">*</span>
                   </label>
                   <Input
                     type="date"
@@ -167,12 +167,12 @@ export default function JournalEntryCreatePage() {
 
                 <div className="space-y-1.5 md:col-span-1 md:row-span-1">
                   <label className="text-sm font-bold text-slate-600">
-                    {t("journal.create.description", { namespace: "accounting", fallback: "البيان" })} <span className="text-red-500">*</span>
+                    {t("journal.create.description", { namespace: "accounting",  })} <span className="text-red-500">*</span>
                   </label>
                   <Input
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
-                    placeholder={t("journal.create.descriptionPlaceholder", { namespace: "accounting", fallback: "وصف القيد..." })}
+                    placeholder={t("journal.create.descriptionPlaceholder", { namespace: "accounting",  })}
                     className="h-10 font-bold"
                   />
                 </div>
@@ -182,7 +182,7 @@ export default function JournalEntryCreatePage() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">{t("journal.create.linesSection", { namespace: "accounting", fallback: "بنود القيد" })}</CardTitle>
+              <CardTitle className="text-base">{t("journal.create.linesSection", { namespace: "accounting",  })}</CardTitle>
             </CardHeader>
             <CardContent>
               <JournalLineEditor

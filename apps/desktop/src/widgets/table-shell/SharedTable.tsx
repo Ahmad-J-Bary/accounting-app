@@ -64,8 +64,8 @@ export function SharedTable<T>({
   });
 
   const { t } = useLocalization();
-  const resolvedSearchPlaceholder = searchPlaceholder ?? t('labels.placeholder', { fallback: 'بحث...' });
-  const resolvedEmptyMessage = emptyMessage ?? t('states.noDataAvailable', { fallback: 'لا توجد بيانات متاحة' });
+  const resolvedSearchPlaceholder = searchPlaceholder ?? t('labels.placeholder', );
+  const resolvedEmptyMessage = emptyMessage ?? t('states.noDataAvailable', );
 
   useEffect(() => {
     onVisibleColumnsChange?.(visibleColumns);
@@ -107,7 +107,7 @@ export function SharedTable<T>({
             handleSort(col.id);
           }
         }}
-        emptyMessage={search ? t('states.noMatchingResults', { fallback: 'لا توجد نتائج تطابق معايير البحث' }) : resolvedEmptyMessage}
+        emptyMessage={search ? t('states.noMatchingResults', ) : resolvedEmptyMessage}
         summary={summary}
       />
     </TableShell>

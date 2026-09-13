@@ -11,7 +11,7 @@ describe("MovementTypeFilter", () => {
         onChange={vi.fn()}
       />,
     );
-    fireEvent.click(screen.getByText("النوع"));
+    fireEvent.click(screen.getByText("movementTypes.filter.label"));
     await waitFor(() => expect(screen.getByText("أول المدة")).toBeInTheDocument());
   });
 
@@ -23,7 +23,7 @@ describe("MovementTypeFilter", () => {
         excludeKeys={["OpeningBalance"]}
       />,
     );
-    fireEvent.click(screen.getByText("النوع"));
+    fireEvent.click(screen.getByText("movementTypes.filter.label"));
     await waitFor(() => expect(screen.getByText("مشتريات")).toBeInTheDocument());
     expect(screen.queryByText("أول المدة")).not.toBeInTheDocument();
   });

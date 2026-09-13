@@ -87,11 +87,11 @@ export default function PurchaseInvoices() {
     setSavingMaterial(true);
     try {
       await materialService.create(data as CreateMaterialRequest);
-      toast.success(t("invoice.addMaterialSuccess", { namespace: "invoicing", fallback: "تم إضافة المادة بنجاح" }));
+      toast.success(t("invoice.addMaterialSuccess", { namespace: "invoicing",  }));
       setMaterialFormOpen(false);
       loadData(false);
     } catch (e) {
-      toast.error(t("invoice.addMaterialError", { namespace: "invoicing", vars: { error: String(e) }, fallback: "فشل إضافة المادة: {{error}}" }));
+      toast.error(t("invoice.addMaterialError", { namespace: "invoicing", vars: { error: String(e) },  }));
     } finally {
       setSavingMaterial(false);
     }
@@ -102,7 +102,7 @@ export default function PurchaseInvoices() {
 
   const handleExport = useCallback(async () => {
     if (enrichedLines.length === 0) {
-      toast.error(t("document.noLinesToExport", { namespace: "invoicing", fallback: "لا توجد بنود للتصدير" }));
+      toast.error(t("document.noLinesToExport", { namespace: "invoicing",  }));
       return;
     }
 
@@ -150,19 +150,19 @@ export default function PurchaseInvoices() {
     const remainingVal = net - paidVal;
 
     await executeExport(exportData, {
-      sheetName: t("invoice.purchaseTitle", { namespace: "invoicing", fallback: "فاتورة مشتريات" }),
-      filename: t("invoice.purchaseFilename", { namespace: "invoicing", vars: { number: headerState.invoice_number }, fallback: `فاتورة_مشتريات_${headerState.invoice_number}` }),
+      sheetName: t("invoice.purchaseTitle", { namespace: "invoicing",  }),
+      filename: t("invoice.purchaseFilename", { namespace: "invoicing", vars: { number: headerState.invoice_number },  }),
       data: enrichedForExport,
       columns,
       summary,
-      summaryLabel: t("document.summaryLabel", { namespace: "invoicing", fallback: "المجموع" }),
+      summaryLabel: t("document.summaryLabel", { namespace: "invoicing",  }),
       additionalSummary: [
-        { label: t("document.paymentMethod", { namespace: "invoicing", fallback: "طريقة الدفع / التسوية" }), value: headerState.payment_method === "Deferred" ? t("document.paymentDeferred", { namespace: "invoicing", fallback: "آجل" }) : t("document.paymentCash", { namespace: "invoicing", fallback: "نقدي" }) },
-        { label: t("document.tax", { namespace: "invoicing", fallback: "الضريبة" }), value: parseFloat(headerState.tax_amount) || 0 },
-        { label: t("document.extraCosts", { namespace: "invoicing", fallback: "التكاليف الإضافية" }), value: parseFloat(headerState.extra_costs) || 0 },
-        { label: t("document.netTotal", { namespace: "invoicing", fallback: "المجموع الكلي (الصافي)" }), value: net },
-        { label: t("document.amountPaid", { namespace: "invoicing", fallback: "المبلغ المدفوع" }), value: paidVal },
-        { label: t("document.amountRemaining", { namespace: "invoicing", fallback: "المبلغ المتبقي" }), value: remainingVal }
+        { label: t("document.paymentMethod", { namespace: "invoicing",  }), value: headerState.payment_method === "Deferred" ? t("document.paymentDeferred", { namespace: "invoicing",  }) : t("document.paymentCash", { namespace: "invoicing",  }) },
+        { label: t("document.tax", { namespace: "invoicing",  }), value: parseFloat(headerState.tax_amount) || 0 },
+        { label: t("document.extraCosts", { namespace: "invoicing",  }), value: parseFloat(headerState.extra_costs) || 0 },
+        { label: t("document.netTotal", { namespace: "invoicing",  }), value: net },
+        { label: t("document.amountPaid", { namespace: "invoicing",  }), value: paidVal },
+        { label: t("document.amountRemaining", { namespace: "invoicing",  }), value: remainingVal }
       ],
       currencyRatesSheet: ratesSheet,
     });
@@ -231,17 +231,17 @@ export default function PurchaseInvoices() {
     const remainingVal = netVal - paidVal;
 
     await executeExport(exportData, {
-      sheetName: t("invoice.purchaseTitle", { namespace: "invoicing", fallback: "فاتورة مشتريات" }),
-      filename: t("invoice.purchaseFilename", { namespace: "invoicing", vars: { number: fullInv.invoice_number }, fallback: `فاتورة_مشتريات_${fullInv.invoice_number}` }),
+      sheetName: t("invoice.purchaseTitle", { namespace: "invoicing",  }),
+      filename: t("invoice.purchaseFilename", { namespace: "invoicing", vars: { number: fullInv.invoice_number },  }),
       data: enrichedLines,
       columns,
       summary,
-      summaryLabel: t("document.summaryLabel", { namespace: "invoicing", fallback: "المجموع" }),
+      summaryLabel: t("document.summaryLabel", { namespace: "invoicing",  }),
       additionalSummary: [
-        { label: t("document.paymentMethod", { namespace: "invoicing", fallback: "طريقة الدفع / التسوية" }), value: fullInv.payment_method === "Deferred" ? t("document.paymentDeferred", { namespace: "invoicing", fallback: "آجل" }) : t("document.paymentCash", { namespace: "invoicing", fallback: "نقدي" }) },
-        { label: t("document.netTotal", { namespace: "invoicing", fallback: "المجموع الكلي (الصافي)" }), value: netVal },
-        { label: t("document.amountPaid", { namespace: "invoicing", fallback: "المبلغ المدفوع" }), value: paidVal },
-        { label: t("document.amountRemaining", { namespace: "invoicing", fallback: "المبلغ المتبقي" }), value: remainingVal }
+        { label: t("document.paymentMethod", { namespace: "invoicing",  }), value: fullInv.payment_method === "Deferred" ? t("document.paymentDeferred", { namespace: "invoicing",  }) : t("document.paymentCash", { namespace: "invoicing",  }) },
+        { label: t("document.netTotal", { namespace: "invoicing",  }), value: netVal },
+        { label: t("document.amountPaid", { namespace: "invoicing",  }), value: paidVal },
+        { label: t("document.amountRemaining", { namespace: "invoicing",  }), value: remainingVal }
       ],
       currencyRatesSheet: ratesSheet,
     });
@@ -250,7 +250,7 @@ export default function PurchaseInvoices() {
   if (view === "editor") {
     return (
       <FinancialDocumentTemplate
-        title={t("invoice.purchaseTitle", { namespace: "invoicing", fallback: "فاتورة مشتريات" })}
+        title={t("invoice.purchaseTitle", { namespace: "invoicing",  })}
         statusBadge={<DocumentStatusBadge status={headerState.status} />}
         toolbar={
           <DocumentToolbar
@@ -262,7 +262,7 @@ export default function PurchaseInvoices() {
               closeTab(activeTabId);
               openTab({
                 id: `/purchase-invoices/${headerState.id}`,
-                title: t("invoice.editPurchaseTabTitle", { namespace: "invoicing", vars: { number: headerState.invoice_number }, fallback: `تعديل فاتورة ${headerState.invoice_number}` }),
+                title: t("invoice.editPurchaseTabTitle", { namespace: "invoicing", vars: { number: headerState.invoice_number },  }),
                 path: `/purchase-invoices/${headerState.id}`,
                 closable: true,
               });
@@ -275,17 +275,17 @@ export default function PurchaseInvoices() {
         }
         headerFields={
           <>
-            <HeaderField label={t("document.invoiceNumber", { namespace: "invoicing", fallback: "رقم الفاتورة" })} value={headerState.invoice_number} readOnly inputClassName="font-mono font-bold" />
+            <HeaderField label={t("document.invoiceNumber", { namespace: "invoicing",  })} value={headerState.invoice_number} readOnly inputClassName="font-mono font-bold" />
 
-            <HeaderField label={t("document.issueDate", { namespace: "invoicing", fallback: "تاريخ الإصدار" })} type="date" value={headerState.issued_at} onChange={v => setHeaderState(s => ({ ...s, issued_at: v }))} disabled={isReadOnly} inputClassName="font-bold" />
+            <HeaderField label={t("document.issueDate", { namespace: "invoicing",  })} type="date" value={headerState.issued_at} onChange={v => setHeaderState(s => ({ ...s, issued_at: v }))} disabled={isReadOnly} inputClassName="font-bold" />
 
-            <HeaderField label={t("party.supplier", { namespace: "partners", fallback: "المورد" })} className="lg:col-span-2">
+            <HeaderField label={t("party.supplier", { namespace: "partners",  })} className="lg:col-span-2">
               <InvoicePartySelector
                 type="supplier"
                 parties={suppliers}
                 readOnly={isReadOnly}
                 selectedId={headerState.supplier_id || ""}
-                selectedName={headerState.supplier_name || t("invoice.cashSupplierName", { namespace: "invoicing", fallback: "مورد نقدي" })}
+                selectedName={headerState.supplier_name || t("invoice.cashSupplierName", { namespace: "invoicing",  })}
                 onSelect={(id, name) => setHeaderState(s => ({ ...s, supplier_id: id, supplier_name: name }))}
                 onClear={() => setHeaderState(s => ({ ...s, supplier_id: "", supplier_name: "مورد نقدي" }))}
                 hideLabel
@@ -299,7 +299,7 @@ export default function PurchaseInvoices() {
               />
             </HeaderField>
 
-            <HeaderField label={t("document.notesLabel", { namespace: "invoicing", fallback: "ملاحظات المستند" })} value={headerState.notes} onChange={v => setHeaderState(s => ({ ...s, notes: v }))} disabled={isReadOnly} placeholder={t("document.notesPlaceholder", { namespace: "invoicing", fallback: "أدخل أي ملاحظات إضافية هنا..." })} className="md:col-span-3 lg:col-span-2" />
+            <HeaderField label={t("document.notesLabel", { namespace: "invoicing",  })} value={headerState.notes} onChange={v => setHeaderState(s => ({ ...s, notes: v }))} disabled={isReadOnly} placeholder={t("document.notesPlaceholder", { namespace: "invoicing",  })} className="md:col-span-3 lg:col-span-2" />
           </>
         }
         lineItemsGrid={
@@ -378,19 +378,19 @@ export default function PurchaseInvoices() {
       onRefresh={() => loadData(false)}
       onCreate={() => {
         const uniqueId = `/purchase-invoices/new-${Date.now()}`;
-        openTab({ id: uniqueId, title: t("invoice.newPurchaseInvoice", { namespace: "invoicing", fallback: "فاتورة مشتريات جديدة" }), path: uniqueId, closable: true });
+        openTab({ id: uniqueId, title: t("invoice.newPurchaseInvoice", { namespace: "invoicing",  }), path: uniqueId, closable: true });
       }}
       onEdit={(inv) => {
-        openTab({ id: `/purchase-invoices/${inv.id}`, title: t("invoice.editPurchaseTabTitle", { namespace: "invoicing", vars: { number: inv.invoice_number }, fallback: `تعديل فاتورة ${inv.invoice_number}` }), path: `/purchase-invoices/${inv.id}`, closable: true });
+        openTab({ id: `/purchase-invoices/${inv.id}`, title: t("invoice.editPurchaseTabTitle", { namespace: "invoicing", vars: { number: inv.invoice_number },  }), path: `/purchase-invoices/${inv.id}`, closable: true });
       }}
       onView={(inv) => {
-        openTab({ id: `/purchase-invoices/${inv.id}-view`, title: t("invoice.viewPurchaseTabTitle", { namespace: "invoicing", vars: { number: inv.invoice_number }, fallback: `عرض فاتورة ${inv.invoice_number}` }), path: `/purchase-invoices/${inv.id}?mode=view`, closable: true });
+        openTab({ id: `/purchase-invoices/${inv.id}-view`, title: t("invoice.viewPurchaseTabTitle", { namespace: "invoicing", vars: { number: inv.invoice_number },  }), path: `/purchase-invoices/${inv.id}?mode=view`, closable: true });
       }}
       onEditOpeningBalance={(inv) => {
-        openTab({ id: `/opening-balance/${inv.id}`, title: t("invoice.openingEditTabTitle", { namespace: "invoicing", fallback: "تعديل بضاعة أول المدة" }), path: `/opening-balance/${inv.id}`, closable: true });
+        openTab({ id: `/opening-balance/${inv.id}`, title: t("invoice.openingEditTabTitle", { namespace: "invoicing",  }), path: `/opening-balance/${inv.id}`, closable: true });
       }}
       onViewOpeningBalance={(inv) => {
-        openTab({ id: `/opening-balance/${inv.id}-view`, title: t("invoice.openingViewTabTitle", { namespace: "invoicing", fallback: "عرض بضاعة أول المدة" }), path: `/opening-balance/${inv.id}?mode=view`, closable: true });
+        openTab({ id: `/opening-balance/${inv.id}-view`, title: t("invoice.openingViewTabTitle", { namespace: "invoicing",  }), path: `/opening-balance/${inv.id}?mode=view`, closable: true });
       }}
       onPost={async (id) => {
         await invoiceService.postInvoice(id);
@@ -401,28 +401,28 @@ export default function PurchaseInvoices() {
         try {
           await invoiceService.deleteInvoice(id);
           await invalidateKeys(queryClient, PURCHASE_KEYS);
-          toast.success(t("invoice.deleteSuccess", { namespace: "invoicing", fallback: "تم حذف الفاتورة والقيود المرتبطة بها" }));
+          toast.success(t("invoice.deleteSuccess", { namespace: "invoicing",  }));
           await loadData(false);
         }
-        catch (e) { toast.error(t("invoice.deleteError", { namespace: "invoicing", vars: { error: String(e) }, fallback: "فشل الحذف: {{error}}" })); }
+        catch (e) { toast.error(t("invoice.deleteError", { namespace: "invoicing", vars: { error: String(e) },  })); }
       }}
       onReopen={async (id) => {
         try {
           await invoiceService.reopenInvoice(id);
           await invalidateKeys(queryClient, PURCHASE_KEYS);
-          toast.success(t("invoice.reopenSuccess", { namespace: "invoicing", fallback: "تم إلغاء الترحيل وإعادة الفاتورة لمسودة" }));
+          toast.success(t("invoice.reopenSuccess", { namespace: "invoicing",  }));
           await loadData(false);
         }
-        catch (e) { toast.error(t("invoice.reopenError", { namespace: "invoicing", vars: { error: String(e) }, fallback: "فشل العملية: {{error}}" })); }
+        catch (e) { toast.error(t("invoice.reopenError", { namespace: "invoicing", vars: { error: String(e) },  })); }
       }}
       formatMonetaryAmount={formatMonetaryAmount}
       onExportRow={handleExportRow}
       partyType="supplier"
-      title={t("invoice.purchaseListTitle", { namespace: "invoicing", fallback: "فواتير المشتريات" })}
-      createLabel={t("invoice.createLabel", { namespace: "invoicing", fallback: "فاتورة جديدة" })}
-      searchPlaceholder={t("invoice.purchaseSearchPlaceholder", { namespace: "invoicing", fallback: "بحث برقم الفاتورة أو المورد..." })}
-      emptyMessage={t("invoice.purchaseEmpty", { namespace: "invoicing", fallback: "لا توجد فواتير مشتريات مسجّلة" })}
-      statsLabel={t("invoice.purchaseStatsLabel", { namespace: "invoicing", fallback: "إجمالي المشتريات" })}
+      title={t("invoice.purchaseListTitle", { namespace: "invoicing",  })}
+      createLabel={t("invoice.createLabel", { namespace: "invoicing",  })}
+      searchPlaceholder={t("invoice.purchaseSearchPlaceholder", { namespace: "invoicing",  })}
+      emptyMessage={t("invoice.purchaseEmpty", { namespace: "invoicing",  })}
+      statsLabel={t("invoice.purchaseStatsLabel", { namespace: "invoicing",  })}
       statsColor="text-rose-600"
       preferenceKey="purchase_invoices"
       showSubtotal

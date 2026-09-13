@@ -47,29 +47,29 @@ export function DamagedTable({
     const cols: UnifiedColumn<DamagedItem>[] = [
       {
         id: "id",
-        header: t("damaged.columnId", { namespace: "inventory", fallback: "الرقم" }),
-        label: t("damaged.columnId", { namespace: "inventory", fallback: "الرقم" }),
+        header: t("labels.number", { namespace: "inventory",  }),
+        label: t("labels.number", { namespace: "inventory",  }),
         accessor: (i) => i.reference ? formatNumber(parseInt(i.reference) || 0) : "—",
         className: "font-black text-slate-900 text-center"
       },
       {
         id: "material_name",
-        header: t("damaged.columnMaterial", { namespace: "inventory", fallback: "المادة" }),
-        label: t("damaged.columnMaterial", { namespace: "inventory", fallback: "المادة" }),
+        header: t("labels.material", { namespace: "inventory",  }),
+        label: t("labels.material", { namespace: "inventory",  }),
         accessor: (i) => i.material_name || i.material_id || "",
         className: "font-bold text-slate-800"
       },
 {
         id: "quantity",
-        header: t("damaged.columnQuantity", { namespace: "inventory", fallback: "الكمية" }),
-        label: t("damaged.columnQuantityDamaged", { namespace: "inventory", fallback: "الكمية التالفة" }),
+        header: t("labels.quantity", { namespace: "inventory",  }),
+        label: t("damaged.quantityLabel", { namespace: "inventory",  }),
         accessor: (i) => toLocalString(Math.round(parseFloat(i.quantity || "0"))),
         className: "tabular-nums font-black text-amber-600"
       },
       {
         id: "loss_original",
-        header: t("damaged.columnLoss", { namespace: "inventory", fallback: "الخسارة" }),
-        label: t("damaged.columnLossOriginal", { namespace: "inventory", fallback: "الخسارة بالعملة الأصلية" }),
+        header: t("damaged.lossCol", { namespace: "inventory",  }),
+        label: t("damaged.lossOriginal", { namespace: "inventory",  }),
         accessor: (i) => originalLossLabel(i),
         className: "tabular-nums font-black text-rose-700"
       },
@@ -93,15 +93,15 @@ export function DamagedTable({
 
     cols.push({
         id: "reason",
-        header: t("damaged.columnReason", { namespace: "inventory", fallback: "السبب" }),
-        label: t("damaged.columnReasonDamaged", { namespace: "inventory", fallback: "سبب التلف" }),
+        header: t("damaged.reason", { namespace: "inventory",  }),
+        label: t("damaged.reason", { namespace: "inventory",  }),
       accessor: (i) => i.reason || "",
       className: "text-slate-500 italic"
     });
     cols.push({
         id: "damage_date",
-        header: t("damaged.columnDate", { namespace: "inventory", fallback: "التاريخ" }),
-        label: t("damaged.columnDateRegistered", { namespace: "inventory", fallback: "تاريخ التسجيل" }),
+        header: t("labels.date", { namespace: "inventory",  }),
+        label: t("damaged.registerDate", { namespace: "inventory",  }),
       accessor: (i) => formatDateTime(i.damage_date),
       className: "text-slate-500 tabular-nums"
     });
@@ -109,8 +109,8 @@ export function DamagedTable({
     if (onView || onEdit || onDelete) {
       cols.push({
         id: "actions",
-        header: t("labels.actions", { namespace: "inventory", fallback: "إجراءات" }),
-        label: t("labels.actions", { namespace: "inventory", fallback: "إجراءات" }),
+        header: t("labels.actions", { namespace: "inventory",  }),
+        label: t("labels.actions", { namespace: "inventory",  }),
         accessor: (i) => (
           <TableActions
             onView={onView ? () => onView(i) : undefined}
@@ -141,7 +141,7 @@ export function DamagedTable({
     const colIds = allColumns.map(c => c.id);
     return colIds.map(id => {
       if (id === "material_name") {
-        return { id: 'count', columnId: id, label: '', value: `${items.length} ${t("damaged.records", { namespace: "inventory", fallback: "سجل" })}`, className: 'text-slate-500 font-medium' };
+        return { id: 'count', columnId: id, label: '', value: `${items.length} ${t("damaged.countSummary", { namespace: "inventory",  })}`, className: 'text-slate-500 font-medium' };
       }
       const costMatch = id.match(/^cost_(.+)$/);
       if (costMatch) {
@@ -151,7 +151,7 @@ export function DamagedTable({
         return {
           id: `${id}_summary`,
           columnId: id,
-          label: `${t("damaged.totalLoss", { namespace: "inventory", fallback: "إجمالي الخسارة" })} ${cs(sym)}`,
+          label: `${t("damaged.totalLoss", { namespace: "inventory",  })} ${cs(sym)}`,
           value: totalCost > 0 ? formatAmount(totalCost, { currencyCode: currCode }) : "—",
           className: isBase ? 'text-rose-600 font-black' as const : 'text-rose-300 font-bold' as const,
         };
@@ -179,13 +179,13 @@ export function DamagedTable({
       loading={loading}
       search={search}
       onSearchChange={onSearchChange}
-      searchPlaceholder={t("damaged.searchPlaceholder", { namespace: "inventory", fallback: "بحث بالمنتج أو السبب..." })}
+      searchPlaceholder={t("damaged.searchPlaceholder", { namespace: "inventory",  })}
       tableId="damaged"
       sortConfig={{ field: "damage_date", direction: "desc", sortFn }}
       sortableFields={["material_name", "damage_date", "quantity", "cost_impact"]}
       selectedId={selectedId}
       onRowClick={onView}
-      emptyMessage={search ? t("damaged.noSearchResults", { namespace: "inventory", fallback: "لا توجد نتائج للبحث" }) : t("damaged.empty", { namespace: "inventory", fallback: "لا توجد سجلات تالف" })}
+      emptyMessage={search ? t("labels.noResultsMatch", { namespace: "inventory",  }) : t("damaged.empty", { namespace: "inventory",  })}
       summary={summaryColumns}
       onVisibleColumnsChange={onVisibleColumnsChange}
     />

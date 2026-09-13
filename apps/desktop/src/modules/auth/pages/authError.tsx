@@ -10,7 +10,7 @@ export default function AuthErrorPage() {
   const [countdown, setCountdown] = useState(3);
   const errorMessage =
     searchParams.get('msg') ||
-    t("auth.error.defaultMessage", { namespace: "auth", fallback: "Sorry, your authentication information is invalid or has expired" });
+    t("auth.error.defaultMessage", { namespace: "auth",  });
 
   useEffect(() => {
     // Countdown logic
@@ -51,7 +51,7 @@ export default function AuthErrorPage() {
 
           {/* Error title */}
           <h1 className="text-2xl font-bold text-gray-800">
-            {t("auth.error.title", { namespace: "auth", fallback: "Authentication Error" })}
+            {t("auth.error.title", { namespace: "auth",  })}
           </h1>
 
           {/* Error description */}
@@ -62,14 +62,14 @@ export default function AuthErrorPage() {
             <p className="text-sm text-gray-500">
               {countdown > 0 ? (
                 <>
-                  {t("auth.error.countdownPrefix", { namespace: "auth", fallback: "Will automatically return to the home page in" })}{' '}
+                  {t("auth.error.countdownPrefix", { namespace: "auth",  })}{' '}
                   <span className="text-blue-600 font-semibold text-base">
                     {countdown}
                   </span>{' '}
-                  {t("auth.error.countdownSuffix", { namespace: "auth", fallback: "seconds" })}
+                  {t("auth.error.countdownSuffix", { namespace: "auth",  })}
                 </>
               ) : (
-                t("auth.error.redirecting", { namespace: "auth", fallback: "Redirecting..." })
+                t("auth.error.redirecting", { namespace: "auth",  })
               )}
             </p>
           </div>
@@ -78,7 +78,7 @@ export default function AuthErrorPage() {
         {/* Return to home button */}
         <div className="flex justify-center pt-2">
           <Button onClick={handleReturnHome} className="px-6">
-            {t("auth.error.returnHome", { namespace: "auth", fallback: "Return to Home" })}
+            {t("auth.error.returnHome", { namespace: "auth",  })}
           </Button>
         </div>
       </div>

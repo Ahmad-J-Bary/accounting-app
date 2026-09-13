@@ -177,10 +177,10 @@ export default function PartyPage({ entityName }: PartyPageProps) {
       setPaymentSaving(true);
       await paymentService.createPayment(payload);
       await refresh(true);
-      toast.success(t(entityName === "customer" ? "partyPage.receiptSuccess" : "partyPage.paymentSuccess", { namespace: "partners", fallback: cfg.successMessage }));
+      toast.success(t(entityName === "customer" ? "partyPage.receiptSuccess" : "partyPage.paymentSuccess", { namespace: "partners"}));
       setPanelMode(null);
     } catch (error) {
-      toast.error(t("partyPage.voucherSaveFailed", { namespace: "partners", vars: { error: String(error) }, fallback: "فشل تسجيل السند: {{error}}" }));
+      toast.error(t("partyPage.voucherSaveFailed", { namespace: "partners", vars: { error: String(error) },  }));
     } finally {
       setPaymentSaving(false);
     }
@@ -238,7 +238,7 @@ export default function PartyPage({ entityName }: PartyPageProps) {
   // ── Handle Excel Export ──
 
   const handleExport = useCallback(async () => {
-    const currCols = currencyAmountCols("balance", t("partyPage.export.colBalance", { namespace: "partners", fallback: "الرصيد" }), (row) => {
+    const currCols = currencyAmountCols("balance", t("partyPage.export.colBalance", { namespace: "partners",  }), (row) => {
       const absBal = Math.abs(Number(row.balance || 0));
       if (absBal === 0) return 0;
       return toBase(absBal, String(row.currency ?? baseCode ?? ''));
@@ -247,11 +247,11 @@ export default function PartyPage({ entityName }: PartyPageProps) {
     const summary = buildCurrencySummary("balance", currencies);
 
     const colDefs: ExcelExportColumn[] = [
-      { id: 'code', label: t("partyPage.export.colIndex", { namespace: "partners", fallback: "#" }), width: 8, hidden: !visibleColumnIds.includes('code'), accessor: (row) => parseInt(String(row.code ?? "0"), 10) || 0 },
-      { id: 'name', label: entityName === 'customer' ? t("columns.partyNameCustomer", { namespace: "partners", fallback: "اسم العميل" }) : t("columns.partyNameSupplier", { namespace: "partners", fallback: "اسم المورد" }), width: 25, hidden: !visibleColumnIds.includes('name'), accessor: (row) => String(row.name ?? '') },
-      { id: 'phone', label: t("columns.phone", { namespace: "partners", fallback: "رقم الهاتف" }), width: 15, hidden: !visibleColumnIds.includes('phone'), accessor: (row) => String(row.phone ?? '') },
+      { id: 'code', label: t("partyPage.export.colIndex", { namespace: "partners",  }), width: 8, hidden: !visibleColumnIds.includes('code'), accessor: (row) => parseInt(String(row.code ?? "0"), 10) || 0 },
+      { id: 'name', label: entityName === 'customer' ? t("columns.partyNameCustomer", { namespace: "partners",  }) : t("columns.partyNameSupplier", { namespace: "partners",  }), width: 25, hidden: !visibleColumnIds.includes('name'), accessor: (row) => String(row.name ?? '') },
+      { id: 'phone', label: t("columns.phone", { namespace: "partners",  }), width: 15, hidden: !visibleColumnIds.includes('phone'), accessor: (row) => String(row.phone ?? '') },
       {
-        id: 'status', label: t("columns.accountStatus", { namespace: "partners", fallback: "حالة الحساب" }), width: 12, hidden: !visibleColumnIds.includes('status'),
+        id: 'status', label: t("columns.accountStatus", { namespace: "partners",  }), width: 12, hidden: !visibleColumnIds.includes('status'),
         accessor: (row) => {
           const debit = Number(row.debit || 0);
           const credit = Number(row.credit || 0);
@@ -259,16 +259,16 @@ export default function PartyPage({ entityName }: PartyPageProps) {
         },
       },
       ...currCols,
-      { id: 'notes', label: t("columns.notes", { namespace: "partners", fallback: "ملاحظات" }), width: 20, accessor: (row) => String(row.notes ?? '') },
+      { id: 'notes', label: t("columns.notes", { namespace: "partners",  }), width: 20, accessor: (row) => String(row.notes ?? '') },
     ];
 
     await executeExport(exportData, {
-      sheetName: entityName === 'supplier' ? t("partyPage.export.sheetSuppliers", { namespace: "partners", fallback: "الموردين" }) : t("partyPage.export.sheetCustomers", { namespace: "partners", fallback: "العملاء" }),
-      filename: entityName === 'supplier' ? t("partyPage.export.sheetSuppliers", { namespace: "partners", fallback: "الموردين" }) : t("partyPage.export.sheetCustomers", { namespace: "partners", fallback: "العملاء" }),
+      sheetName: entityName === 'supplier' ? t("partyPage.export.sheetSuppliers", { namespace: "partners",  }) : t("partyPage.export.sheetCustomers", { namespace: "partners",  }),
+      filename: entityName === 'supplier' ? t("partyPage.export.sheetSuppliers", { namespace: "partners",  }) : t("partyPage.export.sheetCustomers", { namespace: "partners",  }),
       data: items as unknown as Record<string, unknown>[],
       columns: colDefs,
       summary,
-      summaryLabel: t("partyPage.export.summaryLabel", { namespace: "partners", fallback: "المجموع" }),
+      summaryLabel: t("partyPage.export.summaryLabel", { namespace: "partners",  }),
       sortBy: {
         columnId: 'code',
         direction: 'asc',
@@ -292,14 +292,14 @@ export default function PartyPage({ entityName }: PartyPageProps) {
           if (party?.account_id) {
             openTab({
               id: `ledger-${party.account_id}`,
-              title: t("detail.ledgerTab", { namespace: "partners", vars: { name: selectedItem?.name }, fallback: "حركة: {{name}}" }),
+              title: t("detail.ledgerTab", { namespace: "partners", vars: { name: selectedItem?.name },  }),
               path: `/accounting/account-ledger/${party.account_id}`,
               closable: true,
             });
           }
         }}
       >
-        <History className="w-4 h-4 ml-2 text-slate-500" /> {t("partyPage.toolbar.ledger", { namespace: "partners", fallback: "حركة اليومية" })}
+        <History className="w-4 h-4 ml-2 text-slate-500" /> {t("partyPage.toolbar.ledger", { namespace: "partners",  })}
       </Button>
 
       <Button
@@ -309,11 +309,11 @@ export default function PartyPage({ entityName }: PartyPageProps) {
         disabled={!selectedId}
         onClick={() => {
           const tab = cfg.invoicesTab(selectedId!, selectedItem?.name || "");
-          openTab({ ...tab, title: t(entityName === "customer" ? "partyPage.salesTabCustomer" : "partyPage.purchasesTabSupplier", { namespace: "partners", vars: { name: selectedItem?.name || "" }, fallback: entityName === "customer" ? "مبيعات: {{name}}" : "مشتريات: {{name}}" }) });
+          openTab({ ...tab, title: t(entityName === "customer" ? "partyPage.salesTabCustomer" : "partyPage.purchasesTabSupplier", { namespace: "partners", vars: { name: selectedItem?.name || "" }}) });
         }}
       >
         <ShoppingBag className="w-4 h-4 ml-2 text-blue-500" />
-        {entityName === "customer" ? t("partyPage.toolbar.customerSales", { namespace: "partners", fallback: "مبيعات العميل" }) : t("partyPage.toolbar.supplierPurchases", { namespace: "partners", fallback: "مشتريات المورد" })}
+        {entityName === "customer" ? t("partyPage.toolbar.customerSales", { namespace: "partners",  }) : t("partyPage.toolbar.supplierPurchases", { namespace: "partners",  })}
       </Button>
 
       <Button
@@ -323,10 +323,10 @@ export default function PartyPage({ entityName }: PartyPageProps) {
         disabled={!selectedId}
         onClick={() => {
           const tab = cfg.statementPath(selectedId!, selectedItem?.name || "");
-          openTab({ ...tab, title: t("detail.statementTab", { namespace: "partners", vars: { name: selectedItem?.name || "" }, fallback: "كشف: {{name}}" }) });
+          openTab({ ...tab, title: t("detail.statementTab", { namespace: "partners", vars: { name: selectedItem?.name || "" },  }) });
         }}
       >
-        <Printer className="w-4 h-4 ml-2 text-emerald-500" /> {t("partyPage.toolbar.printStatement", { namespace: "partners", fallback: "طباعة كشف حساب" })}
+        <Printer className="w-4 h-4 ml-2 text-emerald-500" /> {t("partyPage.toolbar.printStatement", { namespace: "partners",  })}
       </Button>
 
       <Button
@@ -339,7 +339,7 @@ export default function PartyPage({ entityName }: PartyPageProps) {
         }}
       >
         <Undo2 className="w-4 h-4 ml-2 text-amber-500" />
-        {entityName === "customer" ? t("partyPage.toolbar.salesReturn", { namespace: "partners", fallback: "مرتجع مبيعات" }) : t("partyPage.toolbar.purchaseReturn", { namespace: "partners", fallback: "مرتجع مشتريات" })}
+        {entityName === "customer" ? t("partyPage.toolbar.salesReturn", { namespace: "partners",  }) : t("partyPage.toolbar.purchaseReturn", { namespace: "partners",  })}
       </Button>
 
       <Button
@@ -355,7 +355,7 @@ export default function PartyPage({ entityName }: PartyPageProps) {
           ? <Receipt className="w-4 h-4 ml-2 text-amber-500" />
           : <DollarSign className="w-4 h-4 ml-2 text-rose-500" />
         }
-        {entityName === "customer" ? t("partyPage.toolbar.createReceipt", { namespace: "partners", fallback: "إنشاء سند قبض" }) : t("partyPage.toolbar.createPayment", { namespace: "partners", fallback: "إنشاء سند دفع" })}
+        {entityName === "customer" ? t("partyPage.toolbar.createReceipt", { namespace: "partners",  }) : t("partyPage.toolbar.createPayment", { namespace: "partners",  })}
       </Button>
 
       <Button
@@ -364,13 +364,13 @@ export default function PartyPage({ entityName }: PartyPageProps) {
         className="bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
         onClick={handleExport}
       >
-        <Download className="w-4 h-4 ml-2 text-slate-500" /> {t("partyPage.toolbar.exportExcel", { namespace: "partners", fallback: "تصدير إكسل" })}
+        <Download className="w-4 h-4 ml-2 text-slate-500" /> {t("partyPage.toolbar.exportExcel", { namespace: "partners",  })}
       </Button>
 
       <div className="h-6 w-px bg-slate-200 mx-1" />
 
       <Button size="sm" onClick={handleOpenAddWithAccounts} className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100">
-        <Plus className="w-4 h-4 ml-2" /> {t(entityName === "customer" ? "partyPage.addLabelCustomer" : "partyPage.addLabelSupplier", { namespace: "partners", fallback: cfg.addButtonLabel })}
+        <Plus className="w-4 h-4 ml-2" /> {t(entityName === "customer" ? "partyPage.addLabelCustomer" : "partyPage.addLabelSupplier", { namespace: "partners"})}
       </Button>
     </div>
   );
@@ -413,7 +413,7 @@ export default function PartyPage({ entityName }: PartyPageProps) {
 
   return (
     <OperationalTableTemplate
-      title={t(entityName === "customer" ? "partyPage.titleCustomer" : "partyPage.titleSupplier", { namespace: "partners", fallback: cfg.title })}
+      title={t(entityName === "customer" ? "partyPage.titleCustomer" : "partyPage.titleSupplier", { namespace: "partners"})}
       toolbar={toolbar}
       tableContent={
         <PartyTable
@@ -430,7 +430,7 @@ export default function PartyPage({ entityName }: PartyPageProps) {
             if (party.account_id) {
               openTab({
                 id: `ledger-${party.account_id}`,
-                title: t("detail.ledgerTab", { namespace: "partners", vars: { name: item.name }, fallback: "حركة: {{name}}" }),
+                title: t("detail.ledgerTab", { namespace: "partners", vars: { name: item.name },  }),
                 path: `/accounting/account-ledger/${party.account_id}`,
                 closable: true,
               });

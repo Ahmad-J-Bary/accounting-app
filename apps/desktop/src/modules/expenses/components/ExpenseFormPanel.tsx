@@ -57,7 +57,7 @@ export function ExpenseFormPanel({
   const { currencies, baseCurrency } = useCurrencyContext();
   const { canAccessOpeningWorkflow } = useCompanyCapabilities();
 
-  const title = expense ? t("expense.formTitle.edit", { namespace: "invoicing", fallback: "تعديل بند المصروف" }) : t("expense.formTitle.add", { namespace: "invoicing", fallback: "إضافة بند مصروف جديد" });
+  const title = expense ? t("expense.formTitle.edit", { namespace: "invoicing",  }) : t("expense.formTitle.add", { namespace: "invoicing",  });
 
   const [name, setName] = useState("");
   const [openingBalance, setOpeningBalance] = useState("0");
@@ -126,24 +126,24 @@ export function ExpenseFormPanel({
       saveDisabled={!name.trim()}
     >
       <div className="space-y-6 text-right">
-        <SidebarSection title={t("expense.basicInfo", { namespace: "invoicing", fallback: "المعلومات الأساسية" })}>
+        <SidebarSection title={t("expense.basicInfo", { namespace: "invoicing",  })}>
           <div className="space-y-1.5">
-            <FieldLabel required>{t("expense.itemName", { namespace: "invoicing", fallback: "اسم البند" })}</FieldLabel>
+            <FieldLabel required>{t("expense.itemName", { namespace: "invoicing",  })}</FieldLabel>
             <Input
               required
               value={name}
               onChange={e => setName(e.target.value)}
-              placeholder={t("expense.namePlaceholder", { namespace: "invoicing", fallback: "مثال: مصاريف الإيجار" })}
+              placeholder={t("expense.namePlaceholder", { namespace: "invoicing",  })}
               className="h-9"
             />
           </div>
         </SidebarSection>
 
         {canAccessOpeningWorkflow && (
-          <SidebarSection title={t("expense.financialData", { namespace: "invoicing", fallback: "البيانات المالية" })}>
+          <SidebarSection title={t("expense.financialData", { namespace: "invoicing",  })}>
             {currencies.length > 1 && (
               <div className="space-y-1.5 mb-3">
-                <FieldLabel>{t("expense.defaultCurrency", { namespace: "invoicing", fallback: "العملة الافتراضية" })}</FieldLabel>
+                <FieldLabel>{t("expense.defaultCurrency", { namespace: "invoicing",  })}</FieldLabel>
                 <Select value={currency} onValueChange={setCurrency}>
                   <SelectTrigger className="h-9 font-bold"><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -156,7 +156,7 @@ export function ExpenseFormPanel({
             )}
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5 col-span-2 sm:col-span-1">
-                <FieldLabel>{t("expense.openingBalance", { namespace: "invoicing", fallback: "الرصيد الافتتاحي" })}</FieldLabel>
+                <FieldLabel>{t("expense.openingBalance", { namespace: "invoicing",  })}</FieldLabel>
                 <Input
                   type="number"
                   step="any"
@@ -166,7 +166,7 @@ export function ExpenseFormPanel({
                 />
               </div>
               <div className="space-y-1.5 col-span-2 sm:col-span-1">
-                <FieldLabel>{t("expense.balanceDirection", { namespace: "invoicing", fallback: "اتجاه الرصيد" })}</FieldLabel>
+                <FieldLabel>{t("expense.balanceDirection", { namespace: "invoicing",  })}</FieldLabel>
                 <div className="flex gap-2 h-9">
                   <button
                     type="button"
@@ -178,7 +178,7 @@ export function ExpenseFormPanel({
                     )}
                     onClick={() => setBalanceDirection("debit")}
                   >
-                    {t("expense.debitSide", { namespace: "invoicing", fallback: "مدين" })}
+                    {t("expense.debitSide", { namespace: "invoicing",  })}
                   </button>
                   <button
                     type="button"
@@ -190,7 +190,7 @@ export function ExpenseFormPanel({
                     )}
                     onClick={() => setBalanceDirection("credit")}
                   >
-                    {t("expense.creditSide", { namespace: "invoicing", fallback: "دائن" })}
+                    {t("expense.creditSide", { namespace: "invoicing",  })}
                   </button>
                 </div>
               </div>
@@ -199,11 +199,11 @@ export function ExpenseFormPanel({
         )}
 
         <div className="space-y-1.5">
-          <FieldLabel>{t("labels.notes", { namespace: "common", fallback: "ملاحظات" })}</FieldLabel>
+          <FieldLabel>{t("labels.notes", { namespace: "common",  })}</FieldLabel>
           <Textarea
             value={notes}
             onChange={e => setNotes(e.target.value)}
-            placeholder={t("expense.notesPlaceholder", { namespace: "invoicing", fallback: "أية ملاحظات إضافية..." })}
+            placeholder={t("expense.notesPlaceholder", { namespace: "invoicing",  })}
             className="min-h-[60px] bg-white border-slate-200"
           />
         </div>

@@ -132,7 +132,7 @@ export function UnifiedTable<T>({
 }: UnifiedTableProps<T>) {
   const { settings, getDensityPadding } = useTableSettings();
   const { t } = useLocalization();
-  const resolvedEmptyMessage = emptyMessage ?? t('states.noDataAvailable', { fallback: 'لا توجد بيانات متاحة' });
+  const resolvedEmptyMessage = emptyMessage ?? t('states.noDataAvailable', );
 
   const visibleColumns = useMemo(
     () => columns.filter(c => c.visible !== false),

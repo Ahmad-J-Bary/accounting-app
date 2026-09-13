@@ -21,7 +21,7 @@ export function MigrationPicker({ id, label, candidates, value, onChange }: Migr
       <FieldLabel htmlFor={id}>{label}</FieldLabel>
       <Select value={value} onValueChange={onChange}>
         <SelectTrigger id={id} className="h-9 bg-white border-slate-200 text-xs">
-          <SelectValue placeholder={candidates.length ? t("openingBalance.selectMigrationPlaceholder", { namespace: "accounting", fallback: "اختر ترحيلاً..." }) : t("openingBalance.noMigrations", { namespace: "accounting", fallback: "لا توجد ترحيلات" })} />
+          <SelectValue placeholder={candidates.length ? t("openingBalance.selectMigrationPlaceholder", { namespace: "accounting",  }) : t("openingBalance.noMigrations", { namespace: "accounting",  })} />
         </SelectTrigger>
         <SelectContent>
           {candidates.map((m) => (

@@ -31,7 +31,7 @@ export function DocumentToolbar({
   saveAndPostLabel,
 }: DocumentToolbarProps) {
   const { t } = useLocalization();
-  const resolvedSaveAndPostLabel = saveAndPostLabel ?? t('actions.postInvoice', { fallback: 'ترحيل الفاتورة' });
+  const resolvedSaveAndPostLabel = saveAndPostLabel ?? t('actions.postInvoice', );
   const defaultPrint = useCallback(() => {
     window.dispatchEvent(new Event("app:prepare-print"));
     requestAnimationFrame(() => {
@@ -50,7 +50,7 @@ export function DocumentToolbar({
           onClick={onNewMaterial}
           className="bg-white border-emerald-200 text-emerald-700 hover:bg-emerald-50"
         >
-          <Plus className="w-4 h-4 ml-2" /> {t('labels.newMaterial', { fallback: 'مادة جديدة' })}
+          <Plus className="w-4 h-4 ml-2" /> {t('labels.newMaterial', )}
         </Button>
       )}
 
@@ -60,7 +60,7 @@ export function DocumentToolbar({
           onClick={onEdit}
           className="bg-amber-500 hover:bg-amber-600 shadow-lg shadow-amber-100 font-bold"
         >
-          <Settings2 className="w-4 h-4 ml-2" /> {t('labels.editInvoice', { fallback: 'تعديل الفاتورة' })}
+          <Settings2 className="w-4 h-4 ml-2" /> {t('labels.editInvoice', )}
         </Button>
       )}
 
@@ -72,7 +72,7 @@ export function DocumentToolbar({
             disabled={saving}
             className="bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-100 font-bold"
           >
-            <Send className="w-4 h-4 ml-2" /> {t('labels.saveAndPostEdits', { fallback: 'حفظ وترحيل التعديلات' })}
+            <Send className="w-4 h-4 ml-2" /> {t('labels.saveAndPostEdits', )}
           </Button>
           <Button
             variant="outline"
@@ -80,7 +80,7 @@ export function DocumentToolbar({
             onClick={onReopen}
             className="border-rose-200 text-rose-600 hover:bg-rose-50 font-bold"
           >
-            <History className="w-4 h-4 ml-2" /> {t('actions.unpost', { fallback: 'إلغاء الترحيل' })}
+            <History className="w-4 h-4 ml-2" /> {t('actions.unpost', )}
           </Button>
         </>
       ) : !isReadOnly && status !== "Posted" ? (
@@ -92,7 +92,7 @@ export function DocumentToolbar({
             disabled={saving}
             className="bg-white border-slate-200 text-slate-700 font-bold"
           >
-            <Save className="w-4 h-4 ml-2" /> {saving ? t('states.saving', { fallback: 'جاري الحفظ...' }) : t('actions.saveDraft', { fallback: 'حفظ مسودة' })}
+            <Save className="w-4 h-4 ml-2" /> {saving ? t('states.saving', ) : t('actions.saveDraft', )}
           </Button>
           <Button
             size="sm"
@@ -107,12 +107,12 @@ export function DocumentToolbar({
 
       {onExport && (
         <Button variant="outline" size="sm" onClick={onExport} className="bg-white">
-          <Download className="w-4 h-4 ml-2" /> {t('actions.exportExcel', { fallback: 'تصدير إكسل' })}
+          <Download className="w-4 h-4 ml-2" /> {t('actions.exportExcel', )}
         </Button>
       )}
 
       <Button variant="outline" size="sm" onClick={onPrint ?? defaultPrint} className="bg-white">
-        <Printer className="w-4 h-4 ml-2" /> {t('actions.print', { fallback: 'طباعة' })}
+        <Printer className="w-4 h-4 ml-2" /> {t('actions.print', )}
       </Button>
     </div>
   );

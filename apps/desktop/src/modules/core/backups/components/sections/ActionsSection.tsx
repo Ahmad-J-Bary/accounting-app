@@ -14,7 +14,7 @@ interface Props {
 export function ActionsSection({ operating, onDone, preset = null, onPresetConsumed }: Props) {
   const { t } = useLocalization();
   return (
-    <SettingsSection title={t("settings.backups.actionsTitle", { namespace: "settings", fallback: "إجراءات البيانات" })}>
+    <SettingsSection title={t("backups.actionsTitle", { namespace: "settings",  })}>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <ManualBackupPanel operating={operating} onDone={onDone} />
         <InspectFileFlow

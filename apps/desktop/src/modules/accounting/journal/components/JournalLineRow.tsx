@@ -53,7 +53,7 @@ export function JournalLineRow({
           options={detailAccounts}
           value={line.account_id}
           onValueChange={(id) => onUpdate(line.key, { account_id: id })}
-          placeholder={t("journal.lineRow.accountPlaceholder", { namespace: "accounting", fallback: "اختر الحساب..." })}
+          placeholder={t("journal.lineRow.accountPlaceholder", { namespace: "accounting",  })}
           className="flex-1 min-w-0"
         />
 
@@ -68,7 +68,7 @@ export function JournalLineRow({
                 : "text-slate-500 hover:bg-slate-100",
             )}
           >
-            {t("journal.lineRow.debit", { namespace: "accounting", fallback: "مدين" })}
+            {t("journal.lineRow.debit", { namespace: "accounting",  })}
           </button>
           <button
             type="button"
@@ -80,7 +80,7 @@ export function JournalLineRow({
                 : "text-slate-500 hover:bg-slate-100",
             )}
           >
-            {t("journal.lineRow.credit", { namespace: "accounting", fallback: "دائن" })}
+            {t("journal.lineRow.credit", { namespace: "accounting",  })}
           </button>
         </div>
 
@@ -106,7 +106,7 @@ export function JournalLineRow({
           onClick={() => onRemove(line.key)}
           disabled={isOnlyLine}
           className="h-8 w-8 p-0 text-red-400 hover:bg-red-50 hover:text-red-600 shrink-0"
-          aria-label={t("journal.lineRow.deleteAria", { namespace: "accounting", fallback: "حذف السطر" })}
+          aria-label={t("journal.lineRow.deleteAria", { namespace: "accounting",  })}
         >
           <Trash2 className="h-3.5 w-3.5" />
         </Button>
@@ -115,12 +115,12 @@ export function JournalLineRow({
       <input
         value={line.description}
         onChange={(e) => onUpdate(line.key, { description: e.target.value })}
-        placeholder={t("journal.lineRow.lineDescriptionPlaceholder", { namespace: "accounting", fallback: "بيان السطر (اختياري)" })}
+        placeholder={t("journal.lineRow.lineDescriptionPlaceholder", { namespace: "accounting",  })}
         className="w-full h-7 px-9 text-xs text-slate-600 placeholder:text-slate-400 border-0 bg-transparent focus:outline-none focus:ring-0"
       />
 
       {amountInvalid && (
-        <p className="px-9 text-2xs text-red-600">{t("journal.lineRow.invalidAmount", { namespace: "accounting", fallback: "أدخل مبلغاً صحيحاً أكبر من صفر" })}</p>
+        <p className="px-9 text-2xs text-red-600">{t("journal.lineRow.invalidAmount", { namespace: "accounting",  })}</p>
       )}
     </div>
   );

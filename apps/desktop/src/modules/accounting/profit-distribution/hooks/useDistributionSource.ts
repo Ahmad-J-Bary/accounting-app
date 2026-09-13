@@ -44,8 +44,7 @@ export function useDistributionSource(): DistributionSourceResult {
         sourceLabel: t("profitDistribution.sourceLabelMigration", {
           namespace: "accounting",
           vars: { date: latestMigration.cutover_date },
-          fallback: `ترحيل الرصيد الافتتاحي — ${latestMigration.cutover_date}`,
-        }),
+          }),
         windowStart: "1970-01-01T00:00:00Z",
         windowEnd: normalizeToUtcIso(latestMigration.cutover_date, true),
         isLoading: false,
@@ -62,8 +61,7 @@ export function useDistributionSource(): DistributionSourceResult {
         sourceLabel: t("profitDistribution.sourceLabelPeriod", {
           namespace: "accounting",
           vars: { start: activePeriod.start_date, end: activePeriod.end_date },
-          fallback: `الفترة المالية — ${activePeriod.start_date} إلى ${activePeriod.end_date}`,
-        }),
+          }),
         windowStart: normalizeToUtcIso(activePeriod.start_date, false),
         windowEnd: normalizeToUtcIso(activePeriod.end_date, true),
         isLoading: false,

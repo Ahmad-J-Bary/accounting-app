@@ -114,22 +114,22 @@ export const SidebarContentManager: React.FC = () => {
       <div className="space-y-6" dir="rtl">
         {/* Title */}
         <div className="flex flex-col gap-1 border-r-4 border-blue-600 pr-3 pb-1 mb-2">
-          <h2 className="text-xl font-black text-slate-800 font-sans">{t("settings.sidebarContent.title", { namespace: "settings", fallback: "تخصيص محتوى وترتيب القائمة" })}</h2>
-          <p className="text-xs text-slate-500 font-sans">{t("settings.sidebarContent.description", { namespace: "settings", fallback: "إدارة المجموعات، ترتيب العناصر، تفعيل الاختصارات السريعة، وتثبيت التفضيلات في الشريط الجانبي" })}</p>
+          <h2 className="text-xl font-black text-slate-800 font-sans">{t("sidebarContent.title", { namespace: "settings",  })}</h2>
+          <p className="text-xs text-slate-500 font-sans">{t("sidebarContent.description", { namespace: "settings",  })}</p>
         </div>
 
         {/* ── 1. إدارة المجموعات ── */}
-        <SettingsGroup title={t("settings.sidebarContent.groupsTitle", { namespace: "settings", fallback: "إدارة المجموعات والأقسام" })} icon={Settings2} color="text-blue-600">
+        <SettingsGroup title={t("sidebarContent.groupsTitle", { namespace: "settings",  })} icon={Settings2} color="text-blue-600">
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <span className="text-xs text-slate-500 font-medium">{t("settings.sidebarContent.groupsHint", { namespace: "settings", fallback: "قم بترتيب المجموعات أو إضافتها أو إخفائها بالكامل" })}</span>
+              <span className="text-xs text-slate-500 font-medium">{t("sidebarContent.groupsHint", { namespace: "settings",  })}</span>
               <Button
                 size="sm"
                 onClick={() => setShowAddGroup(prev => !prev)}
                 className="bg-blue-600 hover:bg-blue-700 h-9 font-bold text-xs gap-1.5 rounded-lg"
               >
                 {showAddGroup ? <X className="w-4 h-4" /> : <FolderPlus className="w-4 h-4" />}
-                {showAddGroup ? t("settings.sidebarContent.cancel", { namespace: "settings", fallback: "إلغاء" }) : t("settings.sidebarContent.addCustomGroup", { namespace: "settings", fallback: "إضافة مجموعة مخصصة" })}
+                {showAddGroup ? t("sidebarContent.cancel", { namespace: "settings",  }) : t("sidebarContent.addCustomGroup", { namespace: "settings",  })}
               </Button>
             </div>
 
@@ -138,7 +138,7 @@ export const SidebarContentManager: React.FC = () => {
                 <div className="flex items-center gap-2">
                   <input
                     type="text"
-                    placeholder={t("settings.sidebarContent.groupNamePlaceholder", { namespace: "settings", fallback: "اسم المجموعة الجديدة..." })}
+                    placeholder={t("sidebarContent.groupNamePlaceholder", { namespace: "settings",  })}
                     value={newGroupTitle}
                     onChange={(e) => setNewGroupTitle(e.target.value)}
                     className="flex-1 px-3 py-1.5 text-xs border border-slate-200 rounded-lg outline-none focus:border-blue-500 font-bold"
@@ -146,11 +146,11 @@ export const SidebarContentManager: React.FC = () => {
                   />
                   <Button size="sm" onClick={handleAddGroup} className="bg-blue-600 hover:bg-blue-700 text-xs font-bold rounded-lg h-8 shrink-0">
                     <Plus className="w-3.5 h-3.5 ml-1" />
-                    {t("settings.sidebarContent.add", { namespace: "settings", fallback: "إضافة" })}
+                    {t("sidebarContent.add", { namespace: "settings",  })}
                   </Button>
                 </div>
                 <div>
-                  <span className="text-[10px] text-slate-500 font-bold block mb-1.5">{t("settings.sidebarContent.chooseIcon", { namespace: "settings", fallback: "اختيار أيقونة للمجموعة:" })}</span>
+                  <span className="text-[10px] text-slate-500 font-bold block mb-1.5">{t("sidebarContent.chooseIcon", { namespace: "settings",  })}</span>
                   <IconPicker value={newGroupIcon} onChange={setNewGroupIcon} />
                 </div>
               </div>
@@ -203,7 +203,7 @@ export const SidebarContentManager: React.FC = () => {
                         <div className="flex items-center gap-2 min-w-0">
                           <span className="font-black text-xs text-slate-800 truncate">{displayTitle}</span>
                           {group.isCustom && (
-                            <span className="bg-blue-50 text-blue-600 text-[8px] font-black px-1.5 py-0.5 rounded-full">{t("settings.sidebarContent.customBadge", { namespace: "settings", fallback: "مخصصة" })}</span>
+                            <span className="bg-blue-50 text-blue-600 text-[8px] font-black px-1.5 py-0.5 rounded-full">{t("sidebarContent.customBadge", { namespace: "settings",  })}</span>
                           )}
                           <button
                             onClick={() => handleStartRenameGroup(group.id, displayTitle)}
@@ -218,14 +218,14 @@ export const SidebarContentManager: React.FC = () => {
                     {/* الإجراءات */}
                     <div className="flex items-center gap-3">
                       <span className="text-[10px] text-slate-400 font-black">
-                        {t("settings.sidebarContent.itemCount", { namespace: "settings", fallback: "{{count}} عناصر", vars: { count: group.items.length } })}
+                        {t("sidebarContent.itemCount", { namespace: "settings", vars: { count: group.items.length } })}
                       </span>
 
                       {/* إخفاء / إظهار */}
                       <button
                         onClick={() => toggleGroupVisible(group.id)}
                         className={cn("p-1.5 rounded-lg border transition-colors", group.visible ? "text-blue-600 bg-blue-50/50 border-blue-100 hover:bg-blue-100/60" : "text-slate-400 border-slate-200 hover:bg-slate-100")}
-                        title={group.visible ? t("settings.sidebarContent.hideGroup", { namespace: "settings", fallback: "إخفاء المجموعة" }) : t("settings.sidebarContent.showGroup", { namespace: "settings", fallback: "إظهار المجموعة" })}
+                        title={group.visible ? t("sidebarContent.hideGroup", { namespace: "settings",  }) : t("sidebarContent.showGroup", { namespace: "settings",  })}
                       >
                         {group.visible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
                       </button>
@@ -234,12 +234,12 @@ export const SidebarContentManager: React.FC = () => {
                       {group.isCustom && (
                         <button
                           onClick={() => {
-                            if (confirm(t("settings.sidebarContent.confirmDeleteGroup", { namespace: "settings", fallback: "هل أنت متأكد من حذف هذه المجموعة؟ سيتم إرجاع العناصر الافتراضية بداخلها إلى مكانها الأساسي." }))) {
+                            if (confirm(t("sidebarContent.confirmDeleteGroup", { namespace: "settings",  }))) {
                               deleteCustomGroup(group.id);
                             }
                           }}
                           className="p-1.5 rounded-lg border border-red-100 text-red-500 bg-red-50/30 hover:bg-red-50 hover:text-red-600 transition-colors"
-                          title={t("settings.sidebarContent.deleteGroup", { namespace: "settings", fallback: "حذف المجموعة" })}
+                          title={t("sidebarContent.deleteGroup", { namespace: "settings",  })}
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -253,7 +253,7 @@ export const SidebarContentManager: React.FC = () => {
         </SettingsGroup>
 
         {/* ── 2. إدارة عناصر المجموعات وتخطيطها ── */}
-        <SettingsGroup title={t("settings.sidebarContent.itemsTitle", { namespace: "settings", fallback: "توزيع وعناصر القائمة التفصيلية" })} icon={Link} color="text-indigo-600">
+        <SettingsGroup title={t("sidebarContent.itemsTitle", { namespace: "settings",  })} icon={Link} color="text-indigo-600">
           <div className="space-y-6">
             {layout.groups.map((group) => {
               const groupTitle = group.customTitle ?? group.defaultTitle;
@@ -263,15 +263,15 @@ export const SidebarContentManager: React.FC = () => {
                   <div className="flex items-center justify-between px-4 py-2.5 bg-slate-100 border-b border-slate-150">
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-black text-slate-800">{groupTitle}</span>
-                      {group.isCustom && <span className="bg-blue-100 text-blue-700 text-[8px] font-black px-1.5 py-0.5 rounded-full">{t("settings.sidebarContent.customGroupBadge", { namespace: "settings", fallback: "مجموعة مخصصة" })}</span>}
+                      {group.isCustom && <span className="bg-blue-100 text-blue-700 text-[8px] font-black px-1.5 py-0.5 rounded-full">{t("sidebarContent.customGroupBadge", { namespace: "settings",  })}</span>}
                     </div>
-                    <span className="text-[10px] text-slate-400 font-bold">{t("settings.sidebarContent.activeItems", { namespace: "settings", fallback: "العناصر النشطة: {{count}}", vars: { count: group.items.filter(i => i.visible).length } })}</span>
+                    <span className="text-[10px] text-slate-400 font-bold">{t("sidebarContent.activeItems", { namespace: "settings", vars: { count: group.items.filter(i => i.visible).length } })}</span>
                   </div>
 
                   {/* قائمة العناصر */}
                   {group.items.length === 0 ? (
                     <div className="p-4 text-center text-xs text-slate-400 font-bold bg-white">
-                      {t("settings.sidebarContent.emptyGroup", { namespace: "settings", fallback: "لا توجد عناصر بداخل هذه المجموعة حالياً. اسحب وانقل عناصر إليها لتنظيمها." })}
+                      {t("sidebarContent.emptyGroup", { namespace: "settings",  })}
                     </div>
                   ) : (
                     <div className="divide-y divide-slate-100 bg-white">
@@ -325,7 +325,7 @@ export const SidebarContentManager: React.FC = () => {
                                 <div className="flex items-center gap-1.5 min-w-0">
                                   <span className="text-xs font-bold text-slate-700 truncate">{itemLabel}</span>
                                   <span className="text-[9px] text-slate-400 truncate direction-ltr">({item.to})</span>
-                                  {item.isCustom && <span className="bg-emerald-50 text-emerald-600 text-[8px] font-black px-1 rounded-full">{t("settings.sidebarContent.customItemBadge", { namespace: "settings", fallback: "مخصص" })}</span>}
+                                  {item.isCustom && <span className="bg-emerald-50 text-emerald-600 text-[8px] font-black px-1 rounded-full">{t("sidebarContent.customItemBadge", { namespace: "settings",  })}</span>}
                                   <button
                                     onClick={() => handleStartRenameItem(item.id, itemLabel)}
                                     className="p-0.5 rounded text-slate-400 hover:text-blue-500 transition-colors"
@@ -353,7 +353,7 @@ export const SidebarContentManager: React.FC = () => {
                               <button
                                 onClick={() => toggleItemVisible(item.id)}
                                 className={cn("p-1 rounded transition-colors", item.visible ? "text-emerald-500 hover:bg-emerald-50/50" : "text-slate-350 hover:bg-slate-50")}
-                                title={item.visible ? t("settings.sidebarContent.hideItem", { namespace: "settings", fallback: "إخفاء" }) : t("settings.sidebarContent.showItem", { namespace: "settings", fallback: "إظهار" })}
+                                title={item.visible ? t("sidebarContent.hideItem", { namespace: "settings",  }) : t("sidebarContent.showItem", { namespace: "settings",  })}
                               >
                                 {item.visible ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
                               </button>
@@ -362,7 +362,7 @@ export const SidebarContentManager: React.FC = () => {
                               <button
                                 onClick={() => toggleItemPinned(item.id)}
                                 className={cn("p-1 rounded transition-colors", item.pinned ? "text-amber-500 hover:bg-amber-50/50" : "text-slate-350 hover:bg-slate-50")}
-                                title={item.pinned ? t("settings.sidebarContent.unpin", { namespace: "settings", fallback: "إلغاء التثبيت في الأعلى" }) : t("settings.sidebarContent.pin", { namespace: "settings", fallback: "تثبيت في الأعلى" })}
+                                title={item.pinned ? t("sidebarContent.unpin", { namespace: "settings",  }) : t("sidebarContent.pin", { namespace: "settings",  })}
                               >
                                 {item.pinned ? <Pin className="w-3.5 h-3.5 fill-amber-500" /> : <PinOff className="w-3.5 h-3.5" />}
                               </button>
@@ -371,12 +371,12 @@ export const SidebarContentManager: React.FC = () => {
                               {item.isCustom && (
                                 <button
                                   onClick={() => {
-                                    if (confirm(t("settings.sidebarContent.confirmDeleteItem", { namespace: "settings", fallback: "هل أنت متأكد من حذف هذا الاختصار بالكامل؟" }))) {
+                                    if (confirm(t("sidebarContent.confirmDeleteItem", { namespace: "settings",  }))) {
                                       deleteCustomShortcut(item.id);
                                     }
                                   }}
                                   className="p-1 rounded text-red-500 hover:bg-red-50 hover:text-red-600 transition-colors"
-                                  title={t("settings.sidebarContent.deleteLink", { namespace: "settings", fallback: "حذف الرابط" })}
+                                  title={t("sidebarContent.deleteLink", { namespace: "settings",  })}
                                 >
                                   <Trash2 className="w-3.5 h-3.5" />
                                 </button>
@@ -394,17 +394,17 @@ export const SidebarContentManager: React.FC = () => {
         </SettingsGroup>
 
         {/* ── 3. إضافة عناصر جديدة من المسارات المتاحة ── */}
-        <SettingsGroup title={t("settings.sidebarContent.addRouteTitle", { namespace: "settings", fallback: "إضافة عنصر تنقل من مسارات النظام" })} icon={Plus} color="text-emerald-600">
+        <SettingsGroup title={t("sidebarContent.addRouteTitle", { namespace: "settings",  })} icon={Plus} color="text-emerald-600">
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <span className="text-xs text-slate-500 font-medium">{t("settings.sidebarContent.addRouteHint", { namespace: "settings", fallback: "إضافة أي مسار موجود في النظام إلى إحدى المجموعات بسهولة" })}</span>
+              <span className="text-xs text-slate-500 font-medium">{t("sidebarContent.addRouteHint", { namespace: "settings",  })}</span>
               <Button
                 size="sm"
                 onClick={() => setShowAddItem(prev => !prev)}
                 className="bg-emerald-600 hover:bg-emerald-700 h-9 font-bold text-xs gap-1.5 rounded-lg"
               >
                 {showAddItem ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-                {showAddItem ? t("settings.sidebarContent.cancel", { namespace: "settings", fallback: "إلغاء" }) : t("settings.sidebarContent.addItem", { namespace: "settings", fallback: "إضافة عنصر" })}
+                {showAddItem ? t("sidebarContent.cancel", { namespace: "settings",  }) : t("sidebarContent.addItem", { namespace: "settings",  })}
               </Button>
             </div>
 
@@ -412,7 +412,7 @@ export const SidebarContentManager: React.FC = () => {
               <div className="p-4 bg-emerald-50/40 border border-emerald-100 rounded-xl space-y-3 animate-in fade-in slide-in-from-top-2 duration-200">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div className="space-y-1.5">
-                    <span className="text-[10px] text-slate-600 font-bold">{t("settings.sidebarContent.routeField", { namespace: "settings", fallback: "المسار" })}</span>
+                    <span className="text-[10px] text-slate-600 font-bold">{t("sidebarContent.routeField", { namespace: "settings",  })}</span>
                     <select
                       value={addItemRouteId}
                       onChange={(e) => {
@@ -429,7 +429,7 @@ export const SidebarContentManager: React.FC = () => {
                       }}
                       className="w-full h-10 px-3 text-xs border border-slate-200 rounded-lg outline-none bg-white focus:border-emerald-500 font-bold"
                     >
-                      <option value="">{t("settings.sidebarContent.selectRoute", { namespace: "settings", fallback: "-- اختر المسار --" })}</option>
+                      <option value="">{t("sidebarContent.selectRoute", { namespace: "settings",  })}</option>
                       {ALL_SYSTEM_ROUTES
                         .filter(item => !layout.groups.some(g => g.items.some(i => i.id === item.id && g.items.find(x => x.id === item.id)?.visible)))
                         .map(item => (
@@ -440,7 +440,7 @@ export const SidebarContentManager: React.FC = () => {
                     </select>
                     {addItemRouteId && (
                       <p className="text-[9px] text-emerald-600 font-bold flex items-center gap-1">
-                        <span>{t("settings.sidebarContent.pathLabel", { namespace: "settings", fallback: "المسار:" })}</span>
+                        <span>{t("sidebarContent.pathLabel", { namespace: "settings",  })}</span>
                         <span className="direction-ltr" dir="ltr">
                           {findRouteById(addItemRouteId)?.to}
                         </span>
@@ -449,13 +449,13 @@ export const SidebarContentManager: React.FC = () => {
                   </div>
 
                   <div className="space-y-1.5">
-                    <span className="text-[10px] text-slate-600 font-bold">{t("settings.sidebarContent.targetGroup", { namespace: "settings", fallback: "المجموعة المستهدفة" })}</span>
+                    <span className="text-[10px] text-slate-600 font-bold">{t("sidebarContent.targetGroup", { namespace: "settings",  })}</span>
                     <select
                       value={addItemGroupId}
                       onChange={(e) => setAddItemGroupId(e.target.value)}
                       className="w-full h-10 px-3 text-xs border border-slate-200 rounded-lg outline-none bg-white focus:border-emerald-500 font-bold"
                     >
-                      <option value="">{t("settings.sidebarContent.selectGroup", { namespace: "settings", fallback: "-- اختر المجموعة --" })}</option>
+                      <option value="">{t("sidebarContent.selectGroup", { namespace: "settings",  })}</option>
                       {layout.groups.filter(g => g.visible).map(g => (
                         <option key={g.id} value={g.id}>{g.customTitle ?? g.defaultTitle}</option>
                       ))}
@@ -465,18 +465,18 @@ export const SidebarContentManager: React.FC = () => {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div className="space-y-1.5">
-                    <span className="text-[10px] text-slate-600 font-bold">{t("settings.sidebarContent.customLabelField", { namespace: "settings", fallback: "التسمية (اختياري)" })}</span>
+                    <span className="text-[10px] text-slate-600 font-bold">{t("sidebarContent.customLabelField", { namespace: "settings",  })}</span>
                     <input
                       type="text"
                       value={addItemLabel}
                       onChange={(e) => setAddItemLabel(e.target.value)}
-                      placeholder={t("settings.sidebarContent.customLabelPlaceholder", { namespace: "settings", fallback: "تسمية مخصصة (اختياري)" })}
+                      placeholder={t("sidebarContent.customLabelPlaceholder", { namespace: "settings",  })}
                       className="w-full h-10 px-3 text-xs border border-slate-200 rounded-lg outline-none focus:border-emerald-500 font-bold"
                     />
                   </div>
 
                   <div className="space-y-1.5">
-                    <span className="text-[10px] text-slate-600 font-bold">{t("settings.sidebarContent.iconField", { namespace: "settings", fallback: "الأيقونة (اختياري)" })}</span>
+                    <span className="text-[10px] text-slate-600 font-bold">{t("sidebarContent.iconField", { namespace: "settings",  })}</span>
                     <IconPicker value={addItemIcon} onChange={setAddItemIcon} />
                   </div>
                 </div>
@@ -497,7 +497,7 @@ export const SidebarContentManager: React.FC = () => {
                     className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed text-xs font-bold rounded-lg h-9 gap-1.5"
                   >
                     <Plus className="w-4 h-4" />
-                    {t("settings.sidebarContent.addToGroup", { namespace: "settings", fallback: "إضافة إلى المجموعة" })}
+                    {t("sidebarContent.addToGroup", { namespace: "settings",  })}
                   </Button>
                 </div>
               </div>
@@ -506,7 +506,7 @@ export const SidebarContentManager: React.FC = () => {
             {/* لائحة بجميع مسارات النظام */}
             <div className="border border-slate-150 rounded-xl overflow-hidden bg-white shadow-sm">
               <div className="px-3 py-2 bg-slate-50 border-b border-slate-100">
-                <span className="text-[10px] text-slate-500 font-bold">{t("settings.sidebarContent.allRoutes", { namespace: "settings", fallback: "جميع مسارات النظام المتاحة" })}</span>
+                <span className="text-[10px] text-slate-500 font-bold">{t("sidebarContent.allRoutes", { namespace: "settings",  })}</span>
               </div>
               <div className="divide-y divide-slate-100">
                 {ALL_SYSTEM_ROUTES.map(item => {
@@ -522,7 +522,7 @@ export const SidebarContentManager: React.FC = () => {
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
                         <span className={cn("text-[9px] font-bold px-1.5 py-0.5 rounded-full", isInSidebar ? "bg-emerald-50 text-emerald-600" : "bg-slate-100 text-slate-500")}>
-                          {isInSidebar ? t("settings.sidebarContent.added", { namespace: "settings", fallback: "مضاف" }) : t("settings.sidebarContent.notAdded", { namespace: "settings", fallback: "غير مضاف" })}
+                          {isInSidebar ? t("sidebarContent.added", { namespace: "settings",  }) : t("sidebarContent.notAdded", { namespace: "settings",  })}
                         </span>
                       </div>
                     </div>

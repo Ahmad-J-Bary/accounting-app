@@ -41,8 +41,8 @@ export function Form({
   isLoading = false,
 }: FormProps) {
   const { t } = useLocalization();
-  const resolvedSubmitLabel = submitLabel ?? t('actions.save', { fallback: 'حفظ' });
-  const resolvedCancelLabel = cancelLabel ?? t('actions.cancel', { fallback: 'إلغاء' });
+  const resolvedSubmitLabel = submitLabel ?? t('actions.save', );
+  const resolvedCancelLabel = cancelLabel ?? t('actions.cancel', );
   const [formData, setFormData] = useState<Record<string, unknown>>(() => {
     const initialData: Record<string, unknown> = {};
     fields.forEach((field) => {
@@ -72,7 +72,7 @@ export function Form({
 
       // Required validation
       if (field.required && (value === undefined || value === '')) {
-        newErrors[field.name] = `${field.label} ${t('labels.required', { fallback: 'مطلوب' })}`;
+        newErrors[field.name] = `${field.label} ${t('labels.required', )}`;
         isValid = false;
       }
 
@@ -188,7 +188,7 @@ export function Form({
             </Button>
           )}
           <Button type="submit" disabled={isLoading}>
-            {isLoading ? t('states.saving', { fallback: 'جاري الحفظ...' }) : resolvedSubmitLabel}
+            {isLoading ? t('states.saving', ) : resolvedSubmitLabel}
           </Button>
         </div>
       </form>

@@ -101,7 +101,7 @@ export function WizardLineEditor({
   return (
     <div className="space-y-1.5">
       {rows.length === 0 && (
-        <p className="text-xs text-slate-400 text-center py-2">{t("openingBalance.noItemsYet", { namespace: "accounting", fallback: "لا توجد بنود بعد" })}</p>
+        <p className="text-xs text-slate-400 text-center py-2">{t("openingBalance.noItemsYet", { namespace: "accounting",  })}</p>
       )}
       {rows.map((l) => {
         const isEditing = editingKeys.has(l.key);
@@ -125,7 +125,7 @@ export function WizardLineEditor({
                 <Input
                   value={l.amount}
                   onChange={(e) => updateLine(setter, l.key, { amount: e.target.value })}
-                  placeholder={t("openingBalance.openingBalanceLabel", { namespace: "accounting", fallback: "الرصيد الافتتاحي" })}
+                  placeholder={t("openingBalance.openingBalanceLabel", { namespace: "accounting",  })}
                   type="number"
                   min="0"
                   step="0.01"

@@ -24,7 +24,7 @@ export function WarehouseSelector({
   className,
 }: WarehouseSelectorProps) {
   const { t } = useLocalization();
-  const effectivePlaceholder = placeholder === "اختر مستودع" ? t("warehouses.select", { namespace: "inventory", fallback: "اختر مستودع" }) : placeholder;
+  const effectivePlaceholder = placeholder === "اختر مستودع" ? t("warehouses.selector.placeholder", { namespace: "inventory",  }) : placeholder;
   const effectiveIncludeAll = includeAll && warehouses.length > 1;
 
   const effectiveValue = useMemo(() => {
@@ -39,7 +39,7 @@ export function WarehouseSelector({
         <SelectValue placeholder={effectivePlaceholder} />
       </SelectTrigger>
       <SelectContent sideOffset={4} align="start">
-        {effectiveIncludeAll && <SelectItem value="all">{t("warehouses.all", { namespace: "inventory", fallback: "جميع المستودعات" })}</SelectItem>}
+        {effectiveIncludeAll && <SelectItem value="all">{t("warehouses.all", { namespace: "inventory",  })}</SelectItem>}
         {warehouses.map((w) => (
           <SelectItem key={w.id} value={w.id}>
             {w.name}

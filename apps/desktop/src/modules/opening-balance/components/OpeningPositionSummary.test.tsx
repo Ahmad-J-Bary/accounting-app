@@ -44,17 +44,17 @@ describe("OpeningPositionSummary", () => {
     expect(text).toContain("345,000.00"); // Net Assets
     expect(text).toContain("300,000.00"); // Partner Capital
     expect(text).toContain("45,000.00"); // Residual / Difference
-    expect(text).toContain("الفرق (رصيد غير مصنّف):");
-    expect(screen.getByText("يوجد فرق")).toBeInTheDocument();
+    expect(text).toContain("openingBalance.unclassifiedDifference");
+    expect(screen.getByText("openingBalance.positionDiff")).toBeInTheDocument();
   });
 
   it("reports Difference = 0 and balanced after the residual is classified", () => {
     const { text } = renderSummary({ plugAmount: 45000, balanced: true });
-    expect(text).toContain("الفرق = 0 — متوازن ✓");
+    expect(text).toContain("openingBalance.balancedCheck");
     // Equity side now carries the classified 53 plug (300,000 + 45,000).
     expect(text).toContain("345,000.00");
-    expect(text).toContain("تسوية الرصيد الافتتاحي (53)");
-    expect(screen.getByText("متوازن ✓")).toBeInTheDocument();
+    expect(text).toContain("openingBalance.openingAdjustment");
+    expect(screen.getByText("openingBalance.balanced")).toBeInTheDocument();
   });
 
   it("renders section-targeted smart hints (§14)", () => {

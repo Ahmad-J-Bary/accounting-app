@@ -39,11 +39,11 @@ export function PaymentForm({ config, onSave, onClose, saving }: PaymentFormProp
   const payLabelKeys = PAYMENT_LABEL_KEYS[config.paymentType];
   const defaultCurrency = config.entityCurrency || baseCurrency?.code || "";
   const idFieldName = config.getIdField(config);
-  const payTitle = t(payLabelKeys.title, { namespace: "partners", fallback: config.title });
-  const payCreditLabel = t(payLabelKeys.creditLabel, { namespace: "partners", fallback: config.creditLabel });
-  const payDebitLabel = t(payLabelKeys.debitLabel, { namespace: "partners", fallback: config.debitLabel });
-  const treasury = t("payment.treasury", { namespace: "partners", fallback: "الخزينة (الصندوق)" });
-  const payNotesPrefix = t(payLabelKeys.notesPrefix, { namespace: "partners", fallback: config.notesPrefix });
+  const payTitle = t(payLabelKeys.title, { namespace: "partners"});
+  const payCreditLabel = t(payLabelKeys.creditLabel, { namespace: "partners"});
+  const payDebitLabel = t(payLabelKeys.debitLabel, { namespace: "partners"});
+  const treasury = t("payment.treasury", { namespace: "partners",  });
+  const payNotesPrefix = t(payLabelKeys.notesPrefix, { namespace: "partners"});
 
   const [form, setForm] = useState<Partial<CreatePaymentRequest>>({
     payment_type: config.paymentType,
@@ -81,7 +81,7 @@ export function PaymentForm({ config, onSave, onClose, saving }: PaymentFormProp
     config.paymentType === "Receipt"
       ? treasury
       : config.paymentType === "DrawingsVoucher"
-        ? t("payment.debitValueDrawings", { namespace: "partners", vars: { name: config.entityName }, fallback: `مسحوبات {{name}}` })
+        ? t("payment.debitValueDrawings", { namespace: "partners", vars: { name: config.entityName },  })
         : config.entityName;
 
   return (
@@ -92,14 +92,14 @@ export function PaymentForm({ config, onSave, onClose, saving }: PaymentFormProp
       onSave={handleSave}
       isSaving={saving}
       saveDisabled={isSaveDisabled}
-      saveLabel={t("payment.saveLabel", { namespace: "partners", fallback: "حفظ السند" })}
+      saveLabel={t("payment.saveLabel", { namespace: "partners",  })}
     >
       <div className="space-y-6 text-right">
-        <SidebarSection title={t("payment.detailsSection", { namespace: "partners", fallback: "تفاصيل السند" })}>
+        <SidebarSection title={t("payment.detailsSection", { namespace: "partners",  })}>
           <div className="grid grid-cols-2 gap-4">
             {currencies.length > 1 && (
               <div className="space-y-1.5">
-                <FieldLabel>{t("payment.currency", { namespace: "partners", fallback: "العملة" })}</FieldLabel>
+                <FieldLabel>{t("payment.currency", { namespace: "partners",  })}</FieldLabel>
                 <Select value={form.currency_code} onValueChange={handleCurrencyChange}>
                   <SelectTrigger className="h-9 font-bold bg-white">
                     <SelectValue />
@@ -116,7 +116,7 @@ export function PaymentForm({ config, onSave, onClose, saving }: PaymentFormProp
             )}
 
             <div className={`space-y-1.5 ${currencies.length > 1 ? "" : "col-span-2"}`}>
-              <FieldLabel required>{t("payment.amount", { namespace: "partners", fallback: "المبلغ" })}</FieldLabel>
+              <FieldLabel required>{t("payment.amount", { namespace: "partners",  })}</FieldLabel>
               <Input
                 type="number"
                 min="0"
@@ -143,7 +143,7 @@ export function PaymentForm({ config, onSave, onClose, saving }: PaymentFormProp
             </div>
 
             <div className="space-y-1.5 col-span-2">
-              <FieldLabel>{t("payment.date", { namespace: "partners", fallback: "التاريخ" })}</FieldLabel>
+              <FieldLabel>{t("payment.date", { namespace: "partners",  })}</FieldLabel>
               <Input
                 type="date"
                 value={form.payment_date?.slice(0, 10) ?? ""}
@@ -153,11 +153,11 @@ export function PaymentForm({ config, onSave, onClose, saving }: PaymentFormProp
             </div>
 
             <div className="space-y-1.5 col-span-2">
-              <FieldLabel>{t("payment.notesLabel", { namespace: "partners", fallback: "البيان / ملاحظات" })}</FieldLabel>
+              <FieldLabel>{t("payment.notesLabel", { namespace: "partners",  })}</FieldLabel>
               <Textarea
                 value={form.notes ?? ""}
                 onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))}
-                placeholder={t("payment.notesPlaceholder", { namespace: "partners", fallback: "بيان السند (اختياري)" })}
+                placeholder={t("payment.notesPlaceholder", { namespace: "partners",  })}
                 className="min-h-[60px] bg-white border-slate-200"
               />
             </div>

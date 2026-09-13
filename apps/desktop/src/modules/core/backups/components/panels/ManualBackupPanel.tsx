@@ -24,7 +24,7 @@ export function ManualBackupPanel({
     setError(null);
     try {
       const info = await backupService.backupNow();
-      toast.success(t("manualBackup.createdSuccess", { namespace: "widgets", fallback: "تم إنشاء النسخة ✓ ({{size}})", vars: { size: formatSize(info.size) } }));
+      toast.success(t("manualBackup.createdSuccess", { namespace: "widgets", vars: { size: formatSize(info.size) } }));
       await onDone();
     } catch (e) {
       const err = friendlyBackupError(e);
@@ -38,8 +38,8 @@ export function ManualBackupPanel({
   return (
     <div className="space-y-3">
       <div className="space-y-1">
-        <p className="font-bold text-slate-800 text-sm">{t("manualBackup.title", { namespace: "widgets", fallback: "إنشاء نسخة احتياطية الآن" })}</p>
-        <p className="text-xs text-slate-400">{t("manualBackup.description", { namespace: "widgets", fallback: "حفظ نسخة آمنة من قاعدة بياناتك الحالية." })}</p>
+        <p className="font-bold text-slate-800 text-sm">{t("manualBackup.title", { namespace: "widgets",  })}</p>
+        <p className="text-xs text-slate-400">{t("manualBackup.description", { namespace: "widgets",  })}</p>
       </div>
       <Button
         className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl h-10 text-sm font-bold gap-2 w-full"
@@ -47,7 +47,7 @@ export function ManualBackupPanel({
         onClick={() => void handleBackup()}
       >
         {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4 ml-1" />}
-        {busy ? t("manualBackup.creating", { namespace: "widgets", fallback: "جارٍ الإنشاء..." }) : t("manualBackup.title", { namespace: "widgets", fallback: "إنشاء نسخة احتياطية الآن" })}
+        {busy ? t("manualBackup.creating", { namespace: "widgets",  }) : t("manualBackup.title", { namespace: "widgets",  })}
       </Button>
       {error && !busy && (
         <div role="alert" className="rounded-lg bg-rose-50 border border-rose-200 p-3 text-rose-700">

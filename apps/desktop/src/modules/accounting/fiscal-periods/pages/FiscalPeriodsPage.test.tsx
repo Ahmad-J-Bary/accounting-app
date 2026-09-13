@@ -113,30 +113,30 @@ describe("FiscalPeriodsPage", () => {
 
   it("renders the page heading and create form", () => {
     renderPage();
-    expect(screen.getByText("الفترات المالية")).toBeInTheDocument();
-    expect(screen.getByText("إنشاء فترة مالية")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "إنشاء الفترة" })).toBeInTheDocument();
+    expect(screen.getByText("fiscalPeriods.title")).toBeInTheDocument();
+    expect(screen.getByText("fiscalPeriods.createCard.title")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "fiscalPeriods.createCard.create" })).toBeInTheDocument();
   });
 
   it("lists the open fiscal period with current marker and lock action", async () => {
     renderPage();
     expect(await screen.findByText("2026-01-01")).toBeInTheDocument();
     expect((await screen.findAllByText("مفتوحة")).length).toBeGreaterThan(0);
-    expect(screen.getByRole("button", { name: "إغلاق" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /قفل نهائي/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "fiscalPeriods.table.close" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /fiscalPeriods.table.lock/ })).toBeInTheDocument();
   });
 
   it("shows an empty state when no periods exist", async () => {
     vi.mocked(fiscalPeriodService.listFiscalPeriods).mockResolvedValue([]);
     renderPage();
-    expect(await screen.findByText("لا توجد فترات بعد")).toBeInTheDocument();
+    expect(await screen.findByText("fiscalPeriods.table.empty")).toBeInTheDocument();
   });
 
   it("locks a period after confirmation", async () => {
     renderPage();
-    fireEvent.click(await screen.findByRole("button", { name: /قفل نهائي/ }));
-    expect(await screen.findByText("قفل الفترة المالية نهائياً")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "قفل نهائي" }));
+    fireEvent.click(await screen.findByRole("button", { name: /fiscalPeriods.table.lock/ }));
+    expect(await screen.findByText("fiscalPeriods.confirm.lock.title")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "fiscalPeriods.confirm.lock.confirm" }));
     await waitFor(() => {
       expect(fiscalPeriodService.lockFiscalPeriod).toHaveBeenCalledWith({
         period_id: "p1",
@@ -150,9 +150,9 @@ describe("FiscalPeriodsPage", () => {
       period({ status: "Closed", closed_at: "2026-06-01T00:00:00Z", closed_by: "user" }),
     ]);
     renderPage();
-    fireEvent.click(await screen.findByRole("button", { name: /إعادة فتح/ }));
-    expect(await screen.findByText("إعادة فتح الفترة المالية")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "إعادة الفتح" }));
+    fireEvent.click(await screen.findByRole("button", { name: /fiscalPeriods.table.reopen/ }));
+    expect(await screen.findByText("fiscalPeriods.confirm.reopen.title")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "fiscalPeriods.confirm.reopen.confirm" }));
     await waitFor(() => {
       expect(fiscalPeriodService.reopenFiscalPeriod).toHaveBeenCalledWith({ period_id: "p1" });
     });
@@ -164,8 +164,8 @@ describe("FiscalPeriodsPage", () => {
     ]);
     renderPage();
     expect(await screen.findByText("مقفول")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /قفل نهائي/ })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "إغلاق" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /إعادة فتح/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /fiscalPeriods.table.lock/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "fiscalPeriods.table.close" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /fiscalPeriods.table.reopen/ })).not.toBeInTheDocument();
   });
 });

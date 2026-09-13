@@ -98,16 +98,16 @@ export function AccountTreeNodeItem({
       <>
         <div className="w-[90px]">
           {node.is_final ? (
-            <span className="text-[10px] px-2 py-0.5 rounded-md font-medium bg-emerald-50 text-emerald-700">{t("chartOfAccounts.badges.leaf", { namespace: "accounting", fallback: "نهائي" })}</span>
+            <span className="text-[10px] px-2 py-0.5 rounded-md font-medium bg-emerald-50 text-emerald-700">{t("chartOfAccounts.badges.leaf", { namespace: "accounting",  })}</span>
           ) : (
             <span className={cn("text-[10px] px-2 py-0.5 rounded-md font-medium", isSummaryAccount(node) ? "bg-amber-50 text-amber-700" : "bg-slate-100 text-slate-600")}>
-              {isSummaryAccount(node) ? t("chartOfAccounts.badges.summary", { namespace: "accounting", fallback: "تجميعي" }) : t("chartOfAccounts.badges.sub", { namespace: "accounting", fallback: "فرعي" })}
+              {isSummaryAccount(node) ? t("chartOfAccounts.badges.summary", { namespace: "accounting",  }) : t("chartOfAccounts.badges.sub", { namespace: "accounting",  })}
             </span>
           )}
         </div>
         <div className="w-[100px]">
           <span className={cn("text-[10px] px-2 py-0.5 rounded-md font-medium border", TYPE_LABELS[node.account_type]?.color || "bg-slate-50 text-slate-600 border-slate-200")}>
-            {t(`chartOfAccounts.typeLabels.${node.account_type}`, { namespace: "accounting", fallback: TYPE_LABELS[node.account_type]?.label || node.account_type })}
+            {t(`chartOfAccounts.typeLabels.${node.account_type}`, { namespace: "accounting"})}
           </span>
         </div>
         <div className="w-[120px] text-start tabular-nums">

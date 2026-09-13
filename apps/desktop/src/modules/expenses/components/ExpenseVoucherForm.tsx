@@ -29,7 +29,7 @@ export function ExpenseVoucherForm({ expenseAccount, onSave, onClose, saving }: 
     currency_code: baseCurrency?.code || "",
     exchange_rate: "1",
     debit_account_id: expenseAccount.id,
-    notes: t("expense.voucherNotesPrefix", { namespace: "invoicing", vars: { name: expenseAccount.name_ar }, fallback: `سند صرف: ${expenseAccount.name_ar}` }),
+    notes: t("expense.voucherNotesPrefix", { namespace: "invoicing", vars: { name: expenseAccount.name_ar },  }),
   });
 
   const handleCurrencyChange = (val: string) => {
@@ -59,20 +59,20 @@ export function ExpenseVoucherForm({ expenseAccount, onSave, onClose, saving }: 
 
   return (
     <FormPanel
-      title={t("expense.voucherFormTitle", { namespace: "invoicing", fallback: "إضافة سند صرف مصروف" })}
+      title={t("expense.voucherFormTitle", { namespace: "invoicing",  })}
       icon={<Receipt className="w-5 h-5 text-red-600" />}
       onClose={onClose}
       onSave={handleSave}
       isSaving={saving}
       saveDisabled={isSaveDisabled}
-      saveLabel={t("payment.save", { namespace: "invoicing", fallback: "حفظ السند" })}
+      saveLabel={t("payment.save", { namespace: "invoicing",  })}
     >
       <div className="space-y-6 text-right">
-        <SidebarSection title={t("payment.details", { namespace: "invoicing", fallback: "تفاصيل السند" })}>
+        <SidebarSection title={t("payment.details", { namespace: "invoicing",  })}>
           <div className="grid grid-cols-2 gap-4">
             {currencies.length > 1 && (
             <div className="space-y-1.5">
-              <FieldLabel>{t("labels.currency", { namespace: "common", fallback: "العملة" })}</FieldLabel>
+              <FieldLabel>{t("labels.currency", { namespace: "common",  })}</FieldLabel>
               <Select value={form.currency_code} onValueChange={handleCurrencyChange}>
                 <SelectTrigger className="h-9 font-bold bg-white"><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -85,7 +85,7 @@ export function ExpenseVoucherForm({ expenseAccount, onSave, onClose, saving }: 
             )}
 
             <div className={`space-y-1.5 ${currencies.length > 1 ? "" : "col-span-2"}`}>
-              <FieldLabel required>{t("labels.amount", { namespace: "common", fallback: "المبلغ" })}</FieldLabel>
+              <FieldLabel required>{t("labels.amount", { namespace: "common",  })}</FieldLabel>
               <Input 
                 type="number" 
                 min="0" 
@@ -98,17 +98,17 @@ export function ExpenseVoucherForm({ expenseAccount, onSave, onClose, saving }: 
 
             <div className="col-span-2 grid grid-cols-2 gap-4 p-3 bg-slate-50/50 rounded-lg border border-slate-100">
               <div className="space-y-1.5">
-                <FieldLabel>{t("payment.debitFrom", { namespace: "invoicing", fallback: "من الحساب الدائن" })}</FieldLabel>
-                <Input value={t("payment.treasury", { namespace: "invoicing", fallback: "الخزينة (الصندوق)" })} disabled className="h-9 bg-slate-50 text-slate-500 font-bold" />
+                <FieldLabel>{t("payment.debitFrom", { namespace: "invoicing",  })}</FieldLabel>
+                <Input value={t("payment.treasury", { namespace: "invoicing",  })} disabled className="h-9 bg-slate-50 text-slate-500 font-bold" />
               </div>
               <div className="space-y-1.5">
-                <FieldLabel>{t("payment.debitToExpense", { namespace: "invoicing", fallback: "إلى الحساب المدين (المصروف)" })}</FieldLabel>
+                <FieldLabel>{t("payment.debitToExpense", { namespace: "invoicing",  })}</FieldLabel>
                 <Input value={expenseAccount.name_ar} disabled className="h-9 bg-slate-50 text-slate-500 font-bold" />
               </div>
             </div>
 
             <div className="space-y-1.5 col-span-2">
-              <FieldLabel>{t("labels.date", { namespace: "common", fallback: "التاريخ" })}</FieldLabel>
+              <FieldLabel>{t("labels.date", { namespace: "common",  })}</FieldLabel>
               <Input 
                 type="date"
                 value={form.payment_date?.slice(0, 10) ?? ""}
@@ -118,11 +118,11 @@ export function ExpenseVoucherForm({ expenseAccount, onSave, onClose, saving }: 
             </div>
 
             <div className="space-y-1.5 col-span-2">
-              <FieldLabel>{t("payment.notesField", { namespace: "invoicing", fallback: "البيان / ملاحظات" })}</FieldLabel>
+              <FieldLabel>{t("payment.notesField", { namespace: "invoicing",  })}</FieldLabel>
               <Textarea 
                 value={form.notes ?? ""} 
                 onChange={e => setForm(p => ({ ...p, notes: e.target.value }))} 
-                placeholder={t("payment.notesPlaceholder", { namespace: "invoicing", fallback: "بيان السند (اختياري)" })}
+                placeholder={t("payment.notesPlaceholder", { namespace: "invoicing",  })}
                 className="min-h-[60px] bg-white border-slate-200"
               />
             </div>

@@ -20,7 +20,7 @@ interface CurrentPeriodCardProps {
 export function CurrentPeriodCard({ current, distributable, show }: CurrentPeriodCardProps) {
   const { t } = useLocalization();
   return (
-    <SectionCard title={t("fiscalPeriods.currentCard.title", { namespace: "accounting", fallback: "الفترة الحالية — الربح القابل للتوزيع" })}>
+    <SectionCard title={t("fiscalPeriods.currentCard.title", { namespace: "accounting",  })}>
       {current ? (
         <div className="space-y-1 text-sm">
           <p className="flex items-center gap-2">
@@ -31,16 +31,16 @@ export function CurrentPeriodCard({ current, distributable, show }: CurrentPerio
           </p>
           {distributable && (
             <div className="space-y-1 border-t border-slate-200 pt-2">
-              <p>{t("fiscalPeriods.currentCard.netProfit", { namespace: "accounting", fallback: "صافي ربح الفترة: " })}<span className="font-bold text-emerald-700">{show(distributable.current_period_profit)}</span></p>
-              <p>{t("fiscalPeriods.currentCard.retained", { namespace: "accounting", fallback: "رصيد الأرباح المبقاة: " })}<span className="font-bold text-slate-700">{show(distributable.retained_earnings_balance)}</span></p>
-              <p>{t("fiscalPeriods.currentCard.allocated", { namespace: "accounting", fallback: "المُوزَّع سابقاً: " })}<span className="font-bold text-red-600">{show(distributable.allocated_to_date)}</span></p>
-              <p className="border-t border-slate-200 pt-2">{t("fiscalPeriods.currentCard.distributable", { namespace: "accounting", fallback: "الربح القابل للتوزيع: " })}<span className="font-black text-indigo-700">{show(distributable.distributable)}</span></p>
+              <p>{t("fiscalPeriods.currentCard.netProfit", { namespace: "accounting",  })}<span className="font-bold text-emerald-700">{show(distributable.current_period_profit)}</span></p>
+              <p>{t("fiscalPeriods.currentCard.retained", { namespace: "accounting",  })}<span className="font-bold text-slate-700">{show(distributable.retained_earnings_balance)}</span></p>
+              <p>{t("fiscalPeriods.currentCard.allocated", { namespace: "accounting",  })}<span className="font-bold text-red-600">{show(distributable.allocated_to_date)}</span></p>
+              <p className="border-t border-slate-200 pt-2">{t("fiscalPeriods.currentCard.distributable", { namespace: "accounting",  })}<span className="font-black text-indigo-700">{show(distributable.distributable)}</span></p>
             </div>
           )}
         </div>
       ) : (
         <p className="text-xs text-slate-400">
-          {t("fiscalPeriods.currentCard.empty", { namespace: "accounting", fallback: "لا توجد فترة نشطة. أنشئ فترة مالية لتتمكن الحركات الجديدة من الترحيب فيها." })}
+          {t("fiscalPeriods.currentCard.empty", { namespace: "accounting",  })}
         </p>
       )}
     </SectionCard>

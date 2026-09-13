@@ -240,7 +240,7 @@ describe("GuidedTransitionWizard", () => {
     const user = userEvent.setup();
     renderWizard();
     expect(await screen.findByText("اكتمل إعداد الشركة ✓")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "إنهاء" }));
+    await user.click(screen.getByRole("button", { name: "openingBalance.finishButton" }));
     expect(await screen.findByText("DASHBOARD_ROOT")).toBeInTheDocument();
   });
 

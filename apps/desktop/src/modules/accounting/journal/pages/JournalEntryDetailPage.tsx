@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowRight, Undo2 } from "lucide-react";
 import { toast } from "sonner";
 import { journalEntryService } from "@modules/accounting/api/journalEntryService";
-import { JOURNAL_TYPE_LABELS, journalTypeKey } from "@modules/accounting/journal/lib/journal-config";
+import { journalTypeKey } from "@modules/accounting/journal/lib/journal-config";
 import { useLocalization } from "@app/providers/LocalizationProvider";
 import { Button } from "@shared/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@shared/ui/card";
@@ -32,7 +32,7 @@ function StatusBadge({ status }: { status: string }) {
         styles[status] || "bg-slate-100 text-slate-600",
       )}
     >
-      {t(`journal.detail.status.${status}`, { namespace: "accounting", fallback: status })}
+      {t(`journal.detail.status.${status}`, { namespace: "accounting"})}
     </span>
   );
 }
@@ -60,11 +60,11 @@ export default function JournalEntryDetailPage() {
     if (!entry) return;
     try {
       await journalEntryService.postJournalEntry(entry.id);
-      toast.success(t("journal.detail.toastPosted", { namespace: "accounting", vars: { number: entry.entry_number }, fallback: `تم ترحيل القيد ${entry.entry_number} بنجاح` }));
+      toast.success(t("journal.detail.toastPosted", { namespace: "accounting", vars: { number: entry.entry_number },  }));
       await invalidateKeys(queryClient, JOURNAL_MUTATION_KEYS);
       setConfirmAction(null);
     } catch (e) {
-      toast.error(t("journal.detail.toastPostFailed", { namespace: "accounting", vars: { error: e instanceof Error ? e.message : String(e) }, fallback: "فشل ترحيل القيد: " + (e instanceof Error ? e.message : String(e)) }));
+      toast.error(t("journal.detail.toastPostFailed", { namespace: "accounting", vars: { error: e instanceof Error ? e.message : String(e) } }));
     }
   }, [entry, queryClient, t]);
 
@@ -72,17 +72,17 @@ export default function JournalEntryDetailPage() {
     if (!entry) return;
     try {
       const reversal = await journalEntryService.reverseJournalEntry(entry.id);
-      toast.success(t("journal.detail.toastReversePosted", { namespace: "accounting", vars: { number: reversal.entry_number }, fallback: `تم ترحيل القيد العكسي ${reversal.entry_number}` }));
+      toast.success(t("journal.detail.toastReversePosted", { namespace: "accounting", vars: { number: reversal.entry_number },  }));
       await invalidateKeys(queryClient, JOURNAL_MUTATION_KEYS);
       openTab({
         id: `journal-entry-${reversal.id}`,
-        title: t("journal.detail.tabTitle", { namespace: "accounting", vars: { number: reversal.entry_number }, fallback: `تفاصيل القيد ${reversal.entry_number}` }),
+        title: t("journal.detail.tabTitle", { namespace: "accounting", vars: { number: reversal.entry_number },  }),
         path: `/journal/${reversal.id}`,
         closable: true,
       });
       setConfirmAction(null);
     } catch (e) {
-      toast.error(t("journal.detail.toastReverseFailed", { namespace: "accounting", vars: { error: e instanceof Error ? e.message : String(e) }, fallback: "فشل عكس القيد: " + (e instanceof Error ? e.message : String(e)) }));
+      toast.error(t("journal.detail.toastReverseFailed", { namespace: "accounting", vars: { error: e instanceof Error ? e.message : String(e) } }));
     }
   }, [entry, queryClient, openTab, t]);
 
@@ -103,7 +103,7 @@ export default function JournalEntryDetailPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-full">
-        <p className="text-sm text-slate-500">{t("journal.loading", { namespace: "accounting", fallback: "جاري التحميل..." })}</p>
+        <p className="text-sm text-slate-500">{t("journal.loading", { namespace: "accounting",  })}</p>
       </div>
     );
   }
@@ -111,9 +111,9 @@ export default function JournalEntryDetailPage() {
   if (error || !entry) {
     return (
       <div className="flex flex-col items-center justify-center h-full gap-3">
-        <p className="text-sm text-red-600">{t("journal.detail.loadError", { namespace: "accounting", fallback: "خطأ في تحميل بيانات القيد" })}</p>
+        <p className="text-sm text-red-600">{t("journal.detail.loadError", { namespace: "accounting",  })}</p>
         <Button type="button" variant="outline" size="sm" onClick={handleBack}>
-          {t("journal.back", { namespace: "accounting", fallback: "العودة" })}
+          {t("journal.back", { namespace: "accounting",  })}
         </Button>
       </div>
     );
@@ -130,19 +130,19 @@ export default function JournalEntryDetailPage() {
               size="sm"
               onClick={handleBack}
               className="h-8 w-8 p-0"
-              aria-label={t("journal.back", { namespace: "accounting", fallback: "العودة" })}
+              aria-label={t("journal.back", { namespace: "accounting",  })}
             >
               <ArrowRight className="h-4 w-4" />
             </Button>
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="text-lg font-bold text-slate-800">
-                  {t("journal.detail.title", { namespace: "accounting", vars: { number: entry.entry_number }, fallback: `تفاصيل القيد رقم ${entry.entry_number}` })}
+                  {t("journal.detail.title", { namespace: "accounting", vars: { number: entry.entry_number },  })}
                 </h1>
                 <StatusBadge status={entry.status} />
               </div>
               <p className="text-xs text-slate-500">
-                {t(journalTypeKey(entry.journal_type), { namespace: "accounting", fallback: JOURNAL_TYPE_LABELS[entry.journal_type] || entry.journal_type_display })}
+                {t(journalTypeKey(entry.journal_type), { namespace: "accounting"})}
               </p>
             </div>
           </div>
@@ -155,7 +155,7 @@ export default function JournalEntryDetailPage() {
                   onClick={() => setConfirmAction("post")}
                   className="h-9 px-4 font-bold bg-emerald-600 hover:bg-emerald-700 text-white"
                 >
-                  {t("journal.detail.post", { namespace: "accounting", fallback: "ترحيل القيد" })}
+                  {t("journal.detail.post", { namespace: "accounting",  })}
                 </Button>
               </>
             )}
@@ -167,7 +167,7 @@ export default function JournalEntryDetailPage() {
                 className="h-9 px-4 font-bold text-red-600 border-red-200 hover:bg-red-50"
               >
                 <Undo2 className="w-4 h-4 ms-1" />
-                {t("journal.detail.reverse", { namespace: "accounting", fallback: "عكس القيد" })}
+                {t("journal.detail.reverse", { namespace: "accounting",  })}
               </Button>
             )}
           </div>
@@ -176,46 +176,46 @@ export default function JournalEntryDetailPage() {
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">{t("journal.detail.infoSection", { namespace: "accounting", fallback: "معلومات القيد" })}</CardTitle>
+              <CardTitle className="text-base">{t("journal.detail.infoSection", { namespace: "accounting",  })}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                 <div>
-                  <p className="text-slate-500 text-xs mb-0.5">{t("journal.detail.entryNumber", { namespace: "accounting", fallback: "رقم القيد" })}</p>
+                  <p className="text-slate-500 text-xs mb-0.5">{t("journal.detail.entryNumber", { namespace: "accounting",  })}</p>
                   <p className="font-bold text-slate-800">{entry.entry_number}</p>
                 </div>
                 <div>
-                  <p className="text-slate-500 text-xs mb-0.5">{t("journal.detail.journalType", { namespace: "accounting", fallback: "نوع اليومية" })}</p>
+                  <p className="text-slate-500 text-xs mb-0.5">{t("journal.detail.journalType", { namespace: "accounting",  })}</p>
                   <p className="font-bold text-slate-800">
-                    {t(journalTypeKey(entry.journal_type), { namespace: "accounting", fallback: JOURNAL_TYPE_LABELS[entry.journal_type] || entry.journal_type })}
+                    {t(journalTypeKey(entry.journal_type), { namespace: "accounting"})}
                   </p>
                 </div>
                 <div>
-                  <p className="text-slate-500 text-xs mb-0.5">{t("journal.detail.date", { namespace: "accounting", fallback: "التاريخ" })}</p>
+                  <p className="text-slate-500 text-xs mb-0.5">{t("journal.detail.date", { namespace: "accounting",  })}</p>
                   <p className="font-bold text-slate-800">{formatDateTime(entry.entry_date)}</p>
                 </div>
                 <div>
-                  <p className="text-slate-500 text-xs mb-0.5">{t("journal.detail.statusLabel", { namespace: "accounting", fallback: "الحالة" })}</p>
+                  <p className="text-slate-500 text-xs mb-0.5">{t("journal.detail.statusLabel", { namespace: "accounting",  })}</p>
                   <StatusBadge status={entry.status} />
                 </div>
                 <div className="md:col-span-4">
-                  <p className="text-slate-500 text-xs mb-0.5">{t("journal.detail.description", { namespace: "accounting", fallback: "البيان" })}</p>
+                  <p className="text-slate-500 text-xs mb-0.5">{t("journal.detail.description", { namespace: "accounting",  })}</p>
                   <p className="font-bold text-slate-800">{entry.description}</p>
                 </div>
                 {entry.source_id && (
                   <div>
-                    <p className="text-slate-500 text-xs mb-0.5">{t("journal.detail.source", { namespace: "accounting", fallback: "مصدر القيد" })}</p>
+                    <p className="text-slate-500 text-xs mb-0.5">{t("journal.detail.source", { namespace: "accounting",  })}</p>
                     <p className="font-bold text-slate-800">{entry.source_id}</p>
                   </div>
                 )}
                 {entry.reversal_of_entry_id && (
                   <div>
-                    <p className="text-slate-500 text-xs mb-0.5">{t("journal.detail.reverses", { namespace: "accounting", fallback: "عكس القيد" })}</p>
+                    <p className="text-slate-500 text-xs mb-0.5">{t("journal.detail.reverses", { namespace: "accounting",  })}</p>
                     <p className="font-bold text-slate-800">{entry.reversal_of_entry_id}</p>
                   </div>
                 )}
                 <div>
-                  <p className="text-slate-500 text-xs mb-0.5">{t("journal.detail.createdAt", { namespace: "accounting", fallback: "تاريخ الإنشاء" })}</p>
+                  <p className="text-slate-500 text-xs mb-0.5">{t("journal.detail.createdAt", { namespace: "accounting",  })}</p>
                   <p className="font-bold text-slate-800">{formatDateTime(entry.created_at)}</p>
                 </div>
               </div>
@@ -224,7 +224,7 @@ export default function JournalEntryDetailPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">{t("journal.detail.linesSection", { namespace: "accounting", fallback: "بنود القيد" })}</CardTitle>
+              <CardTitle className="text-base">{t("journal.detail.linesSection", { namespace: "accounting",  })}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
@@ -232,10 +232,10 @@ export default function JournalEntryDetailPage() {
                   <thead>
                     <tr className="border-b border-slate-200">
                       <th className="text-end py-2 px-3 text-xs font-bold text-slate-500">#</th>
-                      <th className="text-end py-2 px-3 text-xs font-bold text-slate-500">{t("journal.detail.colAccount", { namespace: "accounting", fallback: "الحساب" })}</th>
-                      <th className="text-end py-2 px-3 text-xs font-bold text-slate-500">{t("journal.detail.colDebit", { namespace: "accounting", fallback: "المدين" })}</th>
-                      <th className="text-end py-2 px-3 text-xs font-bold text-slate-500">{t("journal.detail.colCredit", { namespace: "accounting", fallback: "الدائن" })}</th>
-                      <th className="text-end py-2 px-3 text-xs font-bold text-slate-500">{t("journal.detail.colDescription", { namespace: "accounting", fallback: "البيان" })}</th>
+                      <th className="text-end py-2 px-3 text-xs font-bold text-slate-500">{t("journal.detail.colAccount", { namespace: "accounting",  })}</th>
+                      <th className="text-end py-2 px-3 text-xs font-bold text-slate-500">{t("journal.detail.colDebit", { namespace: "accounting",  })}</th>
+                      <th className="text-end py-2 px-3 text-xs font-bold text-slate-500">{t("journal.detail.colCredit", { namespace: "accounting",  })}</th>
+                      <th className="text-end py-2 px-3 text-xs font-bold text-slate-500">{t("journal.detail.colDescription", { namespace: "accounting",  })}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -274,7 +274,7 @@ export default function JournalEntryDetailPage() {
                   </tbody>
                   <tfoot>
                     <tr className="border-t-2 border-slate-200 font-bold">
-                      <td colSpan={2} className="py-2 px-3 text-end text-xs">{t("journal.detail.total", { namespace: "accounting", fallback: "الإجمالي" })}</td>
+                      <td colSpan={2} className="py-2 px-3 text-end text-xs">{t("journal.detail.total", { namespace: "accounting",  })}</td>
                       <td className="py-2 px-3 text-end tabular-nums text-blue-700">
                         {fmtMoney(totalDebit)}
                       </td>
@@ -296,20 +296,20 @@ export default function JournalEntryDetailPage() {
       <ConfirmDialog
         open={confirmAction === "post"}
         onOpenChange={(open) => !open && setConfirmAction(null)}
-        title={t("journal.detail.confirmPost.title", { namespace: "accounting", fallback: "تأكيد ترحيل القيد" })}
-        description={t("journal.detail.confirmPost.description", { namespace: "accounting", vars: { number: entry.entry_number }, fallback: `هل تريد ترحيل القيد رقم ${entry.entry_number}؟ بعد الترحيل لا يمكن تعديله.` })}
-        confirmLabel={t("journal.detail.confirmPost.confirm", { namespace: "accounting", fallback: "ترحيل" })}
-        cancelLabel={t("journal.actions.cancel", { namespace: "accounting", fallback: "إلغاء" })}
+        title={t("journal.detail.confirmPost.title", { namespace: "accounting",  })}
+        description={t("journal.detail.confirmPost.description", { namespace: "accounting", vars: { number: entry.entry_number },  })}
+        confirmLabel={t("journal.detail.confirmPost.confirm", { namespace: "accounting",  })}
+        cancelLabel={t("journal.actions.cancel", { namespace: "accounting",  })}
         onConfirm={handlePost}
       />
 
       <ConfirmDialog
         open={confirmAction === "reverse"}
         onOpenChange={(open) => !open && setConfirmAction(null)}
-        title={t("journal.confirmReverse.title", { namespace: "accounting", fallback: "تأكيد عكس القيد" })}
-        description={t("journal.confirmReverse.description", { namespace: "accounting", fallback: "سيتم ترحيل قيد عكسي (معاكس) يُلغي أثر القيد ويحدد القيد الأصلي كمعكوس. هل تريد المتابعة؟" })}
-        confirmLabel={t("journal.confirmReverse.confirm", { namespace: "accounting", fallback: "عكس القيد" })}
-        cancelLabel={t("journal.actions.cancel", { namespace: "accounting", fallback: "إلغاء" })}
+        title={t("journal.confirmReverse.title", { namespace: "accounting",  })}
+        description={t("journal.confirmReverse.description", { namespace: "accounting",  })}
+        confirmLabel={t("journal.confirmReverse.confirm", { namespace: "accounting",  })}
+        cancelLabel={t("journal.actions.cancel", { namespace: "accounting",  })}
         destructive
         onConfirm={handleReverse}
       />

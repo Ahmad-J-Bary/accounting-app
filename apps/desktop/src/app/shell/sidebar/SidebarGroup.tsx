@@ -165,7 +165,7 @@ export function SidebarGroup({
                 sectionHeaderClass,
                 isBgLight ? "hover:bg-slate-200 hover:text-slate-700" : "hover:bg-white/10 hover:text-white"
               )}
-              title={isCollapsed ? t("expand", { namespace: "shell", fallback: "توسيع" }) : t("collapse", { namespace: "shell", fallback: "طي" })}
+              title={isCollapsed ? t("expand", { namespace: "shell",  }) : t("collapse", { namespace: "shell",  })}
             >
               {isCollapsed ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />}
             </button>

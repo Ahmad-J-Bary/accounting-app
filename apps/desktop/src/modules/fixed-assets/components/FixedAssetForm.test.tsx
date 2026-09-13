@@ -40,7 +40,7 @@ describe("FixedAssetForm", () => {
 
   it("NEW company: only the natural purchase workflow exists (no 'أصل سابق' / opening asset)", () => {
     renderForm(COMPANY_TYPE_NEW);
-    expect(screen.getByText("شراء أصل جديد")).toBeInTheDocument();
+    expect(screen.getByText("form.createNewTitle")).toBeInTheDocument();
     expect(screen.queryByText("أصل سابق")).not.toBeInTheDocument();
     expect(
       screen.queryByText(/إضافة أصل سابق/),
@@ -49,8 +49,8 @@ describe("FixedAssetForm", () => {
 
   it("EXISTING company: previous-asset (أول المدة) mode is auto-selected with no choice toggle", () => {
     renderForm(COMPANY_TYPE_EXISTING);
-    expect(screen.getByText("إضافة أصل سابق (أول المدة)")).toBeInTheDocument();
-    expect(screen.getByText("بيانات الأصل السابق")).toBeInTheDocument();
+    expect(screen.getByText("form.createExistingTitle")).toBeInTheDocument();
+    expect(screen.getByText("form.previousSection")).toBeInTheDocument();
     expect(screen.queryByText("شراء جديد")).not.toBeInTheDocument();
     expect(screen.queryByText("أصل سابق")).not.toBeInTheDocument();
   });
@@ -65,7 +65,7 @@ describe("FixedAssetForm", () => {
       COMPANY_TYPE_EXISTING as never,
       [{ status: "Locked" }],
     );
-    expect(screen.getByText("شراء أصل جديد")).toBeInTheDocument();
+    expect(screen.getByText("form.createNewTitle")).toBeInTheDocument();
     expect(screen.queryByText(/إضافة أصل سابق/)).not.toBeInTheDocument();
   });
 
@@ -79,8 +79,8 @@ describe("FixedAssetForm", () => {
       />,
       COMPANY_TYPE_NEW as never,
     );
-    expect(screen.getByText("آليات ومركبات")).toBeInTheDocument();
-    expect(screen.getByText("مضمّن من الحساب المحدد")).toBeInTheDocument();
+    expect(screen.getByText("assetTypes.automotive")).toBeInTheDocument();
+    expect(screen.getByText("form.typeLockedHint")).toBeInTheDocument();
     expect(screen.queryByText("اختر نوع الأصل")).not.toBeInTheDocument();
   });
 

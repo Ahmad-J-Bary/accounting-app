@@ -44,10 +44,10 @@ export default function FiscalPeriodsPage() {
     onSuccess: () => {
       setStart("");
       setEnd("");
-      toast.success(t("fiscalPeriods.toast.created", { namespace: "accounting", fallback: "تم إنشاء الفترة المالية" }));
+      toast.success(t("fiscalPeriods.toast.created", { namespace: "accounting",  }));
       invalidate();
     },
-    onError: (e) => toast.error(t("fiscalPeriods.toast.createFailed", { namespace: "accounting", vars: { error: e instanceof Error ? e.message : String(e) }, fallback: "فشل الإنشاء: " + (e instanceof Error ? e.message : String(e)) })),
+    onError: (e) => toast.error(t("fiscalPeriods.toast.createFailed", { namespace: "accounting", vars: { error: e instanceof Error ? e.message : String(e) } })),
   });
 
   const act = useMutation({
@@ -63,14 +63,14 @@ export default function FiscalPeriodsPage() {
     onSuccess: (_dto, vars) => {
       toast.success(
         vars.type === "close"
-          ? t("fiscalPeriods.toast.closed", { namespace: "accounting", fallback: "تم إغلاق الفترة — لن تقبل حركات جديدة" })
+          ? t("fiscalPeriods.toast.closed", { namespace: "accounting",  })
           : vars.type === "lock"
-            ? t("fiscalPeriods.toast.locked", { namespace: "accounting", fallback: "تم قفل الفترة بشكل نهائي — لا يمكن فتحها بعد الآن" })
-            : t("fiscalPeriods.toast.reopened", { namespace: "accounting", fallback: "تم إعادة فتح الفترة" }),
+            ? t("fiscalPeriods.toast.locked", { namespace: "accounting",  })
+            : t("fiscalPeriods.toast.reopened", { namespace: "accounting",  }),
       );
       invalidate();
     },
-    onError: (e) => toast.error(t("fiscalPeriods.toast.operationFailed", { namespace: "accounting", vars: { error: e instanceof Error ? e.message : String(e) }, fallback: "فشلت العملية: " + (e instanceof Error ? e.message : String(e)) })),
+    onError: (e) => toast.error(t("fiscalPeriods.toast.operationFailed", { namespace: "accounting", vars: { error: e instanceof Error ? e.message : String(e) } })),
   });
 
   // Current period is DERIVED from the date: the Open/Reopened period whose
@@ -107,9 +107,9 @@ export default function FiscalPeriodsPage() {
     ? (() => {
         const keyPath = `fiscalPeriods.confirm.${confirm.type}` as const;
         return {
-          title: t(`${keyPath}.title`, { namespace: "accounting" }),
-          description: t(`${keyPath}.description`, { namespace: "accounting", vars: { start: toLocalDateStr(confirm.period.start_date), end: toLocalDateStr(confirm.period.end_date) } }),
-          confirmLabel: t(`${keyPath}.confirm`, { namespace: "accounting" }),
+          title: t(`${keyPath}.title`, { namespace: "accounting"}),
+          description: t(`${keyPath}.description`, { namespace: "accounting", vars: { start: toLocalDateStr(confirm.period.start_date), end: toLocalDateStr(confirm.period.end_date) }}),
+          confirmLabel: t(`${keyPath}.confirm`, { namespace: "accounting"}),
         };
       })()
     : null;
@@ -117,10 +117,10 @@ export default function FiscalPeriodsPage() {
   return (
     <ErrorBoundary>
     <OperationalTableTemplate
-      title={t("fiscalPeriods.title", { namespace: "accounting", fallback: "الفترات المالية" })}
+      title={t("fiscalPeriods.title", { namespace: "accounting",  })}
       toolbar={
         <p className="text-xs text-slate-500">
-          {t("fiscalPeriods.description", { namespace: "accounting", fallback: "الفترة المالية بنية أساسية للمحاسبة لكل الشركات: كل قيد مرحَّل يجب أن يقع ضمن فترة مفتوحة، والحركة في فترة مغلقة أو مقفلة مرفوضة إلا عبر mechanism صريح (قيد عكسي أو رصيد افتتاحي)." })}
+          {t("fiscalPeriods.description", { namespace: "accounting",  })}
         </p>
       }
       tableContent={

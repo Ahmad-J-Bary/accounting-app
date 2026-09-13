@@ -95,12 +95,12 @@ export function AccountForm({
 
   const handleSave = async () => {
     if (!nameAr.trim()) {
-      setError(t("chartOfAccounts.error.accountNameRequired", { namespace: "accounting", fallback: "يرجى تعبئة اسم الحساب." }));
+      setError(t("chartOfAccounts.error.accountNameRequired", { namespace: "accounting",  }));
       return;
     }
 
     if (mode === "edit" && !code.trim()) {
-      setError(t("chartOfAccounts.error.accountCodeRequired", { namespace: "accounting", fallback: "يرجى تعبئة رقم الحساب." }));
+      setError(t("chartOfAccounts.error.accountCodeRequired", { namespace: "accounting",  }));
       return;
     }
 
@@ -147,7 +147,7 @@ export function AccountForm({
       onSaved();
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : t("chartOfAccounts.error.saveFailed", { namespace: "accounting", fallback: "تعذر حفظ الحساب. حاول مرة أخرى." }),
+        err instanceof Error ? err.message : t("chartOfAccounts.error.saveFailed", { namespace: "accounting",  }),
       );
     } finally {
       setSaving(false);
@@ -158,13 +158,13 @@ export function AccountForm({
 
   return (
     <FormPanel
-      title={mode === "edit" ? t("chartOfAccounts.form.editTitle", { namespace: "accounting", fallback: "تعديل الحساب" }) : t("chartOfAccounts.form.createTitle", { namespace: "accounting", fallback: "إضافة حساب جديد" })}
+      title={mode === "edit" ? t("chartOfAccounts.form.editTitle", { namespace: "accounting",  }) : t("chartOfAccounts.form.createTitle", { namespace: "accounting",  })}
       icon={<span className="text-xl">{mode === "edit" ? "✎" : "＋"}</span>}
       onClose={onClose}
       onSave={handleSave}
       isSaving={saving}
       saveDisabled={!nameAr.trim()}
-      saveLabel={mode === "edit" ? t("chartOfAccounts.form.editSave", { namespace: "accounting", fallback: "حفظ التعديلات" }) : t("chartOfAccounts.form.createSave", { namespace: "accounting", fallback: "إضافة الحساب" })}
+      saveLabel={mode === "edit" ? t("chartOfAccounts.form.editSave", { namespace: "accounting",  }) : t("chartOfAccounts.form.createSave", { namespace: "accounting",  })}
     >
       <div className="space-y-6 text-end">
         {error && (
@@ -172,23 +172,23 @@ export function AccountForm({
             {error}
           </div>
         )}
-        <SidebarSection title={t("chartOfAccounts.form.basicSection", { namespace: "accounting", fallback: "المعلومات الأساسية" })}>
+        <SidebarSection title={t("chartOfAccounts.form.basicSection", { namespace: "accounting",  })}>
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <FieldLabel>{t("chartOfAccounts.form.accountCode", { namespace: "accounting", fallback: "رقم الحساب" })}</FieldLabel>
+                <FieldLabel>{t("chartOfAccounts.form.accountCode", { namespace: "accounting",  })}</FieldLabel>
                 {codeSuffix ? (
                   <div className="flex gap-1">
                     <Input
                       value={codeSuffix}
                       disabled
                       className="h-9 bg-slate-100 text-slate-500 w-16 text-center"
-                      title={t("chartOfAccounts.form.inheritedTitle", { namespace: "accounting", fallback: "الجزء الموروث من الأب ولا يمكن تعديله" })}
+                      title={t("chartOfAccounts.form.inheritedTitle", { namespace: "accounting",  })}
                     />
                     <Input
                       value={code}
                       onChange={(e) => setCode(e.target.value)}
-                      placeholder={t("chartOfAccounts.form.subCodePlaceholder", { namespace: "accounting", fallback: "الجزء الفرعي" })}
+                      placeholder={t("chartOfAccounts.form.subCodePlaceholder", { namespace: "accounting",  })}
                       className="h-9 bg-white flex-1"
                     />
                   </div>
@@ -196,26 +196,26 @@ export function AccountForm({
                   <Input
                     value={code}
                     onChange={(e) => setCode(e.target.value)}
-                    placeholder={t("chartOfAccounts.form.codePlaceholder", { namespace: "accounting", fallback: "مثال: 1101" })}
+                    placeholder={t("chartOfAccounts.form.codePlaceholder", { namespace: "accounting",  })}
                     className="h-9 bg-white"
                   />
                 )}
               </div>
               <div className="space-y-1.5">
-                <FieldLabel>{t("chartOfAccounts.form.accountName", { namespace: "accounting", fallback: "اسم الحساب" })}</FieldLabel>
+                <FieldLabel>{t("chartOfAccounts.form.accountName", { namespace: "accounting",  })}</FieldLabel>
                 <Input
                   value={nameAr}
                   onChange={(e) => setNameAr(e.target.value)}
-                  placeholder={t("chartOfAccounts.form.accountNamePlaceholder", { namespace: "accounting", fallback: "مثال: صندوق فرعي" })}
+                  placeholder={t("chartOfAccounts.form.accountNamePlaceholder", { namespace: "accounting",  })}
                   className="h-9 bg-white"
                 />
               </div>
             </div>
             <div className="space-y-1.5">
-              <FieldLabel>{t("chartOfAccounts.form.parentOf", { namespace: "accounting", fallback: "فرعي من" })}</FieldLabel>
+              <FieldLabel>{t("chartOfAccounts.form.parentOf", { namespace: "accounting",  })}</FieldLabel>
               <div className="h-9 rounded-md border border-input bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
                 {parentId === "null"
-                  ? t("chartOfAccounts.form.levelOne", { namespace: "accounting", fallback: "-- مستوى أول --" })
+                  ? t("chartOfAccounts.form.levelOne", { namespace: "accounting",  })
                   : (() => {
                       const parent = allAccounts.find((a) => a.id === parentId);
                       return parent ? `${parent.code} - ${parent.name_ar}` : "--";
@@ -228,11 +228,11 @@ export function AccountForm({
 
 
         <div className="space-y-1.5">
-          <FieldLabel>{t("chartOfAccounts.form.notes", { namespace: "accounting", fallback: "ملاحظات" })}</FieldLabel>
+          <FieldLabel>{t("chartOfAccounts.form.notes", { namespace: "accounting",  })}</FieldLabel>
           <Textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            placeholder={t("chartOfAccounts.form.notesPlaceholder", { namespace: "accounting", fallback: "ملاحظات اختيارية..." })}
+            placeholder={t("chartOfAccounts.form.notesPlaceholder", { namespace: "accounting",  })}
             className="min-h-[60px]"
           />
         </div>

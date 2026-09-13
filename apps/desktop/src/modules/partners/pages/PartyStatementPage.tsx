@@ -46,7 +46,7 @@ export default function PartyStatementPage({ entityName }: PartyStatementPagePro
   }
 
   if (!id || !entity) {
-    return <div className="p-8 text-center text-red-500 font-bold">{t(entityName === "customer" ? "partyStatement.notFoundCustomer" : "partyStatement.notFoundSupplier", { namespace: "partners", fallback: cfg.notFoundMessage })}</div>;
+    return <div className="p-8 text-center text-red-500 font-bold">{t(entityName === "customer" ? "partyStatement.notFoundCustomer" : "partyStatement.notFoundSupplier", { namespace: "partners"})}</div>;
   }
 
   return (

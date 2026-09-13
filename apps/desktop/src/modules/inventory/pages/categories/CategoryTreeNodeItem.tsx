@@ -90,9 +90,9 @@ export function CategoryTreeNodeItem({
         </Badge>
         <div className="w-[80px]">
           {n.is_active ? (
-            <span className="text-[10px] text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">{t("labels.active", { namespace: "inventory", fallback: "نشط" })}</span>
+            <span className="text-[10px] text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">{t("labels.active", { namespace: "inventory",  })}</span>
           ) : (
-            <span className="text-[10px] text-slate-400 bg-slate-50 px-2 py-0.5 rounded-full border border-slate-100">{t("states.disabled", { namespace: "common", fallback: "معطل" })}</span>
+            <span className="text-[10px] text-slate-400 bg-slate-50 px-2 py-0.5 rounded-full border border-slate-100">{t("states.disabled", { namespace: "common",  })}</span>
           )}
         </div>
       </>

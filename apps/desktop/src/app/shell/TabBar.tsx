@@ -69,7 +69,7 @@ export function TabBar() {
         size="icon"
         className="h-7 w-7 shrink-0"
         onClick={openDashboardTab}
-        title={t("newTab", { namespace: "shell", fallback: "تبويب جديد" })}
+        title={t("newTab", { namespace: "shell",  })}
       >
         <Plus className="w-4 h-4" />
       </Button>

@@ -23,7 +23,7 @@ function renderForm(companyType: string) {
 describe("ExpenseFormPanel", () => {
   it("NEW company: expense item form never shows opening balance fields", () => {
     renderForm(COMPANY_TYPE_NEW);
-    expect(screen.getByText("إضافة بند مصروف جديد")).toBeInTheDocument();
+    expect(screen.getByText("expense.formTitle.add")).toBeInTheDocument();
     expect(screen.queryByText("البيانات المالية")).not.toBeInTheDocument();
     expect(screen.queryByText("الرصيد الافتتاحي")).not.toBeInTheDocument();
     expect(screen.queryByText("اتجاه الرصيد")).not.toBeInTheDocument();
@@ -31,8 +31,8 @@ describe("ExpenseFormPanel", () => {
 
   it("EXISTING company: expense item form exposes the opening balance fields", () => {
     renderForm(COMPANY_TYPE_EXISTING);
-    expect(screen.getByText("البيانات المالية")).toBeInTheDocument();
-    expect(screen.getByText("الرصيد الافتتاحي")).toBeInTheDocument();
-    expect(screen.getByText("اتجاه الرصيد")).toBeInTheDocument();
+    expect(screen.getByText("expense.financialData")).toBeInTheDocument();
+    expect(screen.getByText("expense.openingBalance")).toBeInTheDocument();
+    expect(screen.getByText("expense.balanceDirection")).toBeInTheDocument();
   });
 });

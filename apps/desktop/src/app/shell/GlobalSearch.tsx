@@ -6,10 +6,10 @@ import { ICON_MAP } from "@app/shell/sidebarConfig";
 import { cn } from "@shared/lib/utils";
 import { useLocalization } from "@app/providers/LocalizationProvider";
 
-const GROUP_LABELS: Record<string, { key: string; fallback: string }> = {
-  navigation: { key: "navigation", fallback: "التنقل" },
-  commands: { key: "commands", fallback: "الأوامر" },
-  tabs: { key: "tabs", fallback: "التبويبات المفتوحة" },
+const GROUP_LABELS: Record<string, { key: string }> = {
+  navigation: { key: "navigation" },
+  commands: { key: "commands" },
+  tabs: { key: "tabs" },
 };
 
 export function GlobalSearch() {
@@ -58,7 +58,7 @@ export function GlobalSearch() {
               type="button"
               onClick={closeSearch}
               className="rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700"
-              aria-label={t("close", { namespace: "common", fallback: "إغلاق" })}
+              aria-label={t("actions.close", { namespace: "common",  })}
             >
               <X className="h-4 w-4" />
             </button>
@@ -75,7 +75,7 @@ export function GlobalSearch() {
               Object.entries(groupedResults).map(([group, items]) => (
                 <Command.Group
                   key={group}
-                  heading={GROUP_LABELS[group] ? t(GROUP_LABELS[group].key, { namespace: "search", fallback: GROUP_LABELS[group].fallback }) : group}
+                  heading={GROUP_LABELS[group] ? t(GROUP_LABELS[group].key, { namespace: "search"}) : group}
                   className="mb-3 overflow-hidden rounded-xl bg-slate-50/70 p-1 text-slate-700"
                 >
                   {items.map((result) => {

@@ -85,7 +85,7 @@ export function InvoiceList({
 
   const handleDeleteSelected = async () => {
     if (!selectedId) return;
-    if (!window.confirm(t("invoice.confirmDeleteList", { namespace: "invoicing", fallback: "هل أنت متأكد من حذف هذه الفاتورة؟ سيتم حذف القيود المرتبطة بها أيضاً." }))) return;
+    if (!window.confirm(t("invoice.confirmDeleteList", { namespace: "invoicing",  }))) return;
     await onDelete(selectedId);
     setSelectedId(null);
   };
@@ -103,8 +103,8 @@ export function InvoiceList({
     }), [invoices, search, partyIdFilter, statusFilter, partyType]);
 
   const partyLabel = partyType === "supplier"
-    ? t("invoice.partySupplier", { namespace: "invoicing", fallback: "المورد" })
-    : t("invoice.partyCustomer", { namespace: "invoicing", fallback: "الزبون" });
+    ? t("invoice.partySupplier", { namespace: "invoicing",  })
+    : t("invoice.partyCustomer", { namespace: "invoicing",  });
   const defaultName = partyType === "supplier" ? "مورد نقدي" : "زبون نقدي";
 
   return (
@@ -126,7 +126,7 @@ export function InvoiceList({
               }
             }}
             className="h-9 border-slate-200 hover:bg-slate-50 font-bold">
-            <Eye className="w-4 h-4 ml-2 text-blue-500" /> {t("actions.view", { namespace: "invoicing", fallback: "عرض" })}
+            <Eye className="w-4 h-4 ml-2 text-blue-500" /> {t("actions.view", { namespace: "invoicing",  })}
           </Button>
           <Button variant="outline" size="sm" disabled={!selectedId}
             onClick={() => {
@@ -138,17 +138,17 @@ export function InvoiceList({
               }
             }}
             className="h-9 border-slate-200 hover:bg-slate-50 font-bold">
-            <Settings2 className="w-4 h-4 ml-2 text-amber-500" /> {t("actions.edit", { namespace: "invoicing", fallback: "تعديل" })}
+            <Settings2 className="w-4 h-4 ml-2 text-amber-500" /> {t("actions.edit", { namespace: "invoicing",  })}
           </Button>
           <Button variant="outline" size="sm" disabled={!selectedId}
             onClick={handleDeleteSelected}
             className="h-9 border-slate-200 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 font-bold transition-all">
-            <Trash2 className="w-4 h-4 ml-2 text-rose-500" /> {t("actions.delete", { namespace: "invoicing", fallback: "حذف" })}
+            <Trash2 className="w-4 h-4 ml-2 text-rose-500" /> {t("actions.delete", { namespace: "invoicing",  })}
           </Button>
           <Button variant="outline" size="sm" disabled={!selectedId}
             onClick={() => { window.dispatchEvent(new Event("app:prepare-print")); requestAnimationFrame(() => window.print()); }}
             className="h-9 border-slate-200 hover:bg-slate-50 font-bold">
-            <Printer className="w-4 h-4 ml-2 text-slate-500" /> {t("actions.print", { namespace: "invoicing", fallback: "طباعة" })}
+            <Printer className="w-4 h-4 ml-2 text-slate-500" /> {t("actions.print", { namespace: "invoicing",  })}
           </Button>
         </div>
       }

@@ -76,7 +76,7 @@ export default function PaymentsPage() {
       setSuppliers(sData);
       setAccounts(aData);
     } catch {
-      toast.error(t("payments.loadExtrasError", { namespace: "invoicing", fallback: "فشل تحميل البيانات الإضافية" }));
+      toast.error(t("payment.loadExtrasError", { namespace: "invoicing",  }));
     }
   }, [t]);
 
@@ -88,21 +88,21 @@ export default function PaymentsPage() {
     async (id: string) => {
       if (
         !confirm(
-          t("payments.deleteConfirm", { namespace: "invoicing", fallback: "هل أنت متأكد من حذف هذه الحركة؟ سيتم حذف القيد اليومي المرتبط بها نهائياً." }),
+          t("payment.deleteConfirm", { namespace: "invoicing",  }),
         )
       )
         return;
       try {
         await paymentService.deletePayment(id);
-        toast.success(t("payments.deleteSuccess", { namespace: "invoicing", fallback: "تم الحذف بنجاح" }));
+        toast.success(t("payment.deleteSuccess", { namespace: "invoicing",  }));
         setSelectedPayment(null);
         refresh(true);
         await invalidateKeys(queryClient, PAYMENT_RECEIPT_KEYS);
     } catch (e) {
-        toast.error(t("payments.deleteError", { namespace: "invoicing", vars: { error: String(e) }, fallback: "فشل الحذف: {{error}}" }));
+        toast.error(t("payment.deleteError", { namespace: "invoicing", vars: { error: String(e) },  }));
       }
     },
-    [refresh],
+    [refresh, t],
   );
 
   const handleCreate = useCallback(async (payload: CreatePaymentRequest) => {
@@ -112,20 +112,20 @@ export default function PaymentsPage() {
       setShowDialog(false);
       refresh(true);
       await invalidateKeys(queryClient, PAYMENT_RECEIPT_KEYS);
-      toast.success(t("payments.createSuccess", { namespace: "invoicing", fallback: "تم تسجيل الحركة بنجاح" }));
+      toast.success(t("payment.createSuccess", { namespace: "invoicing",  }));
     } catch (e) {
-      toast.error(t("payments.saveError", { namespace: "invoicing", vars: { error: String(e) }, fallback: "فشل حفظ الحركة: {{error}}" }));
+      toast.error(t("payment.saveError", { namespace: "invoicing", vars: { error: String(e) },  }));
     } finally {
       setSaving(false);
     }
-  }, [refresh]);
+  }, [refresh, t]);
 
   const handleUpdate = useCallback(async (payload: PaymentFormPayload) => {
     setSaving(true);
     try {
       if (payload.id) {
         await paymentService.updatePayment(payload as UpdatePaymentRequest);
-        toast.success(t("payments.updateSuccess", { namespace: "invoicing", fallback: "تم التعديل بنجاح" }));
+        toast.success(t("payment.updateSuccess", { namespace: "invoicing",  }));
       } else {
         await handleCreate(payload);
         return;
@@ -135,11 +135,11 @@ export default function PaymentsPage() {
       refresh(true);
       await invalidateKeys(queryClient, PAYMENT_RECEIPT_KEYS);
     } catch (e) {
-      toast.error(t("payments.updateError", { namespace: "invoicing", vars: { error: String(e) }, fallback: "فشل التعديل: {{error}}" }));
+      toast.error(t("payment.updateError", { namespace: "invoicing", vars: { error: String(e) },  }));
     } finally {
       setSaving(false);
     }
-  }, [refresh, handleCreate]);
+  }, [refresh, handleCreate, t]);
 
   const handleRowClick = useCallback((p: Payment) => {
     setSelectedPayment(p);
@@ -152,7 +152,7 @@ export default function PaymentsPage() {
 
   return (
     <OperationalTableTemplate
-      title={t("payments.title", { namespace: "invoicing", fallback: "السندات المالية" })}
+      title={t("payment.title", { namespace: "invoicing",  })}
       toolbar={
         <Button
           size="sm"
@@ -162,7 +162,7 @@ export default function PaymentsPage() {
           }}
           className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100 font-bold"
         >
-          <Plus className="w-4 h-4 ml-2" /> {t("payments.new", { namespace: "invoicing", fallback: "سند جديد" })}
+          <Plus className="w-4 h-4 ml-2" /> {t("payment.new", { namespace: "invoicing",  })}
         </Button>
       }
       tableContent={

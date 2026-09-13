@@ -9,8 +9,8 @@ export function UnderDevelopmentSection() {
         <RefreshCw className="w-8 h-8" />
       </div>
       <div className="space-y-1">
-        <h3 className="font-black text-slate-600">{t("settings.underDevelopment.title", { namespace: "settings", fallback: "هذا القسم قيد التطوير" })}</h3>
-        <p className="text-sm font-medium">{t("settings.underDevelopment.description", { namespace: "settings", fallback: "سيتم توفير خيارات إضافية في التحديثات القادمة." })}</p>
+        <h3 className="font-black text-slate-600">{t("underDevelopment.title", { namespace: "settings",  })}</h3>
+        <p className="text-sm font-medium">{t("underDevelopment.description", { namespace: "settings",  })}</p>
       </div>
     </div>
   );

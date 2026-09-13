@@ -9,7 +9,7 @@ export function SidebarEmptyState({
   className,
 }: SidebarEmptyStateProps) {
   const { t } = useLocalization();
-  const resolvedMessage = message ?? t('labels.selectItemToView', { fallback: 'الرجاء اختيار عنصر لعرض تفاصيله' });
+  const resolvedMessage = message ?? t('labels.selectItemToView', );
   return (
     <div
       className={cn(

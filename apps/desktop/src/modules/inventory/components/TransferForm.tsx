@@ -223,7 +223,7 @@ export function TransferForm({
 
   if (!open) return null;
 
-  const formTitle = readOnly ? t("transfers.form.viewTitle", { namespace: "inventory", fallback: "عرض التحويل" }) : initialValues ? t("transfers.form.editTitle", { namespace: "inventory", fallback: "تعديل التحويل" }) : t("transfers.form.createTitle", { namespace: "inventory", fallback: "تحويل مخزني جديد" });
+  const formTitle = readOnly ? t("transfers.form.viewTitle", { namespace: "inventory",  }) : initialValues ? t("transfers.form.editTitle", { namespace: "inventory",  }) : t("transfers.form.createTitle", { namespace: "inventory",  });
 
   return (
     <FormPanel
@@ -233,16 +233,16 @@ export function TransferForm({
       onSave={readOnly ? undefined : handleSave}
       isSaving={saving}
       saveDisabled={!valid}
-      saveLabel={readOnly ? undefined : (initialValues ? t("transfers.form.updateTitle", { namespace: "inventory", fallback: "تحديث التحويل" }) : t("transfers.form.saveTitle", { namespace: "inventory", fallback: "حفظ التحويل" }))}
+      saveLabel={readOnly ? undefined : (initialValues ? t("transfers.form.updateTitle", { namespace: "inventory",  }) : t("transfers.form.saveTitle", { namespace: "inventory",  }))}
     >
-      <SidebarSection icon={<Warehouse className="w-3.5 h-3.5" />} title={t("transfers.form.warehouses", { namespace: "inventory", fallback: "المستودعات" })} defaultOpen={true}>
+      <SidebarSection icon={<Warehouse className="w-3.5 h-3.5" />} title={t("transfers.form.warehouses", { namespace: "inventory",  })} defaultOpen={true}>
         <div className="flex gap-2 items-end text-right">
           <div className="flex-1 space-y-1.5">
             <FieldLabel className="flex items-center gap-1.5" required>
-              <Warehouse className="w-3.5 h-3.5 text-slate-400" /> {t("transfers.fromWarehouse", { namespace: "inventory", fallback: "من مستودع" })}
+              <Warehouse className="w-3.5 h-3.5 text-slate-400" /> {t("transfers.fromWarehouse", { namespace: "inventory",  })}
             </FieldLabel>
             <Select value={form.source_warehouse_id} onValueChange={handleSrcWhChange} disabled={readOnly}>
-              <SelectTrigger className="bg-white border-slate-200 h-9"><SelectValue placeholder={t("transfers.form.sourcePlaceholder", { namespace: "inventory", fallback: "اختر المستودع المصدر..." })} /></SelectTrigger>
+              <SelectTrigger className="bg-white border-slate-200 h-9"><SelectValue placeholder={t("transfers.form.sourcePlaceholder", { namespace: "inventory",  })} /></SelectTrigger>
               <SelectContent>
                 {sourceWarehouses.map(w => (
                   <SelectItem key={w.id} value={w.id} disabled={w.id === form.dest_warehouse_id}>{w.name}</SelectItem>
@@ -252,10 +252,10 @@ export function TransferForm({
           </div>
           <div className="flex-1 space-y-1.5">
             <FieldLabel className="flex items-center gap-1.5" required>
-              <Warehouse className="w-3.5 h-3.5 text-slate-400" /> {t("transfers.toWarehouse", { namespace: "inventory", fallback: "إلى مستودع" })}
+              <Warehouse className="w-3.5 h-3.5 text-slate-400" /> {t("transfers.toWarehouse", { namespace: "inventory",  })}
             </FieldLabel>
             <Select value={form.dest_warehouse_id} onValueChange={val => setForm(p => ({ ...p, dest_warehouse_id: val }))} disabled={readOnly}>
-              <SelectTrigger className="bg-white border-slate-200 h-9"><SelectValue placeholder={t("transfers.form.destPlaceholder", { namespace: "inventory", fallback: "اختر مستودع الوجهة..." })} /></SelectTrigger>
+              <SelectTrigger className="bg-white border-slate-200 h-9"><SelectValue placeholder={t("transfers.form.destPlaceholder", { namespace: "inventory",  })} /></SelectTrigger>
               <SelectContent>
                 {activeWarehouses.map(w => (
                   <SelectItem key={w.id} value={w.id} disabled={w.id === form.source_warehouse_id}>{w.name}</SelectItem>
@@ -266,11 +266,11 @@ export function TransferForm({
         </div>
       </SidebarSection>
 
-      <SidebarSection icon={<Package className="w-3.5 h-3.5" />} title={t("transfers.form.materialQtySection", { namespace: "inventory", fallback: "المادة والكمية" })} defaultOpen={true}>
+      <SidebarSection icon={<Package className="w-3.5 h-3.5" />} title={t("transfers.form.materialQtySection", { namespace: "inventory",  })} defaultOpen={true}>
         <div className="space-y-2.5 text-right">
           <div className="space-y-1.5">
             <FieldLabel className="flex items-center gap-1.5" required>
-              <Package className="w-3.5 h-3.5 text-slate-400" /> {t("labels.material", { namespace: "inventory", fallback: "المادة" })}
+              <Package className="w-3.5 h-3.5 text-slate-400" /> {t("labels.material", { namespace: "inventory",  })}
             </FieldLabel>
             {lockMaterial || readOnly ? (
               <div className="h-9 px-3 rounded-lg border border-slate-200 bg-slate-50 flex items-center text-xs font-bold text-slate-700">
@@ -279,11 +279,11 @@ export function TransferForm({
             ) : (
               <Select value={form.material_id} onValueChange={handleMatChange} disabled={!form.source_warehouse_id}>
                 <SelectTrigger className="bg-white border-slate-200 h-9">
-                  <SelectValue placeholder={form.source_warehouse_id ? t("transfers.form.materialPlaceholder", { namespace: "inventory", fallback: "اختر المادة..." }) : t("transfers.form.chooseWarehouseFirst", { namespace: "inventory", fallback: "اختر المستودع أولاً" })} />
+                  <SelectValue placeholder={form.source_warehouse_id ? t("transfers.form.materialPlaceholder", { namespace: "inventory",  }) : t("transfers.form.chooseWarehouseFirst", { namespace: "inventory",  })} />
                 </SelectTrigger>
                 <SelectContent>
                   {materialsInSource.length === 0 ? (
-                    <div className="px-2 py-4 text-center text-sm text-slate-400">{t("transfers.form.noMaterials", { namespace: "inventory", fallback: "لا توجد مواد متوفرة في هذا المستودع" })}</div>
+                    <div className="px-2 py-4 text-center text-sm text-slate-400">{t("transfers.form.noMaterials", { namespace: "inventory",  })}</div>
                   ) : (
                     materialsInSource.map(p => (
                       <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
@@ -295,7 +295,7 @@ export function TransferForm({
           </div>
           <div>
             <FieldLabel className="flex items-center gap-1.5 mb-1.5" required>
-              <ArrowRightLeft className="w-3.5 h-3.5 text-slate-400" /> {t("transfers.form.qtyUnitLabel", { namespace: "inventory", fallback: "الكمية والوحدة" })}
+              <ArrowRightLeft className="w-3.5 h-3.5 text-slate-400" /> {t("transfers.form.qtyUnitLabel", { namespace: "inventory",  })}
             </FieldLabel>
             {isBaseSelected ? (
               <div className="flex gap-2 items-center">
@@ -372,25 +372,25 @@ export function TransferForm({
                 </div>
                 {qtyInUnitNum > 0 && convFactor > 1 && (
                     <div className="text-[11px] text-slate-400 font-medium px-1">
-                    {t("transfers.form.equation", { namespace: "inventory", vars: { x: String(qtyInUnitNum), unit: selectedUnit?.name || '', conv: String(convFactor), rem: String(qtyRemainderNum), baseUnit: baseUnit?.name || '', total: String(totalBase) }, fallback: `أي ${qtyInUnitNum.toLocaleString()} ${selectedUnit?.name} × ${convFactor} + ${qtyRemainderNum.toLocaleString()} ${baseUnit?.name} = ${totalBase.toLocaleString()} ${baseUnit?.name}` })}
+                    {t("transfers.form.equation", { namespace: "inventory", vars: { x: String(qtyInUnitNum), unit: selectedUnit?.name || '', conv: String(convFactor), rem: String(qtyRemainderNum), baseUnit: baseUnit?.name || '', total: String(totalBase) },  })}
                   </div>
                 )}
               </div>
             )}
             {form.material_id && form.source_warehouse_id && availableQtyBase > 0 && (
               <div className="text-[11px] text-slate-500 font-medium mt-1 px-1">
-                {t("transfers.form.available", { namespace: "inventory", vars: { value: availableText }, fallback: `المتوفر: ${availableText}` })}
+                {t("transfers.form.available", { namespace: "inventory", vars: { value: availableText },  })}
               </div>
             )}
           </div>
         </div>
       </SidebarSection>
 
-      <SidebarSection icon={<Calendar className="w-3.5 h-3.5" />} title={t("transfers.form.dateNotesSection", { namespace: "inventory", fallback: "التاريخ والملاحظات" })} defaultOpen={true}>
+      <SidebarSection icon={<Calendar className="w-3.5 h-3.5" />} title={t("transfers.form.dateNotesSection", { namespace: "inventory",  })} defaultOpen={true}>
         <div className="space-y-2.5 text-right">
           <div className="space-y-1.5">
             <FieldLabel className="flex items-center gap-1.5">
-              <Calendar className="w-3.5 h-3.5 text-slate-400" /> {t("transfers.form.transferDate", { namespace: "inventory", fallback: "تاريخ التحويل" })}
+              <Calendar className="w-3.5 h-3.5 text-slate-400" /> {t("transfers.form.transferDate", { namespace: "inventory",  })}
             </FieldLabel>
             <Input type="date"
               value={form.transfer_date?.slice(0, 10) ?? ""}
@@ -400,12 +400,12 @@ export function TransferForm({
           </div>
           <div className="space-y-1.5">
             <FieldLabel className="flex items-center gap-1.5">
-              <FileText className="w-3.5 h-3.5 text-slate-400" /> {t("labels.notes", { namespace: "inventory", fallback: "ملاحظات" })}
+              <FileText className="w-3.5 h-3.5 text-slate-400" /> {t("labels.notes", { namespace: "inventory",  })}
             </FieldLabel>
             <Textarea value={form.notes ?? ""}
               onChange={e => setForm(p => ({ ...p, notes: e.target.value || null }))}
               disabled={readOnly}
-              placeholder={t("transfers.form.notesPlaceholder", { namespace: "inventory", fallback: "سبب التحويل..." })}
+              placeholder={t("transfers.form.notesPlaceholder", { namespace: "inventory",  })}
               className="min-h-[60px]" />
           </div>
         </div>

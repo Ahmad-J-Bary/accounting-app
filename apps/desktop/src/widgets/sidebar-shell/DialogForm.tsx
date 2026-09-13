@@ -35,7 +35,7 @@ export function DialogForm({
   className = "",
 }: DialogFormProps) {
   const { t } = useLocalization();
-  const resolvedSaveLabel = saveLabel ?? t('actions.save', { fallback: 'حفظ' });
+  const resolvedSaveLabel = saveLabel ?? t('actions.save', );
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
@@ -65,13 +65,13 @@ export function DialogForm({
               onClick={() => onOpenChange(false)}
               disabled={isSaving}
             >
-              {t('actions.cancel', { fallback: 'إلغاء' })}
+              {t('actions.cancel', )}
             </Button>
             <Button
               onClick={onSave}
               disabled={isSaving || saveDisabled}
             >
-              {isSaving ? t('states.saving', { fallback: 'جاري الحفظ...' }) : resolvedSaveLabel}
+              {isSaving ? t('states.saving', ) : resolvedSaveLabel}
             </Button>
           </DialogFooter>
         )}

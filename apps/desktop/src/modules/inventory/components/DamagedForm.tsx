@@ -163,21 +163,21 @@ export function DamagedForm({ onClose, products, onSave, saving, initialMaterial
 
   return (
     <FormPanel
-      title={isEditMode ? t("damaged.form.editTitle", { namespace: "inventory", fallback: "تعديل تالف" }) : t("damaged.form.createTitle", { namespace: "inventory", fallback: "تسجيل مواد تالفة" })}
+      title={isEditMode ? t("damaged.form.editTitle", { namespace: "inventory",  }) : t("damaged.form.createTitle", { namespace: "inventory",  })}
       icon={<AlertTriangle className="w-5 h-5 text-rose-600" />}
       onClose={onClose}
       onSave={handleSave}
       isSaving={saving}
       saveDisabled={saving || !form.material_id || !form.quantity}
-      saveLabel={t("damaged.form.save", { namespace: "inventory", fallback: "تسجيل التالف" })}
+      saveLabel={t("damaged.form.save", { namespace: "inventory",  })}
     >
-      <SidebarSection title={t("damaged.form.section", { namespace: "inventory", fallback: "بيانات التلف" })} defaultOpen={true}>
+      <SidebarSection title={t("damaged.form.section", { namespace: "inventory",  })} defaultOpen={true}>
         <div className="space-y-4 text-right">
           <div className="space-y-2">
-            <FieldLabel required>{t("damaged.form.material", { namespace: "inventory", fallback: "المادة" })}</FieldLabel>
+            <FieldLabel required>{t("damaged.form.material", { namespace: "inventory",  })}</FieldLabel>
             <Select value={form.material_id ?? ""} onValueChange={handleMaterialChange}>
               <SelectTrigger className="w-full bg-white border-slate-200">
-                <SelectValue placeholder={t("damaged.form.materialPlaceholder", { namespace: "inventory", fallback: "اختر المادة..." })} />
+                <SelectValue placeholder={t("damaged.form.materialPlaceholder", { namespace: "inventory",  })} />
               </SelectTrigger>
               <SelectContent>
                 {products.map((p) => (
@@ -190,7 +190,7 @@ export function DamagedForm({ onClose, products, onSave, saving, initialMaterial
           </div>
 
           <div className="space-y-2">
-            <FieldLabel required>{t("damaged.quantityLabel", { namespace: "inventory", fallback: "الكمية التالفة" })}</FieldLabel>
+            <FieldLabel required>{t("damaged.quantityLabel", { namespace: "inventory",  })}</FieldLabel>
             <Input
               type="number"
               min="1"
@@ -198,12 +198,12 @@ export function DamagedForm({ onClose, products, onSave, saving, initialMaterial
               value={form.quantity || ""}
               onChange={(e) => handleQuantityChange(e.target.value)}
               className="bg-white border-slate-200 h-9 text-xs tabular-nums"
-              placeholder={t("damaged.form.quantityPlaceholder", { namespace: "inventory", fallback: "أدخل الكمية..." })}
+              placeholder={t("damaged.form.quantityPlaceholder", { namespace: "inventory",  })}
             />
           </div>
 
           <CurrencyField
-            label={t("damaged.form.costImpact", { namespace: "inventory", fallback: "تأثير التكلفة" })}
+            label={t("damaged.form.costImpact", { namespace: "inventory",  })}
             currency={currencyField.currency}
             onCurrencyChange={currencyField.setCurrency}
             amount={form.cost_impact || ""}
@@ -223,7 +223,7 @@ export function DamagedForm({ onClose, products, onSave, saving, initialMaterial
           />
 
           <div className="space-y-2">
-            <FieldLabel>{t("damaged.form.date", { namespace: "inventory", fallback: "تاريخ التلف" })}</FieldLabel>
+            <FieldLabel>{t("damaged.form.date", { namespace: "inventory",  })}</FieldLabel>
             <Input
               type="date"
               value={form.damage_date?.slice(0, 10) ?? ""}
@@ -233,11 +233,11 @@ export function DamagedForm({ onClose, products, onSave, saving, initialMaterial
           </div>
 
           <div className="space-y-2">
-            <FieldLabel>{t("damaged.form.reason", { namespace: "inventory", fallback: "سبب التلف" })}</FieldLabel>
+            <FieldLabel>{t("damaged.form.reason", { namespace: "inventory",  })}</FieldLabel>
             <Textarea
               value={form.reason ?? ""}
               onChange={(e) => setForm((p) => ({ ...p, reason: e.target.value }))}
-              placeholder={t("damaged.form.reasonPlaceholder", { namespace: "inventory", fallback: "استهلاك، كسر، انتهاء صلاحية... (اختياري)" })}
+              placeholder={t("damaged.form.reasonPlaceholder", { namespace: "inventory",  })}
               className="min-h-[60px] bg-white border-slate-200"
             />
           </div>

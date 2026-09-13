@@ -24,7 +24,7 @@ export function OpeningDashboard({ snapshot, onOpenSection, loading = false, foo
   if (loading) {
     return (
       <div className="rounded-xl border border-slate-200 bg-white p-6 text-center text-xs text-slate-400 font-semibold">
-        {t("openingBalance.loadingPosition", { namespace: "accounting", fallback: "جارٍ تحميل المركز الافتتاحي..." })}
+        {t("openingBalance.loadingPosition", { namespace: "accounting",  })}
       </div>
     );
   }
@@ -32,9 +32,9 @@ export function OpeningDashboard({ snapshot, onOpenSection, loading = false, foo
   if (!snapshot.hasData) {
     return (
       <div className="rounded-xl border border-slate-200 bg-white p-6 space-y-2">
-        <p className="text-sm font-bold text-slate-700">{t("openingBalance.noOpenBalances", { namespace: "accounting", fallback: "لا توجد أرصدة مفتوحة بعد" })}</p>
+        <p className="text-sm font-bold text-slate-700">{t("openingBalance.noOpenBalances", { namespace: "accounting",  })}</p>
         <p className="text-xs text-slate-500">
-          {t("openingBalance.noOpenBalancesDesc", { namespace: "accounting", fallback: "ابدأ من معالج التحويل الموجّه لأدخل أرصدة الأقسام واحداً تلو الآخر، ثم عد إلى هذه النظرة لمتابعة الجاهزية." })}
+          {t("openingBalance.noOpenBalancesDesc", { namespace: "accounting",  })}
         </p>
         {footer}
       </div>
@@ -45,25 +45,25 @@ export function OpeningDashboard({ snapshot, onOpenSection, loading = false, foo
     <div className="space-y-4" dir="rtl">
       {/* Accounting-equation summary strip */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <SummaryTile label={t("openingBalance.totalAssets", { namespace: "accounting", fallback: "إجمالي الأصول" })} value={snapshot.totalAssets} tone="text-blue-700" />
-        <SummaryTile label={t("openingBalance.totalLiabilities", { namespace: "accounting", fallback: "إجمالي الخصوم" })} value={snapshot.totalLiabilities} tone="text-emerald-700" />
-        <SummaryTile label={t("openingBalance.totalEquity", { namespace: "accounting", fallback: "إجمالي حقوق الملكية" })} value={snapshot.totalEquity} tone="text-indigo-700" />
+        <SummaryTile label={t("openingBalance.totalAssets", { namespace: "accounting",  })} value={snapshot.totalAssets} tone="text-blue-700" />
+        <SummaryTile label={t("openingBalance.totalLiabilities", { namespace: "accounting",  })} value={snapshot.totalLiabilities} tone="text-emerald-700" />
+        <SummaryTile label={t("openingBalance.totalEquity", { namespace: "accounting",  })} value={snapshot.totalEquity} tone="text-indigo-700" />
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
         {snapshot.status && <StatusBadge status={snapshot.status} />}
         <Badge className={cn("border font-bold", snapshot.balanced ? "bg-green-50 text-green-700 border-green-200" : "bg-red-50 text-red-600 border-red-200")}>
-          {snapshot.balanced ? t("openingBalance.balanced", { namespace: "accounting", fallback: "متوازن ✓" }) : t("openingBalance.unbalanced", { namespace: "accounting", fallback: "غير متوازن" })}
+          {snapshot.balanced ? t("openingBalance.balanced", { namespace: "accounting",  }) : t("openingBalance.unbalanced", { namespace: "accounting",  })}
         </Badge>
         {snapshot.readyToLock && (
-          <Badge className="border border-indigo-200 bg-indigo-50 text-indigo-700 font-bold">{t("openingBalance.readyToPost", { namespace: "accounting", fallback: "جاهز للترحيل والقفل ✓" })}</Badge>
+          <Badge className="border border-indigo-200 bg-indigo-50 text-indigo-700 font-bold">{t("openingBalance.readyToPost", { namespace: "accounting",  })}</Badge>
         )}
       </div>
 
       {snapshot.blockers.length > 0 && (
         <div className="rounded-lg border border-amber-200 bg-amber-50/60 p-3 space-y-1">
           <p className="text-xs font-bold text-amber-700 flex items-center gap-1.5">
-            <AlertTriangle className="w-4 h-4" /> {t("openingBalance.wizardBlockerHint", { namespace: "accounting", fallback: "المعالج لن يُقبل الترحيل حتى تُحل المعطيات التالية:" })}
+            <AlertTriangle className="w-4 h-4" /> {t("openingBalance.wizardBlockerHint", { namespace: "accounting",  })}
           </p>
           <ul className="list-disc pe-5 space-y-0.5">
             {snapshot.blockers.map((b, i) => (
@@ -121,7 +121,7 @@ function SectionCard({ section, onOpen }: { section: OpeningSection; onOpen?: ()
       <div className="text-2xs font-semibold text-slate-400 truncate">
         {section.done
           ? section.lines.slice(0, 2).map((l) => `${l.code} ${l.name_ar}`).join(" · ")
-          : t("openingBalance.waitingForData", { namespace: "accounting", fallback: "بانتظار إدخال الأرصدة" })}
+          : t("openingBalance.waitingForData", { namespace: "accounting",  })}
       </div>
     </button>
   );

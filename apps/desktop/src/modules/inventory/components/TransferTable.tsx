@@ -106,12 +106,12 @@ export function TransferTable({ movements, warehouses, className, onView, onEdit
   const columns = useMemo<UnifiedColumn<TransferRow>[]>(() => {
     const cols: UnifiedColumn<TransferRow>[] = [
     {
-      id: 'material_name', header: t('labels.material', { namespace: 'inventory', fallback: 'المادة' }), label: t('labels.material', { namespace: 'inventory', fallback: 'المادة' }),
+      id: 'material_name', header: t('labels.material', { namespace: 'inventory',  }), label: t('labels.material', { namespace: 'inventory',  }),
       accessor: (r) => r.material_name || '—',
       className: 'font-bold text-slate-900'
     },
     {
-      id: 'source', header: t('transfers.fromWarehouse', { namespace: 'inventory', fallback: 'من مستودع' }), label: t('transfers.fromWarehouse', { namespace: 'inventory', fallback: 'من مستودع' }),
+      id: 'source', header: t('transfers.fromWarehouse', { namespace: 'inventory',  }), label: t('transfers.fromWarehouse', { namespace: 'inventory',  }),
       accessor: (r) => (
         <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-blue-50 text-blue-700 border border-blue-100">
           {r.source_warehouse_name}
@@ -119,7 +119,7 @@ export function TransferTable({ movements, warehouses, className, onView, onEdit
       ),
     },
     {
-      id: 'dest', header: t('transfers.toWarehouse', { namespace: 'inventory', fallback: 'إلى مستودع' }), label: t('transfers.toWarehouse', { namespace: 'inventory', fallback: 'إلى مستودع' }),
+      id: 'dest', header: t('transfers.toWarehouse', { namespace: 'inventory',  }), label: t('transfers.toWarehouse', { namespace: 'inventory',  }),
       accessor: (r) => (
         <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-100">
           {r.dest_warehouse_name}
@@ -127,7 +127,7 @@ export function TransferTable({ movements, warehouses, className, onView, onEdit
       ),
     },
     {
-      id: 'quantity', header: t('labels.quantity', { namespace: 'inventory', fallback: 'الكمية' }), label: t('labels.quantity', { namespace: 'inventory', fallback: 'الكمية' }),
+      id: 'quantity', header: t('labels.quantity', { namespace: 'inventory',  }), label: t('labels.quantity', { namespace: 'inventory',  }),
       accessor: (r) => (
         <span className="tabular-nums font-black text-base text-amber-600">
           {toLocalString(parseFloat(r.quantity))}
@@ -135,7 +135,7 @@ export function TransferTable({ movements, warehouses, className, onView, onEdit
       ),
     },
     {
-      id: 'reference', header: t('labels.reference', { namespace: 'inventory', fallback: 'المرجع' }), label: t('labels.reference', { namespace: 'inventory', fallback: 'المرجع' }),
+      id: 'reference', header: t('labels.reference', { namespace: 'inventory',  }), label: t('labels.reference', { namespace: 'inventory',  }),
       accessor: (r) => (
         <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold font-mono bg-slate-100 text-slate-700 border border-slate-200">
           {formatNumber(parseInt(r.reference) || 0)}
@@ -143,12 +143,12 @@ export function TransferTable({ movements, warehouses, className, onView, onEdit
       ),
     },
     {
-      id: 'notes', header: t('labels.note', { namespace: 'inventory', fallback: 'ملاحظة' }), label: t('labels.note', { namespace: 'inventory', fallback: 'ملاحظة' }),
+      id: 'notes', header: t('labels.note', { namespace: 'inventory',  }), label: t('labels.note', { namespace: 'inventory',  }),
       accessor: (r) => r.notes || '—',
       className: 'text-slate-600 text-xs max-w-[200px] truncate',
     },
     {
-      id: 'date', header: t('labels.date', { namespace: 'inventory', fallback: 'التاريخ' }), label: t('labels.date', { namespace: 'inventory', fallback: 'التاريخ' }),
+      id: 'date', header: t('labels.date', { namespace: 'inventory',  }), label: t('labels.date', { namespace: 'inventory',  }),
       accessor: (r) => formatDateTime(r.transfer_date),
       className: 'tabular-nums text-slate-500 font-medium'
     },
@@ -156,8 +156,8 @@ export function TransferTable({ movements, warehouses, className, onView, onEdit
     if (onView || onEdit || onDelete) {
       cols.push({
         id: 'actions',
-        header: t('labels.actions', { namespace: 'inventory', fallback: 'إجراءات' }),
-        label: t('labels.actions', { namespace: 'inventory', fallback: 'إجراءات' }),
+        header: t('labels.actions', { namespace: 'inventory',  }),
+        label: t('labels.actions', { namespace: 'inventory',  }),
         accessor: (r) => (
           <TableActions
             onView={onView ? () => onView(r) : undefined}
@@ -200,7 +200,7 @@ export function TransferTable({ movements, warehouses, className, onView, onEdit
     <TableShell
       search={search}
       onSearchChange={setSearch}
-      searchPlaceholder={t("transfers.table.searchPlaceholder", { namespace: "inventory", fallback: "بحث بالمادة أو المرجع..." })}
+      searchPlaceholder={t("transfers.table.searchPlaceholder", { namespace: "inventory",  })}
       columns={toolbarColumns}
       onColumnToggle={toggleColumn}
       onColumnsReset={resetToDefault}
@@ -223,7 +223,7 @@ export function TransferTable({ movements, warehouses, className, onView, onEdit
         }}
         onRowClick={handleRowClick}
         selectedId={selectedRef}
-        emptyMessage={search ? t("movements.emptySearch", { namespace: "inventory", fallback: "لا توجد نتائج تطابق معايير البحث" }) : t("transfers.table.empty", { namespace: "inventory", fallback: "لا توجد تحويلات مسجلة" })}
+        emptyMessage={search ? t("movements.emptySearch", { namespace: "inventory",  }) : t("transfers.table.empty", { namespace: "inventory",  })}
         summary={summaryColumns}
       />
     </TableShell>

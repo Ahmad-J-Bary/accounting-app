@@ -42,29 +42,29 @@ export function ExpenseDetailPanel({
 
   const actions: SidebarAction[] = [
     {
-      label: t("actions.edit", { namespace: "common", fallback: "تعديل" }),
+      label: t("actions.edit", { namespace: "common",  }),
       icon: <Pencil className="w-4 h-4" />,
       variant: "warning",
       onClick: () => onEdit(expense),
     },
     {
-      label: t("actions.delete", { namespace: "common", fallback: "حذف" }),
+      label: t("actions.delete", { namespace: "common",  }),
       icon: <Trash2 className="w-4 h-4" />,
       variant: "danger",
       onClick: () => {
-        if (confirm(t("expense.deleteConfirm", { namespace: "invoicing", vars: { name: expense.name_ar }, fallback: `هل أنت متأكد من حذف "${expense.name_ar}"؟` }))) {
+        if (confirm(t("expense.deleteConfirm", { namespace: "invoicing", vars: { name: expense.name_ar },  }))) {
           onDelete(expense.id);
         }
       },
     },
     {
-      label: t("action.journal", { namespace: "invoicing", fallback: "اليومية" }),
+      label: t("expense.journal", { namespace: "invoicing",  }),
       icon: <BookOpen className="w-4 h-4" />,
       variant: "primary",
       onClick: () =>
         openTab({
           id: `ledger-${expense.id}`,
-          title: t("expense.ledgerTabTitle", { namespace: "invoicing", vars: { name: expense.name_ar }, fallback: `حركة: ${expense.name_ar}` }),
+          title: t("expense.ledgerTabTitle", { namespace: "invoicing", vars: { name: expense.name_ar },  }),
           path: `/accounting/account-ledger/${expense.id}`,
           closable: true,
         }),
@@ -73,15 +73,15 @@ export function ExpenseDetailPanel({
 
   return (
     <SidebarShell isOpen={true} onClose={onClose}>
-      <SidebarHeader title={t("expense.detailsTitle", { namespace: "invoicing", fallback: "بيانات بند المصروف" })} onClose={onClose} />
+      <SidebarHeader title={t("expense.detailsTitle", { namespace: "invoicing",  })} onClose={onClose} />
       <SidebarActionBar actions={actions} />
       <SidebarBody>
         <div className="space-y-4 text-right">
           <SidebarDetailGrid
             columns={2}
             fields={[
-              { label: t("labels.accountNumber", { namespace: "invoicing", fallback: "رقم الحساب" }), value: displayCode },
-              { label: t("expense.itemName", { namespace: "invoicing", fallback: "اسم البند" }), value: expense.name_ar },
+              { label: t("labels.accountNumber", { namespace: "invoicing",  }), value: displayCode },
+              { label: t("expense.itemName", { namespace: "invoicing",  }), value: expense.name_ar },
             ]}
           />
           <SidebarDetailGrid
@@ -89,17 +89,17 @@ export function ExpenseDetailPanel({
             fields={[
               ...(canAccessOpeningWorkflow
                 ? [
-                    { label: t("expense.openingBalance", { namespace: "invoicing", fallback: "الرصيد الافتتاحي" }), value: expense.opening_balance || "0" },
-                    { label: t("expense.balanceDirection", { namespace: "invoicing", fallback: "اتجاه الرصيد" }), value: parseFloat(expense.debit || "0") > 0 ? t("expense.debitSide", { namespace: "invoicing", fallback: "مدين" }) : t("expense.creditSide", { namespace: "invoicing", fallback: "دائن" }) },
+                    { label: t("expense.openingBalance", { namespace: "invoicing",  }), value: expense.opening_balance || "0" },
+                    { label: t("expense.balanceDirection", { namespace: "invoicing",  }), value: parseFloat(expense.debit || "0") > 0 ? t("expense.debitSide", { namespace: "invoicing",  }) : t("expense.creditSide", { namespace: "invoicing",  }) },
                   ]
                 : []),
-              { label: t("labels.currency", { namespace: "common", fallback: "العملة" }), value: baseCurrency?.code || "" },
-              { label: t("expense.currentBalance", { namespace: "invoicing", fallback: "الرصيد الحالي" }), value: expense.balance || "0" },
+              { label: t("labels.currency", { namespace: "common",  }), value: baseCurrency?.code || "" },
+              { label: t("expense.currentBalance", { namespace: "invoicing",  }), value: expense.balance || "0" },
             ]}
           />
           {expense.notes && (
             <SidebarDetailGrid
-              fields={[{ label: t("labels.notes", { namespace: "common", fallback: "ملاحظات" }), value: expense.notes }]}
+              fields={[{ label: t("labels.notes", { namespace: "common",  }), value: expense.notes }]}
             />
           )}
         </div>

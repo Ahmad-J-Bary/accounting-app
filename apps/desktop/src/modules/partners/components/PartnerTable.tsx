@@ -66,8 +66,8 @@ export function PartnerTable({
     const cols: UnifiedColumn<PartnerWithRatios>[] = [
       {
         id: "name",
-        header: t("columns.partnerName", { namespace: "partners", fallback: "اسم الشريك" }),
-        label: t("columns.partnerName", { namespace: "partners", fallback: "اسم الشريك" }),
+        header: t("columns.partnerName", { namespace: "partners",  }),
+        label: t("columns.partnerName", { namespace: "partners",  }),
         accessor: (p: PartnerWithRatios) => (
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600 shrink-0">
@@ -84,8 +84,8 @@ export function PartnerTable({
       const isBase = isBaseCurrency(curr.code);
       cols.push({
         id: `amount_${curr.code}`,
-        header: t("columns.capital", { namespace: "partners", vars: { currency: cs(symbol) }, fallback: `رأس المال {{currency}}` }),
-        label: t("columns.capital", { namespace: "partners", vars: { currency: cs(symbol) }, fallback: `رأس المال {{currency}}` }),
+        header: t("columns.capital", { namespace: "partners", vars: { currency: cs(symbol) },  }),
+        label: t("columns.capital", { namespace: "partners", vars: { currency: cs(symbol) },  }),
         accessor: (p: PartnerWithRatios) => {
           if (p.displayAmountBase === 0) return "";
           return formatAmount(p.displayAmountBase, { currencyCode: curr.code });
@@ -99,8 +99,8 @@ export function PartnerTable({
     cols.push(
       {
         id: "capital_ratio",
-        header: t("columns.capitalRatio", { namespace: "partners", fallback: "نسبة رأس المال" }),
-        label: t("columns.capitalRatioFull", { namespace: "partners", fallback: "نسبة المساهمة في رأس المال" }),
+        header: t("columns.capitalRatio", { namespace: "partners",  }),
+        label: t("columns.capitalRatioFull", { namespace: "partners",  }),
         accessor: (p: PartnerWithRatios) => (
           <span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 text-[10px] font-black tabular-nums">
             {toFixed(p.calculatedCapitalRatio, 2)}%
@@ -109,8 +109,8 @@ export function PartnerTable({
       },
       {
         id: "ratio",
-        header: t("columns.profitRatio", { namespace: "partners", fallback: "نسبة الأرباح" }),
-        label: t("columns.profitRatioFull", { namespace: "partners", fallback: "نسبة توزيع الأرباح" }),
+        header: t("columns.profitRatio", { namespace: "partners",  }),
+        label: t("columns.profitRatioFull", { namespace: "partners",  }),
         accessor: (p: PartnerWithRatios) => (
           <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-black tabular-nums">
             {toFixed(p.calculatedRatio, 2)}%
@@ -119,16 +119,16 @@ export function PartnerTable({
       },
       {
         id: "actions",
-        header: t("columns.actions", { namespace: "partners", fallback: "إجراءات" }),
-        label: t("columns.actions", { namespace: "partners", fallback: "إجراءات" }),
+        header: t("columns.actions", { namespace: "partners",  }),
+        label: t("columns.actions", { namespace: "partners",  }),
         accessor: (p: PartnerWithRatios) => (
           <TableActions
             onView={() => onView(p)}
             onEdit={() => onEdit(p)}
             onDelete={() => onDelete(p.id)}
             extraActions={[
-              { label: t("actions.journal", { namespace: "partners", fallback: "اليومية" }), icon: NotebookText, onClick: () => onJournal(p) },
-              { label: t("actions.drawingsVoucher", { namespace: "partners", fallback: "سند مسحوبات" }), icon: Receipt, onClick: () => onDocument(p) },
+              { label: t("actions.journal", { namespace: "partners",  }), icon: NotebookText, onClick: () => onJournal(p) },
+              { label: t("actions.drawingsVoucher", { namespace: "partners",  }), icon: Receipt, onClick: () => onDocument(p) },
             ]}
           />
         )
@@ -165,11 +165,11 @@ export function PartnerTable({
       const id = col.id;
       switch (id) {
         case "name":
-          return { id: "count", columnId: "name", label: "", value: t("summary.count", { namespace: "partners", vars: { count: sortedPartners.length }, fallback: `{{count}} شريك` }), className: "text-slate-500 font-medium" };
+          return { id: "count", columnId: "name", label: "", value: t("summary.count", { namespace: "partners", vars: { count: sortedPartners.length },  }), className: "text-slate-500 font-medium" };
         case "capital_ratio":
-          return { id: "total_capital_ratio", columnId: "capital_ratio", label: t("summary.total", { namespace: "partners", fallback: "المجموع" }), value: `${toFixed(totalCapitalRatio, 2)}%`, className: "text-blue-700 font-black" };
+          return { id: "total_capital_ratio", columnId: "capital_ratio", label: t("summary.total", { namespace: "partners",  }), value: `${toFixed(totalCapitalRatio, 2)}%`, className: "text-blue-700 font-black" };
         case "ratio":
-          return { id: "total_ratio", columnId: "ratio", label: t("summary.total", { namespace: "partners", fallback: "المجموع" }), value: `${toFixed(totalRatio, 2)}%`, className: "text-emerald-700 font-black" };
+          return { id: "total_ratio", columnId: "ratio", label: t("summary.total", { namespace: "partners",  }), value: `${toFixed(totalRatio, 2)}%`, className: "text-emerald-700 font-black" };
         default: {
           const match = id.match(/^amount_(.+)$/);
           if (match) {
@@ -178,7 +178,7 @@ export function PartnerTable({
             return {
               id: `total_${id}`,
               columnId: id,
-              label: t("summary.grandTotal", { namespace: "partners", fallback: "الإجمالي" }),
+              label: t("summary.grandTotal", { namespace: "partners",  }),
               value: baseTotal > 0 ? formatAmount(baseTotal, { currencyCode: currCode }) : "—",
               className: isBase
                 ? "text-slate-900 font-black"
@@ -193,10 +193,10 @@ export function PartnerTable({
 
   return (
     <TableShell
-      title={t("table.title", { namespace: "partners", fallback: "سجل الشركاء" })}
+      title={t("table.title", { namespace: "partners",  })}
       search={search}
       onSearchChange={onSearchChange}
-      searchPlaceholder={t("table.searchPlaceholder", { namespace: "partners", fallback: "بحث باسم الشريك..." })}
+      searchPlaceholder={t("table.searchPlaceholder", { namespace: "partners",  })}
       columns={toolbarColumns}
       onColumnToggle={toggleColumn}
       onColumnsReset={resetToDefault}
@@ -219,7 +219,7 @@ export function PartnerTable({
         }}
         onRowClick={onRowClick}
         selectedId={selectedId}
-        emptyMessage={search ? t("table.emptySearch", { namespace: "partners", fallback: "لا توجد نتائج بحث تطابق استعلامك" }) : t("table.empty", { namespace: "partners", fallback: "لا يوجد شركاء مسجلون حالياً" })}
+        emptyMessage={search ? t("table.emptySearch", { namespace: "partners",  }) : t("table.empty", { namespace: "partners",  })}
         summary={summaryColumns}
       />
     </TableShell>

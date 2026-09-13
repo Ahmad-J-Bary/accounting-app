@@ -43,7 +43,7 @@ export default function Partners() {
     queryKey: ["partners"],
     fetchData: () => partnerService.listPartners(),
     searchFields: ["name"],
-    errorLabel: t("page.loadError", { namespace: "partners", fallback: "فشل جلب الشركاء" }),
+    errorLabel: t("page.loadError", { namespace: "partners",  }),
   });
 
   const [activePanel, setActivePanel] = useState<"edit" | "drawings" | "view" | "profit-distribution" | null>(null);
@@ -93,7 +93,7 @@ export default function Partners() {
       setSaving(true);
       if (payload.id) {
         await partnerService.updatePartner(payload);
-        toast.success(t("toast.updateSuccess", { namespace: "partners", fallback: "تم التحديث بنجاح" }));
+        toast.success(t("toast.updateSuccess", { namespace: "partners",  }));
       } else {
         const partnerId = await partnerService.addPartner(payload);
         // Two accounting-start modes (company-level setting):
@@ -111,35 +111,35 @@ export default function Partners() {
         }
         toast.success(
           startMode === START_MODE_EXISTING
-            ? t("toast.addedOpening", { namespace: "partners", fallback: "تمت إضافة الشريك (رأس مال افتتاحي، بدون حركة صندوق)" })
-            : t("toast.added", { namespace: "partners", fallback: "تمت الإضافة بنجاح" }),
+            ? t("toast.addedOpening", { namespace: "partners",  })
+            : t("toast.added", { namespace: "partners",  }),
         );
       }
       setActivePanel(null);
       await invalidateKeys(queryClient, PARTNER_MUTATION_KEYS);
       refresh(true);
     } catch (error) {
-      toast.error(t("toast.genericError", { namespace: "partners", vars: { error: String(error) }, fallback: "خطأ: {{error}}" }));
+      toast.error(t("toast.genericError", { namespace: "partners", vars: { error: String(error) },  }));
     } finally {
       setSaving(false);
     }
   };
 
   const handleDelete = useCallback(async (id: string) => {
-    if (!confirm(t("confirm.delete", { namespace: "partners", fallback: "هل أنت متأكد من حذف هذا الشريك؟" }))) return;
+    if (!confirm(t("confirm.delete", { namespace: "partners",  }))) return;
     try {
       await partnerService.deletePartner(id);
-      toast.success(t("toast.deleted", { namespace: "partners", fallback: "تم الحذف بنجاح" }));
+      toast.success(t("toast.deleted", { namespace: "partners",  }));
       await invalidateKeys(queryClient, PARTNER_MUTATION_KEYS);
       refresh(true);
     } catch (error) {
-      toast.error(t("toast.deleteError", { namespace: "partners", vars: { error: String(error) }, fallback: "فشل الحذف: {{error}}" }));
+      toast.error(t("toast.deleteError", { namespace: "partners", vars: { error: String(error) },  }));
     }
   }, [refresh, t]);
 
   const handleSaveDrawings = async (payload: CreatePaymentRequest) => {
     if (!selectedPartner?.drawings_account_id) {
-      toast.error(t("toast.drawingsAccountNotConfigured", { namespace: "partners", fallback: "لم يتم إعداد حساب المسحوبات لهذا الشريك" }));
+      toast.error(t("toast.drawingsAccountNotConfigured", { namespace: "partners",  }));
       return;
     }
     try {
@@ -148,9 +148,9 @@ export default function Partners() {
       await invalidateKeys(queryClient, PARTNER_MUTATION_KEYS);
       await refresh(true);
       setActivePanel(null);
-      toast.success(t("toast.drawingsVoucherSaved", { namespace: "partners", fallback: "تم تسجيل سند المسحوبات بنجاح" }));
+      toast.success(t("toast.drawingsVoucherSaved", { namespace: "partners",  }));
     } catch (error) {
-      toast.error(t("toast.voucherSaveFailed", { namespace: "partners", vars: { error: String(error) }, fallback: "فشل تسجيل السند: {{error}}" }));
+      toast.error(t("toast.voucherSaveFailed", { namespace: "partners", vars: { error: String(error) },  }));
     } finally {
       setDrawingsSaving(false);
     }
@@ -173,9 +173,9 @@ export default function Partners() {
       setEditPartner(null);
       await invalidateKeys(queryClient, PARTNER_MUTATION_KEYS);
       refresh(true);
-      toast.success(t("toast.capitalSaved", { namespace: "partners", fallback: "تم تسجيل مساهمة رأس المال بنجاح" }));
+      toast.success(t("toast.capitalSaved", { namespace: "partners",  }));
     } catch (error) {
-      toast.error(t("toast.capitalFailed", { namespace: "partners", vars: { error: String(error) }, fallback: "فشل تسجيل المساهمة: {{error}}" }));
+      toast.error(t("toast.capitalFailed", { namespace: "partners", vars: { error: String(error) },  }));
     } finally {
       setCapitalSubmitting(false);
     }
@@ -186,14 +186,14 @@ export default function Partners() {
   return (
     <>
       <OperationalTableTemplate
-      title={t("page.title", { namespace: "partners", fallback: "الشركاء ورأس المال" })}
+      title={t("page.title", { namespace: "partners",  })}
       toolbar={
         <PartnersToolbar
           selectedPartner={selectedPartner}
           onOpenDrawingsLedger={(_id, accountId, name) =>
             openTab({
               id: `ledger-${accountId}`,
-              title: t("page.ledgerTab", { namespace: "partners", vars: { name }, fallback: "مسحوبات {{name}}" }),
+              title: t("page.ledgerTab", { namespace: "partners", vars: { name },  }),
               path: `/accounting/account-ledger/${accountId}`,
               closable: true,
             })
@@ -203,7 +203,7 @@ export default function Partners() {
           onOpenPartnerStatement={() =>
             openTab({
               id: "partner-rights",
-              title: t("page.statementTab", { namespace: "partners", fallback: "الشركاء وحقوقهم" }),
+              title: t("page.statementTab", { namespace: "partners",  }),
               path: "/accounting/reports/partners",
               closable: true,
             })
@@ -220,16 +220,16 @@ export default function Partners() {
           onSearchChange={setSearch}
           filterBar={
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider whitespace-nowrap">{t("filter.distribution", { namespace: "partners", fallback: "التوزيع:" })}</span>
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider whitespace-nowrap">{t("filter.distribution", { namespace: "partners",  })}</span>
               <Select value={globalStrategy} onValueChange={persistStrategy}>
                 <SelectTrigger className="w-[120px] h-8 bg-white font-bold shadow-sm border-slate-200 text-xs">
-                  <SelectValue placeholder={t("filter.select", { namespace: "partners", fallback: "اختر" })} />
+                  <SelectValue placeholder={t("filter.select", { namespace: "partners",  })} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="auto" className="text-xs font-bold">{t("filter.strategyAuto", { namespace: "partners", fallback: "تلقائي حسب الشريك" })}</SelectItem>
-                  <SelectItem value="BasedOnCapitalLocal" className="text-xs font-bold">{t("filter.strategyCapitalLocal", { namespace: "partners", fallback: "رأس المال المحلي" })}</SelectItem>
-                  <SelectItem value="BasedOnCapitalOriginal" className="text-xs font-bold">{t("filter.strategyCapitalOriginal", { namespace: "partners", fallback: "رأس المال الأصلي" })}</SelectItem>
-                  <SelectItem value="Manual" className="text-xs font-bold">{t("filter.strategyManual", { namespace: "partners", fallback: "يدوي" })}</SelectItem>
+                  <SelectItem value="auto" className="text-xs font-bold">{t("filter.strategyAuto", { namespace: "partners",  })}</SelectItem>
+                  <SelectItem value="BasedOnCapitalLocal" className="text-xs font-bold">{t("filter.strategyCapitalLocal", { namespace: "partners",  })}</SelectItem>
+                  <SelectItem value="BasedOnCapitalOriginal" className="text-xs font-bold">{t("filter.strategyCapitalOriginal", { namespace: "partners",  })}</SelectItem>
+                  <SelectItem value="Manual" className="text-xs font-bold">{t("filter.strategyManual", { namespace: "partners",  })}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -239,10 +239,10 @@ export default function Partners() {
           onDelete={(id) => handleDelete(id)}
           onJournal={(p) => p.drawings_account_id ? openTab({
             id: `ledger-${p.drawings_account_id}`,
-            title: t("page.ledgerTab", { namespace: "partners", vars: { name: p.name }, fallback: "مسحوبات {{name}}" }),
+            title: t("page.ledgerTab", { namespace: "partners", vars: { name: p.name },  }),
             path: `/accounting/account-ledger/${p.drawings_account_id}`,
             closable: true
-          }) : toast.error(t("filter.noDrawingsAccount", { namespace: "partners", fallback: "لا يوجد حساب مسحوبات مرتبط بهذا الشريك" }))}
+          }) : toast.error(t("filter.noDrawingsAccount", { namespace: "partners",  }))}
           onDocument={(p) => {
             setSelectedId(p.id);
             setActivePanel("drawings");
@@ -256,8 +256,8 @@ export default function Partners() {
       }
       bottomWidgets={
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <ChartCard title={t("chart.capitalShares", { namespace: "partners", fallback: "حصص رأس المال" })} icon={PieChartIcon} data={partnersWithRatios.map(p => ({ name: p.name, value: p.calculatedCapitalRatio }))} formatter={(v: number) => `${v.toFixed(2)}%`} />
-          <ChartCard title={t("chart.profitDistribution", { namespace: "partners", fallback: "توزيع الأرباح" })} icon={TrendingUp} data={partnersWithRatios.map(p => ({ name: p.name, value: p.calculatedRatio }))} formatter={(v: number) => `${v.toFixed(2)}%`} />
+          <ChartCard title={t("chart.capitalShares", { namespace: "partners",  })} icon={PieChartIcon} data={partnersWithRatios.map(p => ({ name: p.name, value: p.calculatedCapitalRatio }))} formatter={(v: number) => `${v.toFixed(2)}%`} />
+          <ChartCard title={t("chart.profitDistribution", { namespace: "partners",  })} icon={TrendingUp} data={partnersWithRatios.map(p => ({ name: p.name, value: p.calculatedRatio }))} formatter={(v: number) => `${v.toFixed(2)}%`} />
         </div>
       }
       sidePanel={

@@ -22,12 +22,12 @@ export function CategoryDetailsPanel({ category, prefix }: CategoryDetailsPanelP
   return (
     <div className="grid gap-3">
       <div className="rounded-md border bg-slate-50 p-3">
-        <p className="text-[11px] text-slate-500 mb-1">{t("categories.details.categoryName", { namespace: "inventory", fallback: "اسم التصنيف" })}</p>
+        <p className="text-[11px] text-slate-500 mb-1">{t("categories.details.categoryName", { namespace: "inventory",  })}</p>
         <p className="font-semibold text-slate-800">{category.name}</p>
       </div>
       {displayPrefix && (
         <div className="rounded-md border bg-slate-50 p-3">
-          <p className="text-[11px] text-slate-500 mb-1">{t("categories.details.prefix", { namespace: "inventory", fallback: "البادئة" })}</p>
+          <p className="text-[11px] text-slate-500 mb-1">{t("categories.details.prefix", { namespace: "inventory",  })}</p>
           <p className="font-semibold tabular-nums">{displayPrefix}</p>
         </div>
       )}

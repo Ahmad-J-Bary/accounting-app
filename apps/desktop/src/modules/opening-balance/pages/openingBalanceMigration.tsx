@@ -89,11 +89,11 @@ export default function OpeningBalanceMigration() {
     setTransitioningTo(id);
     try {
       await openingBalanceService.lockMigration(id);
-      toast.success(t("openingBalance.lockMigration", { namespace: "accounting", fallback: "تم قفل الترحيل" }));
+      toast.success(t("openingBalance.lockMigration", { namespace: "accounting",  }));
       refetchMigrations();
       await invalidateAccountingMutationQueries(queryClient);
     } catch (e) {
-      toast.error(t("openingBalance.lockFailed", { namespace: "accounting", vars: { error: String(e) }, fallback: "فشل القفل: " + e }));
+      toast.error(t("openingBalance.lockFailed", { namespace: "accounting", vars: { error: String(e) } }));
     } finally {
       setTransitioningTo(null);
     }
@@ -103,11 +103,11 @@ export default function OpeningBalanceMigration() {
     setCancellingId(id);
     try {
       await openingBalanceService.cancelMigration(id);
-      toast.success(t("openingBalance.cancelMigrationSuccess", { namespace: "accounting", fallback: "تم إلغاء ترحيل الرصيد الافتتاحي وتسجيل القيد العكسي" }));
+      toast.success(t("openingBalance.cancelMigrationSuccess", { namespace: "accounting",  }));
       refetchMigrations();
       await invalidateAccountingMutationQueries(queryClient);
     } catch (e) {
-      toast.error(t("openingBalance.cancelMigrationFailed", { namespace: "accounting", vars: { error: String(e) }, fallback: "فشل الإلغاء: " + e }));
+      toast.error(t("openingBalance.cancelMigrationFailed", { namespace: "accounting", vars: { error: String(e) } }));
     } finally {
       setCancellingId(null);
     }
@@ -117,10 +117,10 @@ export default function OpeningBalanceMigration() {
     setTransitioningTo(id);
     try {
       await openingBalanceService.reopenMigration(id);
-      toast.success(t("openingBalance.reopenMigrationSuccess", { namespace: "accounting", fallback: "تمت إعادة فتح الترحيل كمسودة" }));
+      toast.success(t("openingBalance.reopenMigrationSuccess", { namespace: "accounting",  }));
       refetchMigrations();
     } catch (e) {
-      toast.error(t("openingBalance.reopenMigrationFailed", { namespace: "accounting", vars: { error: String(e) }, fallback: "فشل إعادة الفتح: " + e }));
+      toast.error(t("openingBalance.reopenMigrationFailed", { namespace: "accounting", vars: { error: String(e) } }));
     } finally {
       setTransitioningTo(null);
     }
@@ -140,14 +140,14 @@ export default function OpeningBalanceMigration() {
   );
 
   const handleShowPosition = async () => {
-    if (!positionId) return toast.error(t("openingBalance.selectMigration", { namespace: "accounting", fallback: "اختر ترحيلاً لعرض المركز" }));
+    if (!positionId) return toast.error(t("openingBalance.selectMigration", { namespace: "accounting",  }));
     setPositionLoading(true);
     setPosition(null);
     try {
       const res = await openingBalanceService.getOpeningPositionControl(positionId);
       setPosition(res);
     } catch (e) {
-      toast.error(t("openingBalance.loadPositionFailed", { namespace: "accounting", vars: { error: String(e) }, fallback: "فشل تحميل المركز الافتتاحي: " + e }));
+      toast.error(t("openingBalance.loadPositionFailed", { namespace: "accounting", vars: { error: String(e) } }));
     } finally {
       setPositionLoading(false);
     }
@@ -175,7 +175,7 @@ export default function OpeningBalanceMigration() {
     openingBalanceService
       .getOpeningPositionControl(positionId)
       .then((res) => setPosition(res))
-      .catch((e) => toast.error(t("openingBalance.loadPositionFailed", { namespace: "accounting", vars: { error: String(e) }, fallback: "فشل تحميل المركز الافتتاحي: " + e })))
+      .catch((e) => toast.error(t("openingBalance.loadPositionFailed", { namespace: "accounting", vars: { error: String(e) } })))
       .finally(() => setPositionLoading(false));
   }, [positionId, t]);
 
@@ -189,7 +189,7 @@ export default function OpeningBalanceMigration() {
     openingBalanceService
       .getReconciliation(reconId)
       .then((res) => setReconciliation(res))
-      .catch((e) => toast.error(t("openingBalance.loadReconFailed", { namespace: "accounting", vars: { error: String(e) }, fallback: "فشل تحميل التسوية: " + e })))
+      .catch((e) => toast.error(t("openingBalance.loadReconFailed", { namespace: "accounting", vars: { error: String(e) } })))
       .finally(() => setReconLoading(false));
   }, [reconId, t]);
 
@@ -208,13 +208,13 @@ export default function OpeningBalanceMigration() {
   return (
     <ErrorBoundary>
     <OperationalTableTemplate
-      title={openingClosed ? t("openingBalance.migrationPageTitle.closed", { namespace: "accounting", fallback: "اكتمال إعداد الشركة" }) : t("openingBalance.migrationPageTitle.open", { namespace: "accounting", fallback: "رصيد افتتاح الشركة" })}
+      title={openingClosed ? t("openingBalance.migrationPageTitle.closed", { namespace: "accounting",  }) : t("openingBalance.migrationPageTitle.open", { namespace: "accounting",  })}
       badge={<Badge className="bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-50">{INIT_STATE_LABELS[initState]}</Badge>}
       toolbar={
         openingClosed ? undefined : (
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={() => refetchMigrations()} className="border-slate-200 hover:bg-slate-50 font-bold">
-              <RefreshCw className="w-4 h-4 ms-2 text-slate-500" /> {t("openingBalance.refreshButton", { namespace: "accounting", fallback: "تحديث" })}
+              <RefreshCw className="w-4 h-4 ms-2 text-slate-500" /> {t("openingBalance.refreshButton", { namespace: "accounting",  })}
             </Button>
           </div>
         )
@@ -224,11 +224,11 @@ export default function OpeningBalanceMigration() {
           <Tabs value={openingClosed ? "wizard" : tab} onValueChange={(v) => !openingClosed && setTab(v)} dir="rtl">
               {!openingClosed && (
                 <TabsList className="bg-white border border-slate-200 p-1 h-11 rounded-xl shadow-sm mb-1">
-                  <TabsTrigger value="overview" className="rounded-lg px-5 gap-1.5 data-[state=active]:bg-blue-600 data-[state=active]:text-white transition-all font-bold">{t("openingBalance.tabOverview", { namespace: "accounting", fallback: "نظرة عامة" })}</TabsTrigger>
-                  <TabsTrigger value="list" className="rounded-lg px-5 gap-1.5 data-[state=active]:bg-blue-600 data-[state=active]:text-white transition-all font-bold">{t("openingBalance.tabList", { namespace: "accounting", fallback: "قائمة الترحيلات" })}</TabsTrigger>
-                  <TabsTrigger value="position" className="rounded-lg px-5 gap-1.5 data-[state=active]:bg-blue-600 data-[state=active]:text-white transition-all font-bold">{t("openingBalance.tabPosition", { namespace: "accounting", fallback: "المركز والتسوية" })}</TabsTrigger>
+                  <TabsTrigger value="overview" className="rounded-lg px-5 gap-1.5 data-[state=active]:bg-blue-600 data-[state=active]:text-white transition-all font-bold">{t("openingBalance.tabOverview", { namespace: "accounting",  })}</TabsTrigger>
+                  <TabsTrigger value="list" className="rounded-lg px-5 gap-1.5 data-[state=active]:bg-blue-600 data-[state=active]:text-white transition-all font-bold">{t("openingBalance.tabList", { namespace: "accounting",  })}</TabsTrigger>
+                  <TabsTrigger value="position" className="rounded-lg px-5 gap-1.5 data-[state=active]:bg-blue-600 data-[state=active]:text-white transition-all font-bold">{t("openingBalance.tabPosition", { namespace: "accounting",  })}</TabsTrigger>
                   <TabsTrigger value="wizard" className="rounded-lg px-5 gap-1.5 data-[state=active]:bg-blue-600 data-[state=active]:text-white transition-all font-bold">
-                    {t("openingBalance.tabWizard", { namespace: "accounting", fallback: "المعالج" })}
+                    {t("openingBalance.tabWizard", { namespace: "accounting",  })}
                   </TabsTrigger>
                 </TabsList>
               )}
@@ -244,11 +244,11 @@ export default function OpeningBalanceMigration() {
                   footer={
                     <div className="rounded-xl border border-slate-200 bg-white p-4 flex items-center justify-between gap-3">
                       <div className="text-xs text-slate-500">
-                        {t("openingBalance.cutoverDate", { namespace: "accounting", fallback: "تاريخ القطع" })}: <span className="font-bold text-slate-700">{toLocalDateStr(latestMigration.cutover_date)}</span>
+                        {t("openingBalance.cutoverDate", { namespace: "accounting",  })}: <span className="font-bold text-slate-700">{toLocalDateStr(latestMigration.cutover_date)}</span>
                         {latestMigration.notes ? ` — ${latestMigration.notes}` : ""}
                       </div>
                       <Button size="sm" variant="outline" onClick={() => setTab("wizard")} className="border-slate-200 font-bold">
-                        <ArrowLeft className="w-4 h-4 ms-1.5" /> {t("openingBalance.continueWizard", { namespace: "accounting", fallback: "متابعة في المعالج" })}
+                        <ArrowLeft className="w-4 h-4 ms-1.5" /> {t("openingBalance.continueWizard", { namespace: "accounting",  })}
                       </Button>
                     </div>
                   }
@@ -299,13 +299,13 @@ export default function OpeningBalanceMigration() {
       <ConfirmDialog
         open={!!confirmAction}
         onOpenChange={(open) => !open && setConfirmAction(null)}
-        title={confirmAction?.type === "cancel" ? t("openingBalance.confirmCancelTitle", { namespace: "accounting", fallback: "إلغاء ترحيل الرصيد الافتتاحي" }) : t("openingBalance.confirmReopenTitle", { namespace: "accounting", fallback: "إعادة فتح الترحيل" })}
+        title={confirmAction?.type === "cancel" ? t("openingBalance.confirmCancelTitle", { namespace: "accounting",  }) : t("openingBalance.confirmReopenTitle", { namespace: "accounting",  })}
         description={
           confirmAction?.type === "cancel"
-            ? t("openingBalance.confirmCancelDesc", { namespace: "accounting", fallback: "سيتم ترحيل قيد عكسي يُلغي الرصيد الافتتاحي ويميّز الترحيل كملغى. هل تريد المتابعة؟" })
-            : t("openingBalance.confirmReopenDesc", { namespace: "accounting", fallback: "ستُعاد فتح الترحيل الملغى كمسودة لتعديل بنوده وإعادة سير التحقق. هل تريد المتابعة؟" })
+            ? t("openingBalance.confirmCancelDesc", { namespace: "accounting",  })
+            : t("openingBalance.confirmReopenDesc", { namespace: "accounting",  })
         }
-        confirmLabel={confirmAction?.type === "cancel" ? t("openingBalance.confirmCancelLabel", { namespace: "accounting", fallback: "إلغاء الترحيل" }) : t("openingBalance.confirmReopenLabel", { namespace: "accounting", fallback: "إعادة الفتح" })}
+        confirmLabel={confirmAction?.type === "cancel" ? t("openingBalance.confirmCancelLabel", { namespace: "accounting",  }) : t("openingBalance.confirmReopenLabel", { namespace: "accounting",  })}
         destructive={confirmAction?.type === "cancel"}
         onConfirm={handleConfirmed}
       />
@@ -320,18 +320,18 @@ function WelcomeCard({ onStart }: { onStart: () => void }) {
   const { t } = useLocalization();
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-5 space-y-3">
-      <p className="text-sm font-black text-slate-800">{t("openingBalance.welcomeTitle", { namespace: "accounting", fallback: "إعداد رصيد افتتاح الشركة القائمة" })}</p>
+      <p className="text-sm font-black text-slate-800">{t("openingBalance.welcomeTitle", { namespace: "accounting",  })}</p>
       <p className="text-xs text-slate-500 leading-relaxed">
-        {t("openingBalance.welcomeDesc", { namespace: "accounting", fallback: "بما أنك تبدأ استخدام التطبيق الآن، سيُدخل المعالج الموجه الحالة المالية الفعلية للشركة في تاريخ بدء الاستخدام («تاريخ القطع»). تُرصد الأرصدة قسماً بقسم — نقد وبنوك، عملاء، مخزون، أصول ثابتة، موردون، قروض، شركاء — ثم تُسوّى مع دليل الحسابات وتُرحَّل وتُقفل، ويُفتتح بعدها أول فترة تشغيلية تُقيد عليها الحركات اليومية." })}
+        {t("openingBalance.welcomeDesc", { namespace: "accounting",  })}
       </p>
       <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 space-y-1">
-        <p className="text-xs font-bold text-amber-700">{t("openingBalance.noAutoCash", { namespace: "accounting", fallback: "لن تُنشأ حركة نقدية تلقائية" })}</p>
+        <p className="text-xs font-bold text-amber-700">{t("openingBalance.noAutoCash", { namespace: "accounting",  })}</p>
         <p className="text-xs text-amber-600">
-          {t("openingBalance.noAutoCashDesc", { namespace: "accounting", fallback: "رأس المال والذمم والبنود القديمة أرصدة تاريخية تُرصد للشركة القائمة — ليست مساهمات نقدية جديدة، ولا تُسجَّل أي حركات يومية قبل إقفال الرصيد الافتتاحي." })}
+          {t("openingBalance.noAutoCashDesc", { namespace: "accounting",  })}
         </p>
       </div>
       <Button size="sm" onClick={onStart} className="bg-blue-600 hover:bg-blue-700 text-white font-bold">
-        <Play className="w-4 h-4 ms-1.5" /> {t("openingBalance.startWizard", { namespace: "accounting", fallback: "ابدأ المعالج" })}
+        <Play className="w-4 h-4 ms-1.5" /> {t("openingBalance.startWizard", { namespace: "accounting",  })}
       </Button>
     </div>
   );

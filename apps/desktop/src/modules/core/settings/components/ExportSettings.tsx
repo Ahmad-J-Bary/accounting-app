@@ -10,15 +10,15 @@ export function ExportSettings() {
 
   return (
     <SettingsSection
-      title={t("settings.export.title", { namespace: "settings", fallback: "إعدادات التصدير" })}
-      description={t("settings.export.description", { namespace: "settings", fallback: "تخصيص طريقة عرض العملات في ملفات Excel المُصدَّرة." })}
+      title={t("export.title", { namespace: "settings",  })}
+      description={t("export.description", { namespace: "settings",  })}
     >
       <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
         <div className="space-y-6">
           <div className="space-y-3">
             <label className="font-black text-slate-700 flex items-center gap-2">
               <FileDown className="w-4 h-4 text-indigo-600" />
-              {t("settings.export.currencyMode", { namespace: "settings", fallback: "نمط العملات في التصدير" })}
+              {t("export.currencyMode", { namespace: "settings",  })}
             </label>
             <Select
               value={currencyMode}
@@ -29,10 +29,10 @@ export function ExportSettings() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="fixed" className="font-bold">
-                  {t("settings.export.fixed", { namespace: "settings", fallback: "ثابتة — أعمدة العملات تظهر كما هي" })}
+                  {t("export.fixed", { namespace: "settings",  })}
                 </SelectItem>
                 <SelectItem value="variable" className="font-bold">
-                  {t("settings.export.variable", { namespace: "settings", fallback: "متغيرة — العملة الأساسية فقط + ورقة أسعار الصرف" })}
+                  {t("export.variable", { namespace: "settings",  })}
                 </SelectItem>
               </SelectContent>
             </Select>
@@ -43,14 +43,14 @@ export function ExportSettings() {
           <div className="p-4 rounded-xl bg-blue-50 border border-blue-100 space-y-2">
             <div className="flex items-center gap-2 text-blue-800 font-bold text-sm">
               <Info className="w-4 h-4" />
-              {t("settings.export.explainerTitle", { namespace: "settings", fallback: "شرح النمطين" })}
+              {t("export.explainerTitle", { namespace: "settings",  })}
             </div>
             <div className="text-xs text-blue-700 space-y-1.5 leading-relaxed">
               <p>
-                <strong>{t("settings.export.fixedStrong", { namespace: "settings", fallback: "ثابتة (Fixed):" })}</strong> {t("settings.export.fixedBody", { namespace: "settings", fallback: "تظهر أعمدة لكل عملة في الملف — نفس ما يظهر في الشاشة. مناسبة للفواتير متعددة العملات." })}
+                <strong>{t("export.fixedStrong", { namespace: "settings",  })}</strong> {t("export.fixedBody", { namespace: "settings",  })}
               </p>
               <p>
-                <strong>{t("settings.export.variableStrong", { namespace: "settings", fallback: "متغيرة (Variable):" })}</strong> {t("settings.export.variableBody", { namespace: "settings", fallback: "تظهر مبالغ العملة الأساسية فقط في الورقة الرئيسية، وتُضاف ورقة ثانية \"أسعار الصرف\" تحتوي على سعر كل عملة مستخدمة. مناسبة للتصدير للبرامج الخارجية." })}
+                <strong>{t("export.variableStrong", { namespace: "settings",  })}</strong> {t("export.variableBody", { namespace: "settings",  })}
               </p>
             </div>
           </div>

@@ -19,8 +19,8 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   compact,
 }) => {
   const { t } = useLocalization();
-  const resolvedMessage = message ?? t('states.noDataAvailable', { fallback: 'لا توجد بيانات متاحة' });
-  const resolvedSuggestion = suggestion ?? t('states.tryChangingSearchCriteria', { fallback: 'جرب تغيير معايير البحث أو إضافة بيانات جديدة' });
+  const resolvedMessage = message ?? t('states.noDataAvailable', );
+  const resolvedSuggestion = suggestion ?? t('states.tryChangingSearchCriteria', );
   return (
     <div className={cn(
       "flex flex-col items-center justify-center text-slate-400",

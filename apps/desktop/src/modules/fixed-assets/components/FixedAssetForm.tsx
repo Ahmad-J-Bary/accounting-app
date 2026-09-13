@@ -37,7 +37,6 @@ import { getExchangeRate } from "@shared/lib/currency-strategy";
 import { useCompanyCapabilities } from "@shared/hooks";
 import {
   detectFixedAssetTypeFromName,
-  FIXED_ASSET_TYPE_LABELS,
   type FixedAssetType,
 } from "@shared/tree/fixedAssetTypes";
 import { useLocalization } from "@app/providers/LocalizationProvider";
@@ -324,13 +323,13 @@ export function FixedAssetForm({
   // Validate all mapped accounts are resolved
   const accountMappingError = useMemo(() => {
     if (!assetType) return "";
-    if (!categoryId) return t("mapping.noCategory", { namespace: "validation", fallback: "لم يتم العثور على تصنيف الأصل المناسب" });
+    if (!categoryId) return t("mapping.noCategory", { namespace: "validation",  });
     const { assetAccountId, depreciationAccountId, accumulatedDepreciationAccountId, paymentAccountId } = mappedAccounts;
-    if (!assetAccountId) return t("mapping.noAssetAccount", { namespace: "validation", fallback: "لم يتم العثور على حساب الأصل المناسب" });
-    if (!paymentAccountId) return t("mapping.noPaymentAccount", { namespace: "validation", fallback: "لم يتم العثور على حساب الدفع المناسب" });
+    if (!assetAccountId) return t("mapping.noAssetAccount", { namespace: "validation",  });
+    if (!paymentAccountId) return t("mapping.noPaymentAccount", { namespace: "validation",  });
     if (assetType !== "buildings_land") {
-      if (!depreciationAccountId) return t("mapping.noDepExpenseAccount", { namespace: "validation", fallback: "لم يتم العثور على حساب مصروف الإهلاك" });
-      if (!accumulatedDepreciationAccountId) return t("mapping.noAccDepAccount", { namespace: "validation", fallback: "لم يتم العثور على حساب مجمع الإهلاك" });
+      if (!depreciationAccountId) return t("mapping.noDepExpenseAccount", { namespace: "validation",  });
+      if (!accumulatedDepreciationAccountId) return t("mapping.noAccDepAccount", { namespace: "validation",  });
     }
     return "";
   }, [assetType, categoryId, mappedAccounts, t]);
@@ -350,7 +349,7 @@ export function FixedAssetForm({
     }
     // Defensive: validate no empty UUIDs before sending to backend
     if (!categoryId || !mappedAccounts.assetAccountId || !mappedAccounts.paymentAccountId) {
-      toast.error(t("mapping.incompleteAccounts", { namespace: "validation", fallback: "بيانات الحسابات المحاسبية غير مكتملة" }));
+      toast.error(t("mapping.incompleteAccounts", { namespace: "validation",  }));
       return;
     }
     setSaving(true);
@@ -376,14 +375,14 @@ export function FixedAssetForm({
       };
       if (isEditing && asset) {
         await fixedAssetService.update(asset.id, req);
-        toast.success(t("toast.updated", { namespace: "fixedAssets", fallback: "تم تحديث الأصل بنجاح" }));
+        toast.success(t("toast.updated", { namespace: "fixedAssets",  }));
       } else {
         await fixedAssetService.create(req);
-        toast.success(t("toast.added", { namespace: "fixedAssets", fallback: "تم إضافة الأصل بنجاح" }));
+        toast.success(t("toast.added", { namespace: "fixedAssets",  }));
       }
       onSaved();
     } catch (e) {
-      toast.error(t("toast.saveFailed", { namespace: "fixedAssets", fallback: "فشل حفظ الأصل: {{error}}", vars: { error: String(e) } }));
+      toast.error(t("toast.saveFailed", { namespace: "fixedAssets", vars: { error: String(e) } }));
     } finally {
       setSaving(false);
     }
@@ -395,10 +394,10 @@ export function FixedAssetForm({
   return (
     <FormPanel
       title={isEditing
-        ? t("form.editTitle", { namespace: "fixedAssets", fallback: "تعديل أصل: {{name}}", vars: { name: asset?.name ?? "" } })
+        ? t("form.editTitle", { namespace: "fixedAssets", vars: { name: asset?.name ?? "" } })
         : (additionType === "new"
-          ? t("form.createNewTitle", { namespace: "fixedAssets", fallback: "شراء أصل جديد" })
-          : t("form.createExistingTitle", { namespace: "fixedAssets", fallback: "إضافة أصل سابق (أول المدة)" }))}
+          ? t("form.createNewTitle", { namespace: "fixedAssets",  })
+          : t("form.createExistingTitle", { namespace: "fixedAssets",  }))}
       icon={panelIcon}
       onClose={onClose}
       onSave={handleSave}
@@ -406,28 +405,28 @@ export function FixedAssetForm({
       saveDisabled={!canSave}
     >
       {/* ── Section 1: Basic Info ── */}
-      <SidebarSection title={t("form.basicSection", { namespace: "fixedAssets", fallback: "البيانات الأساسية" })} icon={<FileText className="w-3.5 h-3.5" />} defaultOpen>
-        <FormField label={t("form.assetType", { namespace: "fixedAssets", fallback: "نوع الأصل" })} required>
+      <SidebarSection title={t("form.basicSection", { namespace: "fixedAssets",  })} icon={<FileText className="w-3.5 h-3.5" />} defaultOpen>
+        <FormField label={t("form.assetType", { namespace: "fixedAssets",  })} required>
           {isTypeLocked && displayAssetType ? (
             <div className="flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs">
               {getAssetTypeIcon(displayAssetType)}
               <span className="font-bold text-blue-800">
-                {t("assetTypes." + displayAssetType, { namespace: "fixedAssets", fallback: FIXED_ASSET_TYPE_LABELS[displayAssetType as FixedAssetType] })}
+                {t("assetTypes." + displayAssetType, { namespace: "fixedAssets"})}
               </span>
               <span className="mr-auto text-[10px] font-normal text-blue-500">
-                {t("form.typeLockedHint", { namespace: "fixedAssets", fallback: "مضمّن من الحساب المحدد" })}
+                {t("form.typeLockedHint", { namespace: "fixedAssets",  })}
               </span>
             </div>
           ) : (
             <Select dir="rtl" value={assetType} onValueChange={(v) => setAssetType(v as FixedAssetType)}>
               <SelectTrigger className="bg-white border-slate-200 h-9 w-full text-right text-xs font-bold text-slate-800">
-                <SelectValue placeholder={t("form.assetTypePlaceholder", { namespace: "fixedAssets", fallback: "اختر نوع الأصل" })} />
+                <SelectValue placeholder={t("form.assetTypePlaceholder", { namespace: "fixedAssets",  })} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="buildings_land" className="text-xs">{t("assetTypes.buildings_land", { namespace: "fixedAssets", fallback: "أبنية وأراضي" })}</SelectItem>
-                <SelectItem value="automotive" className="text-xs">{t("assetTypes.automotive", { namespace: "fixedAssets", fallback: "آليات ومركبات" })}</SelectItem>
-                <SelectItem value="equipment" className="text-xs">{t("assetTypes.equipment", { namespace: "fixedAssets", fallback: "معدات وتجهيزات" })}</SelectItem>
-                <SelectItem value="furniture" className="text-xs">{t("assetTypes.furniture", { namespace: "fixedAssets", fallback: "أثاث ومفروشات" })}</SelectItem>
+                <SelectItem value="buildings_land" className="text-xs">{t("assetTypes.buildings_land", { namespace: "fixedAssets",  })}</SelectItem>
+                <SelectItem value="automotive" className="text-xs">{t("assetTypes.automotive", { namespace: "fixedAssets",  })}</SelectItem>
+                <SelectItem value="equipment" className="text-xs">{t("assetTypes.equipment", { namespace: "fixedAssets",  })}</SelectItem>
+                <SelectItem value="furniture" className="text-xs">{t("assetTypes.furniture", { namespace: "fixedAssets",  })}</SelectItem>
               </SelectContent>
             </Select>
           )}
@@ -435,7 +434,7 @@ export function FixedAssetForm({
 
         {code ? (
           <div className="grid grid-cols-2 gap-3">
-            <FormField label={t("form.code", { namespace: "fixedAssets", fallback: "الكود" })}>
+            <FormField label={t("form.code", { namespace: "fixedAssets",  })}>
               <Input
                 value={code}
                 readOnly
@@ -443,21 +442,21 @@ export function FixedAssetForm({
               />
             </FormField>
 
-            <FormField label={t("form.name", { namespace: "fixedAssets", fallback: "الاسم" })} required>
+            <FormField label={t("form.name", { namespace: "fixedAssets",  })} required>
               <Input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder={t("form.namePlaceholder", { namespace: "fixedAssets", fallback: "اسم الأصل" })}
+                placeholder={t("form.namePlaceholder", { namespace: "fixedAssets",  })}
                 className="bg-white border-slate-200 h-9 text-xs"
               />
             </FormField>
           </div>
         ) : (
-          <FormField label={t("form.name", { namespace: "fixedAssets", fallback: "الاسم" })} required>
+          <FormField label={t("form.name", { namespace: "fixedAssets",  })} required>
             <Input
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder={t("form.namePlaceholder", { namespace: "fixedAssets", fallback: "اسم الأصل" })}
+              placeholder={t("form.namePlaceholder", { namespace: "fixedAssets",  })}
               className="bg-white border-slate-200 h-9 text-xs"
             />
           </FormField>
@@ -465,10 +464,10 @@ export function FixedAssetForm({
 
         {showWarehouseField ? (
           <div className="grid grid-cols-2 gap-3">
-            <FormField label={t("form.warehouse", { namespace: "fixedAssets", fallback: "المستودع" })}>
+            <FormField label={t("form.warehouse", { namespace: "fixedAssets",  })}>
               <Select dir="rtl" value={warehouseId} onValueChange={setWarehouseId}>
                 <SelectTrigger className="bg-white border-slate-200 h-9 w-full text-right text-xs">
-                  <SelectValue placeholder={t("form.warehousePlaceholder", { namespace: "fixedAssets", fallback: "اختر مستودع" })} />
+                  <SelectValue placeholder={t("form.warehousePlaceholder", { namespace: "fixedAssets",  })} />
                 </SelectTrigger>
                 <SelectContent>
                   {activeWarehouses.map((w) => (
@@ -481,28 +480,28 @@ export function FixedAssetForm({
             </FormField>
 
             <FormField label={isNonDepreciable
-              ? t("form.locationAddress", { namespace: "fixedAssets", fallback: "الموقع / العنوان" })
-              : t("form.locationRoom", { namespace: "fixedAssets", fallback: "الموقع / الغرفة / القسم" })}>
+              ? t("form.locationAddress", { namespace: "fixedAssets",  })
+              : t("form.locationRoom", { namespace: "fixedAssets",  })}>
               <Input
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
                 placeholder={isNonDepreciable
-                  ? t("form.locationAddressPlaceholder", { namespace: "fixedAssets", fallback: "مثال: دمشق - تنظيم كفرسوسة - محضر 12" })
-                  : t("form.locationRoomPlaceholder", { namespace: "fixedAssets", fallback: "مثال: مكتب المدير" })}
+                  ? t("form.locationAddressPlaceholder", { namespace: "fixedAssets",  })
+                  : t("form.locationRoomPlaceholder", { namespace: "fixedAssets",  })}
                 className="bg-white border-slate-200 h-9 text-xs"
               />
             </FormField>
           </div>
         ) : (
           <FormField label={isNonDepreciable
-            ? t("form.locationAddress", { namespace: "fixedAssets", fallback: "الموقع / العنوان" })
-            : t("form.locationRoom", { namespace: "fixedAssets", fallback: "الموقع / الغرفة / القسم" })}>
+            ? t("form.locationAddress", { namespace: "fixedAssets",  })
+            : t("form.locationRoom", { namespace: "fixedAssets",  })}>
             <Input
               value={location}
               onChange={(e) => setLocation(e.target.value)}
               placeholder={isNonDepreciable
-                ? t("form.locationAddressPlaceholder", { namespace: "fixedAssets", fallback: "مثال: دمشق - تنظيم كفرسوسة - محضر 12" })
-                : t("form.locationRoomPlaceholderWide", { namespace: "fixedAssets", fallback: "مثال: الطابق الثالث - مكتب المدير" })}
+                ? t("form.locationAddressPlaceholder", { namespace: "fixedAssets",  })
+                : t("form.locationRoomPlaceholderWide", { namespace: "fixedAssets",  })}
               className="bg-white border-slate-200 h-9 text-xs"
             />
           </FormField>
@@ -511,14 +510,14 @@ export function FixedAssetForm({
 
       {/* ── Section 2: Purchase & Cost ── */}
       <SidebarSection title={additionType === "new"
-        ? t("form.purchaseSection", { namespace: "fixedAssets", fallback: "الشراء والتكلفة" })
-        : t("form.previousSection", { namespace: "fixedAssets", fallback: "بيانات الأصل السابق" })} icon={<BadgeDollarSign className="w-3.5 h-3.5" />} defaultOpen>
+        ? t("form.purchaseSection", { namespace: "fixedAssets",  })
+        : t("form.previousSection", { namespace: "fixedAssets",  })} icon={<BadgeDollarSign className="w-3.5 h-3.5" />} defaultOpen>
         {currencies.length > 1 ? (
           <div className="grid grid-cols-2 gap-3">
-            <FormField label={t("form.currency", { namespace: "fixedAssets", fallback: "العملة" })} required>
+            <FormField label={t("form.currency", { namespace: "fixedAssets",  })} required>
               <Select dir="rtl" value={currency} onValueChange={setCurrency}>
                 <SelectTrigger className="bg-white border-slate-200 h-9 w-full text-right text-xs">
-                  <SelectValue placeholder={t("form.currencyPlaceholder", { namespace: "fixedAssets", fallback: "اختر العملة" })} />
+                  <SelectValue placeholder={t("form.currencyPlaceholder", { namespace: "fixedAssets",  })} />
                 </SelectTrigger>
                 <SelectContent>
                   {currencies
@@ -533,8 +532,8 @@ export function FixedAssetForm({
             </FormField>
 
             <FormField label={additionType === "new"
-              ? t("form.purchaseCost", { namespace: "fixedAssets", fallback: "تكلفة الشراء" })
-              : t("form.originalCost", { namespace: "fixedAssets", fallback: "التكلفة الأصلية" })} required>
+              ? t("form.purchaseCost", { namespace: "fixedAssets",  })
+              : t("form.originalCost", { namespace: "fixedAssets",  })} required>
               <Input
                 type="number"
                 value={purchaseCost}
@@ -548,8 +547,8 @@ export function FixedAssetForm({
           </div>
         ) : (
           <FormField label={additionType === "new"
-            ? t("form.purchaseCost", { namespace: "fixedAssets", fallback: "تكلفة الشراء" })
-            : t("form.originalCost", { namespace: "fixedAssets", fallback: "التكلفة الأصلية" })} required>
+            ? t("form.purchaseCost", { namespace: "fixedAssets",  })
+            : t("form.originalCost", { namespace: "fixedAssets",  })} required>
             <Input
               type="number"
               value={purchaseCost}
@@ -563,8 +562,8 @@ export function FixedAssetForm({
         )}
 
         <FormField label={additionType === "new"
-          ? t("form.purchaseDate", { namespace: "fixedAssets", fallback: "تاريخ الشراء" })
-          : t("form.acquisitionDate", { namespace: "fixedAssets", fallback: "تاريخ الحيازة" })} required>
+          ? t("form.purchaseDate", { namespace: "fixedAssets",  })
+          : t("form.acquisitionDate", { namespace: "fixedAssets",  })} required>
           <Input
             type="date"
             value={purchaseDate}
@@ -573,11 +572,11 @@ export function FixedAssetForm({
           />
         </FormField>
 
-        <FormField label={t("form.descriptionNotes", { namespace: "fixedAssets", fallback: "التوصيف والملاحظات" })}>
+        <FormField label={t("form.descriptionNotes", { namespace: "fixedAssets",  })}>
           <Textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            placeholder={t("form.notesPlaceholder", { namespace: "fixedAssets", fallback: "أي ملاحظات إضافية..." })}
+            placeholder={t("form.notesPlaceholder", { namespace: "fixedAssets",  })}
             className="bg-white border-slate-200 min-h-[60px] text-xs"
           />
         </FormField>

@@ -51,7 +51,7 @@ export function HierarchicalTreeTemplate({
   treePresentation = "default",
 }: HierarchicalTreeTemplateProps) {
   const { t } = useLocalization();
-  const resolvedTreeHeaderTitle = treeHeaderTitle ?? t('labels.hierarchicalTree', { fallback: 'شجرة البيانات الهيكلية' });
+  const resolvedTreeHeaderTitle = treeHeaderTitle ?? t('labels.hierarchicalTree', );
   return (
     <div className={cn("flex flex-col h-full w-full bg-muted/30", className)} dir="rtl">
       <PageHeader title={title} badge={badge} actions={toolbar} pinAction pinLabel={title} />

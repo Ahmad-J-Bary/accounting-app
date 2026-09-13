@@ -62,7 +62,7 @@ export function PartnersSidePanel({
 
   if (activePanel === "drawings" && selectedPartner) {
     if (!selectedPartner.drawings_account_id) {
-      toast.error(t("toast.drawingsAccountNotConfigured", { namespace: "partners", fallback: "لم يتم إعداد حساب المسحوبات لهذا الشريك" }));
+      toast.error(t("toast.drawingsAccountNotConfigured", { namespace: "partners",  }));
       return null;
     }
     return (

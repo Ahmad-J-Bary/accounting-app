@@ -16,14 +16,14 @@ export function DateRangePicker({ from, to, onFromChange, onToChange, showSepara
       {showSeparator && (
         <span className="inline-block w-px h-5 bg-slate-300 mx-2" />
       )}
-      <span className="text-xs text-slate-400 font-bold">{t('labels.from', { fallback: 'من' })}</span>
+      <span className="text-xs text-slate-400 font-bold">{t('labels.from', )}</span>
       <DatePicker
         value={from}
         onChange={onFromChange}
         className="h-9 w-36 text-xs rounded-lg bg-white"
         placeholder=""
       />
-      <span className="text-xs text-slate-400 font-bold">{t('labels.to', { fallback: 'إلى' })}</span>
+      <span className="text-xs text-slate-400 font-bold">{t('labels.to', )}</span>
       <DatePicker
         value={to}
         onChange={onToChange}

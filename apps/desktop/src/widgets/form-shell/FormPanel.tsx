@@ -37,7 +37,7 @@ export function FormPanel({
   saveDisabled = false,
 }: FormPanelProps) {
   const { t } = useLocalization();
-  const resolvedSaveLabel = saveLabel ?? t('actions.save', { fallback: 'حفظ البيانات' });
+  const resolvedSaveLabel = saveLabel ?? t('actions.save', );
   return (
     <SidebarShell className={className} width={width} onClose={onClose} forceOverlay={forceOverlay}>
       <SidebarHeader title={title} subtitle={subtitle} icon={icon} onClose={onClose} />

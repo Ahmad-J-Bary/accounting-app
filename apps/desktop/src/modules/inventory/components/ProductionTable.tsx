@@ -19,22 +19,22 @@ export function ProductionTable({ data, loading, search, onSearchChange, onVisib
   const allColumns = useMemo<UnifiedColumn<ProductionOrder>[]>(() => [
     {
       id: "order_number",
-      header: t("production.orderNumber", { namespace: "inventory", fallback: "رقم الأمر" }),
-      label: t("production.orderNumberLabel", { namespace: "inventory", fallback: "رقم أمر الإنتاج" }),
+      header: t("production.columns.orderNumber", { namespace: "inventory",  }),
+      label: t("production.columns.orderNumberLabel", { namespace: "inventory",  }),
       accessor: "order_number",
       className: "font-black text-blue-600 font-mono"
     },
     {
       id: "production_date",
-      header: t("production.date", { namespace: "inventory", fallback: "التاريخ" }),
-      label: t("production.dateLabel", { namespace: "inventory", fallback: "تاريخ الإنتاج" }),
+      header: t("production.columns.productionDate", { namespace: "inventory",  }),
+      label: t("production.columns.productionDate", { namespace: "inventory",  }),
       accessor: (o) => formatDateTime(o.production_date),
       className: "tabular-nums text-slate-500"
     },
     {
       id: "materials_count",
-      header: t("production.rawMaterials", { namespace: "inventory", fallback: "المواد الخام" }),
-      label: t("production.rawMaterialsLabel", { namespace: "inventory", fallback: "عدد المواد الخام المستخدمة" }),
+      header: t("production.columns.materials", { namespace: "inventory",  }),
+      label: t("production.columns.materialsLabel", { namespace: "inventory",  }),
       accessor: (o) => (
         <span className="inline-flex items-center gap-1.5 bg-slate-100 px-2 py-1 rounded text-slate-600 font-bold text-xs">
           {o.materials.length} أصناف
@@ -43,8 +43,8 @@ export function ProductionTable({ data, loading, search, onSearchChange, onVisib
     },
     {
       id: "outputs_count",
-      header: t("production.finishedProducts", { namespace: "inventory", fallback: "المنتجات التامة" }),
-      label: t("production.finishedProductsLabel", { namespace: "inventory", fallback: "عدد المنتجات التامة الناتجة" }),
+      header: t("production.columns.products", { namespace: "inventory",  }),
+      label: t("production.columns.productsLabel", { namespace: "inventory",  }),
       accessor: (o) => (
         <span className="inline-flex items-center gap-1.5 bg-blue-50 px-2 py-1 rounded text-blue-600 font-bold text-xs">
           {o.outputs.length} منتجات
@@ -53,15 +53,15 @@ export function ProductionTable({ data, loading, search, onSearchChange, onVisib
     },
     {
       id: "total_cost",
-      header: t("production.totalCost", { namespace: "inventory", fallback: "إجمالي التكلفة" }),
-      label: t("production.totalCostLabel", { namespace: "inventory", fallback: "إجمالي تكلفة الإنتاج" }),
+      header: t("production.columns.totalCost", { namespace: "inventory",  }),
+      label: t("production.columns.totalCostLabel", { namespace: "inventory",  }),
       accessor: (o) => formatCurrency(parseFloat(o.total_cost)),
       className: "tabular-nums font-black text-slate-900"
     },
     {
       id: "status",
-      header: t("production.status", { namespace: "inventory", fallback: "الحالة" }),
-      label: t("production.statusLabel", { namespace: "inventory", fallback: "حالة الأمر" }),
+      header: t("production.status", { namespace: "inventory",  }),
+      label: t("production.columns.statusLabel", { namespace: "inventory",  }),
       accessor: (o) => <StatusBadge status={o.status} />,
     }
   ], [t]);

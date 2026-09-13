@@ -176,12 +176,12 @@ export function AccountMovementTable({
         journal_type: "",
         entry_type: "",
         entry_status: "",
-        journal_type_display: t("ledger.table.beginningType", { namespace: "accounting", fallback: "رصيد سابق" }),
+        journal_type_display: t("ledger.table.beginningType", { namespace: "accounting",  }),
         is_opening: false,
         line_id: "",
         account_id: "",
         source_id: null,
-        description: t("ledger.table.beginningDescription", { namespace: "accounting", fallback: "رصيد سابق / أول الفترة" }),
+        description: t("ledger.table.beginningDescription", { namespace: "accounting",  }),
         opposite_account_name: "",
         currency: "",
         fx_rate: "",
@@ -216,15 +216,15 @@ export function AccountMovementTable({
     const cols: UnifiedColumn<MovementRow>[] = [
       {
         id: "entry_number",
-        header: t("ledger.table.colEntryNumber", { namespace: "accounting", fallback: "رقم القيد" }),
-        label: t("ledger.table.colEntryNumber", { namespace: "accounting", fallback: "رقم القيد" }),
+        header: t("ledger.table.colEntryNumber", { namespace: "accounting",  }),
+        label: t("ledger.table.colEntryNumber", { namespace: "accounting",  }),
         accessor: (r) => (r.isBeginning ? "" : formatNumber(parseInt(r.entry_number) || 0)),
         className: "font-black text-slate-900 text-center"
       },
       {
         id: "journal_type",
-        header: t("ledger.table.colType", { namespace: "accounting", fallback: "نوع الحركة" }),
-        label: t("ledger.table.colType", { namespace: "accounting", fallback: "نوع الحركة" }),
+        header: t("ledger.table.colType", { namespace: "accounting",  }),
+        label: t("ledger.table.colType", { namespace: "accounting",  }),
         accessor: (r) => (
           <span className={cn(
             "inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-tighter",
@@ -245,8 +245,8 @@ export function AccountMovementTable({
       const isBase = isBaseCurrency(curr.code);
       cols.push({
         id: `debit_${curr.code}`,
-        header: t("ledger.table.debitHeader", { namespace: "accounting", vars: { currency: currencySuffix(symbol) }, fallback: `عليه / مدين${currencySuffix(symbol)}` }),
-        label: t("ledger.table.debitHeader", { namespace: "accounting", vars: { currency: currencySuffix(symbol) }, fallback: `عليه / مدين${currencySuffix(symbol)}` }),
+        header: t("ledger.table.debitHeader", { namespace: "accounting", vars: { currency: currencySuffix(symbol) },  }),
+        label: t("ledger.table.debitHeader", { namespace: "accounting", vars: { currency: currencySuffix(symbol) },  }),
         align: "center",
         accessor: (r) => {
           if (r.side !== "debit") return "";
@@ -263,8 +263,8 @@ export function AccountMovementTable({
       const isBase = isBaseCurrency(curr.code);
       cols.push({
         id: `credit_${curr.code}`,
-        header: t("ledger.table.creditHeader", { namespace: "accounting", vars: { currency: currencySuffix(symbol) }, fallback: `له / دائن${currencySuffix(symbol)}` }),
-        label: t("ledger.table.creditHeader", { namespace: "accounting", vars: { currency: currencySuffix(symbol) }, fallback: `له / دائن${currencySuffix(symbol)}` }),
+        header: t("ledger.table.creditHeader", { namespace: "accounting", vars: { currency: currencySuffix(symbol) },  }),
+        label: t("ledger.table.creditHeader", { namespace: "accounting", vars: { currency: currencySuffix(symbol) },  }),
         align: "center",
         accessor: (r) => {
           if (r.side !== "credit") return "";
@@ -280,8 +280,8 @@ export function AccountMovementTable({
     cols.push(
       {
         id: "balance",
-        header: t("ledger.table.balanceHeader", { namespace: "accounting", vars: { currency: currencySuffix(baseSymbol) }, fallback: `الرصيد${currencySuffix(baseSymbol)}` }),
-        label: t("ledger.table.balanceHeader", { namespace: "accounting", vars: { currency: currencySuffix(baseSymbol) }, fallback: `الرصيد${currencySuffix(baseSymbol)}` }),
+        header: t("ledger.table.balanceHeader", { namespace: "accounting", vars: { currency: currencySuffix(baseSymbol) },  }),
+        label: t("ledger.table.balanceHeader", { namespace: "accounting", vars: { currency: currencySuffix(baseSymbol) },  }),
         align: "center",
         accessor: (r) => {
           const b = r.balance ?? 0;
@@ -295,15 +295,15 @@ export function AccountMovementTable({
       },
       {
         id: "description",
-        header: t("ledger.table.colDescription", { namespace: "accounting", fallback: "البيان" }),
-        label: t("ledger.table.colDescription", { namespace: "accounting", fallback: "البيان" }),
+        header: t("ledger.table.colDescription", { namespace: "accounting",  }),
+        label: t("ledger.table.colDescription", { namespace: "accounting",  }),
         accessor: (r) => r.description,
         className: "text-slate-700 font-bold"
       },
       {
         id: "date",
-        header: t("ledger.table.colDate", { namespace: "accounting", fallback: "التاريخ" }),
-        label: t("ledger.table.colDate", { namespace: "accounting", fallback: "التاريخ" }),
+        header: t("ledger.table.colDate", { namespace: "accounting",  }),
+        label: t("ledger.table.colDate", { namespace: "accounting",  }),
         accessor: (r) => formatDateTime(r.date),
         className: "text-slate-500 tabular-nums"
       },
@@ -427,12 +427,12 @@ export function AccountMovementTable({
     );
 
     await executeExport(exportData, {
-      sheetName: t("ledger.table.sheetName", { namespace: "accounting", fallback: "كشف حركة الحساب" }),
-      filename: t("ledger.table.filename", { namespace: "accounting", vars: { name: accountName }, fallback: `حركة_حساب_${accountName}` }),
+      sheetName: t("ledger.table.sheetName", { namespace: "accounting",  }),
+      filename: t("ledger.table.filename", { namespace: "accounting", vars: { name: accountName },  }),
       data: tableData as unknown as Record<string, unknown>[],
       columns: exportColumns,
       summary: Object.keys(summary).length > 0 ? summary : undefined,
-      summaryLabel: t("ledger.table.summaryLabel", { namespace: "accounting", fallback: "المجموع" }),
+      summaryLabel: t("ledger.table.summaryLabel", { namespace: "accounting",  }),
       currencyRatesSheet: ratesSheet,
       mergeCells: merges,
     });
@@ -474,14 +474,14 @@ export function AccountMovementTable({
     return enrichedColumns.map((col) => {
       const id = col.id;
       if (id === "entry_number") {
-        return { id: "count", columnId: "entry_number", label: "", value: t("ledger.table.count", { namespace: "accounting", vars: { count: rowCount }, fallback: `${rowCount} حركة` }), className: "text-slate-500 font-medium" };
+        return { id: "count", columnId: "entry_number", label: "", value: t("ledger.table.count", { namespace: "accounting", vars: { count: rowCount },  }), className: "text-slate-500 font-medium" };
       }
       if (id === "journal_type" || id === "description") {
         return { id: `${id}_spacer`, columnId: id, label: "", value: "" };
       }
 
       if (id === "date") {
-        const label = t("ledger.table.closingLabel", { namespace: "accounting", vars: { sign: closingSign, currency: currencySuffix(baseSymbol) }, fallback: `الرصيد الختامي / ${closingSign}${currencySuffix(baseSymbol)}` });
+        const label = t("ledger.table.closingLabel", { namespace: "accounting", vars: { sign: closingSign, currency: currencySuffix(baseSymbol) },  });
         const value = formatAmount(Math.abs(closingNet), { currencyCode: baseCurrency?.code || "" });
         const valueClass = closingSign === "مدين"
           ? "text-blue-700 font-black"
@@ -584,7 +584,7 @@ export function AccountMovementTable({
     }
 
     if (tableData.length === 0) {
-      return <EmptyState message={search ? t("ledger.table.emptySearch", { namespace: "accounting", fallback: "لا توجد حركات تطابق معايير البحث" }) : t("ledger.table.emptyNone", { namespace: "accounting", fallback: "لا توجد حركات مسجلة لهذا الحساب" })} />;
+      return <EmptyState message={search ? t("ledger.table.emptySearch", { namespace: "accounting",  }) : t("ledger.table.emptyNone", { namespace: "accounting",  })} />;
     }
 
     return (
@@ -681,10 +681,10 @@ export function AccountMovementTable({
 
   return (
     <TableShell
-      title={t("ledger.accountTitle", { namespace: "accounting", vars: { name: accountName }, fallback: `حركة الحساب: ${accountName}` })}
+      title={t("ledger.accountTitle", { namespace: "accounting", vars: { name: accountName },  })}
       search={search}
       onSearchChange={onSearchChange}
-      searchPlaceholder={t("ledger.table.searchPlaceholder", { namespace: "accounting", fallback: "بحث برقم القيد أو البيان..." })}
+      searchPlaceholder={t("ledger.table.searchPlaceholder", { namespace: "accounting",  })}
       columns={toolbarColumns}
       onColumnToggle={toggleColumn}
       onColumnsReset={resetToDefault}
@@ -698,7 +698,7 @@ export function AccountMovementTable({
           onClick={handleExport}
         >
           <Download className="w-3.5 h-3.5 ms-1.5 text-slate-500" />
-          {t("ledger.table.export", { namespace: "accounting", fallback: "تصدير إكسل" })}
+          {t("ledger.table.export", { namespace: "accounting",  })}
         </Button>
       )}
     >

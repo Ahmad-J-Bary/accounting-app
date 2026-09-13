@@ -28,8 +28,8 @@ export default function PartnerRightsReport() {
   const [viewMode, setViewMode] = useState<ViewMode>("profit-share");
 
   const VIEW_OPTIONS: Record<ViewMode, string> = {
-    "profit-share": t("partnerRights.viewProfitShare", { namespace: "reports", fallback: "تقاسم الأرباح" }),
-    "statement": t("partnerRights.viewStatement", { namespace: "reports", fallback: "كشف الحساب" }),
+    "profit-share": t("partnerRights.viewProfitShare", { namespace: "reports",  }),
+    "statement": t("partnerRights.viewStatement", { namespace: "reports",  }),
   };
 
   const formatValue = (value: number) =>
@@ -40,7 +40,7 @@ export default function PartnerRightsReport() {
 
   const viewSwitcher = (
     <div className="flex flex-wrap items-center gap-2">
-      <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider whitespace-nowrap">{t("partnerRights.viewLabel", { namespace: "reports", fallback: "العرض:" })}</span>
+      <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider whitespace-nowrap">{t("partnerRights.viewLabel", { namespace: "reports",  })}</span>
       <Select value={viewMode} onValueChange={(v) => setViewMode(v as ViewMode)}>
         <SelectTrigger className="w-[125px] h-8 bg-white font-bold shadow-sm border-slate-200 text-xs">
           <SelectValue />
@@ -56,7 +56,7 @@ export default function PartnerRightsReport() {
 
   return (
     <OperationalTableTemplate
-      title={t("partnerRights.title", { namespace: "reports", fallback: "الشركاء وحقوقهم" })}
+      title={t("partnerRights.title", { namespace: "reports",  })}
       toolbar={
         <ReportFilterBar
           filters={filters}
@@ -76,7 +76,7 @@ export default function PartnerRightsReport() {
               onClick={() => setShowProfitDistribution(true)}
             >
               <Coins className="me-2 h-4 w-4" />
-              {t("partnerRights.distributeButton", { namespace: "reports", fallback: "توزيع الأرباح" })}
+              {t("partnerRights.distributeButton", { namespace: "reports",  })}
             </Button>
           }
         />
@@ -89,7 +89,7 @@ export default function PartnerRightsReport() {
         ) : computed.profitShare.rows.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
             <Users className="mb-3 h-12 w-12" />
-            <p className="text-sm font-bold">{t("partnerRights.empty", { namespace: "reports", fallback: "لا يوجد شركاء نشطون لعرض التقرير" })}</p>
+            <p className="text-sm font-bold">{t("partnerRights.empty", { namespace: "reports",  })}</p>
           </div>
         ) : viewMode === "profit-share" ? (
           <PartnerProfitShareView computed={computed.profitShare} formatValue={formatValue} filterBar={viewSwitcher} />

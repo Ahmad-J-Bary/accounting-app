@@ -24,23 +24,23 @@ interface PeriodsTableProps {
 export function PeriodsTable({ periods, current, isLoading, actionBusy, onAction }: PeriodsTableProps) {
   const { t } = useLocalization();
   return (
-    <SectionCard title={t("fiscalPeriods.table.title", { namespace: "accounting", fallback: "القائمة" })} contentClassName="p-0 space-y-0 overflow-x-auto">
+    <SectionCard title={t("fiscalPeriods.table.title", { namespace: "accounting",  })} contentClassName="p-0 space-y-0 overflow-x-auto">
       {isLoading && <LoadingState rows={3} />}
       {!isLoading && periods.length === 0 && (
         <div className="py-10">
-          <EmptyState compact message={t("fiscalPeriods.table.empty", { namespace: "accounting", fallback: "لا توجد فترات بعد" })} suggestion={t("fiscalPeriods.table.emptySuggestion", { namespace: "accounting", fallback: "أنشئ أول فترة مالية — تصبح إلزامية لترحيل أي قيد جديد" })} />
+          <EmptyState compact message={t("fiscalPeriods.table.empty", { namespace: "accounting",  })} suggestion={t("fiscalPeriods.table.emptySuggestion", { namespace: "accounting",  })} />
         </div>
       )}
       {!isLoading && periods.length > 0 && (
         <table className="w-full text-xs">
           <thead>
             <tr className="border-b border-slate-200 text-slate-500">
-              <th scope="col" className="text-end px-4 py-2 font-semibold">{t("fiscalPeriods.table.colStart", { namespace: "accounting", fallback: "البداية" })}</th>
-              <th scope="col" className="text-end px-4 py-2 font-semibold">{t("fiscalPeriods.table.colEnd", { namespace: "accounting", fallback: "النهاية" })}</th>
-              <th scope="col" className="text-end px-4 py-2 font-semibold">{t("fiscalPeriods.table.colStatus", { namespace: "accounting", fallback: "الحالة" })}</th>
-              <th scope="col" className="text-end px-4 py-2 font-semibold">{t("fiscalPeriods.table.colClosedBy", { namespace: "accounting", fallback: "أُغلقت بواسطة" })}</th>
-              <th scope="col" className="text-end px-4 py-2 font-semibold">{t("fiscalPeriods.table.colLockedBy", { namespace: "accounting", fallback: "قُفلت بواسطة" })}</th>
-              <th scope="col" className="text-end px-4 py-2 font-semibold">{t("fiscalPeriods.table.colActions", { namespace: "accounting", fallback: "إجراءات" })}</th>
+              <th scope="col" className="text-end px-4 py-2 font-semibold">{t("fiscalPeriods.table.colStart", { namespace: "accounting",  })}</th>
+              <th scope="col" className="text-end px-4 py-2 font-semibold">{t("fiscalPeriods.table.colEnd", { namespace: "accounting",  })}</th>
+              <th scope="col" className="text-end px-4 py-2 font-semibold">{t("fiscalPeriods.table.colStatus", { namespace: "accounting",  })}</th>
+              <th scope="col" className="text-end px-4 py-2 font-semibold">{t("fiscalPeriods.table.colClosedBy", { namespace: "accounting",  })}</th>
+              <th scope="col" className="text-end px-4 py-2 font-semibold">{t("fiscalPeriods.table.colLockedBy", { namespace: "accounting",  })}</th>
+              <th scope="col" className="text-end px-4 py-2 font-semibold">{t("fiscalPeriods.table.colActions", { namespace: "accounting",  })}</th>
             </tr>
           </thead>
           <tbody>
@@ -60,8 +60,8 @@ export function PeriodsTable({ periods, current, isLoading, actionBusy, onAction
                   <td className="px-4 py-2">
                     <span className="flex items-center gap-1.5">
                       <StatusBadge status={p.status} />
-                      {isCurrent && <span className="text-[10px] font-bold text-emerald-600">{t("fiscalPeriods.table.currentBadge", { namespace: "accounting", fallback: "المركز الحالية" })}</span>}
-                      {blocked && <span className="text-[10px] font-bold text-slate-400">{t("fiscalPeriods.table.blockedBadge", { namespace: "accounting", fallback: "مرفوضة الحركة" })}</span>}
+                      {isCurrent && <span className="text-[10px] font-bold text-emerald-600">{t("fiscalPeriods.table.currentBadge", { namespace: "accounting",  })}</span>}
+                      {blocked && <span className="text-[10px] font-bold text-slate-400">{t("fiscalPeriods.table.blockedBadge", { namespace: "accounting",  })}</span>}
                     </span>
                   </td>
                   <td className="px-4 py-2 text-slate-600">{p.closed_by || "—"}</td>
@@ -75,7 +75,7 @@ export function PeriodsTable({ periods, current, isLoading, actionBusy, onAction
                           disabled={actionBusy}
                           onClick={() => onAction("close", p)}
                         >
-                          {t("fiscalPeriods.table.close", { namespace: "accounting", fallback: "إغلاق" })}
+                          {t("fiscalPeriods.table.close", { namespace: "accounting",  })}
                         </Button>
                       )}
                       {canReopen && (
@@ -86,7 +86,7 @@ export function PeriodsTable({ periods, current, isLoading, actionBusy, onAction
                           onClick={() => onAction("reopen", p)}
                         >
                           <LockOpen className="h-3 w-3" />
-                          {t("fiscalPeriods.table.reopen", { namespace: "accounting", fallback: "إعادة فتح" })}
+                          {t("fiscalPeriods.table.reopen", { namespace: "accounting",  })}
                         </Button>
                       )}
                       {canLock && (
@@ -97,7 +97,7 @@ export function PeriodsTable({ periods, current, isLoading, actionBusy, onAction
                           onClick={() => onAction("lock", p)}
                         >
                           <Lock className="h-3 w-3" />
-                          {t("fiscalPeriods.table.lock", { namespace: "accounting", fallback: "قفل نهائي" })}
+                          {t("fiscalPeriods.table.lock", { namespace: "accounting",  })}
                         </Button>
                       )}
                       {!canClose && !canReopen && !canLock && (

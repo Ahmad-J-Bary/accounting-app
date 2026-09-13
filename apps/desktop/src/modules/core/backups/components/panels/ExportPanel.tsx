@@ -28,12 +28,12 @@ export function ExportPanel({ onDone }: { onDone: () => Promise<void> }) {
     try {
       const path = await save({
         defaultPath: `almowakeb_export_${new Date().toISOString().slice(0, 19).replace(/[^0-9]/g, "")}.sqlite`,
-        filters: [{ name: t("settings.backups.filterSqlite", { namespace: "settings", fallback: "قاعدة بيانات SQLite" }), extensions: ["sqlite", "db"] }],
+        filters: [{ name: t("backups.filterSqlite", { namespace: "settings",  }), extensions: ["sqlite", "db"] }],
       });
       if (!path) return;
       await backupService.exportToFile(path);
       setDone(true);
-      toast.success(t("settings.backups.exportSuccess", { namespace: "settings", fallback: "تم تصدير قاعدة البيانات بنجاح" }));
+      toast.success(t("backups.exportSuccess", { namespace: "settings",  }));
       await onDone();
     } catch (e) {
       const err = friendlyBackupError(e);
@@ -56,14 +56,14 @@ export function ExportPanel({ onDone }: { onDone: () => Promise<void> }) {
         onClick={() => void handleExport()}
       >
         {emitting ? <Loader2 className="w-4 h-4 ml-1 animate-spin" /> : busy ? <FileDown className="w-4 h-4 ml-1 animate-pulse" /> : <Download className="w-4 h-4 ml-1" />}
-        {busy ? t("settings.backups.exporting", { namespace: "settings", fallback: "جارٍ التصدير..." }) : t("settings.backups.exportDb", { namespace: "settings", fallback: "تصدير قاعدة البيانات" })}
+        {busy ? t("backups.exporting", { namespace: "settings",  }) : t("backups.exportDb", { namespace: "settings",  })}
       </Button>
 
       {busy && phase && (
         <div role="status" aria-live="polite" className="space-y-1.5">
           <Progress
             value={backupProgressValue(phase)}
-            aria-label={t("settings.backups.exportProgress", { namespace: "settings", fallback: "تقدم التصدير" })}
+            aria-label={t("backups.exportProgress", { namespace: "settings",  })}
             className="[&>div]:bg-blue-600"
           />
           <p className="text-xs font-bold text-slate-500">{BACKUP_PROGRESS_LABELS[phase]}</p>
@@ -72,7 +72,7 @@ export function ExportPanel({ onDone }: { onDone: () => Promise<void> }) {
 
       {done && (
         <div className="flex items-center gap-2 text-xs font-bold text-emerald-600">
-          <CheckCircle2 className="w-4 h-4" /> {t("settings.backups.exportComplete", { namespace: "settings", fallback: "اكتمل التصدير بنجاح ✓" })}
+          <CheckCircle2 className="w-4 h-4" /> {t("backups.exportComplete", { namespace: "settings",  })}
         </div>
       )}
 

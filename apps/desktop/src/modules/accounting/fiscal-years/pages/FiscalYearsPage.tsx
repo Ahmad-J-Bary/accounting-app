@@ -63,10 +63,10 @@ export default function FiscalYearsPage() {
       setLabel("");
       setStart("");
       setEnd("");
-      toast.success(t("fiscalYears.toast.created", { namespace: "accounting", fallback: "تم إنشاء السنة المالية" }));
+      toast.success(t("fiscalYears.toast.created", { namespace: "accounting",  }));
       invalidate();
     },
-    onError: (e) => toast.error(t("fiscalYears.toast.createFailed", { namespace: "accounting", vars: { error: e instanceof Error ? e.message : String(e) }, fallback: "فشل الإنشاء: " + (e instanceof Error ? e.message : String(e)) })),
+    onError: (e) => toast.error(t("fiscalYears.toast.createFailed", { namespace: "accounting", vars: { error: e instanceof Error ? e.message : String(e) } })),
   });
 
   const act = useMutation({
@@ -88,8 +88,8 @@ export default function FiscalYearsPage() {
     onSuccess: (_dto, vars) => {
       toast.success(
         vars.type === "close"
-          ? t("fiscalYears.toast.closed", { namespace: "accounting", fallback: "تم إغلاق السنة المالية" })
-          : t("fiscalYears.toast.reopened", { namespace: "accounting", fallback: "تم إعادة فتح السنة المالية" }),
+          ? t("fiscalYears.toast.closed", { namespace: "accounting",  })
+          : t("fiscalYears.toast.reopened", { namespace: "accounting",  }),
       );
       invalidate();
     },
@@ -97,7 +97,6 @@ export default function FiscalYearsPage() {
       t("fiscalYears.toast.operationFailed", {
         namespace: "accounting",
         vars: { error: e instanceof Error ? e.message : String(e) },
-        fallback: "فشلت العملية: " + (e instanceof Error ? e.message : String(e)),
       })
     ),
   });
@@ -106,12 +105,27 @@ export default function FiscalYearsPage() {
 
   const confirmCopy = confirm
     ? (() => {
+        const CONFIRM_FALLBACKS: Record<string, { title: string; description: string; confirmLabel: string; destructive: boolean }> = {
+          close: {
+            title: "إغلاق السنة المالية",
+            description: "ستُغلق السنة المالية «{label}» من {start} إلى {end}. يجب أن تكون جميع الفترات مغلقة أو مقفلة. لن تُقبل أي حركات جديدة في هذه السنة.",
+            confirmLabel: "إغلاق",
+            destructive: false,
+          },
+          reopen: {
+            title: "إعادة فتح السنة المالية",
+            description: "ستعاد السنة المالية «{label}» إلى حالة «مُعاد فتحها». يمكن تسجيل تصحيحات صريحة بعد إعادة الفتح.",
+            confirmLabel: "إعادة الفتح",
+            destructive: false,
+          },
+        };
+        const base = CONFIRM_FALLBACKS[confirm.type];
         const keyPath = `fiscalYears.confirm.${confirm.type}` as const;
         return {
-          title: t(`${keyPath}.title`, { namespace: "accounting" }),
-          description: t(`${keyPath}.description`, { namespace: "accounting", vars: { label: confirm.year.label, start: toLocalDateStr(confirm.year.start_date), end: toLocalDateStr(confirm.year.end_date) } }),
-          confirmLabel: t(`${keyPath}.confirm`, { namespace: "accounting" }),
-          destructive: false,
+          title: t(`${keyPath}.title`, { namespace: "accounting"}),
+          description: t(`${keyPath}.description`, { namespace: "accounting", vars: { label: confirm.year.label, start: toLocalDateStr(confirm.year.start_date), end: toLocalDateStr(confirm.year.end_date) }}),
+          confirmLabel: t(`${keyPath}.confirm`, { namespace: "accounting"}),
+          destructive: base.destructive,
         };
       })()
     : null;
@@ -119,10 +133,10 @@ export default function FiscalYearsPage() {
   return (
     <ErrorBoundary>
     <OperationalTableTemplate
-      title={t("fiscalYears.title", { namespace: "accounting", fallback: "السنوات المالية" })}
+      title={t("fiscalYears.title", { namespace: "accounting",  })}
       toolbar={
         <p className="text-xs text-slate-500">
-          {t("fiscalYears.description", { namespace: "accounting", fallback: "السنة المالية هي الفترة الزمنية الأساسية للتقارير المالية. تجمع الفترات المالية وتحكّم في دورة الإغلاق والترحيل." })}
+          {t("fiscalYears.description", { namespace: "accounting",  })}
         </p>
       }
       tableContent={

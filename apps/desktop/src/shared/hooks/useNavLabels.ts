@@ -22,7 +22,7 @@ export function useNavLabels() {
     (item: NavLabelSource): string => {
       if (item.customLabel) return item.customLabel;
       if (!item.isCustom) {
-        return t(`nav.${item.id}`, { namespace: "shell", fallback: item.defaultLabel });
+        return t(`nav.${item.id}`, { namespace: "shell"});
       }
       return item.defaultLabel;
     },
@@ -33,7 +33,7 @@ export function useNavLabels() {
     (group: NavGroupLabelSource): string => {
       if (group.customTitle) return group.customTitle;
       if (!group.isCustom) {
-        return t(`nav.groups.${group.id}`, { namespace: "shell", fallback: group.defaultTitle });
+        return t(`nav.groups.${group.id}`, { namespace: "shell"});
       }
       return group.defaultTitle;
     },

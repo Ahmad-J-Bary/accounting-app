@@ -122,7 +122,7 @@ describe("OpeningBalanceMigration company-type gate", () => {
     const { qc } = renderPage();
     await waitFor(() => expect(qc.getQueryData(QUERY_KEYS.settings)).toBeTruthy());
     expect(await screen.findByText("DASHBOARD_ROOT")).toBeInTheDocument();
-    expect(screen.queryByText("رصيد افتتاح الشركة")).not.toBeInTheDocument();
+    expect(screen.queryByText("openingBalance.migrationPageTitle.open")).not.toBeInTheDocument();
   });
 
   it("shows the full page for an EXISTING company with a NOT_STARTED badge", async () => {
@@ -130,13 +130,13 @@ describe("OpeningBalanceMigration company-type gate", () => {
       accounting_start_mode: START_MODE_EXISTING,
     } as never);
     renderPage();
-    expect(await screen.findByText("رصيد افتتاح الشركة")).toBeInTheDocument();
+    expect(await screen.findByText("openingBalance.migrationPageTitle.open")).toBeInTheDocument();
     expect(await screen.findByText("لم يبدأ بعد")).toBeInTheDocument();
     // The overview tab is the default landing: welcome for NOT_STARTED companies.
-    expect(screen.getByText("نظرة عامة")).toBeInTheDocument();
-    expect(screen.getByText("قائمة الترحيلات")).toBeInTheDocument();
-    expect(screen.getByText("إعداد رصيد افتتاح الشركة القائمة")).toBeInTheDocument();
-    expect(screen.getByText("ابدأ المعالج")).toBeInTheDocument();
+    expect(screen.getByText("openingBalance.tabOverview")).toBeInTheDocument();
+    expect(screen.getByText("openingBalance.tabList")).toBeInTheDocument();
+    expect(screen.getByText("openingBalance.welcomeTitle")).toBeInTheDocument();
+    expect(screen.getByText("openingBalance.startWizard")).toBeInTheDocument();
   });
 
   it("keeps a fully ACTIVE EXISTING company on the post-transition completion step (no redirect)", async () => {
@@ -207,8 +207,8 @@ describe("OpeningBalanceMigration company-type gate", () => {
     await waitFor(() => expect(qc.getQueryData(QUERY_KEYS.openingBalanceMigrations)).toBeTruthy());
     // The wizard shows the done/completion step directly; opening management controls vanish.
     expect(await screen.findByText("اكتمل إعداد الشركة ✓")).toBeInTheDocument();
-    expect(screen.queryByText("قائمة الترحيلات")).not.toBeInTheDocument();
-    expect(screen.queryByText("المركز والتسوية")).not.toBeInTheDocument();
+    expect(screen.queryByText("openingBalance.tabList")).not.toBeInTheDocument();
+    expect(screen.queryByText("openingBalance.tabPosition")).not.toBeInTheDocument();
     expect(screen.queryByText("DASHBOARD_ROOT")).not.toBeInTheDocument();
   });
 

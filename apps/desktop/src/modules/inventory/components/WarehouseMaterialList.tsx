@@ -71,7 +71,7 @@ export function WarehouseMaterialList({
     <SidebarShell isOpen={open} onClose={onClose}>
       <SidebarHeader
         title={warehouse.name}
-        subtitle={t("warehouses.materialList.subtitle", { namespace: "inventory", fallback: "المواد الموجودة في المستودع" })}
+        subtitle={t("warehouses.materialList.subtitle", { namespace: "inventory",  })}
         icon={<WarehouseIcon className="w-4 h-4 text-blue-600" />}
         onClose={onClose}
       />
@@ -79,11 +79,11 @@ export function WarehouseMaterialList({
         {/* Stats Strip */}
         <div className="grid grid-cols-2 gap-3 mb-4">
           <div className="rounded-xl border border-slate-100 bg-slate-50 p-3 flex flex-col gap-0.5">
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">{t("warehouses.materialList.itemCount", { namespace: "inventory", fallback: "عدد الأصناف" })}</span>
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">{t("warehouses.materialList.itemCount", { namespace: "inventory",  })}</span>
             <span className="text-xl font-black text-blue-600 tabular-nums">{formatNumber(materialsInWarehouse.length)}</span>
           </div>
           <div className="rounded-xl border border-slate-100 bg-slate-50 p-3 flex flex-col gap-0.5">
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">{t("warehouses.materialList.totalQty", { namespace: "inventory", fallback: "إجمالي الكميات" })}</span>
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">{t("warehouses.materialList.totalQty", { namespace: "inventory",  })}</span>
             <span className="text-xl font-black text-emerald-600 tabular-nums">{formatNumber(totalQty)}</span>
           </div>
         </div>
@@ -92,7 +92,7 @@ export function WarehouseMaterialList({
         <div className="relative mb-4">
           <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
           <Input
-            placeholder={t("warehouses.materialList.searchPlaceholder", { namespace: "inventory", fallback: "بحث بالاسم أو الكود..." })}
+            placeholder={t("warehouses.materialList.searchPlaceholder", { namespace: "inventory",  })}
             value={search}
             onChange={e => setSearch(e.target.value)}
             className="pr-9 h-9 text-xs bg-white border-slate-200"
@@ -103,13 +103,13 @@ export function WarehouseMaterialList({
         {materialsInWarehouse.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-slate-400">
             <Package className="w-12 h-12 mb-3 opacity-20" />
-            <p className="font-bold text-slate-500 text-sm">{t("warehouses.materialList.emptyTitle", { namespace: "inventory", fallback: "لا توجد مواد في هذا المستودع" })}</p>
-            <p className="text-[11px] text-slate-400 mt-1">{t("warehouses.materialList.emptyHint", { namespace: "inventory", fallback: "لم يتم تسجيل أي كميات لهذا المستودع بعد" })}</p>
+            <p className="font-bold text-slate-500 text-sm">{t("warehouses.materialList.emptyTitle", { namespace: "inventory",  })}</p>
+            <p className="text-[11px] text-slate-400 mt-1">{t("warehouses.materialList.emptyHint", { namespace: "inventory",  })}</p>
           </div>
         ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-slate-400">
             <Search className="w-8 h-8 mb-2 opacity-20" />
-            <p className="text-sm text-slate-500">{t("labels.noResults", { namespace: "inventory", fallback: "لا توجد نتائج للبحث" })}</p>
+            <p className="text-sm text-slate-500">{t("labels.noResults", { namespace: "inventory",  })}</p>
           </div>
         ) : (
           <div className="space-y-1.5">
@@ -153,7 +153,7 @@ export function WarehouseMaterialList({
                         className="h-7 text-[10px] border-amber-200 text-amber-700 hover:bg-amber-50 opacity-0 group-hover:opacity-100 transition-opacity"
                         onClick={() => onOpenTransfer(material.id, warehouse.id)}
                       >
-                        <ArrowRightLeft className="w-3 h-3 ml-1" /> {t("warehouses.materialList.transfer", { namespace: "inventory", fallback: "تحويل" })}
+                        <ArrowRightLeft className="w-3 h-3 ml-1" /> {t("warehouses.materialList.transfer", { namespace: "inventory",  })}
                       </Button>
                     )}
                   </div>

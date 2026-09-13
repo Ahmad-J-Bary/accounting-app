@@ -159,7 +159,7 @@ describe("openingBalance (فاتورة أول المدة) company-type gate", ()
       accounting_start_mode: START_MODE_EXISTING,
     } as never);
     renderPage();
-    expect(await screen.findByText("بضاعة أول المدة")).toBeInTheDocument();
+    expect(await screen.findByText("openingBalance.title")).toBeInTheDocument();
   });
 
   it("redirects an EXISTING company away once the migration is Locked (OPENING_LOCKED)", async () => {

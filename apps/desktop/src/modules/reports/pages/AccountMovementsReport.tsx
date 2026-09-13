@@ -34,11 +34,11 @@ export default function AccountMovementsReport() {
 
   return (
     <OperationalTableTemplate
-      title={t("accountMovements.title", { namespace: "reports", fallback: "حركة الحساب" })}
+      title={t("accountMovements.title", { namespace: "reports",  })}
       badge={
         <Select value={selectedAccountId} onValueChange={setSelectedAccountId}>
           <SelectTrigger className="h-9 w-auto min-w-[160px] rounded-lg border-slate-200 bg-white text-xs font-bold">
-            <SelectValue placeholder={t("accountMovements.selectAccountPlaceholder", { namespace: "reports", fallback: "اختر الحساب..." })} />
+            <SelectValue placeholder={t("accountMovements.selectAccountPlaceholder", { namespace: "reports",  })} />
           </SelectTrigger>
           <SelectContent>
             {accounts.map(a => (

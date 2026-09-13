@@ -43,7 +43,7 @@ export function BackupSettingsPanel({ config, operating, onConfigChange, onApply
 
   const RETENTION_PRESETS = RETENTION_KEYS.map(p => ({
     ...p,
-    label: t(`settings.backups.retentionPresets.${p.key}`, { namespace: "settings", fallback: p.key }),
+    label: t(`settings.backups.retentionPresets.${p.key}`, { namespace: "settings"}),
   }));
   const custom = !config.use_same_location;
   const currentPreset = findRetentionPreset(config.keep_daily, config.keep_weekly, config.keep_monthly);
@@ -84,8 +84,8 @@ export function BackupSettingsPanel({ config, operating, onConfigChange, onApply
       <div>
         <div className="flex items-center justify-between gap-3">
           <div className="space-y-0.5">
-            <p className="font-bold text-slate-800 text-sm">{t("settings.backups.autoBackup", { namespace: "settings", fallback: "النسخ الاحتياطي التلقائي" })}</p>
-            <p className="text-xs text-slate-400">{t("settings.backups.autoBackupDesc", { namespace: "settings", fallback: "إنشاء نسخة احتياطية تلقائية عند بدء تشغيل التطبيق." })}</p>
+            <p className="font-bold text-slate-800 text-sm">{t("backups.autoBackup", { namespace: "settings",  })}</p>
+            <p className="text-xs text-slate-400">{t("backups.autoBackupDesc", { namespace: "settings",  })}</p>
           </div>
           <Switch
             checked={config.auto_backup_enabled}
@@ -97,8 +97,8 @@ export function BackupSettingsPanel({ config, operating, onConfigChange, onApply
 
       {/* Retention */}
       <div className="border-t border-slate-100 pt-5">
-        <label className="font-bold text-slate-800 text-sm block mb-1">{t("settings.backups.retention", { namespace: "settings", fallback: "الاحتفاظ بالنسخ الاحتياطية" })}</label>
-        <p className="text-xs text-slate-400 mb-3">{t("settings.backups.retentionDesc", { namespace: "settings", fallback: "ينطبق على النسخ الاحتياطية التلقائية فقط." })}</p>
+        <label className="font-bold text-slate-800 text-sm block mb-1">{t("backups.retention", { namespace: "settings",  })}</label>
+        <p className="text-xs text-slate-400 mb-3">{t("backups.retentionDesc", { namespace: "settings",  })}</p>
         <select
           value={currentPreset}
           disabled={operating}
@@ -115,7 +115,7 @@ export function BackupSettingsPanel({ config, operating, onConfigChange, onApply
 
       {/* Backup location */}
       <div className="border-t border-slate-100 pt-5 space-y-3">
-        <label className="font-bold text-slate-800 text-sm block">{t("settings.backups.location", { namespace: "settings", fallback: "مكان النسخ الاحتياطية" })}</label>
+        <label className="font-bold text-slate-800 text-sm block">{t("backups.location", { namespace: "settings",  })}</label>
 
         <label
           className={cn(
@@ -134,8 +134,8 @@ export function BackupSettingsPanel({ config, operating, onConfigChange, onApply
             className="h-4 w-4 accent-blue-600"
           />
           <div className="space-y-0.5">
-            <div className="text-sm font-bold text-slate-700">{t("settings.backups.nextToProgram", { namespace: "settings", fallback: "بجانب بيانات البرنامج" })}</div>
-            <div className="text-[10px] text-slate-400">{t("settings.backups.nextToProgramDesc", { namespace: "settings", fallback: "حفظ النسخ الاحتياطية بجانب ملف قاعدة البيانات الأصلي" })}</div>
+            <div className="text-sm font-bold text-slate-700">{t("backups.nextToProgram", { namespace: "settings",  })}</div>
+            <div className="text-[10px] text-slate-400">{t("backups.nextToProgramDesc", { namespace: "settings",  })}</div>
           </div>
         </label>
 
@@ -156,25 +156,25 @@ export function BackupSettingsPanel({ config, operating, onConfigChange, onApply
             className="h-4 w-4 accent-blue-600"
           />
           <div className="space-y-0.5 flex-1">
-            <div className="text-sm font-bold text-slate-700">{t("settings.backups.customFolder", { namespace: "settings", fallback: "مجلد مخصص" })}</div>
-            <div className="text-[10px] text-slate-400">{t("settings.backups.customFolderDesc", { namespace: "settings", fallback: "اختيار مجلد محدد للنسخ الاحتياطية" })}</div>
+            <div className="text-sm font-bold text-slate-700">{t("backups.customFolder", { namespace: "settings",  })}</div>
+            <div className="text-[10px] text-slate-400">{t("backups.customFolderDesc", { namespace: "settings",  })}</div>
           </div>
         </label>
 
         {custom && (
           <div className="flex items-center gap-2 pr-8">
             <div className="flex-1 px-3 py-2 rounded-xl bg-white/40 border border-slate-200 text-xs text-slate-500 truncate" dir="ltr">
-              {config.custom_path || t("settings.backups.noFolderSelected", { namespace: "settings", fallback: "لم يتم اختيار مجلد بعد" })}
+              {config.custom_path || t("backups.noFolderSelected", { namespace: "settings",  })}
             </div>
             <Button variant="outline" size="sm" disabled={operating} onClick={() => void pickCustomFolder()} className="shrink-0 h-9 rounded-xl">
-              <FolderOpen className="h-4 w-4 mr-1" /> {t("settings.backups.selectFolder", { namespace: "settings", fallback: "اختيار المجلد" })}
+              <FolderOpen className="h-4 w-4 mr-1" /> {t("backups.selectFolder", { namespace: "settings",  })}
             </Button>
           </div>
         )}
 
         <div className="flex items-center gap-2 pt-2">
           <Button size="sm" variant="outline" disabled={operating} onClick={() => void handleOpenFolder()}>
-            <FolderOpen className="h-4 w-4 mr-1" /> {t("settings.backups.openFolder", { namespace: "settings", fallback: "فتح المجلد" })}
+            <FolderOpen className="h-4 w-4 mr-1" /> {t("backups.openFolder", { namespace: "settings",  })}
           </Button>
           <Button
             size="sm"
@@ -183,7 +183,7 @@ export function BackupSettingsPanel({ config, operating, onConfigChange, onApply
             disabled={operating}
             onClick={() => void onApplyRetention()}
           >
-            <Trash2 className="h-4 w-4 mr-1" /> {t("settings.backups.cleanOld", { namespace: "settings", fallback: "تنظيف النسخ القديمة" })}
+            <Trash2 className="h-4 w-4 mr-1" /> {t("backups.cleanOld", { namespace: "settings",  })}
           </Button>
         </div>
       </div>

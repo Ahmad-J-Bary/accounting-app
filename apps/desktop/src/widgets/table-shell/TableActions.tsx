@@ -38,13 +38,13 @@ export function TableActions({ onView, onEdit, onDelete, onExportRow, extraActio
           {onView && (
             <DropdownMenuItem onClick={onView} className="gap-2 cursor-pointer py-2.5">
               <Eye className="w-4 h-4 text-slate-400" />
-              <span>{t('labels.viewDetails', { fallback: 'عرض التفاصيل' })}</span>
+              <span>{t('labels.viewDetails', )}</span>
             </DropdownMenuItem>
           )}
           {onEdit && (
             <DropdownMenuItem onClick={onEdit} className="gap-2 cursor-pointer py-2.5">
               <Edit className="w-4 h-4 text-slate-400" />
-              <span>{t('labels.editData', { fallback: 'تعديل البيانات' })}</span>
+              <span>{t('labels.editData', )}</span>
             </DropdownMenuItem>
           )}
           
@@ -65,7 +65,7 @@ export function TableActions({ onView, onEdit, onDelete, onExportRow, extraActio
           {onExportRow && (
             <DropdownMenuItem onClick={onExportRow} className="gap-2 cursor-pointer py-2.5">
               <Download className="w-4 h-4 text-slate-400" />
-              <span>{t('labels.exportExcel', { fallback: 'تصدير إكسل' })}</span>
+              <span>{t('labels.exportExcel', )}</span>
             </DropdownMenuItem>
           )}
 
@@ -77,7 +77,7 @@ export function TableActions({ onView, onEdit, onDelete, onExportRow, extraActio
                 className="gap-2 cursor-pointer py-2.5 text-red-600 focus:text-red-600 focus:bg-red-50/50 font-medium"
               >
                 <Trash2 className="w-4 h-4 text-red-400" />
-                <span>{t('labels.deleteRecord', { fallback: 'حذف السجل' })}</span>
+                <span>{t('labels.deleteRecord', )}</span>
               </DropdownMenuItem>
             </>
           )}

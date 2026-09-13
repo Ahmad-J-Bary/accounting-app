@@ -77,7 +77,7 @@ export function TopBar({
   const handleNewCustomer = () => {
     openTab({ 
       id: `/customers/new-${Date.now()}`, 
-      title: t("topbar.newCustomer", { namespace: "shell", fallback: "عميل جديد" }), 
+      title: t("topbar.newCustomer", { namespace: "shell",  }), 
       path: "/customers",
       closable: true
     });
@@ -89,7 +89,7 @@ export function TopBar({
   const handleNewSupplier = () => {
     openTab({ 
       id: `/suppliers/new-${Date.now()}`, 
-      title: t("topbar.newSupplier", { namespace: "shell", fallback: "مورد جديد" }), 
+      title: t("topbar.newSupplier", { namespace: "shell",  }), 
       path: "/suppliers",
       closable: true
     });
@@ -101,7 +101,7 @@ export function TopBar({
   const handleNewProduct = () => {
     openTab({ 
       id: `/materials/new-${Date.now()}`, 
-      title: t("topbar.newProduct", { namespace: "shell", fallback: "منتج جديد" }), 
+      title: t("topbar.newProduct", { namespace: "shell",  }), 
       path: "/materials",
       closable: true
     });
@@ -235,19 +235,19 @@ export function TopBar({
         <DropdownMenuTrigger asChild>
           <Button size="sm" className="gap-2 bg-primary hover:bg-primary/90 active:scale-95 transition-all">
             <Plus className="w-4 h-4" />
-            <span className="hidden sm:inline">{t("topbar.quickAction", { namespace: "shell", fallback: "إجراء سريع" })}</span>
+            <span className="hidden sm:inline">{t("topbar.quickAction", { namespace: "shell",  })}</span>
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-52 text-right">
-          <DropdownMenuItem onClick={() => executeCommand("new-sales-invoice")} className="cursor-pointer">{t("topbar.newSalesInvoice", { namespace: "shell", fallback: "فاتورة مبيعات جديدة" })}</DropdownMenuItem>
-          <DropdownMenuItem onClick={() => executeCommand("new-purchase-invoice")} className="cursor-pointer">{t("topbar.newPurchaseInvoice", { namespace: "shell", fallback: "فاتورة مشتريات جديدة" })}</DropdownMenuItem>
-          <DropdownMenuItem>{t("topbar.newReceiptVoucher", { namespace: "shell", fallback: "سند قبض جديد" })}</DropdownMenuItem>
-          <DropdownMenuItem>{t("topbar.newPaymentVoucher", { namespace: "shell", fallback: "سند صرف جديد" })}</DropdownMenuItem>
-          <DropdownMenuItem onClick={() => executeCommand("new-journal-entry")}>{t("topbar.newJournalEntry", { namespace: "shell", fallback: "قيد يومية جديد" })}</DropdownMenuItem>
+          <DropdownMenuItem onClick={() => executeCommand("new-sales-invoice")} className="cursor-pointer">{t("topbar.newSalesInvoice", { namespace: "shell",  })}</DropdownMenuItem>
+          <DropdownMenuItem onClick={() => executeCommand("new-purchase-invoice")} className="cursor-pointer">{t("topbar.newPurchaseInvoice", { namespace: "shell",  })}</DropdownMenuItem>
+          <DropdownMenuItem>{t("topbar.newReceiptVoucher", { namespace: "shell",  })}</DropdownMenuItem>
+          <DropdownMenuItem>{t("topbar.newPaymentVoucher", { namespace: "shell",  })}</DropdownMenuItem>
+          <DropdownMenuItem onClick={() => executeCommand("new-journal-entry")}>{t("topbar.newJournalEntry", { namespace: "shell",  })}</DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={handleNewCustomer} className="cursor-pointer">{t("topbar.newCustomer", { namespace: "shell", fallback: "عميل جديد" })}</DropdownMenuItem>
-          <DropdownMenuItem onClick={handleNewSupplier} className="cursor-pointer">{t("topbar.newSupplier", { namespace: "shell", fallback: "مورد جديد" })}</DropdownMenuItem>
-          <DropdownMenuItem onClick={handleNewProduct} className="cursor-pointer">{t("topbar.newProduct", { namespace: "shell", fallback: "منتج جديد" })}</DropdownMenuItem>
+          <DropdownMenuItem onClick={handleNewCustomer} className="cursor-pointer">{t("topbar.newCustomer", { namespace: "shell",  })}</DropdownMenuItem>
+          <DropdownMenuItem onClick={handleNewSupplier} className="cursor-pointer">{t("topbar.newSupplier", { namespace: "shell",  })}</DropdownMenuItem>
+          <DropdownMenuItem onClick={handleNewProduct} className="cursor-pointer">{t("topbar.newProduct", { namespace: "shell",  })}</DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
 
@@ -256,7 +256,7 @@ export function TopBar({
           variant={isExchangeVisible ? "secondary" : "ghost"}
           size="icon"
           onClick={onToggleExchange}
-          title={isExchangeVisible ? t("topbar.hideExchangeRate", { namespace: "shell", fallback: "إخفاء سعر الصرف" }) : t("topbar.showExchangeRate", { namespace: "shell", fallback: "إظهار سعر الصرف" })}
+          title={isExchangeVisible ? t("topbar.hideExchangeRate", { namespace: "shell",  }) : t("topbar.showExchangeRate", { namespace: "shell",  })}
           className={cn(isExchangeVisible && "bg-blue-50 text-blue-600 hover:bg-blue-100")}
         >
           <DollarSign className="w-5 h-5" />
@@ -264,12 +264,12 @@ export function TopBar({
       )}
 
       {merged && showSearch && (
-        <Button variant="ghost" size="icon" onClick={openSearch} title={t("globalSearch", { namespace: "shell", fallback: "بحث شامل" })}>
+        <Button variant="ghost" size="icon" onClick={openSearch} title={t("globalSearch", { namespace: "shell",  })}>
           <Search className="w-5 h-5" />
         </Button>
       )}
 
-      <Button variant="ghost" size="icon" onClick={voice.open} title={t("voice", { namespace: "shell", fallback: "المساعد الصوتي" })}>
+      <Button variant="ghost" size="icon" onClick={voice.open} title={t("voice", { namespace: "shell",  })}>
         <Mic className="w-5 h-5" />
       </Button>
 
@@ -284,7 +284,7 @@ export function TopBar({
         <DropdownMenuTrigger asChild>
           {mergedSlim ? (
             <button className={cn("flex items-center gap-1 rounded-md px-1 py-0.5 transition", btnHoverClass)}>
-              <span className={cn("text-[10px] font-medium leading-tight", isHorizontalDark && "text-slate-200")}>{t("topbar.user", { namespace: "shell", fallback: "المستخدم" })}</span>
+              <span className={cn("text-[10px] font-medium leading-tight", isHorizontalDark && "text-slate-200")}>{t("topbar.user", { namespace: "shell",  })}</span>
               <ChevronDown className="w-2.5 h-2.5 opacity-60" />
             </button>
           ) : (
@@ -293,24 +293,24 @@ export function TopBar({
                 <AvatarFallback className="bg-primary text-primary-foreground text-xs">أ</AvatarFallback>
               </Avatar>
               <div className="text-right hidden md:block">
-                <div className={cn("text-sm font-medium leading-tight", isHorizontalDark && "text-slate-200")}>{t("topbar.user", { namespace: "shell", fallback: "المستخدم" })}</div>
+                <div className={cn("text-sm font-medium leading-tight", isHorizontalDark && "text-slate-200")}>{t("topbar.user", { namespace: "shell",  })}</div>
               </div>
             </button>
           )}
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-56">
-          <DropdownMenuLabel>{t("topbar.account", { namespace: "shell", fallback: "الحساب الشخصي" })}</DropdownMenuLabel>
+          <DropdownMenuLabel>{t("topbar.account", { namespace: "shell",  })}</DropdownMenuLabel>
           <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={() => openTab({ id: '/settings', title: t("topbar.settings", { namespace: "shell", fallback: "الإعدادات" }), path: '/settings', closable: true })}>
-            <SettingsIcon className="w-4 h-4 ml-2" />{t("topbar.settings", { namespace: "shell", fallback: "الإعدادات" })}
+          <DropdownMenuItem onClick={() => openTab({ id: '/settings', title: t("topbar.settings", { namespace: "shell",  }), path: '/settings', closable: true })}>
+            <SettingsIcon className="w-4 h-4 ml-2" />{t("topbar.settings", { namespace: "shell",  })}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => setLanguage(language === "ar" ? "en" : "ar")}>
             <SettingsIcon className="w-4 h-4 ml-2" />
-            {language === "ar" ? t("topbar.switchToEnglish", { namespace: "shell", fallback: "التحويل إلى الإنجليزية" }) : t("topbar.switchToArabic", { namespace: "shell", fallback: "التحويل إلى العربية" })}
+            {language === "ar" ? t("topbar.switchToEnglish", { namespace: "shell",  }) : t("topbar.switchToArabic", { namespace: "shell",  })}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem className="text-red-600"><LogOut className="w-4 h-4 ml-2" />{t("topbar.logout", { namespace: "shell", fallback: "تسجيل الخروج" })}</DropdownMenuItem>
+          <DropdownMenuItem className="text-red-600"><LogOut className="w-4 h-4 ml-2" />{t("topbar.logout", { namespace: "shell",  })}</DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
     </>
@@ -331,9 +331,9 @@ export function TopBar({
             <Building2 className="w-4 h-4 text-primary-foreground" />
           </div>
           <div className="min-w-0 hidden sm:flex items-center gap-1.5">
-            <span className={cn("text-sm font-extrabold leading-tight", isHorizontalDark ? "text-slate-100" : "text-slate-800")}>{t("topbar.brandName", { namespace: "shell", fallback: "المُواكِب" })}</span>
+            <span className={cn("text-sm font-extrabold leading-tight", isHorizontalDark ? "text-slate-100" : "text-slate-800")}>{t("topbar.brandName", { namespace: "shell",  })}</span>
             <span className={cn("text-xs select-none", isHorizontalDark ? "text-slate-600" : "text-slate-300")}>|</span>
-            <span className={cn("text-sm font-semibold leading-tight truncate", isHorizontalDark ? "text-slate-400" : "text-slate-500")}>{settings?.company_name || t("topbar.companyFallback", { namespace: "shell", fallback: "المنشأة" })}</span>
+            <span className={cn("text-sm font-semibold leading-tight truncate", isHorizontalDark ? "text-slate-400" : "text-slate-500")}>{settings?.company_name || t("topbar.companyFallback", { namespace: "shell",  })}</span>
           </div>
           {merged && <UpdateBanner variant="slim" dark={isHorizontalDark} />}
         </div>
@@ -354,7 +354,7 @@ export function TopBar({
                 onClick={openSearch}
               >
                 <Search className="w-4 h-4 ml-2" />
-                {t("topbar.searchInSystem", { namespace: "shell", fallback: "بحث شامل في النظام..." })}
+                {t("topbar.searchInSystem", { namespace: "shell",  })}
               </Button>
             )}
           </div>

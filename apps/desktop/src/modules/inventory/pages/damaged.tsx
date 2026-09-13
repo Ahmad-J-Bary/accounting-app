@@ -47,7 +47,7 @@ export default function DamagedPage() {
       const pData = await materialService.list();
       setProducts(pData);
     } catch {
-      toast.error(t("errors.failedLoadProducts", { namespace: "inventory", fallback: "فشل تحميل المنتجات" }));
+      toast.error(t("errors.failedLoadProducts", { namespace: "inventory",  }));
     } finally {
       setLoadingProducts(false);
     }
@@ -62,9 +62,9 @@ export default function DamagedPage() {
       setShowDialog(false);
       refresh(true);
       await invalidateKeys(queryClient, INVENTORY_MUTATION_KEYS);
-      toast.success(t("damaged.created", { namespace: "inventory", fallback: "تم تسجيل التالف بنجاح" }));
+      toast.success(t("damaged.created", { namespace: "inventory",  }));
     } catch (e: unknown) {
-      toast.error(t("errors.save", { namespace: "inventory", vars: { error: String(e) }, fallback: "فشل الحفظ: " + e }));
+      toast.error(t("errors.save", { namespace: "inventory", vars: { error: String(e) } }));
     } finally {
       setSaving(false);
     }
@@ -83,9 +83,9 @@ export default function DamagedPage() {
       setSelectedItem(null);
       refresh(true);
       await invalidateKeys(queryClient, INVENTORY_MUTATION_KEYS);
-      toast.success(t("damaged.updated", { namespace: "inventory", fallback: "تم التعديل بنجاح" }));
+      toast.success(t("damaged.updated", { namespace: "inventory",  }));
     } catch (e: unknown) {
-      toast.error(t("errors.update", { namespace: "inventory", vars: { error: String(e) }, fallback: "فشل التعديل: " + e }));
+      toast.error(t("errors.update", { namespace: "inventory", vars: { error: String(e) } }));
     } finally {
       setSaving(false);
     }
@@ -100,16 +100,16 @@ export default function DamagedPage() {
   }, [selectedItem, handleCreate, handleUpdate]);
 
   const handleDelete = useCallback(async (id: string) => {
-    if (!confirm(t("damaged.deleteConfirm", { namespace: "inventory", fallback: "هل أنت متأكد من حذف سجل التالف هذا؟ سيتم حذف حركة المخزون المرتبطة به." }))) return;
+    if (!confirm(t("damaged.deleteConfirm", { namespace: "inventory",  }))) return;
     try {
       await damagedService.delete(id);
-      toast.success(t("toasts.deleted", { namespace: "inventory", fallback: "تم الحذف بنجاح" }));
+      toast.success(t("toasts.deleted", { namespace: "inventory",  }));
       setSelectedItem(null);
       setShowDialog(false);
       refresh(true);
       await invalidateKeys(queryClient, INVENTORY_MUTATION_KEYS);
     } catch (e) {
-      toast.error(t("errors.delete", { namespace: "inventory", vars: { error: String(e) }, fallback: "فشل الحذف: " + e }));
+      toast.error(t("errors.delete", { namespace: "inventory", vars: { error: String(e) } }));
     }
   }, [refresh, queryClient, t]);
 
@@ -134,30 +134,30 @@ export default function DamagedPage() {
   const { exportData, rateMap, currencies, formatAmount, currencyMode, ratesSheet, baseCode } = useExportSetup();
 
   const handleExport = useCallback(async () => {
-    const currCols = currencyAmountCols("loss", t("damaged.loss", { namespace: "inventory", fallback: "الخسارة" }), (row) => parseFloat((row as unknown as DamagedItem).loss_base || (row as unknown as DamagedItem).cost_impact_base || "0"), currencies, formatAmount, "", hasSecondaryCurrencies, hasSecondaryCurrencies, currencyMode, baseCode, rateMap);
+    const currCols = currencyAmountCols("loss", t("damaged.loss", { namespace: "inventory",  }), (row) => parseFloat((row as unknown as DamagedItem).loss_base || (row as unknown as DamagedItem).cost_impact_base || "0"), currencies, formatAmount, "", hasSecondaryCurrencies, hasSecondaryCurrencies, currencyMode, baseCode, rateMap);
     applyVisibilityToCurrencyCols(currCols, new Set(visibleColumnIds));
     const summary: Record<string, 'sum' | 'subtotal' | 'average' | null> = { quantity: 'subtotal' };
     addCurrencySummary(summary, "loss", currencies);
 
     const columns: ExcelExportColumn[] = [
-      { id: "id", label: t("labels.number", { namespace: "common", fallback: "الرقم" }), accessor: (row) => {
+      { id: "id", label: t("labels.number", { namespace: "common",  }), accessor: (row) => {
         const i = row as unknown as DamagedItem;
         if (i.reference) return parseInt(i.reference, 10) || 0;
         return "—";
       } },
-      { id: "material_name", label: t("labels.material", { namespace: "inventory", fallback: "المادة" }), accessor: (row) => String((row as unknown as DamagedItem).material_name ?? "") },
-      { id: "quantity", label: t("labels.quantity", { namespace: "common", fallback: "الكمية" }), accessor: (row) => Math.round(parseFloat((row as unknown as DamagedItem).quantity || "0")), numeric: true },
+      { id: "material_name", label: t("labels.material", { namespace: "inventory",  }), accessor: (row) => String((row as unknown as DamagedItem).material_name ?? "") },
+      { id: "quantity", label: t("labels.quantity", { namespace: "common",  }), accessor: (row) => Math.round(parseFloat((row as unknown as DamagedItem).quantity || "0")), numeric: true },
       ...currCols,
-      { id: "reason", label: t("labels.reason", { namespace: "common", fallback: "السبب" }), accessor: (row) => String((row as unknown as DamagedItem).reason ?? "") },
-      dateCol("damage_date", t("labels.date", { namespace: "common", fallback: "التاريخ" }), (row) => (row as unknown as DamagedItem).damage_date),
+      { id: "reason", label: t("labels.reason", { namespace: "common",  }), accessor: (row) => String((row as unknown as DamagedItem).reason ?? "") },
+      dateCol("damage_date", t("labels.date", { namespace: "common",  }), (row) => (row as unknown as DamagedItem).damage_date),
     ];
     await executeExport(exportData, {
-      sheetName: t("damaged.title", { namespace: "inventory", fallback: "إدارة المواد التالفة" }),
-      filename: t("damaged.title", { namespace: "inventory", fallback: "إدارة المواد التالفة" }),
+      sheetName: t("damaged.title", { namespace: "inventory",  }),
+      filename: t("damaged.title", { namespace: "inventory",  }),
       data: items as unknown as Record<string, unknown>[],
       columns,
       summary,
-      summaryLabel: t("labels.summary", { namespace: "inventory", fallback: "المجموع" }),
+      summaryLabel: t("labels.summary", { namespace: "inventory",  }),
       currencyRatesSheet: ratesSheet,
       numeralSystem: getNumberingSystem(),
     });
@@ -179,7 +179,7 @@ export default function DamagedPage() {
 
   return (
     <OperationalTableTemplate
-      title={t("damaged.title", { namespace: "inventory", fallback: "إدارة المواد التالفة" })}
+      title={t("damaged.title", { namespace: "inventory",  })}
       toolbar={
         <div className="flex items-center gap-2">
           <Button
@@ -187,10 +187,10 @@ export default function DamagedPage() {
             onClick={handleNewClick}
             className="bg-rose-600 hover:bg-rose-700 shadow-lg shadow-rose-100 font-bold"
           >
-            <Plus className="w-4 h-4 ml-2" /> {t("damaged.register", { namespace: "inventory", fallback: "تسجيل تالف" })}
+            <Plus className="w-4 h-4 ml-2" /> {t("damaged.register", { namespace: "inventory",  })}
           </Button>
           <Button variant="outline" size="sm" onClick={handleExport} className="border-slate-200 hover:bg-slate-50 font-bold">
-            <Download className="w-4 h-4 ml-2 text-slate-500" /> {t("labels.exportExcel", { namespace: "inventory", fallback: "تصدير إكسل" })}
+            <Download className="w-4 h-4 ml-2 text-slate-500" /> {t("labels.exportExcel", { namespace: "inventory",  })}
           </Button>
         </div>
       }

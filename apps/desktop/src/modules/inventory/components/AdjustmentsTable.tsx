@@ -54,36 +54,36 @@ export function AdjustmentsTable({ data, loading, search, onSearchChange, select
     const cols: UnifiedColumn<StockAdjustment>[] = [
       {
         id: "id",
-        header: t("adjustments.columnId", { namespace: "inventory", fallback: "الرقم" }),
-        label: t("adjustments.columnId", { namespace: "inventory", fallback: "الرقم" }),
+        header: t("labels.number", { namespace: "inventory",  }),
+        label: t("labels.number", { namespace: "inventory",  }),
         accessor: (a, idx) => a.reference ? formatNumber(parseInt(a.reference) || 0) : (idx + 1).toString(),
         className: "font-black text-slate-900 text-center"
       },
       {
         id: "material_name",
-        header: t("adjustments.columnMaterial", { namespace: "inventory", fallback: "المادة" }),
-        label: t("adjustments.columnMaterial", { namespace: "inventory", fallback: "المادة" }),
+        header: t("labels.material", { namespace: "inventory",  }),
+        label: t("labels.material", { namespace: "inventory",  }),
         accessor: (a) => a.material_name ?? a.material_id,
         className: "font-bold text-slate-800"
       },
       {
         id: "system_quantity",
-        header: t("adjustments.columnSystemQuantity", { namespace: "inventory", fallback: "كمية النظام" }),
-        label: t("adjustments.columnSystemQuantity", { namespace: "inventory", fallback: "كمية النظام" }),
+        header: t("adjustments.systemQuantity", { namespace: "inventory",  }),
+        label: t("adjustments.systemQuantity", { namespace: "inventory",  }),
         accessor: (a) => toFixed(parseFloat(a.system_quantity), 2),
         className: "tabular-nums text-slate-600"
       },
       {
         id: "actual_quantity",
-        header: t("adjustments.columnCountedQuantity", { namespace: "inventory", fallback: "الكمية المجرودة" }),
-        label: t("adjustments.columnCountedQuantity", { namespace: "inventory", fallback: "الكمية المجرودة" }),
+        header: t("adjustments.actualQuantity", { namespace: "inventory",  }),
+        label: t("adjustments.actualQuantity", { namespace: "inventory",  }),
         accessor: (a) => toFixed(parseFloat(a.actual_quantity), 2),
         className: "tabular-nums font-bold text-slate-800"
       },
       {
         id: "difference",
-        header: t("adjustments.columnDifference", { namespace: "inventory", fallback: "الفارق" }),
-        label: t("adjustments.columnDifference", { namespace: "inventory", fallback: "الفارق" }),
+        header: t("adjustments.difference", { namespace: "inventory",  }),
+        label: t("adjustments.difference", { namespace: "inventory",  }),
         accessor: (a) => {
           const diff = parseFloat(a.difference);
           return (
@@ -101,8 +101,8 @@ export function AdjustmentsTable({ data, loading, search, onSearchChange, select
         const symbol = curr.symbol || curr.code;
         return {
           id: `total_cost_${curr.code}`,
-          header: `${t("adjustments.columnCost", { namespace: "inventory", fallback: "التكلفة" })} ${cs(symbol)}`,
-          label: `${t("adjustments.columnCost", { namespace: "inventory", fallback: "التكلفة" })} ${cs(symbol)}`,
+          header: `${t("adjustments.cost", { namespace: "inventory",  })} ${cs(symbol)}`,
+          label: `${t("adjustments.cost", { namespace: "inventory",  })} ${cs(symbol)}`,
           accessor: (a: StockAdjustment) => {
             const cost = parseFloat(a.total_cost_base || "0");
             return Math.abs(cost) > 0 ? (
@@ -116,15 +116,15 @@ export function AdjustmentsTable({ data, loading, search, onSearchChange, select
       }),
       {
         id: "notes",
-        header: t("adjustments.columnNote", { namespace: "inventory", fallback: "ملاحظة" }),
-        label: t("adjustments.columnNote", { namespace: "inventory", fallback: "ملاحظة" }),
+        header: t("labels.note", { namespace: "inventory",  }),
+        label: t("labels.note", { namespace: "inventory",  }),
         accessor: (a) => a.notes ?? a.reason ?? "",
         className: "text-slate-500"
       },
       {
         id: "adjustment_date",
-        header: t("adjustments.columnDate", { namespace: "inventory", fallback: "التاريخ" }),
-        label: t("adjustments.columnDateAdjustment", { namespace: "inventory", fallback: "تاريخ التسوية" }),
+        header: t("labels.date", { namespace: "inventory",  }),
+        label: t("adjustments.dateLabel", { namespace: "inventory",  }),
         accessor: (a) => formatDateTime(a.adjustment_date),
         className: "tabular-nums text-slate-500"
       },
@@ -133,8 +133,8 @@ export function AdjustmentsTable({ data, loading, search, onSearchChange, select
     if (onView || onEdit || onDelete) {
       cols.push({
         id: "actions",
-        header: t("labels.actions", { namespace: "inventory", fallback: "إجراءات" }),
-        label: t("labels.actions", { namespace: "inventory", fallback: "إجراءات" }),
+        header: t("labels.actions", { namespace: "inventory",  }),
+        label: t("labels.actions", { namespace: "inventory",  }),
         accessor: (a) => (
           <TableActions
             onView={onView ? () => onView(a) : undefined}
@@ -174,13 +174,13 @@ export function AdjustmentsTable({ data, loading, search, onSearchChange, select
     return enrichedColumns.map(col => {
       const id = col.id;
       if (id === "material_name") {
-        return { id: "count", columnId: id, label: "", value: `${sortedData.length} ${t("adjustments.adjustments", { namespace: "inventory", fallback: "تسوية" })}`, className: "text-slate-500 font-medium" };
+        return { id: "count", columnId: id, label: "", value: `${sortedData.length} ${t("adjustments.countSummary", { namespace: "inventory",  })}`, className: "text-slate-500 font-medium" };
       }
       if (id.startsWith("total_cost_")) {
         const total = sortedData.reduce((s, a) => s + parseFloat(a.total_cost_base || "0"), 0);
         const totalCostId = id;
         return {
-          id: `cost_summary_${totalCostId}`, columnId: id, label: t("adjustments.total", { namespace: "inventory", fallback: "الإجمالي" }),
+          id: `cost_summary_${totalCostId}`, columnId: id, label: t("labels.total", { namespace: "inventory",  }),
           value: total !== 0 ? formatAmount(total, { currencyCode: id.replace("total_cost_", "") }) : "—",
           className: "text-slate-900 font-black"
         };
@@ -209,7 +209,7 @@ export function AdjustmentsTable({ data, loading, search, onSearchChange, select
     <TableShell
       search={search}
       onSearchChange={onSearchChange}
-      searchPlaceholder={t("adjustments.searchPlaceholder", { namespace: "inventory", fallback: "بحث بالمنتج أو الملاحظة..." })}
+      searchPlaceholder={t("adjustments.searchPlaceholder", { namespace: "inventory",  })}
       columns={toolbarColumns}
       onColumnToggle={toggleColumn}
       onColumnsReset={resetToDefault}
@@ -233,7 +233,7 @@ export function AdjustmentsTable({ data, loading, search, onSearchChange, select
         }}
         selectedId={selectedId}
         onRowClick={onRowClick}
-        emptyMessage={search ? t("adjustments.noSearchResults", { namespace: "inventory", fallback: "لا توجد نتائج للبحث" }) : t("adjustments.empty", { namespace: "inventory", fallback: "لا توجد تسويات مسجّلة" })}
+        emptyMessage={search ? t("labels.noResultsMatch", { namespace: "inventory",  }) : t("adjustments.empty", { namespace: "inventory",  })}
         summary={summaryColumns}
       />
     </TableShell>

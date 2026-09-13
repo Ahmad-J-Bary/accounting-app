@@ -42,30 +42,30 @@ describe("WizardShell", () => {
 
   it("disables prev on the first step", () => {
     renderShell({ stepIndex: 0 });
-    const prev = screen.getByRole("button", { name: /السابق/ });
+    const prev = screen.getByRole("button", { name: /openingBalance.prevButton/ });
     expect(prev).toBeDisabled();
   });
 
   it("enables prev on later steps", () => {
     renderShell({ stepIndex: 1 });
-    expect(screen.getByRole("button", { name: /السابق/ })).toBeEnabled();
+    expect(screen.getByRole("button", { name: /openingBalance.prevButton/ })).toBeEnabled();
   });
 
   it("disables next when canNext is false", () => {
     renderShell({ canNext: false });
-    expect(screen.getByRole("button", { name: /التالي|إنهاء/ })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /openingBalance.nextButton|openingBalance.finishButton/ })).toBeDisabled();
   });
 
   it("fires onNext when the next button is clicked", async () => {
     const user = userEvent.setup();
     const { onNext } = renderShell({ canNext: true });
-    await user.click(screen.getByRole("button", { name: /التالي/ }));
+    await user.click(screen.getByRole("button", { name: /openingBalance.nextButton/ }));
     expect(onNext).toHaveBeenCalledTimes(1);
   });
 
   it("shows the final label on the last step", () => {
     renderShell({ stepIndex: STEPS.length - 1, isFinal: true });
-    expect(screen.getByRole("button", { name: "إنهاء" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "openingBalance.finishButton" })).toBeEnabled();
   });
 
   it("marks passed steps with a check and the active step with its number", () => {

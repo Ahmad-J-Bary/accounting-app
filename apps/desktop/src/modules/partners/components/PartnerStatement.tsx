@@ -40,8 +40,8 @@ function getJournalDisplay(entry: JournalEntryDto, t: LocalizationContextValue["
       });
       if (matchedAccount) {
         const code = matchedAccount.account_code || "";
-        if (code.startsWith("332")) return t("statement.liabilityEarned", { namespace: "partners", fallback: "خصوم مكتسب" });
-        if (code.startsWith("47")) return t("statement.liabilityGranted", { namespace: "partners", fallback: "خصوم ممنوح" });
+        if (code.startsWith("332")) return t("statement.liabilityEarned", { namespace: "partners",  });
+        if (code.startsWith("47")) return t("statement.liabilityGranted", { namespace: "partners",  });
       }
     }
   }
@@ -77,7 +77,7 @@ export const PartnerStatement: React.FC<PartnerStatementProps> = ({
         setEntries(sorted);
       } catch (err) {
         console.error("Failed to fetch statement:", err);
-        setError(t("statement.loadError", { namespace: "partners", fallback: "فشل تحميل كشف الحساب" }));
+        setError(t("statement.loadError", { namespace: "partners",  }));
       } finally {
         setLoading(false);
       }
@@ -118,7 +118,7 @@ export const PartnerStatement: React.FC<PartnerStatementProps> = ({
     return (
       <div className="flex flex-col items-center justify-center h-64 space-y-4">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
-        <p className="text-slate-500 font-bold">{t("statement.loading", { namespace: "partners", fallback: "جاري تحضير كشف الحساب..." })}</p>
+        <p className="text-slate-500 font-bold">{t("statement.loading", { namespace: "partners",  })}</p>
       </div>
     );
   }
@@ -128,11 +128,11 @@ export const PartnerStatement: React.FC<PartnerStatementProps> = ({
   }
 
   const runningBalances: Record<string, number> = {};
-  const titlePrefix = partnerType === "customer" ? t("statement.titleCustomer", { namespace: "partners", fallback: "كشف حساب العميل" }) : t("statement.titleSupplier", { namespace: "partners", fallback: "كشف حساب المورد" });
+  const titlePrefix = partnerType === "customer" ? t("statement.titleCustomer", { namespace: "partners",  }) : t("statement.titleSupplier", { namespace: "partners",  });
   const emptyText =
     partnerType === "customer"
-      ? t("statement.emptyCustomer", { namespace: "partners", fallback: "لا توجد حركات مسجلة لهذا العميل حتى الآن." })
-      : t("statement.emptySupplier", { namespace: "partners", fallback: "لا توجد حركات مسجلة لهذا المورد حتى الآن." });
+      ? t("statement.emptyCustomer", { namespace: "partners",  })
+      : t("statement.emptySupplier", { namespace: "partners",  });
 
   return (
     <Card className="border-none shadow-none bg-transparent">
@@ -143,7 +143,7 @@ export const PartnerStatement: React.FC<PartnerStatementProps> = ({
             {titlePrefix}: {partnerName}
           </CardTitle>
           <Button variant="outline" size="sm" onClick={() => { window.dispatchEvent(new Event("app:prepare-print")); requestAnimationFrame(() => window.print()); }} className="font-bold">
-            {t("statement.print", { namespace: "partners", fallback: "طباعة الكشف" })}
+            {t("statement.print", { namespace: "partners",  })}
           </Button>
         </div>
       </CardHeader>
@@ -152,14 +152,14 @@ export const PartnerStatement: React.FC<PartnerStatementProps> = ({
           <Table>
             <TableHeader className="bg-slate-50/50">
               <TableRow>
-                <TableHead className="text-right font-bold w-[120px]">{t("statement.colDate", { namespace: "partners", fallback: "التاريخ" })}</TableHead>
-                <TableHead className="text-right font-bold w-[100px]">{t("statement.colEntryNumber", { namespace: "partners", fallback: "رقم القيد" })}</TableHead>
-                <TableHead className="text-right font-bold">{t("statement.colDescription", { namespace: "partners", fallback: "البيان / الحركة" })}</TableHead>
+                <TableHead className="text-right font-bold w-[120px]">{t("statement.colDate", { namespace: "partners",  })}</TableHead>
+                <TableHead className="text-right font-bold w-[100px]">{t("statement.colEntryNumber", { namespace: "partners",  })}</TableHead>
+                <TableHead className="text-right font-bold">{t("statement.colDescription", { namespace: "partners",  })}</TableHead>
                 {sortedCurrencies.map((c) => (
                   <React.Fragment key={c.code}>
-                    <TableHead className="text-left font-bold w-[100px]">{t("statement.colDebit", { namespace: "partners", vars: { currency: c.symbol }, fallback: "مدين ({{currency}})" })}</TableHead>
-                    <TableHead className="text-left font-bold w-[100px]">{t("statement.colCredit", { namespace: "partners", vars: { currency: c.symbol }, fallback: "دائن ({{currency}})" })}</TableHead>
-                    <TableHead className="text-left font-bold w-[110px]">{t("statement.colBalance", { namespace: "partners", vars: { currency: c.symbol }, fallback: "الرصيد ({{currency}})" })}</TableHead>
+                    <TableHead className="text-left font-bold w-[100px]">{t("statement.colDebit", { namespace: "partners", vars: { currency: c.symbol },  })}</TableHead>
+                    <TableHead className="text-left font-bold w-[100px]">{t("statement.colCredit", { namespace: "partners", vars: { currency: c.symbol },  })}</TableHead>
+                    <TableHead className="text-left font-bold w-[110px]">{t("statement.colBalance", { namespace: "partners", vars: { currency: c.symbol },  })}</TableHead>
                   </React.Fragment>
                 ))}
               </TableRow>
@@ -252,7 +252,7 @@ export const PartnerStatement: React.FC<PartnerStatementProps> = ({
             return (
               <TableRow key={targetCurr.code} className="bg-slate-50 font-bold">
                 <TableCell className="text-slate-400 text-xs" colSpan={3}>
-                  {t("statement.total", { namespace: "partners", vars: { currency: targetCurr.symbol }, fallback: "الإجمالي ({{currency}})" })}
+                  {t("statement.total", { namespace: "partners", vars: { currency: targetCurr.symbol },  })}
                 </TableCell>
                 {sortedCurrencies.map((_, idx) => {
                   if (idx === targetIdx) {

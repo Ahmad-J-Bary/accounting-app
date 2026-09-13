@@ -124,8 +124,8 @@ export default function Categories() {
   const canDelete = canOperate && !isUncategorizedSelected;
 
   const newButtonLabel = !!selected?.parent_id || isUncategorizedSelected
-    ? t("categories.newMaterial", { namespace: "inventory", fallback: "مادة جديدة" })
-    : t("categories.newCategory", { namespace: "inventory", fallback: "تصنيف جديد" });
+    ? t("categories.newMaterial", { namespace: "inventory",  })
+    : t("categories.newCategory", { namespace: "inventory",  });
 
   const handleSelect = useCallback((node: CategoryTreeNode) => {
     setSelected(node);
@@ -251,13 +251,13 @@ export default function Categories() {
       return;
     }
     if (selected.name === DEFAULT_CATEGORY_NAME) {
-      toast.error(t("categories.cannotDeleteDefault", { namespace: "inventory", vars: { name: DEFAULT_CATEGORY_NAME }, fallback: `لا يمكن حذف التصنيف الافتراضي "${DEFAULT_CATEGORY_NAME}"` }));
+      toast.error(t("categories.cannotDeleteDefault", { namespace: "inventory", vars: { name: DEFAULT_CATEGORY_NAME },  }));
       return;
     }
     const kind = computeDeleteKind(selected);
     const targetId = computeReassignTargetId(selected);
     if (!kind || !targetId) {
-      toast.error(t("categories.cannotDetermineDelete", { namespace: "inventory", fallback: "تعذر تحديد إجراء الحذف" }));
+      toast.error(t("categories.cannotDetermineDelete", { namespace: "inventory",  }));
       return;
     }
     setDeleteKind(kind);
@@ -271,7 +271,7 @@ export default function Categories() {
     try {
       if (deleteKind?.type === "sub_empty" || deleteKind?.type === "root_no_subs") {
         await categoryService.deleteCategory(pendingCategoryDelete.id);
-        toast.success(t("toasts.deleted", { namespace: "inventory", fallback: "تم الحذف بنجاح" }));
+        toast.success(t("toasts.deleted", { namespace: "inventory",  }));
       } else {
         const result = await categoryService.deleteCategoryWithReassignment(
           pendingCategoryDelete.id,
@@ -279,13 +279,13 @@ export default function Categories() {
         );
         const parts: string[] = [];
         if (result.materials_reassigned > 0) {
-          parts.push(t("categories.reassignedMaterials", { namespace: "inventory", vars: { count: result.materials_reassigned }, fallback: `تم تعديل تصنيف ${result.materials_reassigned} مادة` }));
+          parts.push(t("categories.reassignedMaterials", { namespace: "inventory", vars: { count: result.materials_reassigned },  }));
         }
         if (result.subs_deleted > 0) {
-          parts.push(t("categories.deletedSubs", { namespace: "inventory", vars: { count: result.subs_deleted }, fallback: `وحذف ${result.subs_deleted} تصنيف فرعي` }));
+          parts.push(t("categories.deletedSubs", { namespace: "inventory", vars: { count: result.subs_deleted },  }));
         }
         const suffix = parts.length > 0 ? ` (${parts.join("، ")})` : "";
-        toast.success(t("toasts.deleted", { namespace: "inventory", fallback: "تم الحذف بنجاح" }) + suffix);
+        toast.success(t("toasts.deleted", { namespace: "inventory",  }) + suffix);
       }
       await invalidateKeys(queryClient, INVENTORY_MUTATION_KEYS);
       setDeleteOpen(false);
@@ -294,7 +294,7 @@ export default function Categories() {
       setSelected(null);
       setPanelAction(null);
     } catch (error) {
-      toast.error(t("errors.delete", { namespace: "inventory", vars: { error: error instanceof Error ? error.message : String(error) }, fallback: "فشل الحذف: " + (error instanceof Error ? error.message : String(error)) }));
+      toast.error(t("errors.delete", { namespace: "inventory", vars: { error: error instanceof Error ? error.message : String(error) } }));
     } finally {
       setDeleting(false);
     }
@@ -313,13 +313,13 @@ export default function Categories() {
     try {
       await materialService.delete(materialDeleteTarget.id);
       await invalidateKeys(queryClient, INVENTORY_MUTATION_KEYS);
-      toast.success(t("toasts.deleted", { namespace: "inventory", fallback: "تم الحذف بنجاح" }));
+      toast.success(t("toasts.deleted", { namespace: "inventory",  }));
       setMaterialDeleteOpen(false);
       setMaterialDeleteTarget(null);
       setSelected(null);
       setPanelAction(null);
     } catch (error) {
-      toast.error(t("errors.delete", { namespace: "inventory", vars: { error: error instanceof Error ? error.message : String(error) }, fallback: "فشل الحذف: " + (error instanceof Error ? error.message : String(error)) }));
+      toast.error(t("errors.delete", { namespace: "inventory", vars: { error: error instanceof Error ? error.message : String(error) } }));
     } finally {
       setDeleting(false);
     }
@@ -331,15 +331,15 @@ export default function Categories() {
       const update = data as UpdateMaterialRequest;
       if (update.id) {
         await materialService.update(update);
-        toast.success(t("materials.updated", { namespace: "inventory", fallback: "تم تحديث المادة" }));
+        toast.success(t("materials.updated", { namespace: "inventory",  }));
       } else {
         await materialService.create(data as CreateMaterialRequest);
-        toast.success(t("materials.created", { namespace: "inventory", fallback: "تمت إضافة المادة" }));
+        toast.success(t("materials.created", { namespace: "inventory",  }));
       }
       await invalidateKeys(queryClient, INVENTORY_MUTATION_KEYS);
       setPanelAction(selected && selected.id !== VIRTUAL_ROOT_ID ? { kind: "view" } : null);
     } catch (error) {
-      toast.error(t("errors.save", { namespace: "inventory", vars: { error: error instanceof Error ? error.message : String(error) }, fallback: "فشل الحفظ: " + (error instanceof Error ? error.message : String(error)) }));
+      toast.error(t("errors.save", { namespace: "inventory", vars: { error: error instanceof Error ? error.message : String(error) } }));
     } finally {
       setMaterialSaving(false);
     }
@@ -457,12 +457,12 @@ export default function Categories() {
 
   return (
     <HierarchicalTreeTemplate
-      title={t("categories.title", { namespace: "inventory", fallback: "تصنيفات المواد" })}
+      title={t("categories.title", { namespace: "inventory",  })}
       toolbar={
         <>
           {isMaterialSelected ? (
             <Button size="sm" onClick={handleOpenUnits} className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100">
-              <Scale className="w-4 h-4 ml-2" /> {t("materials.units", { namespace: "inventory", fallback: "الوحدات" })}
+              <Scale className="w-4 h-4 ml-2" /> {t("materials.units", { namespace: "inventory",  })}
             </Button>
           ) : (
             <Button size="sm" onClick={handleOpenNew} className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100">
@@ -476,7 +476,7 @@ export default function Categories() {
             disabled={!canOperate}
             onClick={handleOpenEdit}
           >
-            <Edit className="w-4 h-4 ml-2" /> {t("actions.edit", { namespace: "common", fallback: "تعديل" })}
+            <Edit className="w-4 h-4 ml-2" /> {t("actions.edit", { namespace: "common",  })}
           </Button>
           <Button
             size="sm"
@@ -485,7 +485,7 @@ export default function Categories() {
             disabled={!canDelete}
             onClick={handleDeleteRequest}
           >
-            <Trash2 className="w-4 h-4 ml-2 text-rose-600" /> {t("actions.delete", { namespace: "common", fallback: "حذف" })}
+            <Trash2 className="w-4 h-4 ml-2 text-rose-600" /> {t("actions.delete", { namespace: "common",  })}
           </Button>
         </>
       }
@@ -495,13 +495,13 @@ export default function Categories() {
             onClick={expandAll}
             className="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-bold text-slate-500 hover:text-slate-800 hover:bg-slate-200/70 transition-colors"
           >
-            <ChevronLeft className="w-3 h-3" /> {t("categories.expand", { namespace: "inventory", fallback: "توسيع" })}
+            <ChevronLeft className="w-3 h-3" /> {t("categories.expand", { namespace: "inventory",  })}
           </button>
           <button
             onClick={collapseAll}
             className="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-bold text-slate-500 hover:text-slate-800 hover:bg-slate-200/70 transition-colors"
           >
-            {t("categories.collapse", { namespace: "inventory", fallback: "طي" })} <ChevronRight className="w-3 h-3" />
+            {t("categories.collapse", { namespace: "inventory",  })} <ChevronRight className="w-3 h-3" />
           </button>
         </>
       }
@@ -537,10 +537,10 @@ export default function Categories() {
       <ConfirmDialog
         open={materialDeleteOpen}
         onOpenChange={setMaterialDeleteOpen}
-        title={t("materials.deleteTitle", { namespace: "inventory", fallback: "حذف المادة" })}
-        description={materialDeleteTarget ? t("materials.deleteConfirm", { namespace: "inventory", vars: { name: materialDeleteTarget.name }, fallback: `هل تريد حذف المادة «${materialDeleteTarget.name}»؟` }) : undefined}
-        confirmLabel={t("actions.delete", { namespace: "common", fallback: "حذف" })}
-        cancelLabel={t("actions.cancel", { namespace: "common", fallback: "إلغاء" })}
+        title={t("materials.deleteTitle", { namespace: "inventory",  })}
+        description={materialDeleteTarget ? t("materials.deleteConfirm", { namespace: "inventory", vars: { name: materialDeleteTarget.name },  }) : undefined}
+        confirmLabel={t("actions.delete", { namespace: "common",  })}
+        cancelLabel={t("actions.cancel", { namespace: "common",  })}
         destructive
         onConfirm={() => void handleConfirmMaterialDelete()}
       />

@@ -98,15 +98,15 @@ export function FloatingExchangeRateWidget({ isVisible, onClose }: FloatingExcha
         <div className="flex items-center justify-between mb-1">
           <div className="flex items-center gap-2 drag-handle cursor-grab active:cursor-grabbing p-1 -m-1 hover:bg-slate-50 rounded transition-colors">
             <GripVertical className="w-3.5 h-3.5 text-slate-400" />
-            <div className="text-[11px] font-black text-slate-800 uppercase tracking-wider">{t("settings.floatingWidget.title", { namespace: "settings", fallback: "سعر الصرف العائم" })}</div>
+            <div className="text-[11px] font-black text-slate-800 uppercase tracking-wider">{t("floatingWidget.title", { namespace: "settings",  })}</div>
           </div>
           <div className="flex items-center gap-2">
             {hasRateToday ? (
-              <Badge className="bg-emerald-50 text-emerald-700 border-emerald-100 text-[9px] px-1.5 h-4 font-bold">{t("settings.floatingWidget.updatedToday", { namespace: "settings", fallback: "محدث اليوم" })}</Badge>
+              <Badge className="bg-emerald-50 text-emerald-700 border-emerald-100 text-[9px] px-1.5 h-4 font-bold">{t("floatingWidget.updatedToday", { namespace: "settings",  })}</Badge>
             ) : (
               <Badge variant="outline" className="text-amber-700 border-amber-200 bg-amber-50 text-[9px] px-1.5 h-4 font-bold">
                 <AlertTriangle className="w-2.5 h-2.5 ml-1" />
-                {t("settings.floatingWidget.notUpdated", { namespace: "settings", fallback: "غير محدث" })}
+                {t("floatingWidget.notUpdated", { namespace: "settings",  })}
               </Badge>
             )}
             <button onClick={onClose} className="p-1 hover:bg-slate-100 rounded-full text-slate-400 transition-colors">
@@ -119,7 +119,7 @@ export function FloatingExchangeRateWidget({ isVisible, onClose }: FloatingExcha
           <div className="col-span-5">
             <Select value={currentCode} onValueChange={handleSelect}>
               <SelectTrigger className="h-8 text-xs bg-slate-50/50 border-slate-200">
-                <SelectValue placeholder={t("settings.floatingWidget.currency", { namespace: "settings", fallback: "العملة" })} />
+                <SelectValue placeholder={t("floatingWidget.currency", { namespace: "settings",  })} />
               </SelectTrigger>
               <SelectContent>
                 {nonBase.map((c) => (
@@ -150,11 +150,11 @@ export function FloatingExchangeRateWidget({ isVisible, onClose }: FloatingExcha
         </div>
 
         <div className="text-[10px] text-slate-400 font-bold px-1 text-right">
-          {t("settings.floatingWidget.equivalent", { namespace: "settings", fallback: "كل 1 {{base}} يقابل {{rate}} {{target}}", vars: { base: baseCurrency.symbol || baseCurrency.code, rate: selectedStatus?.rate ?? selectedStatus?.last_rate ?? "—", target: currentCurrency?.symbol || currentCode } })}
+          {t("floatingWidget.equivalent", { namespace: "settings", vars: { base: baseCurrency.symbol || baseCurrency.code, rate: selectedStatus?.rate ?? selectedStatus?.last_rate ?? "—", target: currentCurrency?.symbol || currentCode } })}
         </div>
 
         <div className="flex items-center gap-2 border-t border-slate-100 pt-2">
-          <span className="text-[10px] text-slate-500 font-bold">{t("settings.floatingWidget.displayCurrency", { namespace: "settings", fallback: "عملة العرض:" })}</span>
+          <span className="text-[10px] text-slate-500 font-bold">{t("floatingWidget.displayCurrency", { namespace: "settings",  })}</span>
           <Select value={displayCurrencyCode ?? baseCurrency.code} onValueChange={setDisplayCurrencyCode}>
             <SelectTrigger className="h-7 text-[10px] bg-transparent border-none p-0 shadow-none hover:text-blue-600 transition-colors">
               <SelectValue />

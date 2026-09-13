@@ -16,8 +16,8 @@ export function SidebarFooter({
 }: SidebarFooterProps) {
   const { settings } = useSidePanelSettings();
   const { t } = useLocalization();
-  const resolvedSaveLabel = saveLabel ?? t('actions.saveChanges', { fallback: 'حفظ التغييرات' });
-  const resolvedCancelLabel = cancelLabel ?? t('actions.cancel', { fallback: 'إلغاء' });
+  const resolvedSaveLabel = saveLabel ?? t('actions.saveChanges', );
+  const resolvedCancelLabel = cancelLabel ?? t('actions.cancel', );
 
   const footerPadding =
     settings.paddingPreset === "compact" ? "p-3" : "p-4";
@@ -60,7 +60,7 @@ export function SidebarFooter({
               disabled={isSaving || saveDisabled}
               className="h-9 px-4 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md shadow-blue-100"
             >
-              {isSaving ? t('states.saving', { fallback: 'جارى الحفظ...' }) : resolvedSaveLabel}
+              {isSaving ? t('states.saving', ) : resolvedSaveLabel}
             </Button>
           )}
         </>

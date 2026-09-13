@@ -50,8 +50,8 @@ export function FormShell<T extends Record<string, unknown>>({
   ...formConfig
 }: FormShellProps<T>) {
   const { t } = useLocalization();
-  const resolvedSubmitLabel = submitLabel ?? t('actions.save', { fallback: 'حفظ' });
-  const resolvedResetLabel = resetLabel ?? t('actions.reset', { fallback: 'إعادة تعيين' });
+  const resolvedSubmitLabel = submitLabel ?? t('actions.save', );
+  const resolvedResetLabel = resetLabel ?? t('actions.reset', );
   const form = useForm(formConfig);
 
   const layoutClasses = {
@@ -96,7 +96,7 @@ export function FormShell<T extends Record<string, unknown>>({
                 onClick={onCancel}
                 disabled={loading}
               >
-                {t('actions.cancel', { fallback: 'إلغاء' })}
+                {t('actions.cancel', )}
               </Button>
             )}
             {showReset && (
@@ -111,7 +111,7 @@ export function FormShell<T extends Record<string, unknown>>({
             )}
             {showSubmit && (
               <Button type="submit" disabled={loading || !form.isValid}>
-                {loading ? t('states.saving', { fallback: 'جاري الحفظ...' }) : resolvedSubmitLabel}
+                {loading ? t('states.saving', ) : resolvedSubmitLabel}
               </Button>
             )}
           </div>

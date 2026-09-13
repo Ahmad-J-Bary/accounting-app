@@ -91,7 +91,7 @@ export default function Dashboard() {
     const catMap = new Map<string, number>();
     data.materials.forEach(p => {
       const firstCatId = p.category_ids?.[0];
-      const name = firstCatId ? (catNameById.get(firstCatId) || t("dashboard.pie.other", { namespace: "dashboard", fallback: "أخرى" })) : t("dashboard.pie.uncategorized", { namespace: "dashboard", fallback: "بدون تصنيف" });
+      const name = firstCatId ? (catNameById.get(firstCatId) || t("dashboard.pie.other", { namespace: "dashboard",  })) : t("dashboard.pie.uncategorized", { namespace: "dashboard",  });
       catMap.set(name, (catMap.get(name) || 0) + 1);
     });
     const total = data.materials.length || 1;
@@ -112,14 +112,14 @@ export default function Dashboard() {
   const secondaryCurrencies = currencies.filter(c => !c.is_base);
 
   const paymentTypeLabel: Record<string, string> = {
-    Receipt: t("dashboard.paymentTypes.Receipt", { namespace: "dashboard", fallback: "مقبوض" }),
-    SupplierPayment: t("dashboard.paymentTypes.SupplierPayment", { namespace: "dashboard", fallback: "مدفوع لمورد" }),
-    CustomerPayment: t("dashboard.paymentTypes.CustomerPayment", { namespace: "dashboard", fallback: "مدفوع لعميل" }),
-    SupplierReceipt: t("dashboard.paymentTypes.SupplierReceipt", { namespace: "dashboard", fallback: "مقبوض من مورد" }),
-    ExpenseVoucher: t("dashboard.paymentTypes.ExpenseVoucher", { namespace: "dashboard", fallback: "سند صرف" }),
-    DrawingsVoucher: t("dashboard.paymentTypes.DrawingsVoucher", { namespace: "dashboard", fallback: "سند مسحوبات" }),
-    CashIn: t("dashboard.paymentTypes.CashIn", { namespace: "dashboard", fallback: "إيداع خزينة" }),
-    CashOut: t("dashboard.paymentTypes.CashOut", { namespace: "dashboard", fallback: "سحب خزينة" }),
+    Receipt: t("dashboard.paymentTypes.Receipt", { namespace: "dashboard",  }),
+    SupplierPayment: t("dashboard.paymentTypes.SupplierPayment", { namespace: "dashboard",  }),
+    CustomerPayment: t("dashboard.paymentTypes.CustomerPayment", { namespace: "dashboard",  }),
+    SupplierReceipt: t("dashboard.paymentTypes.SupplierReceipt", { namespace: "dashboard",  }),
+    ExpenseVoucher: t("dashboard.paymentTypes.ExpenseVoucher", { namespace: "dashboard",  }),
+    DrawingsVoucher: t("dashboard.paymentTypes.DrawingsVoucher", { namespace: "dashboard",  }),
+    CashIn: t("dashboard.paymentTypes.CashIn", { namespace: "dashboard",  }),
+    CashOut: t("dashboard.paymentTypes.CashOut", { namespace: "dashboard",  }),
   };
 
   return (
@@ -131,8 +131,8 @@ export default function Dashboard() {
               <LayoutDashboard className="w-8 h-8 text-white" />
             </div>
             <div className="space-y-1">
-              <h1 className="text-3xl font-black text-slate-900">{t("dashboard.title", { namespace: "dashboard", fallback: "لوحة التحكم" })}</h1>
-              <p className="text-slate-400 font-medium">{t("dashboard.subtitle", { namespace: "dashboard", fallback: "نظرة عامة على أداء نظامك المحاسبي" })}</p>
+              <h1 className="text-3xl font-black text-slate-900">{t("dashboard.title", { namespace: "dashboard",  })}</h1>
+              <p className="text-slate-400 font-medium">{t("dashboard.subtitle", { namespace: "dashboard",  })}</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -141,7 +141,7 @@ export default function Dashboard() {
                 onClick={() => setLocalDisplayMode("base")}
                 className={`px-3 py-1.5 text-xs rounded-lg font-bold transition-all ${localDisplayMode === "base" ? "bg-white shadow-sm" : "text-slate-500"}`}
               >
-                {baseCurrency?.symbol || baseCurrency?.code || t("dashboard.currencyButtons.base", { namespace: "dashboard", fallback: "الأساسية" })}
+                {baseCurrency?.symbol || baseCurrency?.code || t("dashboard.currencyButtons.base", { namespace: "dashboard",  })}
               </button>
               {secondaryCurrencies.map(c => (
                 <button
@@ -157,7 +157,7 @@ export default function Dashboard() {
                 className={`px-3 py-1.5 text-xs rounded-lg font-bold transition-all ${localDisplayMode === "both" ? "bg-white shadow-sm" : "text-slate-500"}`}
               >
                 <DollarSign className="w-3 h-3 inline ml-1" />
-                {t("dashboard.currencyButtons.both", { namespace: "dashboard", fallback: "كلاهما" })}
+                {t("dashboard.currencyButtons.both", { namespace: "dashboard",  })}
               </button>
             </div>
             <Select value={period} onValueChange={(v) => setPeriod(v as DashboardPeriod)}>
@@ -165,15 +165,15 @@ export default function Dashboard() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="today">{t("dashboard.period.today", { namespace: "dashboard", fallback: "اليوم" })}</SelectItem>
-                <SelectItem value="this_month">{t("dashboard.period.thisMonth", { namespace: "dashboard", fallback: "هذا الشهر" })}</SelectItem>
-                <SelectItem value="this_year">{t("dashboard.period.thisYear", { namespace: "dashboard", fallback: "هذه السنة" })}</SelectItem>
+                <SelectItem value="today">{t("dashboard.period.today", { namespace: "dashboard",  })}</SelectItem>
+                <SelectItem value="this_month">{t("dashboard.period.thisMonth", { namespace: "dashboard",  })}</SelectItem>
+                <SelectItem value="this_year">{t("dashboard.period.thisYear", { namespace: "dashboard",  })}</SelectItem>
               </SelectContent>
             </Select>
             {refreshing && (
               <span className="flex h-12 items-center gap-1.5 rounded-xl bg-white px-4 border border-slate-200 shadow-sm text-slate-500 text-xs">
                 <Loader2 className="h-4 w-4 animate-spin" />
-                {t("dashboard.refreshing", { namespace: "dashboard", fallback: "جارٍ التحديث…" })}
+                {t("dashboard.refreshing", { namespace: "dashboard",  })}
               </span>
             )}
           </div>
@@ -182,34 +182,34 @@ export default function Dashboard() {
     >
       {/* Row 1: لي / علي sections */}
       <div className="col-span-12 lg:col-span-7">
-        <DashboardSection title={t("dashboard.sections.li", { namespace: "dashboard", fallback: "لي" })} total={liTotal} subtitle={t("dashboard.sections.liSubtitle", { namespace: "dashboard", fallback: "ما للشركة من أرصدة رئيسية" })} displayMode={localDisplayMode}>
-          <FinancialMetricCard label={t("dashboard.sections.cash", { namespace: "dashboard", fallback: "الصندوق (الخزينة)" })} value={cash} icon={Wallet} displayMode={localDisplayMode} />
-          {bank !== 0 && <FinancialMetricCard label={t("dashboard.sections.bank", { namespace: "dashboard", fallback: "رصيد البنك" })} value={bank} icon={Building2} displayMode={localDisplayMode} />}
-          <FinancialMetricCard label={t("dashboard.sections.customerDebts", { namespace: "dashboard", fallback: "ذمم العملاء" })} value={receivables} icon={Users} displayMode={localDisplayMode} />
+        <DashboardSection title={t("dashboard.sections.li", { namespace: "dashboard",  })} total={liTotal} subtitle={t("dashboard.sections.liSubtitle", { namespace: "dashboard",  })} displayMode={localDisplayMode}>
+          <FinancialMetricCard label={t("dashboard.sections.cash", { namespace: "dashboard",  })} value={cash} icon={Wallet} displayMode={localDisplayMode} />
+          {bank !== 0 && <FinancialMetricCard label={t("dashboard.sections.bank", { namespace: "dashboard",  })} value={bank} icon={Building2} displayMode={localDisplayMode} />}
+          <FinancialMetricCard label={t("dashboard.sections.customerDebts", { namespace: "dashboard",  })} value={receivables} icon={Users} displayMode={localDisplayMode} />
         </DashboardSection>
       </div>
 
       <div className="col-span-12 lg:col-span-5">
-        <DashboardSection title={t("dashboard.sections.ali", { namespace: "dashboard", fallback: "علي" })} total={aliTotal} subtitle={t("dashboard.sections.aliSubtitle", { namespace: "dashboard", fallback: "ما على الشركة من التزامات رئيسية" })} displayMode={localDisplayMode}>
-          <FinancialMetricCard label={t("dashboard.sections.supplierDebts", { namespace: "dashboard", fallback: "ذمم الموردين" })} value={payables} icon={Truck} displayMode={localDisplayMode} />
-          {loans !== 0 && <FinancialMetricCard label={t("dashboard.sections.loans", { namespace: "dashboard", fallback: "القروض" })} value={loans} icon={Landmark} displayMode={localDisplayMode} />}
+        <DashboardSection title={t("dashboard.sections.ali", { namespace: "dashboard",  })} total={aliTotal} subtitle={t("dashboard.sections.aliSubtitle", { namespace: "dashboard",  })} displayMode={localDisplayMode}>
+          <FinancialMetricCard label={t("dashboard.sections.supplierDebts", { namespace: "dashboard",  })} value={payables} icon={Truck} displayMode={localDisplayMode} />
+          {loans !== 0 && <FinancialMetricCard label={t("dashboard.sections.loans", { namespace: "dashboard",  })} value={loans} icon={Landmark} displayMode={localDisplayMode} />}
         </DashboardSection>
       </div>
 
       {/* Row 2: Operational metrics */}
-      <DashboardCard span={4} title={t("dashboard.ops.sales", { namespace: "dashboard", fallback: "المبيعات" })} subtitle={t("dashboard.ops.salesSubtitle", { namespace: "dashboard", fallback: "إيرادات الفترة" })}>
+      <DashboardCard span={4} title={t("dashboard.ops.sales", { namespace: "dashboard",  })} subtitle={t("dashboard.ops.salesSubtitle", { namespace: "dashboard",  })}>
         <div className="text-3xl font-black tabular-nums text-slate-900">
           {formatAmount(sales, { mode: localDisplayMode })}
         </div>
       </DashboardCard>
 
-      <DashboardCard span={4} title={t("dashboard.ops.purchases", { namespace: "dashboard", fallback: "المشتريات" })} subtitle={t("dashboard.ops.purchasesSubtitle", { namespace: "dashboard", fallback: "مشتريات الفترة" })}>
+      <DashboardCard span={4} title={t("dashboard.ops.purchases", { namespace: "dashboard",  })} subtitle={t("dashboard.ops.purchasesSubtitle", { namespace: "dashboard",  })}>
         <div className="text-3xl font-black tabular-nums text-slate-900">
           {formatAmount(purchases, { mode: localDisplayMode })}
         </div>
       </DashboardCard>
 
-      <DashboardCard span={4} title={t("dashboard.ops.inventory", { namespace: "dashboard", fallback: "المخزون" })} subtitle={t("dashboard.ops.inventorySubtitle", { namespace: "dashboard", fallback: "قيمة المخزون الحالية" })}>
+      <DashboardCard span={4} title={t("dashboard.ops.inventory", { namespace: "dashboard",  })} subtitle={t("dashboard.ops.inventorySubtitle", { namespace: "dashboard",  })}>
         <div className="text-3xl font-black tabular-nums text-slate-900">
           {formatAmount(data.inventory, { mode: localDisplayMode })}
         </div>
@@ -218,12 +218,12 @@ export default function Dashboard() {
       {/* Charts + Alerts + Recent Activity */}
       <DashboardCard 
         span={8} 
-        title={t("dashboard.chart.title", { namespace: "dashboard", fallback: "الإيرادات والمصروفات" })} 
-        subtitle={t("dashboard.chart.subtitle", { namespace: "dashboard", fallback: "مقارنة الأداء المالي لآخر 6 أشهر" })}
+        title={t("dashboard.chart.title", { namespace: "dashboard",  })} 
+        subtitle={t("dashboard.chart.subtitle", { namespace: "dashboard",  })}
         actions={
           <div className="flex bg-slate-100 p-1 rounded-xl">
-            <Button size="sm" variant="ghost" className="rounded-lg h-8 px-4 bg-white shadow-sm font-bold">{t("dashboard.chart.buttons.area", { namespace: "dashboard", fallback: "مساحي" })}</Button>
-            <Button size="sm" variant="ghost" className="rounded-lg h-8 px-4 text-slate-500 font-bold">{t("dashboard.chart.buttons.bars", { namespace: "dashboard", fallback: "أعمدة" })}</Button>
+            <Button size="sm" variant="ghost" className="rounded-lg h-8 px-4 bg-white shadow-sm font-bold">{t("dashboard.chart.buttons.area", { namespace: "dashboard",  })}</Button>
+            <Button size="sm" variant="ghost" className="rounded-lg h-8 px-4 text-slate-500 font-bold">{t("dashboard.chart.buttons.bars", { namespace: "dashboard",  })}</Button>
           </div>
         }
       >
@@ -246,18 +246,18 @@ export default function Dashboard() {
               <Tooltip 
                 contentStyle={{borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', direction: 'rtl'}}
               />
-              <Area type="monotone" dataKey="revenue" name={t("dashboard.chart.revenueSeries", { namespace: "dashboard", fallback: "الإيرادات" })} stroke="#2563eb" strokeWidth={3} fillOpacity={1} fill="url(#colorRev)" />
-              <Area type="monotone" dataKey="expenses" name={t("dashboard.chart.expensesSeries", { namespace: "dashboard", fallback: "المصروفات" })} stroke="#f43f5e" strokeWidth={3} fillOpacity={1} fill="url(#colorExp)" />
+              <Area type="monotone" dataKey="revenue" name={t("dashboard.chart.revenueSeries", { namespace: "dashboard",  })} stroke="#2563eb" strokeWidth={3} fillOpacity={1} fill="url(#colorRev)" />
+              <Area type="monotone" dataKey="expenses" name={t("dashboard.chart.expensesSeries", { namespace: "dashboard",  })} stroke="#f43f5e" strokeWidth={3} fillOpacity={1} fill="url(#colorExp)" />
             </AreaChart>
           </ResponsiveContainer>
         ) : (
           <div className="flex items-center justify-center h-[320px] text-slate-300 font-bold text-sm">
-            {t("dashboard.chart.empty", { namespace: "dashboard", fallback: "لا توجد بيانات إيرادات أو مصروفات مسجلة بعد" })}
+            {t("dashboard.chart.empty", { namespace: "dashboard",  })}
           </div>
         )}
       </DashboardCard>
 
-      <DashboardCard span={4} title={t("dashboard.pie.title", { namespace: "dashboard", fallback: "توزيع المخزون" })} subtitle={t("dashboard.pie.subtitle", { namespace: "dashboard", fallback: "حسب الفئات الرئيسية" })}>
+      <DashboardCard span={4} title={t("dashboard.pie.title", { namespace: "dashboard",  })} subtitle={t("dashboard.pie.subtitle", { namespace: "dashboard",  })}>
         <div className="flex flex-col h-full justify-between">
           {pieData.length > 0 ? (
             <>
@@ -283,14 +283,14 @@ export default function Dashboard() {
             </>
           ) : (
             <div className="flex items-center justify-center h-[320px] text-slate-300 font-bold text-sm">
-              {t("dashboard.pie.empty", { namespace: "dashboard", fallback: "لا توجد أصناف مسجلة بعد" })}
+              {t("dashboard.pie.empty", { namespace: "dashboard",  })}
             </div>
           )}
         </div>
       </DashboardCard>
 
       {/* Bottom Row: Alerts + Recent */}
-      <DashboardCard span={4} title={t("dashboard.alerts.title", { namespace: "dashboard", fallback: "تنبيهات النظام" })} subtitle={t("dashboard.alerts.subtitle", { namespace: "dashboard", fallback: "المخزون والتحذيرات" })}>
+      <DashboardCard span={4} title={t("dashboard.alerts.title", { namespace: "dashboard",  })} subtitle={t("dashboard.alerts.subtitle", { namespace: "dashboard",  })}>
         <div className="space-y-4">
           {lowStock.length > 0 ? (
             <>
@@ -299,8 +299,8 @@ export default function Dashboard() {
                   <Bell className="w-5 h-5 text-white" />
                 </div>
                 <div className="flex-1">
-                  <div className="text-xs font-black text-rose-600">{t("dashboard.alerts.lowStockTitle", { namespace: "dashboard", fallback: "المخزون المنخفض" })}</div>
-                  <div className="text-sm font-bold text-rose-900">{t("dashboard.alerts.lowStockBody", { namespace: "dashboard", fallback: "{{count}} أصناف بحاجة للطلب", vars: { count: lowStock.length } })}</div>
+                  <div className="text-xs font-black text-rose-600">{t("dashboard.alerts.lowStockTitle", { namespace: "dashboard",  })}</div>
+                  <div className="text-sm font-bold text-rose-900">{t("dashboard.alerts.lowStockBody", { namespace: "dashboard", vars: { count: lowStock.length } })}</div>
                 </div>
               </div>
               <div className="space-y-2 max-h-[200px] overflow-auto">
@@ -320,8 +320,8 @@ export default function Dashboard() {
                 <Package className="w-5 h-5 text-white" />
               </div>
               <div className="flex-1">
-                <div className="text-xs font-black text-emerald-600">{t("dashboard.alerts.safeTitle", { namespace: "dashboard", fallback: "المخزون مؤمن" })}</div>
-                <div className="text-sm font-bold text-emerald-900">{t("dashboard.alerts.safeBody", { namespace: "dashboard", fallback: "جميع الأصناف ضمن الحد الآمن" })}</div>
+                <div className="text-xs font-black text-emerald-600">{t("dashboard.alerts.safeTitle", { namespace: "dashboard",  })}</div>
+                <div className="text-sm font-bold text-emerald-900">{t("dashboard.alerts.safeBody", { namespace: "dashboard",  })}</div>
               </div>
             </div>
           )}
@@ -329,11 +329,11 @@ export default function Dashboard() {
         </div>
       </DashboardCard>
 
-      <DashboardCard span={8} title={t("dashboard.recent.title", { namespace: "dashboard", fallback: "أحدث النشاطات" })} subtitle={t("dashboard.recent.subtitle", { namespace: "dashboard", fallback: "القيود والمدفوعات الأخيرة" })}>
+      <DashboardCard span={8} title={t("dashboard.recent.title", { namespace: "dashboard",  })} subtitle={t("dashboard.recent.subtitle", { namespace: "dashboard",  })}>
         <Tabs defaultValue="sales" className="w-full">
           <TabsList className="bg-slate-100 p-1 rounded-xl mb-6">
-            <TabsTrigger value="sales" className="rounded-lg font-bold data-[state=active]:bg-white">{t("dashboard.recent.tabs.journals", { namespace: "dashboard", fallback: "القيود" })}</TabsTrigger>
-            <TabsTrigger value="payments" className="rounded-lg font-bold data-[state=active]:bg-white">{t("dashboard.recent.tabs.payments", { namespace: "dashboard", fallback: "المدفوعات" })}</TabsTrigger>
+            <TabsTrigger value="sales" className="rounded-lg font-bold data-[state=active]:bg-white">{t("dashboard.recent.tabs.journals", { namespace: "dashboard",  })}</TabsTrigger>
+            <TabsTrigger value="payments" className="rounded-lg font-bold data-[state=active]:bg-white">{t("dashboard.recent.tabs.payments", { namespace: "dashboard",  })}</TabsTrigger>
           </TabsList>
 
           <TabsContent value="sales" className="m-0">
@@ -342,10 +342,10 @@ export default function Dashboard() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="text-slate-400 font-black text-[10px] uppercase tracking-widest border-b border-slate-100">
-                      <th className="text-right pb-4">{t("dashboard.recent.journalCols.number", { namespace: "dashboard", fallback: "رقم القيد" })}</th>
-                      <th className="text-right pb-4">{t("dashboard.recent.journalCols.statement", { namespace: "dashboard", fallback: "البيان" })}</th>
-                      <th className="text-left pb-4">{t("dashboard.recent.journalCols.amount", { namespace: "dashboard", fallback: "المبلغ" })}</th>
-                      <th className="text-left pb-4">{t("dashboard.recent.journalCols.status", { namespace: "dashboard", fallback: "الحالة" })}</th>
+                      <th className="text-right pb-4">{t("dashboard.recent.journalCols.number", { namespace: "dashboard",  })}</th>
+                      <th className="text-right pb-4">{t("dashboard.recent.journalCols.statement", { namespace: "dashboard",  })}</th>
+                      <th className="text-left pb-4">{t("dashboard.recent.journalCols.amount", { namespace: "dashboard",  })}</th>
+                      <th className="text-left pb-4">{t("dashboard.recent.journalCols.status", { namespace: "dashboard",  })}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50">
@@ -366,7 +366,7 @@ export default function Dashboard() {
               </div>
             ) : (
               <div className="flex items-center justify-center h-[200px] text-slate-300 font-bold text-sm">
-                {t("dashboard.recent.journalsEmpty", { namespace: "dashboard", fallback: "لا توجد قيود يومية مسجلة بعد" })}
+                {t("dashboard.recent.journalsEmpty", { namespace: "dashboard",  })}
               </div>
             )}
           </TabsContent>
@@ -377,11 +377,11 @@ export default function Dashboard() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="text-slate-400 font-black text-[10px] uppercase tracking-widest border-b border-slate-100">
-                      <th className="text-right pb-4">{t("dashboard.recent.paymentCols.number", { namespace: "dashboard", fallback: "رقم السند" })}</th>
-                      <th className="text-right pb-4">{t("dashboard.recent.paymentCols.type", { namespace: "dashboard", fallback: "النوع" })}</th>
-                      <th className="text-right pb-4">{t("dashboard.recent.paymentCols.party", { namespace: "dashboard", fallback: "الطرف" })}</th>
-                      <th className="text-left pb-4">{t("dashboard.recent.paymentCols.amount", { namespace: "dashboard", fallback: "المبلغ" })}</th>
-                      <th className="text-left pb-4">{t("dashboard.recent.paymentCols.date", { namespace: "dashboard", fallback: "التاريخ" })}</th>
+                      <th className="text-right pb-4">{t("dashboard.recent.paymentCols.number", { namespace: "dashboard",  })}</th>
+                      <th className="text-right pb-4">{t("dashboard.recent.paymentCols.type", { namespace: "dashboard",  })}</th>
+                      <th className="text-right pb-4">{t("dashboard.recent.paymentCols.party", { namespace: "dashboard",  })}</th>
+                      <th className="text-left pb-4">{t("dashboard.recent.paymentCols.amount", { namespace: "dashboard",  })}</th>
+                      <th className="text-left pb-4">{t("dashboard.recent.paymentCols.date", { namespace: "dashboard",  })}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50">
@@ -399,7 +399,7 @@ export default function Dashboard() {
               </div>
             ) : (
               <div className="flex items-center justify-center h-[200px] text-slate-300 font-bold text-sm">
-                {t("dashboard.recent.paymentsEmpty", { namespace: "dashboard", fallback: "لا توجد مدفوعات مسجلة بعد" })}
+                {t("dashboard.recent.paymentsEmpty", { namespace: "dashboard",  })}
               </div>
             )}
           </TabsContent>

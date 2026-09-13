@@ -33,18 +33,18 @@ export default function InventoryLowStockReport() {
         shortage: toQty(m.minimum_stock) - toQty(m.total_available),
         category: m.category_ids?.[0]
           ? catNameById.get(m.category_ids[0]) ?? "—"
-          : t("inventoryLowStock.noCategory", { namespace: "reports", fallback: "بدون تصنيف" }),
+          : t("inventoryLowStock.noCategory", { namespace: "reports",  }),
       }))
       .sort((a, b) => b.shortage - a.shortage);
   }, [materials, catNameById, t]);
 
   return (
     <OperationalTableTemplate
-      title={t("inventoryLowStock.title", { namespace: "reports", fallback: "نواقص المخزون" })}
+      title={t("inventoryLowStock.title", { namespace: "reports",  })}
       badge={
         <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-3 py-1 text-xs font-black text-rose-600">
           <AlertTriangle className="h-3.5 w-3.5" />
-          {t("inventoryLowStock.itemCount", { namespace: "reports", fallback: "{{count}} صنف", vars: { count: rows.length } })}
+          {t("inventoryLowStock.itemCount", { namespace: "reports", vars: { count: rows.length } })}
         </span>
       }
       toolbar={
@@ -52,7 +52,7 @@ export default function InventoryLowStockReport() {
           {isRefetching ? (
             <span className="flex h-9 items-center gap-1.5 rounded-lg bg-white px-2.5 text-xs text-slate-500 border border-slate-200">
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              {t("inventoryLowStock.updating", { namespace: "reports", fallback: "جارٍ التحديث…" })}
+              {t("inventoryLowStock.updating", { namespace: "reports",  })}
             </span>
           ) : (
             <Button
@@ -63,7 +63,7 @@ export default function InventoryLowStockReport() {
               onClick={() => void refetch()}
             >
               <RefreshCw className="h-3.5 w-3.5" />
-              {t("inventoryLowStock.refresh", { namespace: "reports", fallback: "تحديث" })}
+              {t("inventoryLowStock.refresh", { namespace: "reports",  })}
             </Button>
           )}
         </div>
@@ -76,13 +76,13 @@ export default function InventoryLowStockReport() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-slate-400 font-black text-[10px] uppercase tracking-widest border-b border-slate-100">
-                  <th className="text-end pb-4">{t("inventoryLowStock.colCode", { namespace: "reports", fallback: "الكود" })}</th>
-                  <th className="text-end pb-4">{t("inventoryLowStock.colItem", { namespace: "reports", fallback: "الصنف" })}</th>
-                  <th className="text-end pb-4">{t("inventoryLowStock.colCategory", { namespace: "reports", fallback: "الفئة" })}</th>
-                  <th className="text-start pb-4">{t("inventoryLowStock.colBarcode", { namespace: "reports", fallback: "الباركود" })}</th>
-                  <th className="text-start pb-4">{t("inventoryLowStock.colQuantity", { namespace: "reports", fallback: "الكمية المتاحة" })}</th>
-                  <th className="text-start pb-4">{t("inventoryLowStock.colMinimum", { namespace: "reports", fallback: "الحد الأدنى" })}</th>
-                  <th className="text-start pb-4">{t("inventoryLowStock.colShortage", { namespace: "reports", fallback: "النقص" })}</th>
+                  <th className="text-end pb-4">{t("inventoryLowStock.colCode", { namespace: "reports",  })}</th>
+                  <th className="text-end pb-4">{t("inventoryLowStock.colItem", { namespace: "reports",  })}</th>
+                  <th className="text-end pb-4">{t("inventoryLowStock.colCategory", { namespace: "reports",  })}</th>
+                  <th className="text-start pb-4">{t("inventoryLowStock.colBarcode", { namespace: "reports",  })}</th>
+                  <th className="text-start pb-4">{t("inventoryLowStock.colQuantity", { namespace: "reports",  })}</th>
+                  <th className="text-start pb-4">{t("inventoryLowStock.colMinimum", { namespace: "reports",  })}</th>
+                  <th className="text-start pb-4">{t("inventoryLowStock.colShortage", { namespace: "reports",  })}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
@@ -90,7 +90,7 @@ export default function InventoryLowStockReport() {
                   <tr>
                     <td colSpan={7} className="py-12 text-center text-slate-300 font-bold text-sm">
                       <PackageCheck className="mx-auto mb-2 h-8 w-8" />
-                      {t("inventoryLowStock.empty", { namespace: "reports", fallback: "جميع الأصناف ضمن الحد الآمن" })}
+                      {t("inventoryLowStock.empty", { namespace: "reports",  })}
                     </td>
                   </tr>
                 )}

@@ -29,7 +29,7 @@ export function PartnersToolbar({
         disabled={!selectedPartner}
         onClick={() => {
           if (!selectedPartner?.drawings_account_id) {
-            toast.error(t("toast.noDrawingsAccount", { namespace: "partners", fallback: "لا يوجد حساب مسحوبات مرتبط بهذا الشريك" }));
+            toast.error(t("toast.noDrawingsAccount", { namespace: "partners",  }));
             return;
           }
           onOpenDrawingsLedger(
@@ -40,7 +40,7 @@ export function PartnersToolbar({
         }}
         className="border-slate-200 text-slate-700 hover:bg-slate-50"
       >
-        <HistoryIcon className="w-4 h-4 ml-2 text-slate-500" /> {t("toolbar.drawings", { namespace: "partners", fallback: "مسحوبات الشريك" })}
+        <HistoryIcon className="w-4 h-4 ml-2 text-slate-500" /> {t("toolbar.drawings", { namespace: "partners",  })}
       </Button>
 
       <Button
@@ -49,23 +49,23 @@ export function PartnersToolbar({
         disabled={!selectedPartner}
         onClick={() => {
           if (!selectedPartner?.drawings_account_id) {
-            toast.error(t("toast.noDrawingsAccount", { namespace: "partners", fallback: "لا يوجد حساب مسحوبات مرتبط بهذا الشريك" }));
+            toast.error(t("toast.noDrawingsAccount", { namespace: "partners",  }));
             return;
           }
           onOpenDrawingsForm(selectedPartner.id);
         }}
         className="border-slate-200 text-slate-700 hover:bg-slate-50"
       >
-        <PlusCircle className="w-4 h-4 ml-2 text-amber-500" /> {t("toolbar.drawingsVoucher", { namespace: "partners", fallback: "سند مسحوبات" })}
+        <PlusCircle className="w-4 h-4 ml-2 text-amber-500" /> {t("toolbar.drawingsVoucher", { namespace: "partners",  })}
       </Button>
 
       <Button
         size="sm"
         variant="outline"
-        onClick={() => toast.info(t("toolbar.exporting", { namespace: "partners", fallback: "جاري التصدير..." }))}
+        onClick={() => toast.info(t("toolbar.exporting", { namespace: "partners",  }))}
         className="border-slate-200 text-slate-700 hover:bg-slate-50"
       >
-        <Download className="w-4 h-4 ml-2 text-emerald-500" /> {t("toolbar.exportExcel", { namespace: "partners", fallback: "تصدير إكسل" })}
+        <Download className="w-4 h-4 ml-2 text-emerald-500" /> {t("toolbar.exportExcel", { namespace: "partners",  })}
       </Button>
 
       <Button
@@ -74,7 +74,7 @@ export function PartnersToolbar({
         onClick={onOpenPartnerStatement}
         className="border-slate-200 text-slate-700 hover:bg-slate-50"
       >
-        <TrendingUp className="w-4 h-4 ml-2 text-emerald-500" /> {t("toolbar.statement", { namespace: "partners", fallback: "الشركاء وحقوقهم" })}
+        <TrendingUp className="w-4 h-4 ml-2 text-emerald-500" /> {t("toolbar.statement", { namespace: "partners",  })}
       </Button>
 
       <Button
@@ -83,7 +83,7 @@ export function PartnersToolbar({
         onClick={onOpenProfitDistribution}
         className="border-slate-200 text-slate-700 hover:bg-slate-50"
       >
-        <Coins className="w-4 h-4 ml-2 text-amber-500" /> {t("toolbar.profitDistribution", { namespace: "partners", fallback: "توزيع الأرباح" })}
+        <Coins className="w-4 h-4 ml-2 text-amber-500" /> {t("toolbar.profitDistribution", { namespace: "partners",  })}
       </Button>
 
       <div className="w-px h-6 bg-slate-200 mx-1" />
@@ -93,7 +93,7 @@ export function PartnersToolbar({
         onClick={onAddPartner}
         className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100 font-bold"
       >
-        <Plus className="w-4 h-4 ml-2" /> {t("toolbar.addPartner", { namespace: "partners", fallback: "إضافة شريك جديد" })}
+        <Plus className="w-4 h-4 ml-2" /> {t("toolbar.addPartner", { namespace: "partners",  })}
       </Button>
     </div>
   );

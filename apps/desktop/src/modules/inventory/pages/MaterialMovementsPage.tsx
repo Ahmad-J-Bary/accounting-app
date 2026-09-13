@@ -55,15 +55,14 @@ export default function MaterialMovementsPage() {
       .sort((a, b) => new Date(b.movement_date).getTime() - new Date(a.movement_date).getTime());
   }, [movements, isPurchase]);
 
-  const typeLabel = t(isPurchase ? "movementTypes.Purchase" : "movementTypes.Sale", { namespace: "inventory", fallback: isPurchase ? "مشتريات" : "مبيعات" });
+  const typeLabel = t(isPurchase ? "movementTypes.Purchase" : "movementTypes.Sale", { namespace: "inventory"});
 
   const title = material
     ? t("materialMovements.title", {
         namespace: "inventory",
         vars: { type: typeLabel, name: material.name },
-        fallback: `${typeLabel} المادة: ${material.name}`,
-      })
-    : t("materialMovements.loading", { namespace: "inventory", fallback: "جاري التحميل..." });
+        })
+    : t("materialMovements.loading", { namespace: "inventory",  });
 
   return (
     <OperationalTableTemplate
@@ -71,12 +70,12 @@ export default function MaterialMovementsPage() {
       tableContent={
         loading ? (
           <div className="flex items-center justify-center py-20 text-muted-foreground">
-            {t("materialMovements.loading", { namespace: "inventory", fallback: "جاري التحميل..." })}
+            {t("materialMovements.loading", { namespace: "inventory",  })}
           </div>
         ) : displayMovements.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
             <Package className="w-12 h-12 mb-4 opacity-30" />
-            <p>{t("materialMovements.empty", { namespace: "inventory", vars: { type: typeLabel }, fallback: `لا توجد ${typeLabel} لهذه المادة` })}</p>
+            <p>{t("materialMovements.empty", { namespace: "inventory", vars: { type: typeLabel },  })}</p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -100,19 +99,19 @@ export default function MaterialMovementsPage() {
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                   <div>
-                    <span className="text-slate-400 text-xs">{t("labels.quantity", { namespace: "common", fallback: "الكمية" })}</span>
+                    <span className="text-slate-400 text-xs">{t("labels.quantity", { namespace: "common",  })}</span>
                     <p className="font-bold">{toLocalString(parseFloat(m.quantity))}</p>
                   </div>
                   <div>
-                    <span className="text-slate-400 text-xs">{t("labels.cost", { namespace: "inventory", fallback: "التكلفة" })}</span>
+                    <span className="text-slate-400 text-xs">{t("labels.cost", { namespace: "inventory",  })}</span>
                     <p className="font-bold">{formatCurrency(parseFloat(m.unit_cost), baseCurrency?.symbol || "")}</p>
                   </div>
                   <div>
-                    <span className="text-slate-400 text-xs">{t("labels.total", { namespace: "common", fallback: "الإجمالي" })}</span>
+                    <span className="text-slate-400 text-xs">{t("labels.total", { namespace: "common",  })}</span>
                     <p className="font-bold">{formatCurrency(parseFloat(m.total_cost), baseCurrency?.symbol || "")}</p>
                   </div>
                   <div>
-                    <span className="text-slate-400 text-xs">{t("labels.party", { namespace: "inventory", fallback: "الطرف" })}</span>
+                    <span className="text-slate-400 text-xs">{t("labels.party", { namespace: "inventory",  })}</span>
                     <p className="font-medium">{m.party_name || "—"}</p>
                   </div>
                 </div>
