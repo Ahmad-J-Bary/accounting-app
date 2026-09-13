@@ -7,8 +7,10 @@ import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { formatCurrency, formatDate, toLocalString, toFixed } from '@shared/lib/format';
 import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTemplate";
 import { Badge } from "@shared/ui/badge";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 export default function MaterialMovementsPage() {
+  const { t } = useLocalization();
   const { materialId } = useParams<{ materialId: string }>();
   const location = useLocation();
   const isPurchase = location.pathname.includes("/purchases/");
@@ -53,9 +55,15 @@ export default function MaterialMovementsPage() {
       .sort((a, b) => new Date(b.movement_date).getTime() - new Date(a.movement_date).getTime());
   }, [movements, isPurchase]);
 
+  const typeLabel = t(isPurchase ? "movementTypes.Purchase" : "movementTypes.Sale", { namespace: "inventory", fallback: isPurchase ? "مشتريات" : "مبيعات" });
+
   const title = material
-    ? `${isPurchase ? "مشتريات" : "مبيعات"} المادة: ${material.name}`
-    : "جاري التحميل...";
+    ? t("materialMovements.title", {
+        namespace: "inventory",
+        vars: { type: typeLabel, name: material.name },
+        fallback: `${typeLabel} المادة: ${material.name}`,
+      })
+    : t("materialMovements.loading", { namespace: "inventory", fallback: "جاري التحميل..." });
 
   return (
     <OperationalTableTemplate
@@ -63,12 +71,12 @@ export default function MaterialMovementsPage() {
       tableContent={
         loading ? (
           <div className="flex items-center justify-center py-20 text-muted-foreground">
-            جاري التحميل...
+            {t("materialMovements.loading", { namespace: "inventory", fallback: "جاري التحميل..." })}
           </div>
         ) : displayMovements.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
             <Package className="w-12 h-12 mb-4 opacity-30" />
-            <p>لا توجد {isPurchase ? "مشتريات" : "مبيعات"} لهذه المادة</p>
+            <p>{t("materialMovements.empty", { namespace: "inventory", vars: { type: typeLabel }, fallback: `لا توجد ${typeLabel} لهذه المادة` })}</p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -84,7 +92,7 @@ export default function MaterialMovementsPage() {
                     ) : (
                       <ArrowUp className="w-4 h-4 text-red-600" />
                     )}
-                    {m.movement_type_label || (m.is_inflow ? "مشتريات" : "مبيعات")}
+                    {m.movement_type_label || typeLabel}
                   </span>
                   <Badge variant="outline" className="text-[10px]">
                     {formatDate(m.movement_date)}
@@ -92,19 +100,19 @@ export default function MaterialMovementsPage() {
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                   <div>
-                    <span className="text-slate-400 text-xs">الكمية</span>
+                    <span className="text-slate-400 text-xs">{t("labels.quantity", { namespace: "common", fallback: "الكمية" })}</span>
                     <p className="font-bold">{toLocalString(parseFloat(m.quantity))}</p>
                   </div>
                   <div>
-                    <span className="text-slate-400 text-xs">التكلفة</span>
+                    <span className="text-slate-400 text-xs">{t("labels.cost", { namespace: "inventory", fallback: "التكلفة" })}</span>
                     <p className="font-bold">{formatCurrency(parseFloat(m.unit_cost), baseCurrency?.symbol || "")}</p>
                   </div>
                   <div>
-                    <span className="text-slate-400 text-xs">الإجمالي</span>
+                    <span className="text-slate-400 text-xs">{t("labels.total", { namespace: "common", fallback: "الإجمالي" })}</span>
                     <p className="font-bold">{formatCurrency(parseFloat(m.total_cost), baseCurrency?.symbol || "")}</p>
                   </div>
                   <div>
-                    <span className="text-slate-400 text-xs">الطرف</span>
+                    <span className="text-slate-400 text-xs">{t("labels.party", { namespace: "inventory", fallback: "الطرف" })}</span>
                     <p className="font-medium">{m.party_name || "—"}</p>
                   </div>
                 </div>

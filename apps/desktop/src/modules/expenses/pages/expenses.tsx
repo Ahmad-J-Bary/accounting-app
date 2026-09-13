@@ -18,6 +18,7 @@ import { type CreatePaymentRequest } from "@erp/shared-types";
 
 import { OperationalTableTemplate } from '@widgets/templates/OperationalTableTemplate';
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 import { effectiveBalanceBase, balanceDirectionLabel } from "@shared/lib/balance-utils";
 import { getExchangeRate } from "@shared/lib/currency-strategy";
 import { executeExport, buildCurrencySummary, applyVisibilityToCurrencyCols, currencyAmountCols } from "@shared/lib/excel";
@@ -32,6 +33,7 @@ const OTHER_EXPENSES_PARENT_ID = SYSTEM_ACCOUNT_IDS.OTHER_EXPENSES;
 type ExpenseSavePayload = SaveAccountCommand & { _id?: string };
 
 export default function Expenses() {
+  const { t } = useLocalization();
   const { hasSecondaryCurrencies } = useBaseCurrencyColumns();
   const { exportData, baseCurrency, rateMap, currencies, formatAmount, currencyMode, ratesSheet, baseCode } = useExportSetup();
   const { toBase } = useCurrencyContext();
@@ -96,10 +98,10 @@ export default function Expenses() {
       await paymentService.createPayment(payload);
       await invalidateKeys(queryClient, PAYMENT_RECEIPT_KEYS);
       await refresh(true);
-      toast.success("تم تسجيل سند الصرف بنجاح");
+      toast.success(t("expense.voucherSaveSuccess", { namespace: "invoicing", fallback: "تم تسجيل سند الصرف بنجاح" }));
       setIsVoucherOpen(false);
     } catch (error) {
-      toast.error("فشل تسجيل السند: " + error);
+      toast.error(t("expense.voucherSaveError", { namespace: "invoicing", vars: { error: String(error) }, fallback: "فشل تسجيل السند: {{error}}" }));
     } finally {
       setVoucherSaving(false);
     }
@@ -136,7 +138,7 @@ export default function Expenses() {
   }, [expensesParent, handleSave, baseCurrency, rateMap]);
 
   const handleExport = useCallback(async () => {
-    const currCols = currencyAmountCols("balance", "الرصيد", (row) => {
+    const currCols = currencyAmountCols("balance", t("expense.balance", { namespace: "invoicing", fallback: "الرصيد" }), (row) => {
       const c = row as unknown as AccountDto;
       const absBal = Math.abs(Number(c.balance || 0));
       if (absBal === 0) return 0;
@@ -152,8 +154,8 @@ export default function Expenses() {
         const suffix = prefix && c.code?.startsWith(prefix) ? c.code.substring(prefix.length) : c.code || "";
         return suffix ? parseInt(suffix) || 0 : 0;
       }, numeric: true },
-      { id: "name", label: "اسم البند", accessor: (row) => String((row as unknown as AccountDto).name_ar ?? "") },
-      { id: "status", label: "حالة الحساب", accessor: (row) => {
+      { id: "name", label: t("expense.itemName", { namespace: "invoicing", fallback: "اسم البند" }), accessor: (row) => String((row as unknown as AccountDto).name_ar ?? "") },
+      { id: "status", label: t("expense.accountStatus", { namespace: "invoicing", fallback: "حالة الحساب" }), accessor: (row) => {
         const c = row as unknown as AccountDto;
         return balanceDirectionLabel(
           c.debit !== undefined ? Number(c.debit || 0) : 0,
@@ -164,21 +166,21 @@ export default function Expenses() {
       ...currCols,
     ];
     await executeExport(exportData, {
-      sheetName: "بنود المصاريف",
-      filename: "بنود المصاريف",
+      sheetName: t("expense.title", { namespace: "invoicing", fallback: "بنود المصاريف" }),
+      filename: t("expense.title", { namespace: "invoicing", fallback: "بنود المصاريف" }),
       data: expenses as unknown as Record<string, unknown>[],
       columns: exportColumns,
       summary,
-      summaryLabel: "المجموع",
+      summaryLabel: t("document.summaryLabel", { namespace: "invoicing", fallback: "المجموع" }),
       currencyRatesSheet: ratesSheet,
     });
-  }, [expenses, currencies, formatAmount, toBase, currencyMode, baseCode, rateMap, expensesParent, exportData, hasSecondaryCurrencies, ratesSheet, visibleColumnIds]);
+  }, [expenses, currencies, formatAmount, toBase, currencyMode, baseCode, rateMap, expensesParent, exportData, hasSecondaryCurrencies, ratesSheet, visibleColumnIds, t]);
 
   const isLoading = loading || refreshing;
 
   return (
     <OperationalTableTemplate
-      title="بنود المصاريف"
+      title={t("expense.title", { namespace: "invoicing", fallback: "بنود المصاريف" })}
       toolbar={
         <div className="flex items-center gap-2">
           <Button
@@ -188,12 +190,12 @@ export default function Expenses() {
             disabled={!selectedId || !selectedExpense?.id}
             onClick={() => selectedExpense?.id && openTab({
               id: `ledger-${selectedExpense.id}`,
-              title: `حركة: ${selectedExpense.name_ar}`,
+              title: t("expense.ledgerTabTitle", { namespace: "invoicing", vars: { name: selectedExpense.name_ar }, fallback: `حركة: ${selectedExpense.name_ar}` }),
               path: `/accounting/account-ledger/${selectedExpense.id}`,
               closable: true
             })}
           >
-            <History className="w-4 h-4 ml-2 text-slate-500" /> حركة اليومية
+            <History className="w-4 h-4 ml-2 text-slate-500" /> {t("expense.journal", { namespace: "invoicing", fallback: "حركة اليومية" })}
           </Button>
 
           <Button
@@ -206,7 +208,7 @@ export default function Expenses() {
               setIsFormOpen(false);
             }}
           >
-            <DollarSign className="w-4 h-4 ml-2 text-rose-500" /> إنشاء سند صرف
+            <DollarSign className="w-4 h-4 ml-2 text-rose-500" /> {t("expense.createVoucher", { namespace: "invoicing", fallback: "إنشاء سند صرف" })}
           </Button>
 
           <Button
@@ -215,13 +217,13 @@ export default function Expenses() {
             className="bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
             onClick={handleExport}
           >
-            <Download className="w-4 h-4 ml-2 text-slate-500" /> تصدير إكسل
+            <Download className="w-4 h-4 ml-2 text-slate-500" /> {t("labels.exportExcel", { namespace: "invoicing", fallback: "تصدير إكسل" })}
           </Button>
 
           <div className="h-6 w-px bg-slate-200 mx-1" />
 
           <Button size="sm" onClick={handleOpenAdd} className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100 font-bold">
-            <Plus className="w-4 h-4 ml-2" /> إضافة بند مصروف
+            <Plus className="w-4 h-4 ml-2" /> {t("expense.addItem", { namespace: "invoicing", fallback: "إضافة بند مصروف" })}
           </Button>
         </div>
       }
@@ -236,7 +238,7 @@ export default function Expenses() {
             onDelete={(id) => { setSelectedId(null); handleDelete(id); }}
             onJournal={(acc) => acc.id && openTab({
               id: `ledger-${acc.id}`,
-              title: `حركة: ${acc.name_ar}`,
+              title: t("expense.ledgerTabTitle", { namespace: "invoicing", vars: { name: acc.name_ar }, fallback: `حركة: ${acc.name_ar}` }),
               path: `/accounting/account-ledger/${acc.id}`,
               closable: true
             })}

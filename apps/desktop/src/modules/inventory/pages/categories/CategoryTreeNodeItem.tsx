@@ -3,6 +3,7 @@ import { cn } from '@shared/lib/utils';
 import { Badge } from "@shared/ui/badge";
 import { TreeItem } from '@widgets/tree-sidebar/TreeItem';
 import type { CategoryDto } from "@erp/shared-types";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 interface CategoryTreeNode extends CategoryDto {
   children: CategoryTreeNode[];
@@ -28,6 +29,7 @@ export function CategoryTreeNodeItem({
   expandedNodes,
   onToggle,
 }: CategoryTreeNodeItemProps) {
+  const { t } = useLocalization();
   const isVirtualRoot = node.id === VIRTUAL_ROOT_ID;
   const isDefault = node.name === "غير مصنف" && !node.parent_id;
   const isRoot = !node.parent_id && !isVirtualRoot;
@@ -88,9 +90,9 @@ export function CategoryTreeNodeItem({
         </Badge>
         <div className="w-[80px]">
           {n.is_active ? (
-            <span className="text-[10px] text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">نشط</span>
+            <span className="text-[10px] text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">{t("labels.active", { namespace: "inventory", fallback: "نشط" })}</span>
           ) : (
-            <span className="text-[10px] text-slate-400 bg-slate-50 px-2 py-0.5 rounded-full border border-slate-100">معطل</span>
+            <span className="text-[10px] text-slate-400 bg-slate-50 px-2 py-0.5 rounded-full border border-slate-100">{t("states.disabled", { namespace: "common", fallback: "معطل" })}</span>
           )}
         </div>
       </>

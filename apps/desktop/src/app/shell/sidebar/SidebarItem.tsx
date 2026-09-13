@@ -4,6 +4,7 @@ import { useNavSidebarSettings } from '@shared/hooks';
 import { cn } from '@shared/lib/utils';
 import { ICON_MAP } from '@app/shell/sidebarConfig';
 import type { SidebarItemConfig } from '@shared/types/sidebar-config';
+import { useNavLabels } from '@shared/hooks';
 import { Pin } from 'lucide-react';
 
 interface SidebarItemProps {
@@ -26,6 +27,7 @@ export function SidebarItem({
 }: SidebarItemProps) {
   const { openTab, updateMainTab, activeTabId } = useTabs();
   const { settings, getNavFontSizeClass } = useNavSidebarSettings();
+  const { itemLabel } = useNavLabels();
 
   if (item.isSeparator) {
     return (
@@ -50,7 +52,7 @@ export function SidebarItem({
     : isBgLight ? 'text-slate-500 group-hover:text-slate-800' : 'text-slate-500 group-hover:text-slate-300';
 
   const IconComp = ICON_MAP[item.icon] ?? ICON_MAP['Settings'];
-  const displayLabel = item.customLabel ?? item.defaultLabel;
+  const displayLabel = itemLabel(item);
 
   const handleClick = (e: React.MouseEvent) => {
     e.preventDefault();

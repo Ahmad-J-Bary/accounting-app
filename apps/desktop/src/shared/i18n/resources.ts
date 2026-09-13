@@ -1,5 +1,24 @@
 import type { AppLanguage, I18nNamespace, TranslationTree } from "@shared/types/i18n";
 
+import { common } from "./resources/common";
+import { shell } from "./resources/shell";
+import { search } from "./resources/search";
+import { commands } from "./resources/commands";
+import { voice } from "./resources/voice";
+import { dashboard } from "./resources/dashboard";
+import { accounting } from "./resources/accounting";
+import { partners } from "./resources/partners";
+import { invoicing } from "./resources/invoicing";
+import { inventory } from "./resources/inventory";
+import { fixedAssets } from "./resources/fixedAssets";
+import { reports } from "./resources/reports";
+import { settings } from "./resources/settings";
+import { users } from "./resources/users";
+import { auth } from "./resources/auth";
+import { validation } from "./resources/validation";
+import { errors } from "./resources/errors";
+import { widgets } from "./resources/widgets";
+
 type NamespaceBundle = Record<I18nNamespace, TranslationTree>;
 
 export const DEFAULT_LANGUAGE: AppLanguage = "ar";
@@ -14,141 +33,34 @@ export const DIRECTION_BY_LANGUAGE: Record<AppLanguage, "rtl" | "ltr"> = {
   en: "ltr",
 };
 
+export const NAMESPACE_BUNDLES: Record<I18nNamespace, Record<AppLanguage, TranslationTree>> = {
+  common,
+  shell,
+  search,
+  commands,
+  voice,
+  dashboard,
+  accounting,
+  partners,
+  invoicing,
+  inventory,
+  fixedAssets,
+  reports,
+  settings,
+  users,
+  auth,
+  validation,
+  errors,
+  widgets,
+};
+
 export const I18N_RESOURCES: Record<AppLanguage, NamespaceBundle> = {
-  ar: {
-    common: {
-      actions: {
-        cancel: "إلغاء",
-        close: "إغلاق",
-        confirm: "تأكيد",
-        save: "حفظ",
-        open: "فتح",
-        search: "بحث",
-        newTab: "تبويب جديد",
-      },
-      states: {
-        loading: "جاري التحميل...",
-        noResults: "لا توجد نتائج",
-        unavailable: "غير متاح",
-      },
-    },
-    shell: {
-      dashboard: "لوحة التحكم",
-      globalSearch: "البحث الشامل",
-      newTab: "تبويب جديد",
-      tabs: {
-        default: "افتراضي",
-        browser: "مشابه للمتصفح",
-        vscode: "مشابه لـ VS Code",
-      },
-      voice: "المساعد الصوتي",
-      windows: "النوافذ",
-    },
-    search: {
-      placeholder: "ابحث في الصفحات والأوامر والنتائج...",
-      recent: "الأخيرة",
-      commands: "الأوامر",
-      navigation: "التنقل",
-      tabs: "التبويبات المفتوحة",
-      noResults: "لا توجد نتائج مطابقة",
-      hint: "استخدم الأسهم للتنقل و Enter للاختيار",
-    },
-    commands: {
-      openSearch: "فتح البحث",
-      newDashboardTab: "فتح تبويب جديد",
-      newSalesInvoice: "فاتورة مبيعات جديدة",
-      newPurchaseInvoice: "فاتورة مشتريات جديدة",
-      newJournalEntry: "قيد يومية جديد",
-      newOpeningBalance: "فاتورة أول المدة جديدة",
-      openSettings: "فتح الإعدادات",
-    },
-    voice: {
-      title: "المساعد الصوتي",
-      idle: "جاهز للاستماع",
-      recording: "جاري الاستماع...",
-      transcribing: "جاري تحويل الصوت إلى نص...",
-      analyzing: "جاري فهم الطلب...",
-      ambiguous: "يوجد أكثر من احتمال",
-      confirmation: "تأكيد التنفيذ",
-      executing: "جاري التنفيذ...",
-      success: "تم التنفيذ بنجاح",
-      error: "تعذر تنفيذ الطلب",
-    },
-    settings: {
-      language: "اللغة",
-      terminology: "المصطلحات",
-      tabStyle: "أسلوب التبويبات",
-      motion: "الحركة",
-      reducedMotion: "تقليل الحركة",
-    },
-  },
-  en: {
-    common: {
-      actions: {
-        cancel: "Cancel",
-        close: "Close",
-        confirm: "Confirm",
-        save: "Save",
-        open: "Open",
-        search: "Search",
-        newTab: "New Tab",
-      },
-      states: {
-        loading: "Loading...",
-        noResults: "No results",
-        unavailable: "Unavailable",
-      },
-    },
-    shell: {
-      dashboard: "Dashboard",
-      globalSearch: "Global Search",
-      newTab: "New Tab",
-      tabs: {
-        default: "Default",
-        browser: "Browser",
-        vscode: "VS Code",
-      },
-      voice: "Voice Assistant",
-      windows: "Windows",
-    },
-    search: {
-      placeholder: "Search pages, commands, and results...",
-      recent: "Recent",
-      commands: "Commands",
-      navigation: "Navigation",
-      tabs: "Open Tabs",
-      noResults: "No matching results",
-      hint: "Use arrows to navigate and Enter to open",
-    },
-    commands: {
-      openSearch: "Open Search",
-      newDashboardTab: "Open New Tab",
-      newSalesInvoice: "New Sales Invoice",
-      newPurchaseInvoice: "New Purchase Invoice",
-      newJournalEntry: "New Journal Entry",
-      newOpeningBalance: "New Opening Balance",
-      openSettings: "Open Settings",
-    },
-    voice: {
-      title: "Voice Assistant",
-      idle: "Ready to listen",
-      recording: "Listening...",
-      transcribing: "Transcribing...",
-      analyzing: "Understanding request...",
-      ambiguous: "More than one interpretation found",
-      confirmation: "Confirm action",
-      executing: "Executing...",
-      success: "Done successfully",
-      error: "Could not complete the request",
-    },
-    settings: {
-      language: "Language",
-      terminology: "Terminology",
-      tabStyle: "Tab Style",
-      motion: "Motion",
-      reducedMotion: "Reduced Motion",
-    },
-  },
+  ar: Object.fromEntries(
+    Object.entries(NAMESPACE_BUNDLES).map(([namespace, bundle]) => [namespace, bundle.ar]),
+  ) as Record<I18nNamespace, TranslationTree>,
+  en: Object.fromEntries(
+    Object.entries(NAMESPACE_BUNDLES).map(([namespace, bundle]) => [namespace, bundle.en]),
+  ) as Record<I18nNamespace, TranslationTree>,
 };
 
 export function getNestedTranslation(tree: TranslationTree, key: string): string | undefined {
@@ -159,4 +71,26 @@ export function getNestedTranslation(tree: TranslationTree, key: string): string
     current = current[part];
   }
   return typeof current === "string" ? current : undefined;
+}
+
+const ARABIC_PLURAL_CATEGORY = (count: number): string => {
+  if (count === 0) return "zero";
+  if (count === 1) return "one";
+  if (count === 2) return "two";
+  if (count >= 3 && count <= 10) return "few";
+  if (count >= 11 && count <= 99) return "many";
+  return "many";
+};
+
+const ENGLISH_PLURAL_CATEGORY = (count: number): string => (count === 1 ? "one" : "other");
+
+export function pluralCategory(language: AppLanguage, count: number): string {
+  return language === "ar" ? ARABIC_PLURAL_CATEGORY(count) : ENGLISH_PLURAL_CATEGORY(count);
+}
+
+export function interpolate(template: string, vars?: Record<string, string | number>): string {
+  if (!vars) return template;
+  return template.replace(/\{\{(\w+)\}\}/g, (match, name: string) =>
+    name in vars ? String(vars[name]) : match,
+  );
 }

@@ -13,6 +13,7 @@ import { ArrowDownCircle, ArrowUpCircle, Download, Filter } from "lucide-react";
 import { Button } from "@shared/ui/button";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@shared/ui/select";
 import type { Payment, AccountDto } from "@erp/shared-types";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 type SortField = "journal_entry_number" | "payment_date" | "payment_type" | "credit_account" | "debit_account";
 
@@ -54,6 +55,7 @@ export function PaymentsTable({
   onDelete,
 }: PaymentsTableProps) {
 
+  const { t } = useLocalization();
   const { isBaseCurrency, currencySuffix: cs, hasSecondaryCurrencies } = useBaseCurrencyColumns();
   const { exportData, currencyMode, ratesSheet, baseCode } = useExportSetup();
   const sortedCurrencies = useMemo(() => {
@@ -91,13 +93,9 @@ export function PaymentsTable({
           break;
         case "payment_type":
           comparison = (
-            PAYMENT_TYPE_LABELS[
-              a.payment_type as keyof typeof PAYMENT_TYPE_LABELS
-            ] || a.payment_type
+            t(`paymentTypeLabel.${a.payment_type as string}`, { namespace: "invoicing", fallback: PAYMENT_TYPE_LABELS[a.payment_type as keyof typeof PAYMENT_TYPE_LABELS] || a.payment_type })
           ).localeCompare(
-            PAYMENT_TYPE_LABELS[
-              b.payment_type as keyof typeof PAYMENT_TYPE_LABELS
-            ] || b.payment_type,
+            t(`paymentTypeLabel.${b.payment_type as string}`, { namespace: "invoicing", fallback: PAYMENT_TYPE_LABELS[b.payment_type as keyof typeof PAYMENT_TYPE_LABELS] || b.payment_type }),
             "ar",
           );
           break;
@@ -130,15 +128,15 @@ export function PaymentsTable({
       const cols: UnifiedColumn<Payment>[] = [
       {
         id: "journal_entry_number",
-        header: "رقم القيد",
-        label: "رقم القيد",
+        header: t("payment.journalEntryNo", { namespace: "invoicing", fallback: "رقم القيد" }),
+        label: t("payment.journalEntryNo", { namespace: "invoicing", fallback: "رقم القيد" }),
         accessor: (p) => formatNumber(parseInt(p.journal_entry_number) || 0),
         className: "font-black text-indigo-700 tabular-nums",
       },
       {
         id: "payment_type",
-        header: "النوع",
-        label: "النوع",
+        header: t("payment.type", { namespace: "invoicing", fallback: "النوع" }),
+        label: t("payment.type", { namespace: "invoicing", fallback: "النوع" }),
         accessor: (p) => (
           <div className="flex items-center gap-2">
             {isIncomingPayment(p.payment_type) ? (
@@ -147,9 +145,12 @@ export function PaymentsTable({
               <ArrowUpCircle className="w-3.5 h-3.5 text-rose-500" />
             )}
             <span className="font-bold text-[11px]">
-              {PAYMENT_TYPE_LABELS[
-                p.payment_type as keyof typeof PAYMENT_TYPE_LABELS
-              ] || p.payment_type}
+              {t(`paymentTypeLabel.${p.payment_type as string}`, {
+                namespace: "invoicing",
+                fallback: PAYMENT_TYPE_LABELS[
+                  p.payment_type as keyof typeof PAYMENT_TYPE_LABELS
+                ] || p.payment_type,
+              })}
             </span>
           </div>
         ),
@@ -159,8 +160,8 @@ export function PaymentsTable({
         const isBase = isBaseCurrency(curr.code);
         return {
           id: `amount_${curr.code}`,
-          header: `المبلغ ${cs(symbol)}`,
-          label: `المبلغ ${cs(symbol)}`,
+          header: t("payment.amountColumn", { namespace: "invoicing", vars: { currency: cs(symbol) }, fallback: `المبلغ ${cs(symbol)}` }),
+          label: t("payment.amountColumn", { namespace: "invoicing", vars: { currency: cs(symbol) }, fallback: `المبلغ ${cs(symbol)}` }),
           accessor: (p: Payment) => {
             const amount = parseFloat(p.amount) || 0;
             if (amount === 0) return "";
@@ -175,15 +176,15 @@ export function PaymentsTable({
       }),
       {
         id: "notes",
-        header: "البيان",
-        label: "البيان",
+        header: t("payment.statement", { namespace: "invoicing", fallback: "البيان" }),
+        label: t("payment.statement", { namespace: "invoicing", fallback: "البيان" }),
         accessor: (p) => p.notes || "",
         className: "text-slate-500 italic",
       },
       {
         id: "credit_account",
-        header: "الحساب الدائن / المصدر",
-        label: "الحساب الدائن / المصدر",
+        header: t("payment.creditAccount", { namespace: "invoicing", fallback: "الحساب الدائن / المصدر" }),
+        label: t("payment.creditAccount", { namespace: "invoicing", fallback: "الحساب الدائن / المصدر" }),
         accessor: (p) => {
           if (p.credit_account_id) {
             return (
@@ -196,8 +197,8 @@ export function PaymentsTable({
       },
       {
         id: "debit_account",
-        header: "الحساب المدين / الوجهة",
-        label: "الحساب المدين / الوجهة",
+        header: t("payment.debitAccount", { namespace: "invoicing", fallback: "الحساب المدين / الوجهة" }),
+        label: t("payment.debitAccount", { namespace: "invoicing", fallback: "الحساب المدين / الوجهة" }),
         accessor: (p) => {
           if (p.debit_account_id) {
             return (
@@ -210,15 +211,15 @@ export function PaymentsTable({
       },
       {
         id: "payment_date",
-        header: "التاريخ",
-        label: "التاريخ",
+        header: t("labels.date", { namespace: "common", fallback: "التاريخ" }),
+        label: t("labels.date", { namespace: "common", fallback: "التاريخ" }),
         accessor: (p) => formatDateTime(p.payment_date),
         className: "tabular-nums text-slate-500",
       },
       {
         id: "actions",
-        header: "إجراءات",
-        label: "إجراءات",
+        header: t("labels.actions", { namespace: "common", fallback: "إجراءات" }),
+        label: t("labels.actions", { namespace: "common", fallback: "إجراءات" }),
         accessor: (p) => (
           <TableActions
             onView={() => onRowClick(p)}
@@ -240,6 +241,7 @@ export function PaymentsTable({
       onDelete,
       isBaseCurrency,
       cs,
+      t,
     ],
   );
 
@@ -262,7 +264,7 @@ export function PaymentsTable({
   });
 
   const handleExport = useCallback(async () => {
-    const currCols = currencyAmountCols("amount", "المبلغ", (row) => {
+    const currCols = currencyAmountCols("amount", t("labels.amount", { namespace: "common", fallback: "المبلغ" }), (row) => {
       const p = row as unknown as Payment;
       const amount = parseFloat(p.amount) || 0;
       const baseAmount = toBase(amount, p.currency_code);
@@ -277,34 +279,34 @@ export function PaymentsTable({
     const summary = buildCurrencySummary("amount", sortedCurrencies);
 
     const exportColumns: ExcelExportColumn[] = [
-      { id: "journal_entry_number", label: "رقم القيد", accessor: (row) => parseInt(String((row as Record<string, unknown>).journal_entry_number ?? "0"), 10) || 0 },
-      { id: "payment_type", label: "النوع", accessor: (row) => {
+      { id: "journal_entry_number", label: t("payment.journalEntryNo", { namespace: "invoicing", fallback: "رقم القيد" }), accessor: (row) => parseInt(String((row as Record<string, unknown>).journal_entry_number ?? "0"), 10) || 0 },
+      { id: "payment_type", label: t("payment.type", { namespace: "invoicing", fallback: "النوع" }), accessor: (row) => {
         const p = row as unknown as Payment;
-        return PAYMENT_TYPE_LABELS[p.payment_type as keyof typeof PAYMENT_TYPE_LABELS] || p.payment_type;
+        return t(`paymentTypeLabel.${p.payment_type as string}`, { namespace: "invoicing", fallback: PAYMENT_TYPE_LABELS[p.payment_type as keyof typeof PAYMENT_TYPE_LABELS] || p.payment_type });
       }},
       ...currCols,
-      { id: "notes", label: "البيان", accessor: (row) => String((row as Record<string, unknown>).notes ?? "") },
-      { id: "credit_account", label: "الحساب الدائن / المصدر", accessor: (row) => {
+      { id: "notes", label: t("payment.statement", { namespace: "invoicing", fallback: "البيان" }), accessor: (row) => String((row as Record<string, unknown>).notes ?? "") },
+      { id: "credit_account", label: t("payment.creditAccount", { namespace: "invoicing", fallback: "الحساب الدائن / المصدر" }), accessor: (row) => {
         const p = row as unknown as Payment;
         return p.credit_account_id ? accounts.find((a) => a.id === p.credit_account_id)?.name_ar ?? "" : "";
       }},
-      { id: "debit_account", label: "الحساب المدين / الوجهة", accessor: (row) => {
+      { id: "debit_account", label: t("payment.debitAccount", { namespace: "invoicing", fallback: "الحساب المدين / الوجهة" }), accessor: (row) => {
         const p = row as unknown as Payment;
         return p.debit_account_id ? accounts.find((a) => a.id === p.debit_account_id)?.name_ar ?? "" : "";
       }},
-      dateCol("payment_date", "التاريخ", (row) => (row as unknown as Payment).payment_date),
+      dateCol("payment_date", t("labels.date", { namespace: "common", fallback: "التاريخ" }), (row) => (row as unknown as Payment).payment_date),
     ];
 
     await executeExport(exportData, {
-      sheetName: "السندات المالية",
-      filename: "السندات المالية",
+      sheetName: t("payments.title", { namespace: "invoicing", fallback: "السندات المالية" }),
+      filename: t("payments.title", { namespace: "invoicing", fallback: "السندات المالية" }),
       data: sortedData as unknown as Record<string, unknown>[],
       columns: exportColumns,
       summary,
-      summaryLabel: "المجموع",
+      summaryLabel: t("document.summaryLabel", { namespace: "invoicing", fallback: "المجموع" }),
       currencyRatesSheet: ratesSheet,
     });
-  }, [sortedData, sortedCurrencies, accounts, formatAmount, toBase, currencyMode, baseCode, rateMap, exportData, hasSecondaryCurrencies, enrichedColumns, ratesSheet]);
+  }, [sortedData, sortedCurrencies, accounts, formatAmount, toBase, currencyMode, baseCode, rateMap, exportData, hasSecondaryCurrencies, enrichedColumns, ratesSheet, t]);
 
   const summaryColumns = useMemo<SummaryColumn[]>(() => {
     const baseTotal = sortedData.reduce((sum, p) => {
@@ -321,7 +323,7 @@ export function PaymentsTable({
           id: "count",
           columnId: "journal_entry_number",
           label: "",
-          value: `${sortedData.length} سند`,
+          value: t("payment.countVouchers", { namespace: "invoicing", vars: { count: sortedData.length }, fallback: `${sortedData.length} سند` }),
           className: "text-slate-500 font-medium",
         };
       }
@@ -332,7 +334,7 @@ export function PaymentsTable({
         return {
           id: `${id}_summary`,
           columnId: id,
-          label: "الإجمالي",
+          label: t("labels.total", { namespace: "common", fallback: "الإجمالي" }),
           value: baseTotal !== 0
             ? formatAmount(baseTotal, { currencyCode: currCode })
             : "—",
@@ -343,13 +345,13 @@ export function PaymentsTable({
       }
       return { id: `${id}_spacer`, columnId: id, label: "", value: "" };
     });
-  }, [sortedData, enrichedColumns, formatAmount, toBase, isBaseCurrency]);
+  }, [sortedData, enrichedColumns, formatAmount, toBase, isBaseCurrency, t]);
 
   return (
     <TableShell
       search={search}
       onSearchChange={onSearchChange}
-      searchPlaceholder="بحث بالمستخدم، الحساب، البيان..."
+      searchPlaceholder={t("payment.searchPlaceholder", { namespace: "invoicing", fallback: "بحث بالمستخدم، الحساب، البيان..." })}
       columns={toolbarColumns}
       onColumnToggle={toggleColumn}
       onColumnsReset={resetToDefault}
@@ -363,19 +365,19 @@ export function PaymentsTable({
           onClick={handleExport}
         >
           <Download className="w-3.5 h-3.5 ml-1.5 text-slate-500" />
-          تصدير إكسل
+          {t("labels.exportExcel", { namespace: "invoicing", fallback: "تصدير إكسل" })}
         </Button>
       }
       filterBar={
         <Select value={typeFilter} onValueChange={onTypeFilterChange}>
           <SelectTrigger className="w-[130px] h-8 bg-white font-bold shadow-sm border-slate-200 text-xs">
             <Filter className="w-3.5 h-3.5 ml-1.5 text-slate-400" />
-            <SelectValue placeholder="نوع الدفعة" />
+            <SelectValue placeholder={t("payment.typeFilterPlaceholder", { namespace: "invoicing", fallback: "نوع الدفعة" })} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all" className="text-xs font-bold">الكل</SelectItem>
-            <SelectItem value="incoming" className="text-xs font-bold text-emerald-600">قبض</SelectItem>
-            <SelectItem value="outgoing" className="text-xs font-bold text-rose-600">دفع</SelectItem>
+            <SelectItem value="all" className="text-xs font-bold">{t("actions.all", { namespace: "common", fallback: "الكل" })}</SelectItem>
+            <SelectItem value="incoming" className="text-xs font-bold text-emerald-600">{t("payment.filterReceipt", { namespace: "invoicing", fallback: "قبض" })}</SelectItem>
+            <SelectItem value="outgoing" className="text-xs font-bold text-rose-600">{t("payment.filterPayment", { namespace: "invoicing", fallback: "دفع" })}</SelectItem>
           </SelectContent>
         </Select>
       }
@@ -401,7 +403,7 @@ export function PaymentsTable({
         }}
         onRowClick={(p) => onRowClick(p)}
         selectedId={selectedId}
-        emptyMessage="لا توجد سندات مالية مسجلة"
+        emptyMessage={t("payment.empty", { namespace: "invoicing", fallback: "لا توجد سندات مالية مسجلة" })}
         summary={summaryColumns}
       />
     </TableShell>

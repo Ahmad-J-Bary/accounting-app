@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { Bell, Search, Plus, Building2, LogOut, Settings as SettingsIcon, DollarSign, ChevronDown, Mic } from "lucide-react";
 import { useAppearance } from '@shared/hooks/useAppearance';
-import { useSidebarLayout } from '@shared/hooks';
+import { useSidebarLayout, useNavLabels } from '@shared/hooks';
 import { cn } from '@shared/lib/utils';
 import { Button } from "@shared/ui/button";
 import {
@@ -50,6 +50,7 @@ export function TopBar({
   const { openSearch } = useGlobalSearch();
   const voice = useVoice();
   const { language, setLanguage } = useLocalization();
+  const { itemLabel, groupTitle } = useNavLabels();
   const { executeCommand } = useCommands();
   const showSearch = appearance.show.search;
   const showNotifications = appearance.show.notifications;
@@ -117,7 +118,7 @@ export function TopBar({
   const renderNavItem = (item: SidebarItemConfig, slim: boolean) => {
     const isActive = activeTabId === item.to || location.pathname === item.to;
     const ItemIcon = ICON_MAP[item.icon] ?? null;
-    const label = item.customLabel ?? item.defaultLabel;
+    const label = itemLabel(item);
 
     const handleClick = (e: React.MouseEvent) => {
       e.preventDefault();
@@ -148,7 +149,7 @@ export function TopBar({
   };
 
   const renderNavGroup = (group: SidebarGroupConfig) => {
-    const displayTitle = group.customTitle ?? group.defaultTitle;
+    const displayTitle = groupTitle(group);
     const visibleItems = group.items.filter((i: SidebarItemConfig) => i.visible).sort((a: SidebarItemConfig, b: SidebarItemConfig) => a.order - b.order);
     if (visibleItems.length === 0) return null;
 
@@ -194,7 +195,7 @@ export function TopBar({
 
               const isActive = activeTabId === item.to || location.pathname === item.to;
               const ItemIcon = ICON_MAP[item.icon] ?? null;
-              const label = item.customLabel ?? item.defaultLabel;
+              const label = itemLabel(item);
 
               const handleClick = (e: React.MouseEvent) => {
                 e.preventDefault();

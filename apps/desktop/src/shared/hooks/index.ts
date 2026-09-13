@@ -13,6 +13,7 @@ export * from './useColumnResize';
 export * from './useGridResize';
 export * from './useBaseCurrencyColumns';
 export * from './useSidebarLayoutContext';
+export * from './useNavLabels';
 export * from './useSidebarQuickAdd';
 export * from './useExcelExport';
 export * from './useExportSetup';

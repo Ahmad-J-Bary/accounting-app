@@ -12,8 +12,10 @@ import { MOVEMENT_TYPE_KEYS, getTransferRefs } from '@modules/inventory/constant
 import { useStockMovements, useMaterials } from "@shared/hooks/queries/useMaterialQueries";
 import { useWarehouses } from "@shared/hooks/queries/useWarehouseQueries";
 import { useCompanyCapabilities } from "@shared/hooks";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 export default function Inventory() {
+  const { t } = useLocalization();
   const { openTab } = useTabs();
   const { canAccessOpeningWorkflow } = useCompanyCapabilities();
 
@@ -93,20 +95,20 @@ export default function Inventory() {
   }), []);
 
   const handleDamagedEdit = useCallback((_item: DamagedItem) => {
-    toast.info('تعديل التالف متاح من صفحة المواد التالفة');
-  }, []);
+    toast.info(t('movements.editDamagedHint', { namespace: "inventory", fallback: 'تعديل التالف متاح من صفحة المواد التالفة' }));
+  }, [t]);
 
   const handleDamagedDelete = useCallback((_id: string) => {
-    toast.info('حذف التالف متاح من صفحة المواد التالفة');
-  }, []);
+    toast.info(t('movements.deleteDamagedHint', { namespace: "inventory", fallback: 'حذف التالف متاح من صفحة المواد التالفة' }));
+  }, [t]);
 
   const handleAdjustmentEdit = useCallback((_item: StockAdjustment) => {
-    toast.info('تعديل التسوية متاح من صفحة تسوية الجرد');
-  }, []);
+    toast.info(t('movements.editAdjustmentHint', { namespace: "inventory", fallback: 'تعديل التسوية متاح من صفحة تسوية الجرد' }));
+  }, [t]);
 
   const handleAdjustmentDelete = useCallback((_id: string) => {
-    toast.info('حذف التسوية متاح من صفحة تسوية الجرد');
-  }, []);
+    toast.info(t('movements.deleteAdjustmentHint', { namespace: "inventory", fallback: 'حذف التسوية متاح من صفحة تسوية الجرد' }));
+  }, [t]);
 
   const handleCloseDamagedDetail = useCallback(() => {
     setDamagedDetailItem(null);
@@ -177,14 +179,14 @@ export default function Inventory() {
     if (route && m.source_document_id) {
       openTab({
         id: `${route}/${m.source_document_id}-inv-view`,
-        title: `عرض ${m.reference || clean}`,
+        title: t('movements.openDocument', { namespace: "inventory", vars: { name: m.reference || clean }, fallback: `عرض ${m.reference || clean}` }),
         path: `${route}/${m.source_document_id}?mode=view`,
         closable: true,
       });
     } else if (route) {
       openTab({
         id: `${route}-inv-view`,
-        title: `عرض ${clean}`,
+        title: t('movements.openDocument', { namespace: "inventory", vars: { name: clean }, fallback: `عرض ${clean}` }),
         path: `${route}?mode=view`,
         closable: true,
       });
@@ -193,7 +195,7 @@ export default function Inventory() {
 
   return (
     <OperationalTableTemplate
-      title="حركات المخزون"
+      title={t('movements.title', { namespace: "inventory", fallback: 'حركات المخزون' })}
       tableContent={
         <InventoryMovementsTable
           movements={filteredMovements}
@@ -209,7 +211,7 @@ export default function Inventory() {
                   value={selectedWarehouseId || 'all'}
                   onValueChange={(v) => setSelectedWarehouseId(v === 'all' ? null : v)}
                   includeAll={!isSingleWarehouse}
-                  placeholder={isSingleWarehouse ? (warehouses[0]?.name || 'مستودع الشركة') : 'جميع المستودعات'}
+                  placeholder={isSingleWarehouse ? (warehouses[0]?.name || t('warehouses.companyDefault', { namespace: "inventory", fallback: 'مستودع الشركة' })) : t('warehouses.all', { namespace: "inventory", fallback: 'جميع المستودعات' })}
                 />
               </div>
               <MovementTypeFilter value={selectedTypes} onChange={setSelectedTypes} excludeKeys={canAccessOpeningWorkflow ? undefined : ['OpeningBalance']} />

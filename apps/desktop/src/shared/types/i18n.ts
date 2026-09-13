@@ -2,13 +2,27 @@ export type AppLanguage = "ar" | "en";
 
 export type AppDirection = "rtl" | "ltr";
 
+export const SUPPORTED_LANGUAGES: readonly AppLanguage[] = ["ar", "en"];
+
 export type I18nNamespace =
   | "common"
   | "shell"
   | "search"
   | "commands"
   | "voice"
-  | "settings";
+  | "dashboard"
+  | "accounting"
+  | "partners"
+  | "invoicing"
+  | "inventory"
+  | "fixedAssets"
+  | "reports"
+  | "settings"
+  | "users"
+  | "auth"
+  | "validation"
+  | "errors"
+  | "widgets";
 
 export interface TranslationTree {
   [key: string]: string | TranslationTree;
@@ -20,12 +34,24 @@ export interface TerminologyOverride {
   value: string;
 }
 
+export interface TranslateOptions {
+  namespace?: I18nNamespace;
+  fallback?: string;
+  vars?: Record<string, string | number>;
+  count?: number;
+}
+
+export function isValidLanguage(value: unknown): value is AppLanguage {
+  return value === "ar" || value === "en";
+}
+
 export interface LocalizationContextValue {
   language: AppLanguage;
   direction: AppDirection;
+  isRTL: boolean;
   locale: string;
   setLanguage: (language: AppLanguage) => void;
-  t: (key: string, options?: { namespace?: I18nNamespace; fallback?: string }) => string;
+  t: (key: string, options?: TranslateOptions) => string;
   resolveLabel: (key: string, fallback?: string) => string;
   terminologyOverrides: TerminologyOverride[];
   setTerminologyOverride: (override: TerminologyOverride) => void;

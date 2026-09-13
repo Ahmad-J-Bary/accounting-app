@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useTabs } from '@app/providers/TabContext';
-import { useCompanyTypeSettings, useCompanyInitState, useSidebarLayout } from '@shared/hooks';
+import { useCompanyTypeSettings, useCompanyInitState, useSidebarLayout, useNavLabels } from '@shared/hooks';
 import { companyTypeOf, hiddenNavIds } from '@modules/opening-balance/lib/company-lifecycle';
 import { cn } from '@shared/lib/utils';
 import { ICON_MAP } from '../sidebarConfig';
@@ -21,6 +21,7 @@ export function NavBar({ slim = false, activeBg = 'bg-blue-600', hoverBg = 'hove
   const { initState, isReady } = useCompanyInitState();
   const hiddenItemIds = hiddenNavIds(companyTypeOf(companySettings), isReady ? initState : 'ACTIVE');
   const { openTab, updateMainTab, activeTabId } = useTabs();
+  const { itemLabel, groupTitle } = useNavLabels();
   const location = useLocation();
   const [hoveredGroup, setHoveredGroup] = useState<string | null>(null);
   const isHorizLight = horizontalAppearance === 'light';
@@ -40,7 +41,7 @@ export function NavBar({ slim = false, activeBg = 'bg-blue-600', hoverBg = 'hove
               onMouseEnter={() => setHoveredGroup(group.id)}
               onMouseLeave={() => setHoveredGroup(null)}
               className="w-full flex items-center justify-center p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/50 transition-colors"
-              title={group.customTitle ?? group.defaultTitle}
+              title={groupTitle(group)}
             >
               {group.icon && ICON_MAP[group.icon] ? (
                 <span className="w-4 h-4">{React.createElement(ICON_MAP[group.icon], { className: "w-4 h-4" })}</span>
@@ -53,7 +54,7 @@ export function NavBar({ slim = false, activeBg = 'bg-blue-600', hoverBg = 'hove
             {/* Tooltip on hover */}
             {hoveredGroup === group.id && (
               <div className="absolute right-full mr-2 top-1/2 -translate-y-1/2 z-50 px-2 py-1 text-[10px] font-bold text-white bg-slate-700 rounded shadow-lg whitespace-nowrap pointer-events-none">
-                {group.customTitle ?? group.defaultTitle}
+                {groupTitle(group)}
               </div>
             )}
           </div>
@@ -75,7 +76,7 @@ export function NavBar({ slim = false, activeBg = 'bg-blue-600', hoverBg = 'hove
       dir="rtl"
     >
       {visibleGroups.map(group => {
-        const displayGroupTitle = group.customTitle ?? group.defaultTitle;
+        const displayGroupTitle = groupTitle(group);
         const visibleItems = group.items.filter(i => !hiddenItemIds.has(i.id)).filter(i => i.visible).sort((a, b) => a.order - b.order);
         if (visibleItems.length === 0) return null;
 
@@ -88,7 +89,7 @@ export function NavBar({ slim = false, activeBg = 'bg-blue-600', hoverBg = 'hove
           const item = nonSeparatorItems[0];
           const isActive = activeTabId === item.to || location.pathname === item.to;
           const ItemIcon = ICON_MAP[item.icon] ?? null;
-          const displayLabel = item.customLabel ?? item.defaultLabel;
+          const displayLabel = itemLabel(item);
 
           const handleClick = (e: React.MouseEvent) => {
             e.preventDefault();
@@ -164,7 +165,7 @@ export function NavBar({ slim = false, activeBg = 'bg-blue-600', hoverBg = 'hove
 
                   const isActive = activeTabId === item.to || location.pathname === item.to;
                   const ItemIcon = ICON_MAP[item.icon] ?? null;
-                  const displayLabel = item.customLabel ?? item.defaultLabel;
+                  const displayLabel = itemLabel(item);
 
                   const handleClick = (e: React.MouseEvent) => {
                     e.preventDefault();

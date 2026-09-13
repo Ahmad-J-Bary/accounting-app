@@ -9,6 +9,7 @@ import { SidebarSection } from '@widgets/sidebar-shell/SidebarSection';
 import { cn } from "@shared/lib/utils";
 import { Receipt } from "lucide-react";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 import { useCompanyCapabilities } from "@shared/hooks";
 
 export interface ExpenseFormPayload {
@@ -52,10 +53,11 @@ export function ExpenseFormPanel({
   onClose,
   saving,
 }: ExpenseFormPanelProps) {
+  const { t } = useLocalization();
   const { currencies, baseCurrency } = useCurrencyContext();
   const { canAccessOpeningWorkflow } = useCompanyCapabilities();
 
-  const title = expense ? "تعديل بند المصروف" : "إضافة بند مصروف جديد";
+  const title = expense ? t("expense.formTitle.edit", { namespace: "invoicing", fallback: "تعديل بند المصروف" }) : t("expense.formTitle.add", { namespace: "invoicing", fallback: "إضافة بند مصروف جديد" });
 
   const [name, setName] = useState("");
   const [openingBalance, setOpeningBalance] = useState("0");
@@ -124,24 +126,24 @@ export function ExpenseFormPanel({
       saveDisabled={!name.trim()}
     >
       <div className="space-y-6 text-right">
-        <SidebarSection title="المعلومات الأساسية">
+        <SidebarSection title={t("expense.basicInfo", { namespace: "invoicing", fallback: "المعلومات الأساسية" })}>
           <div className="space-y-1.5">
-            <FieldLabel required>اسم البند</FieldLabel>
+            <FieldLabel required>{t("expense.itemName", { namespace: "invoicing", fallback: "اسم البند" })}</FieldLabel>
             <Input
               required
               value={name}
               onChange={e => setName(e.target.value)}
-              placeholder="مثال: مصاريف الإيجار"
+              placeholder={t("expense.namePlaceholder", { namespace: "invoicing", fallback: "مثال: مصاريف الإيجار" })}
               className="h-9"
             />
           </div>
         </SidebarSection>
 
         {canAccessOpeningWorkflow && (
-          <SidebarSection title="البيانات المالية">
+          <SidebarSection title={t("expense.financialData", { namespace: "invoicing", fallback: "البيانات المالية" })}>
             {currencies.length > 1 && (
               <div className="space-y-1.5 mb-3">
-                <FieldLabel>العملة الافتراضية</FieldLabel>
+                <FieldLabel>{t("expense.defaultCurrency", { namespace: "invoicing", fallback: "العملة الافتراضية" })}</FieldLabel>
                 <Select value={currency} onValueChange={setCurrency}>
                   <SelectTrigger className="h-9 font-bold"><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -154,7 +156,7 @@ export function ExpenseFormPanel({
             )}
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5 col-span-2 sm:col-span-1">
-                <FieldLabel>الرصيد الافتتاحي</FieldLabel>
+                <FieldLabel>{t("expense.openingBalance", { namespace: "invoicing", fallback: "الرصيد الافتتاحي" })}</FieldLabel>
                 <Input
                   type="number"
                   step="any"
@@ -164,7 +166,7 @@ export function ExpenseFormPanel({
                 />
               </div>
               <div className="space-y-1.5 col-span-2 sm:col-span-1">
-                <FieldLabel>اتجاه الرصيد</FieldLabel>
+                <FieldLabel>{t("expense.balanceDirection", { namespace: "invoicing", fallback: "اتجاه الرصيد" })}</FieldLabel>
                 <div className="flex gap-2 h-9">
                   <button
                     type="button"
@@ -176,7 +178,7 @@ export function ExpenseFormPanel({
                     )}
                     onClick={() => setBalanceDirection("debit")}
                   >
-                    مدين
+                    {t("expense.debitSide", { namespace: "invoicing", fallback: "مدين" })}
                   </button>
                   <button
                     type="button"
@@ -188,7 +190,7 @@ export function ExpenseFormPanel({
                     )}
                     onClick={() => setBalanceDirection("credit")}
                   >
-                    دائن
+                    {t("expense.creditSide", { namespace: "invoicing", fallback: "دائن" })}
                   </button>
                 </div>
               </div>
@@ -197,11 +199,11 @@ export function ExpenseFormPanel({
         )}
 
         <div className="space-y-1.5">
-          <FieldLabel>ملاحظات</FieldLabel>
+          <FieldLabel>{t("labels.notes", { namespace: "common", fallback: "ملاحظات" })}</FieldLabel>
           <Textarea
             value={notes}
             onChange={e => setNotes(e.target.value)}
-            placeholder="أية ملاحظات إضافية..."
+            placeholder={t("expense.notesPlaceholder", { namespace: "invoicing", fallback: "أية ملاحظات إضافية..." })}
             className="min-h-[60px] bg-white border-slate-200"
           />
         </div>

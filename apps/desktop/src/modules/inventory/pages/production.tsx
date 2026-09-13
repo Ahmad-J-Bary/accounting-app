@@ -7,8 +7,10 @@ import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTem
 import { useDataTable } from '@shared/hooks';
 import { ProductionTable } from '@modules/inventory/components/ProductionTable';
 import { toast } from "sonner";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 export default function ProductionPage() {
+  const { t } = useLocalization();
   const {
     filtered: orders,
     loading,
@@ -22,10 +24,10 @@ export default function ProductionPage() {
 
   return (
     <OperationalTableTemplate
-      title="أوامر الإنتاج"
+      title={t("production.title", { namespace: "inventory", fallback: "أوامر الإنتاج" })}
       toolbar={
-        <Button size="sm" onClick={() => toast.info("أمر إنتاج جديد قيد التطوير")} className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100 font-bold">
-          <Plus className="w-4 h-4 ml-2" /> أمر إنتاج جديد
+        <Button size="sm" onClick={() => toast.info(t("production.newOrderComingSoon", { namespace: "inventory", fallback: "أمر إنتاج جديد قيد التطوير" }))} className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100 font-bold">
+          <Plus className="w-4 h-4 ml-2" /> {t("production.newOrder", { namespace: "inventory", fallback: "أمر إنتاج جديد" })}
         </Button>
       }
       tableContent={

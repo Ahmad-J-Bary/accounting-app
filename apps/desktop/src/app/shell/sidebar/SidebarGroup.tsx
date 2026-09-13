@@ -1,4 +1,4 @@
-import { useNavSidebarSettings } from '@shared/hooks';
+import { useNavSidebarSettings, useNavLabels } from '@shared/hooks';
 import { cn } from '@shared/lib/utils';
 import { ICON_MAP } from '@app/shell/sidebarConfig';
 import type { SidebarGroupConfig } from '@shared/types/sidebar-config';
@@ -29,6 +29,7 @@ export function SidebarGroup({
   verticalAppearance,
 }: SidebarGroupProps) {
   const { settings } = useNavSidebarSettings();
+  const { groupTitle } = useNavLabels();
 
   const {
     navGroupCollapseBehavior = 'free',

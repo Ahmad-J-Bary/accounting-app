@@ -1,27 +1,50 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useState } from "react";
 import {
   DIRECTION_BY_LANGUAGE,
   DEFAULT_LANGUAGE,
   I18N_RESOURCES,
   LOCALE_BY_LANGUAGE,
   getNestedTranslation,
+  interpolate,
+  pluralCategory,
 } from "@shared/i18n/resources";
 import type {
   AppLanguage,
   LocalizationContextValue,
   TerminologyOverride,
 } from "@shared/types/i18n";
+import { isValidLanguage } from "@shared/types/i18n";
 import { setDirection, setLocale } from "@shared/lib/format";
 
 const LANGUAGE_STORAGE_KEY = "erp_language";
 const TERMINOLOGY_STORAGE_KEY = "erp_terminology_overrides";
 
-const LocalizationContext = createContext<LocalizationContextValue | undefined>(undefined);
+const SAFE_FALLBACK_VALUE: LocalizationContextValue = {
+  language: DEFAULT_LANGUAGE,
+  direction: DIRECTION_BY_LANGUAGE[DEFAULT_LANGUAGE],
+  locale: LOCALE_BY_LANGUAGE[DEFAULT_LANGUAGE],
+  setLanguage: () => {},
+  t: (key, options) => options?.fallback ?? key,
+  setTerminologyOverride: () => {},
+  removeTerminologyOverride: () => {},
+  terminologyOverrides: [],
+};
+
+const LocalizationContext = createContext<LocalizationContextValue>(SAFE_FALLBACK_VALUE);
+
+export function applyDocumentAttributes(language: AppLanguage) {
+  const direction = DIRECTION_BY_LANGUAGE[language];
+  const locale = LOCALE_BY_LANGUAGE[language];
+  document.documentElement.lang = language;
+  document.documentElement.dir = direction;
+  setLocale(locale);
+  setDirection(direction);
+}
 
 function loadLanguage(): AppLanguage {
   if (typeof window === "undefined") return DEFAULT_LANGUAGE;
   const stored = window.localStorage.getItem(LANGUAGE_STORAGE_KEY);
-  return stored === "en" ? "en" : DEFAULT_LANGUAGE;
+  return isValidLanguage(stored) ? stored : DEFAULT_LANGUAGE;
 }
 
 function loadTerminologyOverrides(): TerminologyOverride[] {
@@ -43,13 +66,10 @@ export function LocalizationProvider({ children }: { children: React.ReactNode }
   const direction = DIRECTION_BY_LANGUAGE[language];
   const locale = LOCALE_BY_LANGUAGE[language];
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     window.localStorage.setItem(LANGUAGE_STORAGE_KEY, language);
-    document.documentElement.lang = language;
-    document.documentElement.dir = direction;
-    setLocale(locale);
-    setDirection(direction);
-  }, [direction, language, locale]);
+    applyDocumentAttributes(language);
+  }, [language]);
 
   useEffect(() => {
     window.localStorage.setItem(TERMINOLOGY_STORAGE_KEY, JSON.stringify(terminologyOverrides));
@@ -73,8 +93,17 @@ export function LocalizationProvider({ children }: { children: React.ReactNode }
     (key, options) => {
       const namespace = options?.namespace ?? "common";
       const bundle = I18N_RESOURCES[language][namespace];
-      const translated = getNestedTranslation(bundle, key);
-      return resolveLabel(`${namespace}.${key}`, translated || options?.fallback || key);
+      let candidate = key;
+      if (options?.count !== undefined) {
+        const withCount = `${key}.${pluralCategory(language, options.count)}`;
+        if (getNestedTranslation(bundle, withCount) !== undefined) candidate = withCount;
+      }
+      const translated = getNestedTranslation(bundle, candidate);
+      const resolved = resolveLabel(
+        `${namespace}.${candidate}`,
+        translated || options?.fallback || key,
+      );
+      return interpolate(resolved, options?.vars);
     },
     [language, resolveLabel],
   );
@@ -98,6 +127,7 @@ export function LocalizationProvider({ children }: { children: React.ReactNode }
     () => ({
       language,
       direction,
+      isRTL: direction === "rtl",
       locale,
       setLanguage,
       t,
@@ -126,10 +156,6 @@ export function LocalizationProvider({ children }: { children: React.ReactNode }
   );
 }
 
-export function useLocalization() {
-  const context = useContext(LocalizationContext);
-  if (!context) {
-    throw new Error("useLocalization must be used within LocalizationProvider");
-  }
-  return context;
+export function useLocalization(): LocalizationContextValue {
+  return useContext(LocalizationContext);
 }

@@ -16,8 +16,10 @@ import { AdjustmentDetailPanel } from '@modules/inventory/components/AdjustmentD
 import { dateCol, executeExport, addCurrencySummary, applyVisibilityToCurrencyCols, currencyAmountCols } from "@shared/lib/excel";
 import type { ExcelExportColumn } from "@shared/lib/excel";
 import { formatNumber, getNumberingSystem } from "@shared/lib/format";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 export default function AdjustmentsPage() {
+  const { t } = useLocalization();
   const queryClient = useQueryClient();
 
   const {
@@ -46,11 +48,11 @@ export default function AdjustmentsPage() {
       const pData = await materialService.list();
       setProducts(pData);
     } catch {
-      toast.error("فشل تحميل المنتجات");
+      toast.error(t("errors.failedLoadProducts", { namespace: "inventory", fallback: "فشل تحميل المنتجات" }));
     } finally {
       setLoadingProducts(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => { loadProducts(); }, [loadProducts]);
 
@@ -61,13 +63,13 @@ export default function AdjustmentsPage() {
       setShowDialog(false);
       refresh(true);
       await invalidateKeys(queryClient, INVENTORY_MUTATION_KEYS);
-      toast.success("تم تسجيل تسوية الجرد بنجاح");
+      toast.success(t("adjustments.created", { namespace: "inventory", fallback: "تم تسجيل تسوية الجرد بنجاح" }));
     } catch (e: unknown) {
-      toast.error("فشل الحفظ: " + e);
+      toast.error(t("errors.save", { namespace: "inventory", vars: { error: String(e) }, fallback: "فشل الحفظ: " + e }));
     } finally {
       setSaving(false);
     }
-  }, [refresh, queryClient]);
+  }, [refresh, queryClient, t]);
 
   const handleUpdate = useCallback(async (payload: CreateStockAdjustmentRequest) => {
     if (!selectedItem) return;
@@ -89,13 +91,13 @@ export default function AdjustmentsPage() {
       setSelectedItem(null);
       refresh(true);
       await invalidateKeys(queryClient, INVENTORY_MUTATION_KEYS);
-      toast.success("تم تعديل التسوية بنجاح");
+      toast.success(t("adjustments.updated", { namespace: "inventory", fallback: "تم تعديل التسوية بنجاح" }));
     } catch (e: unknown) {
-      toast.error("فشل التعديل: " + e);
+      toast.error(t("errors.update", { namespace: "inventory", vars: { error: String(e) }, fallback: "فشل التعديل: " + e }));
     } finally {
       setSaving(false);
     }
-  }, [selectedItem, refresh, queryClient]);
+  }, [selectedItem, refresh, queryClient, t]);
 
   const handleSave = useCallback(async (payload: CreateStockAdjustmentRequest) => {
     if (selectedItem) {
@@ -106,18 +108,18 @@ export default function AdjustmentsPage() {
   }, [selectedItem, handleCreate, handleUpdate]);
 
   const handleDelete = useCallback(async (id: string) => {
-    if (!confirm("هل أنت متأكد من حذف سجل التسوية هذا؟ سيتم حذف حركة المخزون المرتبطة به.")) return;
+    if (!confirm(t("adjustments.deleteConfirm", { namespace: "inventory", fallback: "هل أنت متأكد من حذف سجل التسوية هذا؟ سيتم حذف حركة المخزون المرتبطة به." }))) return;
     try {
       await adjustmentService.delete(id);
-      toast.success("تم الحذف بنجاح");
+      toast.success(t("toasts.deleted", { namespace: "inventory", fallback: "تم الحذف بنجاح" }));
       setSelectedItem(null);
       setShowDialog(false);
       refresh(true);
       await invalidateKeys(queryClient, INVENTORY_MUTATION_KEYS);
     } catch (e) {
-      toast.error("فشل الحذف: " + e);
+      toast.error(t("errors.delete", { namespace: "inventory", vars: { error: String(e) }, fallback: "فشل الحذف: " + e }));
     }
-  }, [refresh, queryClient]);
+  }, [refresh, queryClient, t]);
 
   const handleView = useCallback((item: StockAdjustment) => {
     setSelectedItem(item);
@@ -145,7 +147,7 @@ export default function AdjustmentsPage() {
   const { exportData, rateMap, currencies, formatAmount, currencyMode, ratesSheet, baseCode } = useExportSetup();
 
   const handleExport = useCallback(async () => {
-    const currCols = currencyAmountCols("total_cost", "التكلفة", (row) => Math.abs(parseFloat((row as unknown as StockAdjustment).total_cost_base || "0")), currencies, formatAmount, "", hasSecondaryCurrencies, hasSecondaryCurrencies, currencyMode, baseCode, rateMap);
+    const currCols = currencyAmountCols("total_cost", t("labels.cost", { namespace: "inventory", fallback: "التكلفة" }), (row) => Math.abs(parseFloat((row as unknown as StockAdjustment).total_cost_base || "0")), currencies, formatAmount, "", hasSecondaryCurrencies, hasSecondaryCurrencies, currencyMode, baseCode, rateMap);
     applyVisibilityToCurrencyCols(currCols, new Set(visibleColumnIds));
     const summary: Record<string, 'sum' | 'subtotal' | 'average' | null> = {
       system_quantity: 'subtotal',
@@ -155,26 +157,26 @@ export default function AdjustmentsPage() {
     addCurrencySummary(summary, "total_cost", currencies);
 
     const columns: ExcelExportColumn[] = [
-      { id: "id", label: "الرقم", accessor: (row) => formatNumber(parseInt((row as unknown as StockAdjustment).reference ?? "0", 10) || 0), numeric: true },
-      { id: "material_name", label: "المادة", accessor: (row) => String((row as unknown as StockAdjustment).material_name ?? "") },
-      { id: "system_quantity", label: "كمية النظام", accessor: (row) => parseFloat((row as unknown as StockAdjustment).system_quantity || "0"), numeric: true, decimalPlaces: 2 },
-      { id: "actual_quantity", label: "الكمية المجرودة", accessor: (row) => parseFloat((row as unknown as StockAdjustment).actual_quantity || "0"), numeric: true, decimalPlaces: 2 },
-      { id: "difference", label: "الفارق", formula: "{col('actual_quantity')}{row}-{col('system_quantity')}{row}", numeric: true, decimalPlaces: 2 },
+      { id: "id", label: t("labels.number", { namespace: "common", fallback: "الرقم" }), accessor: (row) => formatNumber(parseInt((row as unknown as StockAdjustment).reference ?? "0", 10) || 0), numeric: true },
+      { id: "material_name", label: t("labels.material", { namespace: "inventory", fallback: "المادة" }), accessor: (row) => String((row as unknown as StockAdjustment).material_name ?? "") },
+      { id: "system_quantity", label: t("adjustments.systemQuantity", { namespace: "inventory", fallback: "كمية النظام" }), accessor: (row) => parseFloat((row as unknown as StockAdjustment).system_quantity || "0"), numeric: true, decimalPlaces: 2 },
+      { id: "actual_quantity", label: t("adjustments.actualQuantity", { namespace: "inventory", fallback: "الكمية المجرودة" }), accessor: (row) => parseFloat((row as unknown as StockAdjustment).actual_quantity || "0"), numeric: true, decimalPlaces: 2 },
+      { id: "difference", label: t("adjustments.difference", { namespace: "inventory", fallback: "الفارق" }), formula: "{col('actual_quantity')}{row}-{col('system_quantity')}{row}", numeric: true, decimalPlaces: 2 },
       ...currCols,
-      { id: "notes", label: "ملاحظة", accessor: (row) => String((row as unknown as StockAdjustment).notes ?? (row as unknown as StockAdjustment).reason ?? "") },
-      dateCol("adjustment_date", "التاريخ", (row) => (row as unknown as StockAdjustment).adjustment_date),
+      { id: "notes", label: t("labels.note", { namespace: "inventory", fallback: "ملاحظة" }), accessor: (row) => String((row as unknown as StockAdjustment).notes ?? (row as unknown as StockAdjustment).reason ?? "") },
+      dateCol("adjustment_date", t("labels.date", { namespace: "common", fallback: "التاريخ" }), (row) => (row as unknown as StockAdjustment).adjustment_date),
     ];
     await executeExport(exportData, {
-      sheetName: "تسويات الجرد",
-      filename: "تسويات الجرد",
+      sheetName: t("adjustments.title", { namespace: "inventory", fallback: "تسويات الجرد" }),
+      filename: t("adjustments.title", { namespace: "inventory", fallback: "تسويات الجرد" }),
       data: adjustments as unknown as Record<string, unknown>[],
       columns,
       summary,
-      summaryLabel: "المجموع",
+      summaryLabel: t("labels.summary", { namespace: "inventory", fallback: "المجموع" }),
       currencyRatesSheet: ratesSheet,
       numeralSystem: getNumberingSystem(),
     });
-  }, [adjustments, currencies, formatAmount, currencyMode, baseCode, rateMap, exportData, hasSecondaryCurrencies, ratesSheet, visibleColumnIds]);
+  }, [adjustments, currencies, formatAmount, currencyMode, baseCode, rateMap, exportData, hasSecondaryCurrencies, ratesSheet, visibleColumnIds, t]);
 
   const handleCloseForm = useCallback(() => {
     setShowDialog(false);
@@ -183,31 +185,31 @@ export default function AdjustmentsPage() {
 
   return (
     <OperationalTableTemplate
-      title="تسويات الجرد"
+      title={t("adjustments.title", { namespace: "inventory", fallback: "تسويات الجرد" })}
       toolbar={
         <div className="flex items-center gap-2">
           <Button size="sm" onClick={handleNewClick} className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100 font-bold">
-            <Plus className="w-4 h-4 ml-2" /> تسوية جديدة
+            <Plus className="w-4 h-4 ml-2" /> {t("adjustments.new", { namespace: "inventory", fallback: "تسوية جديدة" })}
           </Button>
           <div className="h-6 w-px bg-slate-200 mx-1" />
           <Button variant="outline" size="sm" disabled={!selectedItem}
             onClick={() => selectedItem && handleView(selectedItem)}
             className="h-9 border-slate-200 hover:bg-slate-50 font-bold">
-            <Eye className="w-4 h-4 ml-2 text-blue-500" /> عرض
+            <Eye className="w-4 h-4 ml-2 text-blue-500" /> {t("actions.view", { namespace: "common", fallback: "عرض" })}
           </Button>
           <Button variant="outline" size="sm" disabled={!selectedItem}
             onClick={() => selectedItem && handleEditClick(selectedItem)}
             className="h-9 border-slate-200 hover:bg-slate-50 font-bold">
-            <Settings2 className="w-4 h-4 ml-2 text-amber-500" /> تعديل
+            <Settings2 className="w-4 h-4 ml-2 text-amber-500" /> {t("actions.edit", { namespace: "common", fallback: "تعديل" })}
           </Button>
           <Button variant="outline" size="sm" disabled={!selectedItem}
             onClick={() => selectedItem && handleDelete(selectedItem.id)}
             className="h-9 border-slate-200 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 font-bold transition-all">
-            <Trash2 className="w-4 h-4 ml-2 text-rose-500" /> حذف
+            <Trash2 className="w-4 h-4 ml-2 text-rose-500" /> {t("actions.delete", { namespace: "common", fallback: "حذف" })}
           </Button>
           <div className="h-6 w-px bg-slate-200 mx-1" />
           <Button variant="outline" size="sm" onClick={handleExport} className="h-9 border-slate-200 hover:bg-slate-50 font-bold">
-            <Download className="w-4 h-4 ml-2 text-slate-500" /> تصدير إكسل
+            <Download className="w-4 h-4 ml-2 text-slate-500" /> {t("labels.exportExcel", { namespace: "inventory", fallback: "تصدير إكسل" })}
           </Button>
         </div>
       }

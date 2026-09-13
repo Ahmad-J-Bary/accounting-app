@@ -3,6 +3,7 @@ import { UnifiedTable, type UnifiedColumn } from '@widgets/table-shell/UnifiedTa
 import { TableShell } from '@widgets/table-shell/TableShell';
 import type { SummaryColumn } from '@widgets/table-shell/TableSummary';
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 import { useUnifiedColumns, useSortable, useTableColumns, useBaseCurrencyColumns } from "@shared/hooks";
 import { formatNumber } from "@shared/lib/format";
 import type { AccountDto } from "@erp/shared-types";
@@ -33,6 +34,7 @@ const codeSuffix = (code: string, prefix?: string) => {
 };
 
 export function ExpenseTable({ expenses, loading, search, onSearchChange, onView, onEdit, onDelete, onJournal, onDocument, selectedId, parentCode, onVisibleColumnsChange }: ExpenseTableProps) {
+  const { t } = useLocalization();
   const { currencies, formatAmount, toBase } = useCurrencyContext();
   const { isBaseCurrency, currencySuffix: cs } = useBaseCurrencyColumns();
   const { getAccountStatusColumn } = useTableColumns();
@@ -56,7 +58,7 @@ export function ExpenseTable({ expenses, loading, search, onSearchChange, onView
       {
         id: "code",
         header: "#",
-        label: "كود الحساب",
+        label: t("expense.accountCode", { namespace: "invoicing", fallback: "كود الحساب" }),
         accessor: (c) => {
           const code = c.code || "";
           const suffix = parentCode && code.startsWith(parentCode)
@@ -68,22 +70,22 @@ export function ExpenseTable({ expenses, loading, search, onSearchChange, onView
       },
       {
         id: "name",
-        header: "اسم البند",
-        label: "اسم البند",
+        header: t("expense.itemName", { namespace: "invoicing", fallback: "اسم البند" }),
+        label: t("expense.itemName", { namespace: "invoicing", fallback: "اسم البند" }),
         accessor: "name_ar",
         className: "font-bold text-slate-800"
       },
     ];
 
-    cols.push(getAccountStatusColumn("حالة الحساب"));
+    cols.push(getAccountStatusColumn(t("expense.accountStatus", { namespace: "invoicing", fallback: "حالة الحساب" })));
 
     currencies.forEach(curr => {
       const symbol = curr.symbol || curr.code;
       const isBase = isBaseCurrency(curr.code);
       cols.push({
         id: `balance_${curr.code}`,
-        header: `الرصيد ${cs(symbol)}`,
-        label: `الرصيد ${cs(symbol)}`,
+        header: t("expense.balanceColumn", { namespace: "invoicing", vars: { currency: cs(symbol) }, fallback: `الرصيد ${cs(symbol)}` }),
+        label: t("expense.balanceColumn", { namespace: "invoicing", vars: { currency: cs(symbol) }, fallback: `الرصيد ${cs(symbol)}` }),
         accessor: (c) => {
           const absBal = Math.abs(Number(c.balance || 0));
           if (absBal === 0) return "";
@@ -98,23 +100,23 @@ export function ExpenseTable({ expenses, loading, search, onSearchChange, onView
 
     cols.push({
       id: "actions",
-      header: "إجراءات",
-      label: "إجراءات",
+      header: t("labels.actions", { namespace: "common", fallback: "إجراءات" }),
+      label: t("labels.actions", { namespace: "common", fallback: "إجراءات" }),
       accessor: (e) => (
         <TableActions
           onView={() => onView(e)}
           onEdit={() => onEdit(e)}
           onDelete={onDelete ? () => onDelete(e.id) : undefined}
           extraActions={[
-            ...(onJournal ? [{ label: "اليومية", icon: NotebookText, onClick: () => onJournal(e) }] : []),
-            ...(onDocument ? [{ label: "سند صرف", icon: Receipt, onClick: () => onDocument(e) }] : []),
+            ...(onJournal ? [{ label: t("action.journal", { namespace: "invoicing", fallback: "اليومية" }), icon: NotebookText, onClick: () => onJournal(e) }] : []),
+            ...(onDocument ? [{ label: t("expense.voucher", { namespace: "invoicing", fallback: "سند صرف" }), icon: Receipt, onClick: () => onDocument(e) }] : []),
           ]}
         />
       )
     });
 
     return cols;
-  }, [currencies, formatAmount, toBase, parentCode, onView, onEdit, onDelete, onJournal, onDocument, getAccountStatusColumn, isBaseCurrency, cs]);
+  }, [currencies, formatAmount, toBase, parentCode, onView, onEdit, onDelete, onJournal, onDocument, getAccountStatusColumn, isBaseCurrency, cs, t]);
 
   // Default visible: only base currency's balance column is visible.
   // Secondary currency balances are hidden by default (user can toggle on).
@@ -154,7 +156,7 @@ export function ExpenseTable({ expenses, loading, search, onSearchChange, onView
     return enrichedColumns.map((col) => {
       const id = col.id;
       if (id === 'name') {
-        return { id: 'name_summary', columnId: 'name', label: '', value: `${sortedExpenses.length} بند`, className: 'text-slate-600 font-medium' };
+        return { id: 'name_summary', columnId: 'name', label: '', value: t("expense.countItems", { namespace: "invoicing", vars: { count: sortedExpenses.length }, fallback: `${sortedExpenses.length} بند` }), className: 'text-slate-600 font-medium' };
       }
       if (id === 'code' || id === 'status' || id === 'actions') {
         return { id: `${id}_spacer`, columnId: id, label: '', value: '' };
@@ -163,11 +165,11 @@ export function ExpenseTable({ expenses, loading, search, onSearchChange, onView
       if (match) {
         const currCode = match[1];
         const isBase = isBaseCurrency(currCode);
-        const statusLabel = totalBal > 0 ? 'مدين' : 'دائن';
+        const statusLabel = totalBal > 0 ? t("expense.debitSide", { namespace: "invoicing", fallback: "مدين" }) : t("expense.creditSide", { namespace: "invoicing", fallback: "دائن" });
         return {
           id: `${id}_summary`,
           columnId: id,
-          label: totalBal === 0 ? '—' : `الرصيد / ${statusLabel}`,
+          label: totalBal === 0 ? '—' : t("expense.balanceWithSide", { namespace: "invoicing", vars: { side: statusLabel }, fallback: `الرصيد / ${statusLabel}` }),
           value: baseTotal !== 0 ? formatAmount(baseTotal, { currencyCode: currCode }) : "—",
           className: isBase
             ? `${overallColor} font-black`
@@ -176,13 +178,13 @@ export function ExpenseTable({ expenses, loading, search, onSearchChange, onView
       }
       return { id: `${id}_spacer`, columnId: id, label: '', value: '' };
     });
-  }, [sortedExpenses, formatAmount, toBase, enrichedColumns, isBaseCurrency]);
+  }, [sortedExpenses, formatAmount, toBase, enrichedColumns, isBaseCurrency, t]);
 
   return (
     <TableShell
       search={search}
       onSearchChange={onSearchChange}
-      searchPlaceholder="بحث باسم البند أو الكود..."
+      searchPlaceholder={t("expense.searchPlaceholder", { namespace: "invoicing", fallback: "بحث باسم البند أو الكود..." })}
       columns={toolbarColumns}
       onColumnToggle={toggleColumn}
       onColumnsReset={resetToDefault}
@@ -204,7 +206,7 @@ export function ExpenseTable({ expenses, loading, search, onSearchChange, onView
           else if (col.id === "name") handleSort("name");
           else if (col.id === "status" || col.id?.startsWith("balance_")) handleSort("balance");
         }}
-        emptyMessage={search ? "لا توجد نتائج بحث تطابق استعلامك" : "لا توجد بنود مصاريف مسجلة حالياً"}
+        emptyMessage={search ? t("expense.noSearchResults", { namespace: "invoicing", fallback: "لا توجد نتائج بحث تطابق استعلامك" }) : t("expense.empty", { namespace: "invoicing", fallback: "لا توجد بنود مصاريف مسجلة حالياً" })}
         summary={summaryColumns}
       />
     </TableShell>

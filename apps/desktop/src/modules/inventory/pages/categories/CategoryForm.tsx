@@ -7,6 +7,7 @@ import { AlertCircle, Shuffle } from "lucide-react";
 import type { CategoryDto } from "@erp/shared-types";
 import { categoryService } from '@modules/inventory/api/categoryService';
 import { toast } from "sonner";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 const DEFAULT_CATEGORY_NAME = "غير مصنف";
 
@@ -39,6 +40,7 @@ export function CategoryForm({
   onClose,
   onSaved,
 }: CategoryFormProps) {
+  const { t } = useLocalization();
   const [name, setName] = useState("");
   const [codePrefix, setCodePrefix] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -75,11 +77,11 @@ export function CategoryForm({
   }, [open, mode, selected, isRoot, isUncategorized, getGeneralSubPrefix, suggestPrefix]);
 
   const handleSave = async () => {
-    if (!name.trim()) { setError("الاسم مطلوب"); return; }
+    if (!name.trim()) { setError(t("categories.form.nameRequired", { namespace: "inventory", fallback: "الاسم مطلوب" })); return; }
 
     const trimmedName = name.trim();
     if (codePrefix.trim().length === 0 && mode === "create_cat") {
-      setError("بادئة الكود مطلوبة."); return;
+      setError(t("categories.form.prefixRequired", { namespace: "inventory", fallback: "بادئة الكود مطلوبة." })); return;
     }
 
     setSaving(true);
@@ -88,12 +90,12 @@ export function CategoryForm({
       if (mode === "create_cat") {
         if (parentId) {
           if (allCategories.some((c) => c.parent_id === parentId && c.name === trimmedName)) {
-            setError(`يوجد تصنيف فرعي بنفس الاسم «${trimmedName}» ضمن نفس التصنيف الأساسي`);
+            setError(t("categories.form.duplicateSub", { namespace: "inventory", vars: { name: trimmedName }, fallback: `يوجد تصنيف فرعي بنفس الاسم «${trimmedName}» ضمن نفس التصنيف الأساسي` }));
             return;
           }
         } else {
           if (allCategories.some((c) => !c.parent_id && c.name === trimmedName && c.name !== DEFAULT_CATEGORY_NAME)) {
-            setError(`يوجد تصنيف أساسي بنفس الاسم «${trimmedName}»`);
+            setError(t("categories.form.duplicateRoot", { namespace: "inventory", vars: { name: trimmedName }, fallback: `يوجد تصنيف أساسي بنفس الاسم «${trimmedName}»` }));
             return;
           }
         }
@@ -102,11 +104,11 @@ export function CategoryForm({
           parent_id: parentId || undefined,
           code_prefix: codePrefix.trim().toUpperCase() || null,
         });
-        toast.success("تمت إضافة التصنيف");
+        toast.success(t("categories.form.categoryCreated", { namespace: "inventory", fallback: "تمت إضافة التصنيف" }));
       } else if (mode === "edit_cat" && selected) {
         if (isRoot) {
           if (allCategories.some((c) => !c.parent_id && c.name === trimmedName && c.name !== DEFAULT_CATEGORY_NAME && c.id !== selected.id)) {
-            setError(`يوجد تصنيف أساسي بنفس الاسم «${trimmedName}»`);
+            setError(t("categories.form.duplicateRoot", { namespace: "inventory", vars: { name: trimmedName }, fallback: `يوجد تصنيف أساسي بنفس الاسم «${trimmedName}»` }));
             return;
           }
           await categoryService.updateCategory({
@@ -127,7 +129,7 @@ export function CategoryForm({
         } else {
           const siblingParent = parentId || selected.parent_id;
           if (siblingParent && allCategories.some((c) => c.parent_id === siblingParent && c.name === trimmedName && c.id !== selected.id)) {
-            setError(`يوجد تصنيف فرعي بنفس الاسم «${trimmedName}» ضمن نفس التصنيف الأساسي`);
+            setError(t("categories.form.duplicateSub", { namespace: "inventory", vars: { name: trimmedName }, fallback: `يوجد تصنيف فرعي بنفس الاسم «${trimmedName}» ضمن نفس التصنيف الأساسي` }));
             return;
           }
           await categoryService.updateCategory({
@@ -138,11 +140,11 @@ export function CategoryForm({
             code_prefix: codePrefix.trim().toUpperCase() || null,
           });
         }
-        toast.success("تم تحديث التصنيف");
+        toast.success(t("categories.form.categoryUpdated", { namespace: "inventory", fallback: "تم تحديث التصنيف" }));
       }
       onSaved();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "فشلت العملية");
+      setError(err instanceof Error ? err.message : t("categories.form.failed", { namespace: "inventory", fallback: "فشلت العملية" }));
     } finally {
       setSaving(false);
     }
@@ -150,17 +152,23 @@ export function CategoryForm({
 
   if (!open) return null;
 
-  const prefixLabel = isRoot ? "بادئة التصنيف الفرعي العام" : "بادئة الكود";
+  const prefixLabel = isRoot
+    ? t("categories.form.prefixLabelGeneralSub", { namespace: "inventory", fallback: "بادئة التصنيف الفرعي العام" })
+    : t("categories.form.prefixLabel", { namespace: "inventory", fallback: "بادئة الكود" });
 
   return (
     <FormPanel
-      title={mode === "edit_cat" ? "تعديل التصنيف" : "إضافة تصنيف جديد"}
+      title={mode === "edit_cat"
+        ? t("categories.form.editTitle", { namespace: "inventory", fallback: "تعديل التصنيف" })
+        : t("categories.form.createTitle", { namespace: "inventory", fallback: "إضافة تصنيف جديد" })}
       icon={<span className="text-xl">{mode === "edit_cat" ? "✎" : "＋"}</span>}
       onClose={onClose}
       onSave={handleSave}
       isSaving={saving}
       saveDisabled={!name.trim()}
-      saveLabel={mode === "edit_cat" ? "حفظ التعديلات" : "إضافة التصنيف"}
+      saveLabel={mode === "edit_cat"
+        ? t("categories.form.saveEdit", { namespace: "inventory", fallback: "حفظ التعديلات" })
+        : t("categories.form.saveCreate", { namespace: "inventory", fallback: "إضافة التصنيف" })}
     >
       <div className="space-y-4">
         {error && (
@@ -170,11 +178,11 @@ export function CategoryForm({
           </div>
         )}
         <div className="space-y-1">
-          <FieldLabel>اسم التصنيف</FieldLabel>
+          <FieldLabel>{t("categories.details.categoryName", { namespace: "inventory", fallback: "اسم التصنيف" })}</FieldLabel>
           <Input
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="مثال: ساعات"
+            placeholder={t("categories.form.namePlaceholder", { namespace: "inventory", fallback: "مثال: ساعات" })}
             className="bg-white"
             disabled={isUncategorized && mode === "edit_cat"}
           />
@@ -194,7 +202,7 @@ export function CategoryForm({
               variant="outline"
               size="icon"
               onClick={() => setCodePrefix(suggestPrefix())}
-              title="اقتراح بادئة"
+              title={t("categories.form.suggestPrefix", { namespace: "inventory", fallback: "اقتراح بادئة" })}
             >
               <Shuffle className="w-4 h-4" />
             </Button>

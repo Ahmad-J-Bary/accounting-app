@@ -15,8 +15,10 @@ import { DamagedDetailPanel } from '@modules/inventory/components/DamagedDetailP
 import { dateCol, executeExport, addCurrencySummary, applyVisibilityToCurrencyCols, currencyAmountCols } from "@shared/lib/excel";
 import type { ExcelExportColumn } from "@shared/lib/excel";
 import { getNumberingSystem } from "@shared/lib/format";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 export default function DamagedPage() {
+  const { t } = useLocalization();
   const queryClient = useQueryClient();
 
   const {
@@ -45,11 +47,11 @@ export default function DamagedPage() {
       const pData = await materialService.list();
       setProducts(pData);
     } catch {
-      toast.error("فشل تحميل المنتجات");
+      toast.error(t("errors.failedLoadProducts", { namespace: "inventory", fallback: "فشل تحميل المنتجات" }));
     } finally {
       setLoadingProducts(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => { loadProducts(); }, [loadProducts]);
 
@@ -60,13 +62,13 @@ export default function DamagedPage() {
       setShowDialog(false);
       refresh(true);
       await invalidateKeys(queryClient, INVENTORY_MUTATION_KEYS);
-      toast.success("تم تسجيل التالف بنجاح");
+      toast.success(t("damaged.created", { namespace: "inventory", fallback: "تم تسجيل التالف بنجاح" }));
     } catch (e: unknown) {
-      toast.error("فشل الحفظ: " + e);
+      toast.error(t("errors.save", { namespace: "inventory", vars: { error: String(e) }, fallback: "فشل الحفظ: " + e }));
     } finally {
       setSaving(false);
     }
-  }, [refresh, queryClient]);
+  }, [refresh, queryClient, t]);
 
   const handleUpdate = useCallback(async (payload: CreateDamagedItemRequest) => {
     if (!selectedItem) return;
@@ -81,13 +83,13 @@ export default function DamagedPage() {
       setSelectedItem(null);
       refresh(true);
       await invalidateKeys(queryClient, INVENTORY_MUTATION_KEYS);
-      toast.success("تم التعديل بنجاح");
+      toast.success(t("damaged.updated", { namespace: "inventory", fallback: "تم التعديل بنجاح" }));
     } catch (e: unknown) {
-      toast.error("فشل التعديل: " + e);
+      toast.error(t("errors.update", { namespace: "inventory", vars: { error: String(e) }, fallback: "فشل التعديل: " + e }));
     } finally {
       setSaving(false);
     }
-  }, [selectedItem, refresh, queryClient]);
+  }, [selectedItem, refresh, queryClient, t]);
 
   const handleSave = useCallback(async (payload: CreateDamagedItemRequest) => {
     if (selectedItem) {
@@ -98,18 +100,18 @@ export default function DamagedPage() {
   }, [selectedItem, handleCreate, handleUpdate]);
 
   const handleDelete = useCallback(async (id: string) => {
-    if (!confirm("هل أنت متأكد من حذف سجل التالف هذا؟ سيتم حذف حركة المخزون المرتبطة به.")) return;
+    if (!confirm(t("damaged.deleteConfirm", { namespace: "inventory", fallback: "هل أنت متأكد من حذف سجل التالف هذا؟ سيتم حذف حركة المخزون المرتبطة به." }))) return;
     try {
       await damagedService.delete(id);
-      toast.success("تم الحذف بنجاح");
+      toast.success(t("toasts.deleted", { namespace: "inventory", fallback: "تم الحذف بنجاح" }));
       setSelectedItem(null);
       setShowDialog(false);
       refresh(true);
       await invalidateKeys(queryClient, INVENTORY_MUTATION_KEYS);
     } catch (e) {
-      toast.error("فشل الحذف: " + e);
+      toast.error(t("errors.delete", { namespace: "inventory", vars: { error: String(e) }, fallback: "فشل الحذف: " + e }));
     }
-  }, [refresh, queryClient]);
+  }, [refresh, queryClient, t]);
 
   const handleView = useCallback((item: DamagedItem) => {
     setSelectedItem(item);
@@ -132,34 +134,34 @@ export default function DamagedPage() {
   const { exportData, rateMap, currencies, formatAmount, currencyMode, ratesSheet, baseCode } = useExportSetup();
 
   const handleExport = useCallback(async () => {
-    const currCols = currencyAmountCols("loss", "الخسارة", (row) => parseFloat((row as unknown as DamagedItem).loss_base || (row as unknown as DamagedItem).cost_impact_base || "0"), currencies, formatAmount, "", hasSecondaryCurrencies, hasSecondaryCurrencies, currencyMode, baseCode, rateMap);
+    const currCols = currencyAmountCols("loss", t("damaged.loss", { namespace: "inventory", fallback: "الخسارة" }), (row) => parseFloat((row as unknown as DamagedItem).loss_base || (row as unknown as DamagedItem).cost_impact_base || "0"), currencies, formatAmount, "", hasSecondaryCurrencies, hasSecondaryCurrencies, currencyMode, baseCode, rateMap);
     applyVisibilityToCurrencyCols(currCols, new Set(visibleColumnIds));
     const summary: Record<string, 'sum' | 'subtotal' | 'average' | null> = { quantity: 'subtotal' };
     addCurrencySummary(summary, "loss", currencies);
 
     const columns: ExcelExportColumn[] = [
-      { id: "id", label: "الرقم", accessor: (row) => {
+      { id: "id", label: t("labels.number", { namespace: "common", fallback: "الرقم" }), accessor: (row) => {
         const i = row as unknown as DamagedItem;
         if (i.reference) return parseInt(i.reference, 10) || 0;
         return "—";
       } },
-      { id: "material_name", label: "المادة", accessor: (row) => String((row as unknown as DamagedItem).material_name ?? "") },
-      { id: "quantity", label: "الكمية", accessor: (row) => Math.round(parseFloat((row as unknown as DamagedItem).quantity || "0")), numeric: true },
+      { id: "material_name", label: t("labels.material", { namespace: "inventory", fallback: "المادة" }), accessor: (row) => String((row as unknown as DamagedItem).material_name ?? "") },
+      { id: "quantity", label: t("labels.quantity", { namespace: "common", fallback: "الكمية" }), accessor: (row) => Math.round(parseFloat((row as unknown as DamagedItem).quantity || "0")), numeric: true },
       ...currCols,
-      { id: "reason", label: "السبب", accessor: (row) => String((row as unknown as DamagedItem).reason ?? "") },
-      dateCol("damage_date", "التاريخ", (row) => (row as unknown as DamagedItem).damage_date),
+      { id: "reason", label: t("labels.reason", { namespace: "common", fallback: "السبب" }), accessor: (row) => String((row as unknown as DamagedItem).reason ?? "") },
+      dateCol("damage_date", t("labels.date", { namespace: "common", fallback: "التاريخ" }), (row) => (row as unknown as DamagedItem).damage_date),
     ];
     await executeExport(exportData, {
-      sheetName: "إدارة المواد التالفة",
-      filename: "إدارة المواد التالفة",
+      sheetName: t("damaged.title", { namespace: "inventory", fallback: "إدارة المواد التالفة" }),
+      filename: t("damaged.title", { namespace: "inventory", fallback: "إدارة المواد التالفة" }),
       data: items as unknown as Record<string, unknown>[],
       columns,
       summary,
-      summaryLabel: "المجموع",
+      summaryLabel: t("labels.summary", { namespace: "inventory", fallback: "المجموع" }),
       currencyRatesSheet: ratesSheet,
       numeralSystem: getNumberingSystem(),
     });
-  }, [items, currencies, formatAmount, currencyMode, baseCode, rateMap, exportData, hasSecondaryCurrencies, ratesSheet, visibleColumnIds]);
+  }, [items, currencies, formatAmount, currencyMode, baseCode, rateMap, exportData, hasSecondaryCurrencies, ratesSheet, visibleColumnIds, t]);
 
   // Build initial values for form when editing
   const formInitialValues = selectedItem
@@ -177,7 +179,7 @@ export default function DamagedPage() {
 
   return (
     <OperationalTableTemplate
-      title="إدارة المواد التالفة"
+      title={t("damaged.title", { namespace: "inventory", fallback: "إدارة المواد التالفة" })}
       toolbar={
         <div className="flex items-center gap-2">
           <Button
@@ -185,10 +187,10 @@ export default function DamagedPage() {
             onClick={handleNewClick}
             className="bg-rose-600 hover:bg-rose-700 shadow-lg shadow-rose-100 font-bold"
           >
-            <Plus className="w-4 h-4 ml-2" /> تسجيل تالف
+            <Plus className="w-4 h-4 ml-2" /> {t("damaged.register", { namespace: "inventory", fallback: "تسجيل تالف" })}
           </Button>
           <Button variant="outline" size="sm" onClick={handleExport} className="border-slate-200 hover:bg-slate-50 font-bold">
-            <Download className="w-4 h-4 ml-2 text-slate-500" /> تصدير إكسل
+            <Download className="w-4 h-4 ml-2 text-slate-500" /> {t("labels.exportExcel", { namespace: "inventory", fallback: "تصدير إكسل" })}
           </Button>
         </div>
       }

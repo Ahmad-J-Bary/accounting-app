@@ -22,6 +22,7 @@ import { useCategoryTree, VIRTUAL_ROOT_ID, type CategoryTreeNode } from '@module
 import { useCategories } from "@shared/hooks/queries/useCategoryQueries";
 import { useMaterials } from "@shared/hooks/queries/useMaterialQueries";
 import { QUERY_KEYS, INVENTORY_MUTATION_KEYS, invalidateKeys } from "@shared/hooks/queryClient";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 const DEFAULT_CATEGORY_NAME = "غير مصنف";
 
@@ -36,6 +37,7 @@ type PanelAction =
   | null;
 
 export default function Categories() {
+  const { t } = useLocalization();
   const queryClient = useQueryClient();
   const { data: categoriesData = [], isLoading: categoriesLoading } = useCategories();
   const { data: materialsData = [] } = useMaterials();
@@ -121,7 +123,9 @@ export default function Categories() {
   const canOperate = !!selected && !isRootSelected;
   const canDelete = canOperate && !isUncategorizedSelected;
 
-  const newButtonLabel = !!selected?.parent_id || isUncategorizedSelected ? "مادة جديدة" : "تصنيف جديد";
+  const newButtonLabel = !!selected?.parent_id || isUncategorizedSelected
+    ? t("categories.newMaterial", { namespace: "inventory", fallback: "مادة جديدة" })
+    : t("categories.newCategory", { namespace: "inventory", fallback: "تصنيف جديد" });
 
   const handleSelect = useCallback((node: CategoryTreeNode) => {
     setSelected(node);
@@ -247,19 +251,19 @@ export default function Categories() {
       return;
     }
     if (selected.name === DEFAULT_CATEGORY_NAME) {
-      toast.error(`لا يمكن حذف التصنيف الافتراضي "${DEFAULT_CATEGORY_NAME}"`);
+      toast.error(t("categories.cannotDeleteDefault", { namespace: "inventory", vars: { name: DEFAULT_CATEGORY_NAME }, fallback: `لا يمكن حذف التصنيف الافتراضي "${DEFAULT_CATEGORY_NAME}"` }));
       return;
     }
     const kind = computeDeleteKind(selected);
     const targetId = computeReassignTargetId(selected);
     if (!kind || !targetId) {
-      toast.error("تعذر تحديد إجراء الحذف");
+      toast.error(t("categories.cannotDetermineDelete", { namespace: "inventory", fallback: "تعذر تحديد إجراء الحذف" }));
       return;
     }
     setDeleteKind(kind);
     setPendingCategoryDelete({ id: selected.id, name: selected.name, targetId });
     setDeleteOpen(true);
-  }, [canOperate, selected, computeDeleteKind, computeReassignTargetId]);
+  }, [canOperate, selected, computeDeleteKind, computeReassignTargetId, t]);
 
   const handleConfirmCategoryDelete = useCallback(async () => {
     if (!pendingCategoryDelete) return;
@@ -267,7 +271,7 @@ export default function Categories() {
     try {
       if (deleteKind?.type === "sub_empty" || deleteKind?.type === "root_no_subs") {
         await categoryService.deleteCategory(pendingCategoryDelete.id);
-        toast.success("تم الحذف بنجاح");
+        toast.success(t("toasts.deleted", { namespace: "inventory", fallback: "تم الحذف بنجاح" }));
       } else {
         const result = await categoryService.deleteCategoryWithReassignment(
           pendingCategoryDelete.id,
@@ -275,13 +279,13 @@ export default function Categories() {
         );
         const parts: string[] = [];
         if (result.materials_reassigned > 0) {
-          parts.push(`تم تعديل تصنيف ${result.materials_reassigned} مادة`);
+          parts.push(t("categories.reassignedMaterials", { namespace: "inventory", vars: { count: result.materials_reassigned }, fallback: `تم تعديل تصنيف ${result.materials_reassigned} مادة` }));
         }
         if (result.subs_deleted > 0) {
-          parts.push(`وحذف ${result.subs_deleted} تصنيف فرعي`);
+          parts.push(t("categories.deletedSubs", { namespace: "inventory", vars: { count: result.subs_deleted }, fallback: `وحذف ${result.subs_deleted} تصنيف فرعي` }));
         }
         const suffix = parts.length > 0 ? ` (${parts.join("، ")})` : "";
-        toast.success(`تم الحذف بنجاح${suffix}`);
+        toast.success(t("toasts.deleted", { namespace: "inventory", fallback: "تم الحذف بنجاح" }) + suffix);
       }
       await invalidateKeys(queryClient, INVENTORY_MUTATION_KEYS);
       setDeleteOpen(false);
@@ -290,11 +294,11 @@ export default function Categories() {
       setSelected(null);
       setPanelAction(null);
     } catch (error) {
-      toast.error("فشل الحذف: " + (error instanceof Error ? error.message : String(error)));
+      toast.error(t("errors.delete", { namespace: "inventory", vars: { error: error instanceof Error ? error.message : String(error) }, fallback: "فشل الحذف: " + (error instanceof Error ? error.message : String(error)) }));
     } finally {
       setDeleting(false);
     }
-  }, [pendingCategoryDelete, deleteKind, queryClient]);
+  }, [pendingCategoryDelete, deleteKind, queryClient, t]);
 
   const handleCancelCategoryDelete = useCallback(() => {
     if (deleting) return;
@@ -309,17 +313,17 @@ export default function Categories() {
     try {
       await materialService.delete(materialDeleteTarget.id);
       await invalidateKeys(queryClient, INVENTORY_MUTATION_KEYS);
-      toast.success("تم الحذف بنجاح");
+      toast.success(t("toasts.deleted", { namespace: "inventory", fallback: "تم الحذف بنجاح" }));
       setMaterialDeleteOpen(false);
       setMaterialDeleteTarget(null);
       setSelected(null);
       setPanelAction(null);
     } catch (error) {
-      toast.error("فشل الحذف: " + (error instanceof Error ? error.message : String(error)));
+      toast.error(t("errors.delete", { namespace: "inventory", vars: { error: error instanceof Error ? error.message : String(error) }, fallback: "فشل الحذف: " + (error instanceof Error ? error.message : String(error)) }));
     } finally {
       setDeleting(false);
     }
-  }, [materialDeleteTarget, queryClient]);
+  }, [materialDeleteTarget, queryClient, t]);
 
   const handleSaveMaterial = useCallback(async (data: CreateMaterialRequest | UpdateMaterialRequest) => {
     setMaterialSaving(true);
@@ -327,19 +331,19 @@ export default function Categories() {
       const update = data as UpdateMaterialRequest;
       if (update.id) {
         await materialService.update(update);
-        toast.success("تم تحديث المادة");
+        toast.success(t("materials.updated", { namespace: "inventory", fallback: "تم تحديث المادة" }));
       } else {
         await materialService.create(data as CreateMaterialRequest);
-        toast.success("تمت إضافة المادة");
+        toast.success(t("materials.created", { namespace: "inventory", fallback: "تمت إضافة المادة" }));
       }
       await invalidateKeys(queryClient, INVENTORY_MUTATION_KEYS);
       setPanelAction(selected && selected.id !== VIRTUAL_ROOT_ID ? { kind: "view" } : null);
     } catch (error) {
-      toast.error("فشل الحفظ: " + (error instanceof Error ? error.message : String(error)));
+      toast.error(t("errors.save", { namespace: "inventory", vars: { error: error instanceof Error ? error.message : String(error) }, fallback: "فشل الحفظ: " + (error instanceof Error ? error.message : String(error)) }));
     } finally {
       setMaterialSaving(false);
     }
-  }, [queryClient, selected]);
+  }, [queryClient, selected, t]);
 
   const handleCategorySaved = useCallback(async () => {
     await invalidateKeys(queryClient, [QUERY_KEYS.categories]);
@@ -453,12 +457,12 @@ export default function Categories() {
 
   return (
     <HierarchicalTreeTemplate
-      title="تصنيفات المواد"
+      title={t("categories.title", { namespace: "inventory", fallback: "تصنيفات المواد" })}
       toolbar={
         <>
           {isMaterialSelected ? (
             <Button size="sm" onClick={handleOpenUnits} className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100">
-              <Scale className="w-4 h-4 ml-2" /> الوحدات
+              <Scale className="w-4 h-4 ml-2" /> {t("materials.units", { namespace: "inventory", fallback: "الوحدات" })}
             </Button>
           ) : (
             <Button size="sm" onClick={handleOpenNew} className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100">
@@ -472,7 +476,7 @@ export default function Categories() {
             disabled={!canOperate}
             onClick={handleOpenEdit}
           >
-            <Edit className="w-4 h-4 ml-2" /> تعديل
+            <Edit className="w-4 h-4 ml-2" /> {t("actions.edit", { namespace: "common", fallback: "تعديل" })}
           </Button>
           <Button
             size="sm"
@@ -481,7 +485,7 @@ export default function Categories() {
             disabled={!canDelete}
             onClick={handleDeleteRequest}
           >
-            <Trash2 className="w-4 h-4 ml-2 text-rose-600" /> حذف
+            <Trash2 className="w-4 h-4 ml-2 text-rose-600" /> {t("actions.delete", { namespace: "common", fallback: "حذف" })}
           </Button>
         </>
       }
@@ -491,13 +495,13 @@ export default function Categories() {
             onClick={expandAll}
             className="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-bold text-slate-500 hover:text-slate-800 hover:bg-slate-200/70 transition-colors"
           >
-            <ChevronLeft className="w-3 h-3" /> توسيع
+            <ChevronLeft className="w-3 h-3" /> {t("categories.expand", { namespace: "inventory", fallback: "توسيع" })}
           </button>
           <button
             onClick={collapseAll}
             className="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-bold text-slate-500 hover:text-slate-800 hover:bg-slate-200/70 transition-colors"
           >
-            طي <ChevronRight className="w-3 h-3" />
+            {t("categories.collapse", { namespace: "inventory", fallback: "طي" })} <ChevronRight className="w-3 h-3" />
           </button>
         </>
       }
@@ -533,10 +537,10 @@ export default function Categories() {
       <ConfirmDialog
         open={materialDeleteOpen}
         onOpenChange={setMaterialDeleteOpen}
-        title="حذف المادة"
-        description={materialDeleteTarget ? `هل تريد حذف المادة «${materialDeleteTarget.name}»؟` : undefined}
-        confirmLabel="حذف"
-        cancelLabel="إلغاء"
+        title={t("materials.deleteTitle", { namespace: "inventory", fallback: "حذف المادة" })}
+        description={materialDeleteTarget ? t("materials.deleteConfirm", { namespace: "inventory", vars: { name: materialDeleteTarget.name }, fallback: `هل تريد حذف المادة «${materialDeleteTarget.name}»؟` }) : undefined}
+        confirmLabel={t("actions.delete", { namespace: "common", fallback: "حذف" })}
+        cancelLabel={t("actions.cancel", { namespace: "common", fallback: "إلغاء" })}
         destructive
         onConfirm={() => void handleConfirmMaterialDelete()}
       />
