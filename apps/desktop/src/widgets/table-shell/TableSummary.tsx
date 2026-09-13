@@ -2,6 +2,7 @@ import React from 'react';
 import { cn } from '@shared/lib/utils';
 import { useTableSettings } from '@shared/hooks';
 import { getLeftBorderClass } from "@shared/lib/table-utils";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 export interface SummaryColumn {
   id: string;
@@ -41,6 +42,7 @@ export const TableSummary: React.FC<TableSummaryProps> = ({
   asPageFooter = false,
 }) => {
   const { settings, getDensityPadding } = useTableSettings();
+  const { t } = useLocalization();
 
   if (!settings.showSummary) return null;
 
@@ -155,7 +157,7 @@ export const TableSummary: React.FC<TableSummaryProps> = ({
       >
         {hasAnyActive && (
           <div className="absolute top-0 right-4 -translate-y-1/2 px-2 py-0.5 bg-slate-700 text-white text-3xs font-black uppercase tracking-wider rounded-full shadow-sm">
-            ملخص
+            {t('labels.summary', { fallback: 'ملخص' })}
           </div>
         )}
         {labelRow}

@@ -31,6 +31,8 @@ import { DocumentStatusBadge } from "@modules/invoicing/components/DocumentStatu
 import { useDocumentEditor } from "@modules/invoicing/hooks/useDocumentEditor";
 import { toBackendLines, calcLineTotal } from "@modules/invoicing/lib/invoiceUtils";
 import { useDocumentFinancials } from "@modules/invoicing/lib/useDocumentFinancials";
+import { useLocalization } from "@app/providers/LocalizationProvider";
+import type { LocalizationContextValue } from "@shared/types/i18n";
 import { MaterialForm } from "@modules/inventory/components/MaterialForm";
 interface HeaderState {
   id?: string;
@@ -48,10 +50,10 @@ interface HeaderState {
   status: string;
 }
 
-const defaultHeader = (): HeaderState => ({
+const defaultHeader = (t: LocalizationContextValue["t"]): HeaderState => ({
   docNumber: "...",
   issued_at: toLocalDateStr(new Date().toISOString()),
-  notes: "مواد أول المدة- رصيد افتتاحي للمواد",
+  notes: t("openingBalance.defaultNotes", { namespace: "accounting", fallback: "مواد أول المدة- رصيد افتتاحي للمواد" }),
   currency_code: "",
   exchange_rate: "1",
   discount_amount: "0",
@@ -64,6 +66,7 @@ const defaultHeader = (): HeaderState => ({
 });
 
 export default function OpeningBalance() {
+  const { t } = useLocalization();
   const { id } = useParams<{ id: string }>();
   const { closeTab, activeTabId, openTab } = useTabs();
   const tabLocation = useTabLocation();
@@ -81,7 +84,7 @@ export default function OpeningBalance() {
   const { exportData, baseCurrency, rateMap, currencies, currencyMode, ratesSheet } = useExportSetup();
   const { hasMultipleCurrencies } = useCurrencyContext();
   const companyType = useCompanyType();
-  const [header, setHeader] = useState<HeaderState>(defaultHeader());
+  const [header, setHeader] = useState<HeaderState>(defaultHeader(t));
 
   const defaultWarehouseId = appSettings?.purchase_warehouse_id || warehouses.find(w => w.is_default)?.id;
 
@@ -113,11 +116,11 @@ export default function OpeningBalance() {
       setWarehouses(whData);
       setAppSettings(settingsData);
     } catch (e: unknown) {
-      toast.error("فشل تحميل البيانات: " + e);
+      toast.error(t("openingBalance.loadError", { namespace: "accounting", vars: { error: String(e) }, fallback: "فشل تحميل البيانات: " + e }));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     loadData();
@@ -170,11 +173,11 @@ export default function OpeningBalance() {
         return line;
       }));
     }).catch((e) => {
-      toast.error("فشل تحميل الرصيد الافتتاحي: " + e);
+      toast.error(t("openingBalance.loadOpeningError", { namespace: "accounting", vars: { error: String(e) }, fallback: "فشل تحميل الرصيد الافتتاحي: " + e }));
     }).finally(() => {
       setLoading(false);
     });
-  }, [id, setLines, defaultWarehouseId]);
+  }, [id, setLines, defaultWarehouseId, t]);
 
   useEffect(() => {
     categoryService.list().then(setCategories).catch(() => {});
@@ -190,24 +193,24 @@ export default function OpeningBalance() {
     setSavingMaterial(true);
     try {
       await materialService.create(data as CreateMaterialRequest);
-      toast.success("تم إضافة المادة بنجاح");
+      toast.success(t("openingBalance.materialAdded", { namespace: "accounting", fallback: "تم إضافة المادة بنجاح" }));
       setMaterialFormOpen(false);
       invalidateAccountingMutationQueries(queryClient);
       loadData();
     } catch (e) {
-      toast.error("فشل إضافة المادة: " + e);
+      toast.error(t("openingBalance.materialAddFailed", { namespace: "accounting", vars: { error: String(e) }, fallback: "فشل إضافة المادة: " + e }));
     } finally {
       setSavingMaterial(false);
     }
-  }, [loadData]);
+  }, [loadData, t]);
 
   const handleSave = async (andPost = true) => {
     if (!header.currency_code) {
-      toast.error("الرجاء اختيار العملات أولاً من إعدادات العملات");
+      toast.error(t("openingBalance.currencyRequired", { namespace: "accounting", fallback: "الرجاء اختيار العملات أولاً من إعدادات العملات" }));
       return;
     }
     if (lines.length === 0) {
-      toast.error("أضف صنفاً واحداً على الأقل");
+      toast.error(t("openingBalance.addAtLeastOne", { namespace: "accounting", fallback: "أضف صنفاً واحداً على الأقل" }));
       return;
     }
 
@@ -237,9 +240,9 @@ export default function OpeningBalance() {
 
       if (andPost) {
         await invoiceService.postInvoice(result.id);
-        toast.success("تم ترحيل الرصيد الافتتاحي للمخزون بنجاح");
+        toast.success(t("openingBalance.postedSuccess", { namespace: "accounting", fallback: "تم ترحيل الرصيد الافتتاحي للمخزون بنجاح" }));
       } else {
-        toast.success("تم حفظ المسودة");
+        toast.success(t("openingBalance.draftSaved", { namespace: "accounting", fallback: "تم حفظ المسودة" }));
       }
 
       invalidateAccountingMutationQueries(queryClient);
@@ -247,12 +250,12 @@ export default function OpeningBalance() {
       closeTab(activeTabId);
       openTab({
         id: "purchase-invoices",
-        title: "فواتير المشتريات",
+        title: t("openingBalance.purchaseInvoicesTab", { namespace: "accounting", fallback: "فواتير المشتريات" }),
         path: "/purchase-invoices",
         closable: true,
       });
     } catch (e: unknown) {
-      toast.error("فشل الحفظ: " + e);
+      toast.error(t("openingBalance.saveFailed", { namespace: "accounting", vars: { error: String(e) }, fallback: "فشل الحفظ: " + e }));
     } finally {
       setSaving(false);
     }

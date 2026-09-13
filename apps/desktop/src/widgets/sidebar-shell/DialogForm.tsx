@@ -7,6 +7,7 @@ import {
   DialogFooter,
 } from "@shared/ui/dialog";
 import { Button } from "@shared/ui/button";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 interface DialogFormProps {
   open: boolean;
@@ -28,11 +29,13 @@ export function DialogForm({
   onSave,
   isSaving = false,
   saveDisabled = false,
-  saveLabel = "حفظ",
+  saveLabel,
   children,
   description,
   className = "",
 }: DialogFormProps) {
+  const { t } = useLocalization();
+  const resolvedSaveLabel = saveLabel ?? t('actions.save', { fallback: 'حفظ' });
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
@@ -62,13 +65,13 @@ export function DialogForm({
               onClick={() => onOpenChange(false)}
               disabled={isSaving}
             >
-              إلغاء
+              {t('actions.cancel', { fallback: 'إلغاء' })}
             </Button>
             <Button
               onClick={onSave}
               disabled={isSaving || saveDisabled}
             >
-              {isSaving ? "جاري الحفظ..." : saveLabel}
+              {isSaving ? t('states.saving', { fallback: 'جاري الحفظ...' }) : resolvedSaveLabel}
             </Button>
           </DialogFooter>
         )}

@@ -7,6 +7,7 @@ import {
   ChevronsLeft 
 } from "lucide-react";
 import { cn } from '@shared/lib/utils';
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 interface TablePaginationProps {
   currentPage: number;
@@ -25,6 +26,8 @@ export const TablePagination: React.FC<TablePaginationProps> = ({
   pageSize,
   className,
 }) => {
+  const { t } = useLocalization();
+
   if (totalPages <= 1) return null;
 
   return (
@@ -32,7 +35,7 @@ export const TablePagination: React.FC<TablePaginationProps> = ({
       <div className="flex-1 text-sm text-slate-500 font-medium">
         {totalItems !== undefined && (
           <span>
-            عرض {(currentPage - 1) * (pageSize || 0) + 1} إلى {Math.min(currentPage * (pageSize || 0), totalItems)} من {totalItems} سجل
+            {t('labels.showing', { fallback: 'عرض' })} {(currentPage - 1) * (pageSize || 0) + 1} {t('labels.to', { fallback: 'إلى' })} {Math.min(currentPage * (pageSize || 0), totalItems)} {t('labels.of', { fallback: 'من' })} {totalItems} {t('labels.record', { fallback: 'سجل' })}
           </span>
         )}
       </div>
@@ -58,7 +61,7 @@ export const TablePagination: React.FC<TablePaginationProps> = ({
         
         <div className="flex items-center gap-1 px-2">
           <span className="text-sm font-bold text-slate-700">{currentPage}</span>
-          <span className="text-sm text-slate-400">من</span>
+          <span className="text-sm text-slate-400">{t('labels.of', { fallback: 'من' })}</span>
           <span className="text-sm font-bold text-slate-700">{totalPages}</span>
         </div>
 

@@ -6,6 +6,7 @@ import { TableActions } from '@widgets/table-shell/TableActions';
 import type { SummaryColumn } from '@widgets/table-shell/TableSummary';
 import { useUnifiedColumns, useSortable } from "@shared/hooks";
 import { formatDateTime, formatNumber, toLocalString } from '@shared/lib/format';
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 export interface TransferRow {
   reference: string;
@@ -40,6 +41,7 @@ const sortFn = (a: TransferRow, b: TransferRow, field: TransferSortField, direct
 };
 
 export function TransferTable({ movements, warehouses, className, onView, onEdit, onDelete, onVisibleColumnsChange }: TransferTableProps) {
+  const { t } = useLocalization();
   const [search, setSearch] = useState("");
   const [selectedRef, setSelectedRef] = useState<string | null>(null);
 
@@ -104,12 +106,12 @@ export function TransferTable({ movements, warehouses, className, onView, onEdit
   const columns = useMemo<UnifiedColumn<TransferRow>[]>(() => {
     const cols: UnifiedColumn<TransferRow>[] = [
     {
-      id: 'material_name', header: 'المادة', label: 'المادة',
+      id: 'material_name', header: t('labels.material', { namespace: 'inventory', fallback: 'المادة' }), label: t('labels.material', { namespace: 'inventory', fallback: 'المادة' }),
       accessor: (r) => r.material_name || '—',
       className: 'font-bold text-slate-900'
     },
     {
-      id: 'source', header: 'من مستودع', label: 'من مستودع',
+      id: 'source', header: t('transfers.fromWarehouse', { namespace: 'inventory', fallback: 'من مستودع' }), label: t('transfers.fromWarehouse', { namespace: 'inventory', fallback: 'من مستودع' }),
       accessor: (r) => (
         <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-blue-50 text-blue-700 border border-blue-100">
           {r.source_warehouse_name}
@@ -117,7 +119,7 @@ export function TransferTable({ movements, warehouses, className, onView, onEdit
       ),
     },
     {
-      id: 'dest', header: 'إلى مستودع', label: 'إلى مستودع',
+      id: 'dest', header: t('transfers.toWarehouse', { namespace: 'inventory', fallback: 'إلى مستودع' }), label: t('transfers.toWarehouse', { namespace: 'inventory', fallback: 'إلى مستودع' }),
       accessor: (r) => (
         <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-100">
           {r.dest_warehouse_name}
@@ -125,7 +127,7 @@ export function TransferTable({ movements, warehouses, className, onView, onEdit
       ),
     },
     {
-      id: 'quantity', header: 'الكمية', label: 'الكمية',
+      id: 'quantity', header: t('labels.quantity', { namespace: 'inventory', fallback: 'الكمية' }), label: t('labels.quantity', { namespace: 'inventory', fallback: 'الكمية' }),
       accessor: (r) => (
         <span className="tabular-nums font-black text-base text-amber-600">
           {toLocalString(parseFloat(r.quantity))}
@@ -133,7 +135,7 @@ export function TransferTable({ movements, warehouses, className, onView, onEdit
       ),
     },
     {
-      id: 'reference', header: 'المرجع', label: 'المرجع',
+      id: 'reference', header: t('labels.reference', { namespace: 'inventory', fallback: 'المرجع' }), label: t('labels.reference', { namespace: 'inventory', fallback: 'المرجع' }),
       accessor: (r) => (
         <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold font-mono bg-slate-100 text-slate-700 border border-slate-200">
           {formatNumber(parseInt(r.reference) || 0)}
@@ -141,12 +143,12 @@ export function TransferTable({ movements, warehouses, className, onView, onEdit
       ),
     },
     {
-      id: 'notes', header: 'ملاحظة', label: 'ملاحظة',
+      id: 'notes', header: t('labels.note', { namespace: 'inventory', fallback: 'ملاحظة' }), label: t('labels.note', { namespace: 'inventory', fallback: 'ملاحظة' }),
       accessor: (r) => r.notes || '—',
       className: 'text-slate-600 text-xs max-w-[200px] truncate',
     },
     {
-      id: 'date', header: 'التاريخ', label: 'التاريخ',
+      id: 'date', header: t('labels.date', { namespace: 'inventory', fallback: 'التاريخ' }), label: t('labels.date', { namespace: 'inventory', fallback: 'التاريخ' }),
       accessor: (r) => formatDateTime(r.transfer_date),
       className: 'tabular-nums text-slate-500 font-medium'
     },
@@ -154,8 +156,8 @@ export function TransferTable({ movements, warehouses, className, onView, onEdit
     if (onView || onEdit || onDelete) {
       cols.push({
         id: 'actions',
-        header: 'إجراءات',
-        label: 'إجراءات',
+        header: t('labels.actions', { namespace: 'inventory', fallback: 'إجراءات' }),
+        label: t('labels.actions', { namespace: 'inventory', fallback: 'إجراءات' }),
         accessor: (r) => (
           <TableActions
             onView={onView ? () => onView(r) : undefined}
@@ -166,7 +168,7 @@ export function TransferTable({ movements, warehouses, className, onView, onEdit
       });
     }
     return cols;
-  }, [onView, onEdit, onDelete]);
+  }, [onView, onEdit, onDelete, t]);
 
   const defaultVisible = useMemo(() => {
     const ids = ["material_name", "source", "dest", "quantity", "reference", "notes", "date"];
@@ -198,7 +200,7 @@ export function TransferTable({ movements, warehouses, className, onView, onEdit
     <TableShell
       search={search}
       onSearchChange={setSearch}
-      searchPlaceholder="بحث بالمادة أو المرجع..."
+      searchPlaceholder={t("transfers.table.searchPlaceholder", { namespace: "inventory", fallback: "بحث بالمادة أو المرجع..." })}
       columns={toolbarColumns}
       onColumnToggle={toggleColumn}
       onColumnsReset={resetToDefault}
@@ -221,7 +223,7 @@ export function TransferTable({ movements, warehouses, className, onView, onEdit
         }}
         onRowClick={handleRowClick}
         selectedId={selectedRef}
-        emptyMessage={search ? "لا توجد نتائج تطابق معايير البحث" : "لا توجد تحويلات مسجلة"}
+        emptyMessage={search ? t("movements.emptySearch", { namespace: "inventory", fallback: "لا توجد نتائج تطابق معايير البحث" }) : t("transfers.table.empty", { namespace: "inventory", fallback: "لا توجد تحويلات مسجلة" })}
         summary={summaryColumns}
       />
     </TableShell>

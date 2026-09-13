@@ -5,6 +5,7 @@ import {
   ChevronRight 
 } from 'lucide-react';
 import { useTabs } from '@app/providers/TabContext';
+import { useLocalization } from '@app/providers/LocalizationProvider';
 
 interface QuickAction {
   label: string;
@@ -21,71 +22,72 @@ interface QuickActionsProps {
 
 export function QuickActions({ actions, columns = 4 }: QuickActionsProps) {
   const { openTab } = useTabs();
+  const { t } = useLocalization();
 
   const handleNewInvoice = () => {
     const id = `/sales-invoices/new-${Date.now()}`;
-    openTab({ id, title: "فاتورة مبيعات جديدة", path: id, closable: true });
+    openTab({ id, title: t("newSalesInvoiceTab", { namespace: "shell", fallback: "فاتورة مبيعات جديدة" }), path: id, closable: true });
   };
 
   const handleNewPurchaseInvoice = () => {
     const id = `/purchase-invoices/new-${Date.now()}`;
-    openTab({ id, title: "فاتورة مشتريات جديدة", path: id, closable: true });
+    openTab({ id, title: t("newPurchaseInvoiceTab", { namespace: "shell", fallback: "فاتورة مشتريات جديدة" }), path: id, closable: true });
   };
 
   const defaultActions: QuickAction[] = actions || [
     {
-      label: 'فاتورة مبيعات',
+      label: t("quickActionsList.newSalesInvoice", { namespace: "shell", fallback: "فاتورة مبيعات" }),
       icon: Receipt,
-      description: 'إنشاء فاتورة مبيعات جديدة',
+      description: t("quickActionsList.newSalesInvoiceDesc", { namespace: "shell", fallback: "إنشاء فاتورة مبيعات جديدة" }),
       onClick: handleNewInvoice,
       color: 'bg-blue-50 text-blue-600 hover:bg-blue-100',
     },
     {
-      label: 'فاتورة مشتريات',
+      label: t("quickActionsList.newPurchaseInvoice", { namespace: "shell", fallback: "فاتورة مشتريات" }),
       icon: ShoppingCart,
-      description: 'إنشاء فاتورة مشتريات جديدة',
+      description: t("quickActionsList.newPurchaseInvoiceDesc", { namespace: "shell", fallback: "إنشاء فاتورة مشتريات جديدة" }),
       onClick: handleNewPurchaseInvoice,
       color: 'bg-purple-50 text-purple-600 hover:bg-purple-100',
     },
     {
-      label: 'سند قبض',
+      label: t("quickActionsList.receiptVoucher", { namespace: "shell", fallback: "سند قبض" }),
       icon: Wallet,
-      description: 'تسجيل قبض من العميل',
+      description: t("quickActionsList.receiptVoucherDesc", { namespace: "shell", fallback: "تسجيل قبض من العميل" }),
       onClick: () => {},
       color: 'bg-green-50 text-green-600 hover:bg-green-100',
     },
     {
-      label: 'سند صرف',
+      label: t("quickActionsList.paymentVoucher", { namespace: "shell", fallback: "سند صرف" }),
       icon: Wallet,
-      description: 'تسجيل صرف للمورد',
+      description: t("quickActionsList.paymentVoucherDesc", { namespace: "shell", fallback: "تسجيل صرف للمورد" }),
       onClick: () => {},
       color: 'bg-red-50 text-red-600 hover:bg-red-100',
     },
     {
-      label: 'قيد يومية',
+      label: t("quickActionsList.journalEntry", { namespace: "shell", fallback: "قيد يومية" }),
       icon: FileText,
-      description: 'إنشاء قيد محاسبي جديد',
+      description: t("quickActionsList.journalEntryDesc", { namespace: "shell", fallback: "إنشاء قيد محاسبي جديد" }),
       onClick: () => {},
       color: 'bg-amber-50 text-amber-600 hover:bg-amber-100',
     },
     {
-      label: 'عميل جديد',
+      label: t("quickActionsList.newCustomer", { namespace: "shell", fallback: "عميل جديد" }),
       icon: User,
-      description: 'إضافة عميل جديد',
+      description: t("quickActionsList.newCustomerDesc", { namespace: "shell", fallback: "إضافة عميل جديد" }),
       onClick: () => {},
       color: 'bg-teal-50 text-teal-600 hover:bg-teal-100',
     },
     {
-      label: 'منتج جديد',
+      label: t("quickActionsList.newProduct", { namespace: "shell", fallback: "منتج جديد" }),
       icon: Package,
-      description: 'إضافة منتج جديد',
+      description: t("quickActionsList.newProductDesc", { namespace: "shell", fallback: "إضافة منتج جديد" }),
       onClick: () => {},
       color: 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100',
     },
     {
-      label: 'المزيد',
+      label: t("quickActionsList.more", { namespace: "shell", fallback: "المزيد" }),
       icon: ChevronRight,
-      description: 'عرض جميع الإجراءات',
+      description: t("quickActionsList.moreDesc", { namespace: "shell", fallback: "عرض جميع الإجراءات" }),
       onClick: () => {},
       color: 'bg-gray-50 text-gray-600 hover:bg-gray-100',
     },
@@ -94,10 +96,10 @@ export function QuickActions({ actions, columns = 4 }: QuickActionsProps) {
   return (
     <Card className="p-5">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="font-semibold">إجراءات سريعة</h3>
+        <h3 className="font-semibold">{t("quickActions", { namespace: "shell", fallback: "إجراءات سريعة" })}</h3>
         <Button variant="ghost" size="sm">
           <Plus className="w-4 h-4 ml-2" />
-          تخصيص
+          {t("customize", { namespace: "shell", fallback: "تخصيص" })}
         </Button>
       </div>
 

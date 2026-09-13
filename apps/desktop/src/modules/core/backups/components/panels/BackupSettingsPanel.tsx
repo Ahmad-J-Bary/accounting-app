@@ -5,23 +5,24 @@ import { Switch } from "@shared/ui/switch";
 import { cn } from "@shared/lib/utils";
 import { toast } from "sonner";
 import { backupService, type BackupConfig } from "../../../api/backupService";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
-const RETENTION_PRESETS: { label: string; value: string; daily: number; weekly: number; monthly: number }[] = [
-  { label: "آخر يوم", value: "1d", daily: 1, weekly: 0, monthly: 0 },
-  { label: "آخر 3 أيام", value: "3d", daily: 3, weekly: 0, monthly: 0 },
-  { label: "آخر 7 أيام", value: "7d", daily: 7, weekly: 0, monthly: 0 },
-  { label: "آخر 14 يوم", value: "14d", daily: 14, weekly: 0, monthly: 0 },
-  { label: "آخر 30 يوم", value: "30d", daily: 0, weekly: 4, monthly: 1 },
-  { label: "آخر 60 يوم", value: "60d", daily: 0, weekly: 8, monthly: 2 },
-  { label: "آخر 90 يوم", value: "90d", daily: 0, weekly: 12, monthly: 3 },
-  { label: "آخر 6 أشهر", value: "6m", daily: 0, weekly: 0, monthly: 6 },
-  { label: "آخر سنة", value: "1y", daily: 0, weekly: 0, monthly: 12 },
-  { label: "بدون حد", value: "none", daily: 0, weekly: 0, monthly: 0 },
+const RETENTION_KEYS: { key: string; value: string; daily: number; weekly: number; monthly: number }[] = [
+  { key: "last1d", value: "1d", daily: 1, weekly: 0, monthly: 0 },
+  { key: "last3d", value: "3d", daily: 3, weekly: 0, monthly: 0 },
+  { key: "last7d", value: "7d", daily: 7, weekly: 0, monthly: 0 },
+  { key: "last14d", value: "14d", daily: 14, weekly: 0, monthly: 0 },
+  { key: "last30d", value: "30d", daily: 0, weekly: 4, monthly: 1 },
+  { key: "last60d", value: "60d", daily: 0, weekly: 8, monthly: 2 },
+  { key: "last90d", value: "90d", daily: 0, weekly: 12, monthly: 3 },
+  { key: "last6m", value: "6m", daily: 0, weekly: 0, monthly: 6 },
+  { key: "last1y", value: "1y", daily: 0, weekly: 0, monthly: 12 },
+  { key: "none", value: "none", daily: 0, weekly: 0, monthly: 0 },
 ];
 
 function findRetentionPreset(daily: number, weekly: number, monthly: number): string {
   // Find matching preset
-  for (const p of RETENTION_PRESETS) {
+  for (const p of RETENTION_KEYS) {
     if (p.daily === daily && p.weekly === weekly && p.monthly === monthly) {
       return p.value;
     }
@@ -38,6 +39,12 @@ interface Props {
 }
 
 export function BackupSettingsPanel({ config, operating, onConfigChange, onApplyRetention }: Props) {
+  const { t } = useLocalization();
+
+  const RETENTION_PRESETS = RETENTION_KEYS.map(p => ({
+    ...p,
+    label: t(`settings.backups.retentionPresets.${p.key}`, { namespace: "settings", fallback: p.key }),
+  }));
   const custom = !config.use_same_location;
   const currentPreset = findRetentionPreset(config.keep_daily, config.keep_weekly, config.keep_monthly);
 
@@ -77,8 +84,8 @@ export function BackupSettingsPanel({ config, operating, onConfigChange, onApply
       <div>
         <div className="flex items-center justify-between gap-3">
           <div className="space-y-0.5">
-            <p className="font-bold text-slate-800 text-sm">النسخ الاحتياطي التلقائي</p>
-            <p className="text-xs text-slate-400">إنشاء نسخة احتياطية تلقائية عند بدء تشغيل التطبيق.</p>
+            <p className="font-bold text-slate-800 text-sm">{t("settings.backups.autoBackup", { namespace: "settings", fallback: "النسخ الاحتياطي التلقائي" })}</p>
+            <p className="text-xs text-slate-400">{t("settings.backups.autoBackupDesc", { namespace: "settings", fallback: "إنشاء نسخة احتياطية تلقائية عند بدء تشغيل التطبيق." })}</p>
           </div>
           <Switch
             checked={config.auto_backup_enabled}
@@ -90,8 +97,8 @@ export function BackupSettingsPanel({ config, operating, onConfigChange, onApply
 
       {/* Retention */}
       <div className="border-t border-slate-100 pt-5">
-        <label className="font-bold text-slate-800 text-sm block mb-1">الاحتفاظ بالنسخ الاحتياطية</label>
-        <p className="text-xs text-slate-400 mb-3">ينطبق على النسخ الاحتياطية التلقائية فقط.</p>
+        <label className="font-bold text-slate-800 text-sm block mb-1">{t("settings.backups.retention", { namespace: "settings", fallback: "الاحتفاظ بالنسخ الاحتياطية" })}</label>
+        <p className="text-xs text-slate-400 mb-3">{t("settings.backups.retentionDesc", { namespace: "settings", fallback: "ينطبق على النسخ الاحتياطية التلقائية فقط." })}</p>
         <select
           value={currentPreset}
           disabled={operating}
@@ -108,7 +115,7 @@ export function BackupSettingsPanel({ config, operating, onConfigChange, onApply
 
       {/* Backup location */}
       <div className="border-t border-slate-100 pt-5 space-y-3">
-        <label className="font-bold text-slate-800 text-sm block">مكان النسخ الاحتياطية</label>
+        <label className="font-bold text-slate-800 text-sm block">{t("settings.backups.location", { namespace: "settings", fallback: "مكان النسخ الاحتياطية" })}</label>
 
         <label
           className={cn(
@@ -127,8 +134,8 @@ export function BackupSettingsPanel({ config, operating, onConfigChange, onApply
             className="h-4 w-4 accent-blue-600"
           />
           <div className="space-y-0.5">
-            <div className="text-sm font-bold text-slate-700">بجانب بيانات البرنامج</div>
-            <div className="text-[10px] text-slate-400">حفظ النسخ الاحتياطية بجانب ملف قاعدة البيانات الأصلي</div>
+            <div className="text-sm font-bold text-slate-700">{t("settings.backups.nextToProgram", { namespace: "settings", fallback: "بجانب بيانات البرنامج" })}</div>
+            <div className="text-[10px] text-slate-400">{t("settings.backups.nextToProgramDesc", { namespace: "settings", fallback: "حفظ النسخ الاحتياطية بجانب ملف قاعدة البيانات الأصلي" })}</div>
           </div>
         </label>
 
@@ -149,25 +156,25 @@ export function BackupSettingsPanel({ config, operating, onConfigChange, onApply
             className="h-4 w-4 accent-blue-600"
           />
           <div className="space-y-0.5 flex-1">
-            <div className="text-sm font-bold text-slate-700">مجلد مخصص</div>
-            <div className="text-[10px] text-slate-400">اختيار مجلد محدد للنسخ الاحتياطية</div>
+            <div className="text-sm font-bold text-slate-700">{t("settings.backups.customFolder", { namespace: "settings", fallback: "مجلد مخصص" })}</div>
+            <div className="text-[10px] text-slate-400">{t("settings.backups.customFolderDesc", { namespace: "settings", fallback: "اختيار مجلد محدد للنسخ الاحتياطية" })}</div>
           </div>
         </label>
 
         {custom && (
           <div className="flex items-center gap-2 pr-8">
             <div className="flex-1 px-3 py-2 rounded-xl bg-white/40 border border-slate-200 text-xs text-slate-500 truncate" dir="ltr">
-              {config.custom_path || "لم يتم اختيار مجلد بعد"}
+              {config.custom_path || t("settings.backups.noFolderSelected", { namespace: "settings", fallback: "لم يتم اختيار مجلد بعد" })}
             </div>
             <Button variant="outline" size="sm" disabled={operating} onClick={() => void pickCustomFolder()} className="shrink-0 h-9 rounded-xl">
-              <FolderOpen className="h-4 w-4 mr-1" /> اختيار المجلد
+              <FolderOpen className="h-4 w-4 mr-1" /> {t("settings.backups.selectFolder", { namespace: "settings", fallback: "اختيار المجلد" })}
             </Button>
           </div>
         )}
 
         <div className="flex items-center gap-2 pt-2">
           <Button size="sm" variant="outline" disabled={operating} onClick={() => void handleOpenFolder()}>
-            <FolderOpen className="h-4 w-4 mr-1" /> فتح المجلد
+            <FolderOpen className="h-4 w-4 mr-1" /> {t("settings.backups.openFolder", { namespace: "settings", fallback: "فتح المجلد" })}
           </Button>
           <Button
             size="sm"
@@ -176,7 +183,7 @@ export function BackupSettingsPanel({ config, operating, onConfigChange, onApply
             disabled={operating}
             onClick={() => void onApplyRetention()}
           >
-            <Trash2 className="h-4 w-4 mr-1" /> تنظيف النسخ القديمة
+            <Trash2 className="h-4 w-4 mr-1" /> {t("settings.backups.cleanOld", { namespace: "settings", fallback: "تنظيف النسخ القديمة" })}
           </Button>
         </div>
       </div>

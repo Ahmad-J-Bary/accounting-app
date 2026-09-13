@@ -6,6 +6,7 @@ import { RefreshCw, Loader2 } from "lucide-react";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { DateRangePicker } from "./DateRangePicker";
 import type { ReportFilters } from "@shared/types/report";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 type Currency = { code: string; symbol?: string; name_ar?: string; name?: string };
 
@@ -45,6 +46,7 @@ export function ReportFilterBar({
   lastLoadedAt,
 }: ReportFilterBarProps) {
   const { baseCurrency } = useCurrencyContext();
+  const { t } = useLocalization();
 
   const baseCode = useMemo(
     () => baseCurrencyCode || baseCurrency?.code || "",
@@ -67,12 +69,12 @@ export function ReportFilterBar({
     if (fallbackBase && !options.find((o) => o.code === fallbackBase)) {
       options.unshift({
         code: fallbackBase,
-        label: `العملة الأساسية (${fallbackBase})`,
+        label: `${t('labels.baseCurrencyLabel', { fallback: 'العملة الأساسية' })} (${fallbackBase})`,
       });
     }
 
     return options;
-  }, [currencies, baseCurrencyCode, baseCurrency, showCurrencySelect]);
+  }, [currencies, baseCurrencyCode, baseCurrency, showCurrencySelect, t]);
 
   const effectiveValue = useMemo(() => {
     if (!currentCurrency) return "";
@@ -90,7 +92,7 @@ export function ReportFilterBar({
       {showSelect && (
         <Select value={effectiveValue} onValueChange={onCurrencyChange}>
           <SelectTrigger className="h-9 w-auto min-w-[130px] rounded-lg border-slate-200 bg-white text-xs">
-            <SelectValue placeholder="اختر العملة" />
+            <SelectValue placeholder={t('labels.chooseCurrency', { fallback: 'اختر العملة' })} />
           </SelectTrigger>
           <SelectContent>
             {currencyOptions.map((opt) => (
@@ -119,18 +121,18 @@ export function ReportFilterBar({
           onClick={() => void onRefresh()}
         >
           <RefreshCw className="h-3.5 w-3.5" />
-          تحديث
+          {t('actions.refresh', { fallback: 'تحديث' })}
         </Button>
       )}
       {refreshing && (
         <span className="flex h-9 items-center gap-1.5 rounded-lg bg-white px-2.5 text-xs text-slate-500">
           <Loader2 className="h-3.5 w-3.5 animate-spin" />
-          جارٍ التحديث…
+          {t('states.refreshing', { fallback: 'جارٍ التحديث…' })}
         </span>
       )}
       {lastLoadedAt && !refreshing && (
         <span className="text-xs text-slate-400">
-          آخر تحديث:{" "}
+          {t('labels.lastUpdate', { fallback: 'آخر تحديث:' })}{" "}
           {lastLoadedAt.toLocaleTimeString("ar-EG", {
             hour: "2-digit",
             minute: "2-digit",

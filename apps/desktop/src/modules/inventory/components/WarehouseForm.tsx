@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { Warehouse, MapPin } from 'lucide-react';
 import type { WarehouseDto, CreateWarehouseRequest, UpdateWarehouseRequest } from '@erp/shared-types';
 import { warehouseService } from '@modules/inventory/api/warehouseService';
+import { useLocalization } from '@app/providers/LocalizationProvider';
 
 interface WarehouseFormProps {
   open: boolean;
@@ -18,6 +19,7 @@ interface WarehouseFormProps {
 }
 
 export function WarehouseForm({ open, onClose, onSaved, editItem }: WarehouseFormProps) {
+  const { t } = useLocalization();
   const [name, setName] = useState('');
   const [address, setAddress] = useState('');
   const [isActive, setIsActive] = useState(true);
@@ -42,7 +44,7 @@ export function WarehouseForm({ open, onClose, onSaved, editItem }: WarehouseFor
 
   const handleSave = async () => {
     if (!name.trim()) {
-      toast.error('اسم المستودع مطلوب');
+      toast.error(t('warehouses.form.nameRequired', { namespace: 'inventory', fallback: 'اسم المستودع مطلوب' }));
       return;
     }
     setSaving(true);
@@ -56,14 +58,14 @@ export function WarehouseForm({ open, onClose, onSaved, editItem }: WarehouseFor
           is_default: isDefault,
         };
         await warehouseService.update(req);
-        toast.success('تم تحديث المستودع');
+        toast.success(t('warehouses.form.updated', { namespace: 'inventory', fallback: 'تم تحديث المستودع' }));
       } else {
         const req: CreateWarehouseRequest = {
           name: name.trim(),
           address: address.trim() || null
         };
         await warehouseService.create(req);
-        toast.success('تم إنشاء المستودع');
+        toast.success(t('warehouses.form.created', { namespace: 'inventory', fallback: 'تم إنشاء المستودع' }));
       }
       onSaved();
       onClose();
@@ -78,33 +80,33 @@ export function WarehouseForm({ open, onClose, onSaved, editItem }: WarehouseFor
 
   return (
     <FormPanel
-      title={editItem ? "تعديل مستودع" : "إضافة مستودع جديد"}
+      title={editItem ? t('warehouses.form.editTitle', { namespace: 'inventory', fallback: 'تعديل مستودع' }) : t('warehouses.form.createTitle', { namespace: 'inventory', fallback: 'إضافة مستودع جديد' })}
       icon={<Warehouse className="w-5 h-5 text-blue-600" />}
       onClose={onClose}
       onSave={handleSave}
       isSaving={saving}
       saveDisabled={!name.trim()}
-      saveLabel={editItem ? "حفظ التغييرات" : "إضافة"}
+      saveLabel={editItem ? t('warehouses.form.saveEdit', { namespace: 'inventory', fallback: 'حفظ التغييرات' }) : t('warehouses.form.saveCreate', { namespace: 'inventory', fallback: 'إضافة' })}
     >
-      <SidebarSection icon={<Warehouse className="w-3.5 h-3.5" />} title="بيانات المستودع" defaultOpen={true}>
+      <SidebarSection icon={<Warehouse className="w-3.5 h-3.5" />} title={t('warehouses.form.section', { namespace: 'inventory', fallback: 'بيانات المستودع' })} defaultOpen={true}>
         <div className="space-y-2.5 text-right">
           <div className="space-y-1.5">
-            <FieldLabel className="flex items-center gap-1.5" required><Warehouse className="w-3.5 h-3.5 text-slate-400" /> الاسم</FieldLabel>
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="اسم المستودع" className="bg-white border-slate-200 h-9" />
+            <FieldLabel className="flex items-center gap-1.5" required><Warehouse className="w-3.5 h-3.5 text-slate-400" /> {t('labels.name', { namespace: 'inventory', fallback: 'الاسم' })}</FieldLabel>
+            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={t('warehouses.form.namePlaceholder', { namespace: 'inventory', fallback: 'اسم المستودع' })} className="bg-white border-slate-200 h-9" />
           </div>
           <div className="space-y-1.5">
-            <FieldLabel className="flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5 text-slate-400" /> الموقع</FieldLabel>
-            <Input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="الموقع (اختياري)" className="bg-white border-slate-200 h-9" />
+            <FieldLabel className="flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5 text-slate-400" /> {t('warehouses.form.location', { namespace: 'inventory', fallback: 'الموقع' })}</FieldLabel>
+            <Input value={address} onChange={(e) => setAddress(e.target.value)} placeholder={t('warehouses.form.locationPlaceholder', { namespace: 'inventory', fallback: 'الموقع (اختياري)' })} className="bg-white border-slate-200 h-9" />
           </div>
           <div className="flex items-center gap-6 pt-2">
             <div className="flex items-center gap-3">
               <Switch id="warehouseIsActive" checked={isActive} onCheckedChange={setIsActive} />
-              <Label htmlFor="warehouseIsActive" className="text-sm font-medium cursor-pointer">نشط</Label>
+              <Label htmlFor="warehouseIsActive" className="text-sm font-medium cursor-pointer">{t('labels.active', { namespace: 'inventory', fallback: 'نشط' })}</Label>
             </div>
             {editItem && (
               <div className="flex items-center gap-3">
                 <Switch id="warehouseIsDefault" checked={isDefault} onCheckedChange={setIsDefault} />
-                <Label htmlFor="warehouseIsDefault" className="text-sm font-medium cursor-pointer">افتراضي</Label>
+                <Label htmlFor="warehouseIsDefault" className="text-sm font-medium cursor-pointer">{t('labels.default', { namespace: 'inventory', fallback: 'افتراضي' })}</Label>
               </div>
             )}
           </div>

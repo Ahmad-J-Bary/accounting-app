@@ -19,27 +19,6 @@ interface ConfirmState {
   period: FiscalPeriodDto;
 }
 
-const CONFIRM_COPY: Record<PeriodActionType, { title: string; description: string; confirmLabel: string }> = {
-  close: {
-    title: "إغلاق الفترة المالية",
-    description:
-      "ستغلق الفترة من {start} إلى {end}. لن تُقبل أي حركات جديدة بتاريخ ضمنها إلا عبر قيد تراجع أو رصيد افتتاحي.",
-    confirmLabel: "إغلاق",
-  },
-  lock: {
-    title: "قفل الفترة المالية نهائياً",
-    description:
-      "القفل يمنع أي حركة في الفترة بشكل نهائي ولا يمكن فتح الفترة بعد القفل. هذا إجراء لا يُرجع إلا عبر mechanism صريح.",
-    confirmLabel: "قفل نهائي",
-  },
-  reopen: {
-    title: "إعادة فتح الفترة المالية",
-    description:
-      "ستعاد الفترة إلى حالة «مُعاد فتحها» لتسجيل تصحيحات صريحة. لا يمكن فتح فترة مقفلة أو ملغاة.",
-    confirmLabel: "إعادة الفتح",
-  },
-};
-
 export default function FiscalPeriodsPage() {
   const qc = useQueryClient();
   const { formatAmount, baseCurrency } = useCurrencyContext();
@@ -126,15 +105,11 @@ export default function FiscalPeriodsPage() {
 
   const confirmCopy = confirm
     ? (() => {
-        const base = CONFIRM_COPY[confirm.type];
-        const descriptionSource = CONFIRM_COPY[confirm.type].description
-            .replace("{start}", toLocalDateStr(confirm.period.start_date))
-            .replace("{end}", toLocalDateStr(confirm.period.end_date));
         const keyPath = `fiscalPeriods.confirm.${confirm.type}` as const;
         return {
-          title: t(`${keyPath}.title`, { namespace: "accounting", fallback: base.title }),
-          description: t(`${keyPath}.description`, { namespace: "accounting", vars: { start: toLocalDateStr(confirm.period.start_date), end: toLocalDateStr(confirm.period.end_date) }, fallback: descriptionSource }),
-          confirmLabel: t(`${keyPath}.confirm`, { namespace: "accounting", fallback: base.confirmLabel }),
+          title: t(`${keyPath}.title`, { namespace: "accounting" }),
+          description: t(`${keyPath}.description`, { namespace: "accounting", vars: { start: toLocalDateStr(confirm.period.start_date), end: toLocalDateStr(confirm.period.end_date) } }),
+          confirmLabel: t(`${keyPath}.confirm`, { namespace: "accounting" }),
         };
       })()
     : null;

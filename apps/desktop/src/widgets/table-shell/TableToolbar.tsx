@@ -21,6 +21,7 @@ import {
 import { useTableSettings } from '@shared/hooks';
 import { TableDensity } from '@shared/types/table-settings';
 import { cn } from '@shared/lib/utils';
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 export interface ToolbarColumn {
   id: string;
@@ -45,7 +46,7 @@ interface TableToolbarProps {
 export const TableToolbar: React.FC<TableToolbarProps> = ({
   search,
   onSearchChange,
-  searchPlaceholder = "بحث...",
+  searchPlaceholder,
   columns,
   onColumnToggle,
   onColumnsReset,
@@ -55,6 +56,8 @@ export const TableToolbar: React.FC<TableToolbarProps> = ({
   filterBar,
 }) => {
   const { settings, updateSetting, resetSettings } = useTableSettings();
+  const { t } = useLocalization();
+  const resolvedSearchPlaceholder = searchPlaceholder ?? t('labels.placeholder', { fallback: 'بحث...' });
   const visibleCount = columns.filter((c) => c.visible).length;
   const totalCount = columns.length;
   const hasColumns = columns.length > 0;
@@ -67,7 +70,7 @@ export const TableToolbar: React.FC<TableToolbarProps> = ({
           <Input
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
-            placeholder={searchPlaceholder}
+            placeholder={resolvedSearchPlaceholder}
             className="h-8 pr-7 pl-3 text-sm bg-white border-slate-200 focus:bg-white transition-all w-full"
           />
         </div>
@@ -85,39 +88,39 @@ export const TableToolbar: React.FC<TableToolbarProps> = ({
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm" className="h-8 px-2 border-slate-200 bg-white text-slate-600">
                   <LayoutGrid className="w-3.5 h-3.5 ml-1" />
-                  <span className="text-xs">العرض</span>
+                  <span className="text-xs">{t('labels.view', { fallback: 'العرض' })}</span>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="w-56">
-                <DropdownMenuLabel className="text-right">كثافة الجدول</DropdownMenuLabel>
+                <DropdownMenuLabel className="text-right">{t('labels.tableDensity', { fallback: 'كثافة الجدول' })}</DropdownMenuLabel>
                 <DropdownMenuRadioGroup
                   value={settings.density}
                   onValueChange={(v) => updateSetting('density', v as TableDensity)}
                 >
-                  <DropdownMenuRadioItem value="compact" className="flex-row-reverse">مختصر</DropdownMenuRadioItem>
-                  <DropdownMenuRadioItem value="comfortable" className="flex-row-reverse">مريح</DropdownMenuRadioItem>
-                  <DropdownMenuRadioItem value="spacious" className="flex-row-reverse">واسع</DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="compact" className="flex-row-reverse">{t('labels.compact', { fallback: 'مختصر' })}</DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="comfortable" className="flex-row-reverse">{t('labels.comfortable', { fallback: 'مريح' })}</DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="spacious" className="flex-row-reverse">{t('labels.spacious', { fallback: 'واسع' })}</DropdownMenuRadioItem>
                 </DropdownMenuRadioGroup>
                 <DropdownMenuSeparator />
-                <DropdownMenuLabel className="text-right">خيارات أخرى</DropdownMenuLabel>
+                <DropdownMenuLabel className="text-right">{t('labels.otherOptions', { fallback: 'خيارات أخرى' })}</DropdownMenuLabel>
                 <DropdownMenuCheckboxItem
                   checked={settings.zebraRows}
                   onCheckedChange={(v) => updateSetting('zebraRows', !!v)}
                   className="flex-row-reverse"
                 >
-                  صفوف ملونة (Zebra)
+                  {t('labels.zebraRows', { fallback: 'صفوف ملونة (Zebra)' })}
                 </DropdownMenuCheckboxItem>
                 <DropdownMenuCheckboxItem
                   checked={settings.stickyHeader}
                   onCheckedChange={(v) => updateSetting('stickyHeader', !!v)}
                   className="flex-row-reverse"
                 >
-                  تثبيت الهيدر
+                  {t('labels.stickyHeader', { fallback: 'تثبيت الهيدر' })}
                 </DropdownMenuCheckboxItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={resetSettings} className="flex-row-reverse text-rose-600 focus:text-rose-600">
                   <RotateCcw className="w-4 h-4 ml-2" />
-                  إعادة ضبط المصنع
+                  {t('actions.factoryReset', { fallback: 'إعادة ضبط المصنع' })}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -133,7 +136,7 @@ export const TableToolbar: React.FC<TableToolbarProps> = ({
                   )}
                 >
                   <Columns className="w-3.5 h-3.5 ml-1" />
-                  <span className="text-xs">الأعمدة</span>
+                  <span className="text-xs">{t('labels.columns', { fallback: 'الأعمدة' })}</span>
                   {hasColumns && (
                     <span className={cn(
                       "mr-1 text-3xs font-bold px-1 py-0.5 rounded tabular-nums",
@@ -148,7 +151,7 @@ export const TableToolbar: React.FC<TableToolbarProps> = ({
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="w-64 max-h-[420px] overflow-y-auto">
                 <DropdownMenuLabel className="flex items-center justify-between text-right gap-2">
-                  <span>إظهار / إخفاء الأعمدة</span>
+                  <span>{t('labels.showHideColumns', { fallback: 'إظهار / إخفاء الأعمدة' })}</span>
                   {hasColumns && (
                     <span className="text-2xs tabular-nums text-slate-500 font-medium">
                       {visibleCount} / {totalCount}
@@ -175,7 +178,7 @@ export const TableToolbar: React.FC<TableToolbarProps> = ({
                       className="flex-row-reverse text-blue-600 focus:text-blue-600 disabled:text-slate-400 disabled:opacity-50"
                     >
                       <RotateCcw className="w-4 h-4 ml-2" />
-                      استعادة الأعمدة الافتراضية
+                      {t('actions.restoreDefaultColumns', { fallback: 'استعادة الأعمدة الافتراضية' })}
                     </DropdownMenuItem>
                   </>
                 )}

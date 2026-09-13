@@ -113,6 +113,12 @@ export const dashboard: Record<AppLanguage, TranslationTree> = {
       title: "التنبيهات",
       empty: "لا توجد تنبيهات",
     },
+    receivablesPayables: {
+      totalDebit: "إجمالي المدين",
+      totalCredit: "إجمالي الدائن",
+      unlinkedReceivable: "عملاء غير مرتبطين بحسابات محاسبية",
+      unlinkedPayable: "موردين غير مرتبطين بحسابات محاسبية",
+    },
   },
   en: {
     title: "Dashboard",
@@ -225,6 +231,12 @@ export const dashboard: Record<AppLanguage, TranslationTree> = {
     alertsCards: {
       title: "Alerts",
       empty: "No alerts",
+    },
+    receivablesPayables: {
+      totalDebit: "Total Debit",
+      totalCredit: "Total Credit",
+      unlinkedReceivable: "customers not linked to accounting entries",
+      unlinkedPayable: "suppliers not linked to accounting entries",
     },
   },
 };

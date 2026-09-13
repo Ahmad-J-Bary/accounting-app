@@ -2,6 +2,7 @@ import { useSidePanelSettings } from "@shared/hooks/useSidePanelSettings";
 import { cn } from "@shared/lib/utils";
 import { Button } from "@shared/ui/button";
 import type { SidebarFooterProps } from "./types";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 export function SidebarFooter({
   children,
@@ -9,11 +10,14 @@ export function SidebarFooter({
   onSave,
   isSaving = false,
   saveDisabled = false,
-  saveLabel = "حفظ التغييرات",
-  cancelLabel = "إلغاء",
+  saveLabel,
+  cancelLabel,
   className,
 }: SidebarFooterProps) {
   const { settings } = useSidePanelSettings();
+  const { t } = useLocalization();
+  const resolvedSaveLabel = saveLabel ?? t('actions.saveChanges', { fallback: 'حفظ التغييرات' });
+  const resolvedCancelLabel = cancelLabel ?? t('actions.cancel', { fallback: 'إلغاء' });
 
   const footerPadding =
     settings.paddingPreset === "compact" ? "p-3" : "p-4";
@@ -46,7 +50,7 @@ export function SidebarFooter({
               disabled={isSaving}
               className="h-9 px-4 rounded-lg text-slate-600 border-slate-200 text-xs font-bold"
             >
-              {cancelLabel}
+              {resolvedCancelLabel}
             </Button>
           )}
           {onSave && (
@@ -56,7 +60,7 @@ export function SidebarFooter({
               disabled={isSaving || saveDisabled}
               className="h-9 px-4 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md shadow-blue-100"
             >
-              {isSaving ? "جارى الحفظ..." : saveLabel}
+              {isSaving ? t('states.saving', { fallback: 'جارى الحفظ...' }) : resolvedSaveLabel}
             </Button>
           )}
         </>

@@ -9,6 +9,7 @@ import { TableSummary } from './TableSummary';
 import { TablePagination } from './TablePagination';
 import { EmptyState } from './EmptyState';
 import { GridHeader } from './GridHeader';
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -114,7 +115,7 @@ export function UnifiedTable<T>({
   onRowClick,
   onRowDoubleClick,
   loading,
-  emptyMessage = "لا توجد بيانات متاحة",
+  emptyMessage,
   emptySuggestion,
   emptyIcon,
   className,
@@ -130,6 +131,8 @@ export function UnifiedTable<T>({
   sortDirection,
 }: UnifiedTableProps<T>) {
   const { settings, getDensityPadding } = useTableSettings();
+  const { t } = useLocalization();
+  const resolvedEmptyMessage = emptyMessage ?? t('states.noDataAvailable', { fallback: 'لا توجد بيانات متاحة' });
 
   const visibleColumns = useMemo(
     () => columns.filter(c => c.visible !== false),
@@ -310,7 +313,7 @@ export function UnifiedTable<T>({
     if (data.length === 0) {
       return (
         <EmptyState
-          message={emptyMessage}
+          message={resolvedEmptyMessage}
           suggestion={emptySuggestion}
           icon={emptyIcon}
         />

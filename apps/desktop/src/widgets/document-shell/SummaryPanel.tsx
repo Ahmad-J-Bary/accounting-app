@@ -6,6 +6,7 @@ import {
   formatWithLocale,
   useCurrencyContext,
 } from "@app/providers/CurrencyContext";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 interface SummaryPanelProps {
   subtotal: number;
@@ -54,6 +55,7 @@ export function SummaryPanel({
   isCashParty = false,
 }: SummaryPanelProps) {
   const { baseCurrency, currencies: contextCurrencies, convertBetween } = useCurrencyContext();
+  const { t } = useLocalization();
   const safeExtra = extraCosts ?? 0;
   const availableCurrencies = currencies ?? contextCurrencies;
   const safeCurrency = currency || baseCurrency?.code || (availableCurrencies[0]?.code ?? "");
@@ -211,7 +213,7 @@ export function SummaryPanel({
           {availableCurrencies.length > 1 && (
             <div className="flex items-center gap-1.5 shrink-0 px-2.5 py-1 bg-muted rounded-md border border-border">
               <span className="text-2xs font-bold text-muted-foreground">
-                العملة:
+                {t('labels.currency', { fallback: 'العملة:' })}
               </span>
               {onCurrencyChange && currencies ? (
                 <select

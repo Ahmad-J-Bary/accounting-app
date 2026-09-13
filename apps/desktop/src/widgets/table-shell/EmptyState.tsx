@@ -1,6 +1,7 @@
 import React from 'react';
 import { cn } from '@shared/lib/utils';
 import { Inbox } from 'lucide-react';
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 interface EmptyStateProps {
   message?: string;
@@ -11,12 +12,15 @@ interface EmptyStateProps {
 }
 
 export const EmptyState: React.FC<EmptyStateProps> = ({
-  message = "لا توجد بيانات متاحة",
-  suggestion = "جرب تغيير معايير البحث أو إضافة بيانات جديدة",
+  message,
+  suggestion,
   icon,
   className,
   compact,
 }) => {
+  const { t } = useLocalization();
+  const resolvedMessage = message ?? t('states.noDataAvailable', { fallback: 'لا توجد بيانات متاحة' });
+  const resolvedSuggestion = suggestion ?? t('states.tryChangingSearchCriteria', { fallback: 'جرب تغيير معايير البحث أو إضافة بيانات جديدة' });
   return (
     <div className={cn(
       "flex flex-col items-center justify-center text-slate-400",
@@ -30,9 +34,9 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
       )}>
         {icon || <Inbox className={cn("text-slate-300", compact ? "w-6 h-6" : "w-10 h-10")} />}
       </div>
-      <p className={cn("font-bold text-slate-500", compact ? "text-sm" : "text-base")}>{message}</p>
-      {suggestion && (
-        <p className={cn("mt-1 opacity-70", compact ? "text-xs" : "text-sm")}>{suggestion}</p>
+      <p className={cn("font-bold text-slate-500", compact ? "text-sm" : "text-base")}>{resolvedMessage}</p>
+      {resolvedSuggestion && (
+        <p className={cn("mt-1 opacity-70", compact ? "text-xs" : "text-sm")}>{resolvedSuggestion}</p>
       )}
     </div>
   );

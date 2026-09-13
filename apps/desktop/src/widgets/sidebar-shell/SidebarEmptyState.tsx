@@ -1,12 +1,15 @@
 import { cn } from "@shared/lib/utils";
 import { AlertCircle } from "lucide-react";
 import type { SidebarEmptyStateProps } from "./types";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 export function SidebarEmptyState({
-  message = "الرجاء اختيار عنصر لعرض تفاصيله",
+  message,
   icon,
   className,
 }: SidebarEmptyStateProps) {
+  const { t } = useLocalization();
+  const resolvedMessage = message ?? t('labels.selectItemToView', { fallback: 'الرجاء اختيار عنصر لعرض تفاصيله' });
   return (
     <div
       className={cn(
@@ -18,7 +21,7 @@ export function SidebarEmptyState({
         {icon || <AlertCircle className="w-8 h-8 text-slate-300" />}
       </div>
       <p className="text-xs font-bold text-slate-500 max-w-[240px] leading-relaxed">
-        {message}
+        {resolvedMessage}
       </p>
     </div>
   );

@@ -3,6 +3,7 @@ import { SidebarShell } from "@widgets/sidebar-shell/SidebarShell";
 import { SidebarHeader } from "@widgets/sidebar-shell/SidebarHeader";
 import { SidebarFooter } from "@widgets/sidebar-shell/SidebarFooter";
 import type { SidebarWidth } from "@widgets/sidebar-shell/types";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 interface FormPanelProps {
   title: string;
@@ -32,9 +33,11 @@ export function FormPanel({
   className,
   width,
   forceOverlay,
-  saveLabel = "حفظ البيانات",
+  saveLabel,
   saveDisabled = false,
 }: FormPanelProps) {
+  const { t } = useLocalization();
+  const resolvedSaveLabel = saveLabel ?? t('actions.save', { fallback: 'حفظ البيانات' });
   return (
     <SidebarShell className={className} width={width} onClose={onClose} forceOverlay={forceOverlay}>
       <SidebarHeader title={title} subtitle={subtitle} icon={icon} onClose={onClose} />
@@ -54,7 +57,7 @@ export function FormPanel({
         onCancel={onClose}
         isSaving={isSaving}
         saveDisabled={saveDisabled}
-        saveLabel={saveLabel}
+        saveLabel={resolvedSaveLabel}
       >
         {footer}
       </SidebarFooter>

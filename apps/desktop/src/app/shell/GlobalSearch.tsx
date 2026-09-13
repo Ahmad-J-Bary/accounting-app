@@ -6,10 +6,10 @@ import { ICON_MAP } from "@app/shell/sidebarConfig";
 import { cn } from "@shared/lib/utils";
 import { useLocalization } from "@app/providers/LocalizationProvider";
 
-const GROUP_LABELS: Record<string, string> = {
-  navigation: "التنقل",
-  commands: "الأوامر",
-  tabs: "التبويبات المفتوحة",
+const GROUP_LABELS: Record<string, { key: string; fallback: string }> = {
+  navigation: { key: "navigation", fallback: "التنقل" },
+  commands: { key: "commands", fallback: "الأوامر" },
+  tabs: { key: "tabs", fallback: "التبويبات المفتوحة" },
 };
 
 export function GlobalSearch() {
@@ -75,7 +75,7 @@ export function GlobalSearch() {
               Object.entries(groupedResults).map(([group, items]) => (
                 <Command.Group
                   key={group}
-                  heading={GROUP_LABELS[group] || group}
+                  heading={GROUP_LABELS[group] ? t(GROUP_LABELS[group].key, { namespace: "search", fallback: GROUP_LABELS[group].fallback }) : group}
                   className="mb-3 overflow-hidden rounded-xl bg-slate-50/70 p-1 text-slate-700"
                 >
                   {items.map((result) => {

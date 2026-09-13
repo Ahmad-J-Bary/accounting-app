@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
 import { cn } from "@shared/lib/utils";
 import type { WarehouseDto } from "@erp/shared-types";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 interface WarehouseSelectorProps {
   warehouses: WarehouseDto[];
@@ -22,6 +23,7 @@ export function WarehouseSelector({
   placeholder = "اختر مستودع",
   className,
 }: WarehouseSelectorProps) {
+  const { t } = useLocalization();
   const effectiveIncludeAll = includeAll && warehouses.length > 1;
 
   const effectiveValue = useMemo(() => {
@@ -36,7 +38,7 @@ export function WarehouseSelector({
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
       <SelectContent sideOffset={4} align="start">
-        {effectiveIncludeAll && <SelectItem value="all">جميع المستودعات</SelectItem>}
+        {effectiveIncludeAll && <SelectItem value="all">{t("warehouses.all", { namespace: "inventory", fallback: "جميع المستودعات" })}</SelectItem>}
         {warehouses.map((w) => (
           <SelectItem key={w.id} value={w.id}>
             {w.name}

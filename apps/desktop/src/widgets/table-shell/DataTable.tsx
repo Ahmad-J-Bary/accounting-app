@@ -3,6 +3,7 @@ import { cn } from '@shared/lib/utils';
 import { getAlignmentClass } from "@shared/lib/table-utils";
 import { Skeleton } from "@shared/ui/skeleton";
 import { EmptyState } from './EmptyState';
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 export interface Column<T> {
   id?: string;
@@ -32,12 +33,14 @@ export function DataTable<T>({
   onRowClick,
   onRowDoubleClick,
   loading,
-  emptyMessage = "لا توجد بيانات متاحة",
+  emptyMessage,
   className,
   idKey = "id" as keyof T,
   skeletonRows = 5,
   selectedId,
 }: DataTableProps<T>) {
+  const { t } = useLocalization();
+  const resolvedEmptyMessage = emptyMessage ?? t('states.noDataAvailable', { fallback: 'لا توجد بيانات متاحة' });
   const getAlignment = (colIdx: number, explicitAlign?: "right" | "left" | "center") => {
     if (explicitAlign) return explicitAlign;
     if (colIdx === 0) return "right";
@@ -69,7 +72,7 @@ export function DataTable<T>({
       return (
         <tr>
           <td colSpan={columns.length} className="py-20">
-            <EmptyState message={emptyMessage} />
+            <EmptyState message={resolvedEmptyMessage} />
           </td>
         </tr>
       );

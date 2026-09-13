@@ -2,6 +2,7 @@ import { Button } from "@shared/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@shared/ui/dropdown-menu";
 import { LucideIcon, MoreHorizontal, Eye, Edit, Trash2, Download } from "lucide-react";
 import { cn } from '@shared/lib/utils';
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 interface ActionItem {
   label: string;
@@ -20,6 +21,7 @@ interface TableActionsProps {
 }
 
 export function TableActions({ onView, onEdit, onDelete, onExportRow, extraActions, align = "end" }: TableActionsProps) {
+  const { t } = useLocalization();
   return (
     <div onClick={e => e.stopPropagation()}>
       <DropdownMenu>
@@ -36,13 +38,13 @@ export function TableActions({ onView, onEdit, onDelete, onExportRow, extraActio
           {onView && (
             <DropdownMenuItem onClick={onView} className="gap-2 cursor-pointer py-2.5">
               <Eye className="w-4 h-4 text-slate-400" />
-              <span>عرض التفاصيل</span>
+              <span>{t('labels.viewDetails', { fallback: 'عرض التفاصيل' })}</span>
             </DropdownMenuItem>
           )}
           {onEdit && (
             <DropdownMenuItem onClick={onEdit} className="gap-2 cursor-pointer py-2.5">
               <Edit className="w-4 h-4 text-slate-400" />
-              <span>تعديل البيانات</span>
+              <span>{t('labels.editData', { fallback: 'تعديل البيانات' })}</span>
             </DropdownMenuItem>
           )}
           
@@ -63,7 +65,7 @@ export function TableActions({ onView, onEdit, onDelete, onExportRow, extraActio
           {onExportRow && (
             <DropdownMenuItem onClick={onExportRow} className="gap-2 cursor-pointer py-2.5">
               <Download className="w-4 h-4 text-slate-400" />
-              <span>تصدير إكسل</span>
+              <span>{t('labels.exportExcel', { fallback: 'تصدير إكسل' })}</span>
             </DropdownMenuItem>
           )}
 
@@ -75,7 +77,7 @@ export function TableActions({ onView, onEdit, onDelete, onExportRow, extraActio
                 className="gap-2 cursor-pointer py-2.5 text-red-600 focus:text-red-600 focus:bg-red-50/50 font-medium"
               >
                 <Trash2 className="w-4 h-4 text-red-400" />
-                <span>حذف السجل</span>
+                <span>{t('labels.deleteRecord', { fallback: 'حذف السجل' })}</span>
               </DropdownMenuItem>
             </>
           )}

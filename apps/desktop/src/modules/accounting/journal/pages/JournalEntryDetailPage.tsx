@@ -25,12 +25,6 @@ function StatusBadge({ status }: { status: string }) {
     Reversed: "bg-red-100 text-red-600",
     Cancelled: "bg-slate-300 text-slate-700",
   };
-  const labels: Record<string, string> = {
-    Draft: "مسودة",
-    Posted: "مرحل",
-    Reversed: "معكوس",
-    Cancelled: "ملغي",
-  };
   return (
     <span
       className={cn(
@@ -38,7 +32,7 @@ function StatusBadge({ status }: { status: string }) {
         styles[status] || "bg-slate-100 text-slate-600",
       )}
     >
-      {t(`journal.detail.status.${status}`, { namespace: "accounting", fallback: labels[status] || status })}
+      {t(`journal.detail.status.${status}`, { namespace: "accounting", fallback: status })}
     </span>
   );
 }

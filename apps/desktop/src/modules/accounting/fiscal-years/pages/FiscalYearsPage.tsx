@@ -26,23 +26,6 @@ interface ConfirmState {
   year: FiscalYearDto;
 }
 
-const CONFIRM_COPY: Record<FiscalYearActionType, { title: string; description: string; confirmLabel: string; destructive: boolean }> = {
-  close: {
-    title: "إغلاق السنة المالية",
-    description:
-      "ستُغلق السنة المالية «{label}» من {start} إلى {end}. يجب أن تكون جميع الفترات مغلقة أو مقفلة. لن تُقبل أي حركات جديدة في هذه السنة.",
-    confirmLabel: "إغلاق",
-    destructive: false,
-  },
-  reopen: {
-    title: "إعادة فتح السنة المالية",
-    description:
-      "ستعاد السنة المالية «{label}» إلى حالة «مُعاد فتحها». يمكن تسجيل تصحيحات صريحة بعد إعادة الفتح.",
-    confirmLabel: "إعادة الفتح",
-    destructive: false,
-  },
-};
-
 function periodWindowFromDateInput(start: string, end: string): { start_date: string; end_date: string } {
   return {
     start_date: new Date(`${start}T00:00:00Z`).toISOString(),
@@ -123,17 +106,12 @@ export default function FiscalYearsPage() {
 
   const confirmCopy = confirm
     ? (() => {
-        const base = CONFIRM_COPY[confirm.type];
-        const descriptionSource = CONFIRM_COPY[confirm.type].description
-            .replace("{label}", confirm.year.label)
-            .replace("{start}", toLocalDateStr(confirm.year.start_date))
-            .replace("{end}", toLocalDateStr(confirm.year.end_date));
         const keyPath = `fiscalYears.confirm.${confirm.type}` as const;
         return {
-          title: t(`${keyPath}.title`, { namespace: "accounting", fallback: base.title }),
-          description: t(`${keyPath}.description`, { namespace: "accounting", vars: { label: confirm.year.label, start: toLocalDateStr(confirm.year.start_date), end: toLocalDateStr(confirm.year.end_date) }, fallback: descriptionSource }),
-          confirmLabel: t(`${keyPath}.confirm`, { namespace: "accounting", fallback: base.confirmLabel }),
-          destructive: base.destructive,
+          title: t(`${keyPath}.title`, { namespace: "accounting" }),
+          description: t(`${keyPath}.description`, { namespace: "accounting", vars: { label: confirm.year.label, start: toLocalDateStr(confirm.year.start_date), end: toLocalDateStr(confirm.year.end_date) } }),
+          confirmLabel: t(`${keyPath}.confirm`, { namespace: "accounting" }),
+          destructive: false,
         };
       })()
     : null;

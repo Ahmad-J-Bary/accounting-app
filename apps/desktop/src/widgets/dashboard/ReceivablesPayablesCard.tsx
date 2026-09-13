@@ -1,6 +1,7 @@
 import { Card } from "@shared/ui/card";
 import { formatCurrency } from '@shared/lib/format';
 import { ArrowUpRight, ArrowDownRight, LucideIcon } from "lucide-react";
+import { useLocalization } from '@app/providers/LocalizationProvider';
 
 interface ReceivablesPayablesCardProps {
   title: string;
@@ -22,6 +23,7 @@ export function ReceivablesPayablesCard({
   unlinkedCount,
   type
 }: ReceivablesPayablesCardProps) {
+  const { t } = useLocalization();
   const isAmber = color === "amber";
   const borderClass = isAmber ? "border-r-amber-500" : "border-r-red-500";
   const iconColorClass = isAmber ? "text-amber-600" : "text-red-600";
@@ -41,13 +43,13 @@ export function ReceivablesPayablesCard({
       </div>
       <div className="grid grid-cols-2 gap-4 text-sm">
         <div className="p-3 bg-slate-50 rounded-md">
-          <div className="text-muted-foreground text-xs mb-1">إجمالي المدين</div>
+          <div className="text-muted-foreground text-xs mb-1">{t("receivablesPayables.totalDebit", { namespace: "dashboard", fallback: "إجمالي المدين" })}</div>
           <div className="font-bold text-red-600">
             {formatCurrency(typeof debit === "string" ? parseFloat(debit) : debit)}
           </div>
         </div>
         <div className="p-3 bg-slate-50 rounded-md">
-          <div className="text-muted-foreground text-xs mb-1">إجمالي الدائن</div>
+          <div className="text-muted-foreground text-xs mb-1">{t("receivablesPayables.totalCredit", { namespace: "dashboard", fallback: "إجمالي الدائن" })}</div>
           <div className="font-bold text-green-600">
             {formatCurrency(typeof credit === "string" ? parseFloat(credit) : credit)}
           </div>
@@ -56,7 +58,7 @@ export function ReceivablesPayablesCard({
       {unlinkedCount > 0 && (
         <div className={`mt-3 text-2xs font-medium flex items-center gap-1 ${isAmber ? "text-amber-600" : "text-red-600"}`}>
           <span className="flex h-1.5 w-1.5 rounded-full bg-current animate-pulse" />
-          ⚠️ {unlinkedCount} {type === "receivable" ? "عملاء" : "موردين"} غير مرتبطين بحسابات محاسبية
+          ⚠️ {unlinkedCount} {type === "receivable" ? t("receivablesPayables.unlinkedReceivable", { namespace: "dashboard", fallback: "عملاء غير مرتبطين بحسابات محاسبية" }) : t("receivablesPayables.unlinkedPayable", { namespace: "dashboard", fallback: "موردين غير مرتبطين بحسابات محاسبية" })}
         </div>
       )}
     </Card>

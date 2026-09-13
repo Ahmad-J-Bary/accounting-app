@@ -9,7 +9,7 @@ import { useLocalization } from '@app/providers/LocalizationProvider';
 export function TabBar() {
   const { tabs, switchTab, closeTab, openDashboardTab } = useTabs();
   const { settings } = useAppearance();
-  const { direction } = useLocalization();
+  const { t, direction } = useLocalization();
   const scrollRef = useRef<HTMLDivElement>(null);
   const isRtl = direction === 'rtl';
 
@@ -69,7 +69,7 @@ export function TabBar() {
         size="icon"
         className="h-7 w-7 shrink-0"
         onClick={openDashboardTab}
-        title="تبويب جديد"
+        title={t("newTab", { namespace: "shell", fallback: "تبويب جديد" })}
       >
         <Plus className="w-4 h-4" />
       </Button>

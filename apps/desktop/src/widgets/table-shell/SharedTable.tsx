@@ -4,6 +4,7 @@ import { UnifiedTable } from './UnifiedTable';
 import { TableShell } from './TableShell';
 import type { SummaryColumn } from './TableSummary';
 import { useUnifiedColumns, useSortable } from '@shared/hooks';
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 type SortDirection = 'asc' | 'desc';
 
@@ -42,13 +43,13 @@ export function SharedTable<T>({
   loading = false,
   search,
   onSearchChange,
-  searchPlaceholder = "بحث...",
+  searchPlaceholder,
   tableId,
   sortConfig,
   selectedId,
   onRowClick,
   sortableFields,
-  emptyMessage = "لا توجد بيانات متاحة",
+  emptyMessage,
   summary,
   enableResize = true,
   title,
@@ -61,6 +62,10 @@ export function SharedTable<T>({
     columns,
     defaultVisible: defaultVisible || columns.map(c => c.id),
   });
+
+  const { t } = useLocalization();
+  const resolvedSearchPlaceholder = searchPlaceholder ?? t('labels.placeholder', { fallback: 'بحث...' });
+  const resolvedEmptyMessage = emptyMessage ?? t('states.noDataAvailable', { fallback: 'لا توجد بيانات متاحة' });
 
   useEffect(() => {
     onVisibleColumnsChange?.(visibleColumns);
@@ -78,7 +83,7 @@ export function SharedTable<T>({
       title={title}
       search={search}
       onSearchChange={onSearchChange}
-      searchPlaceholder={searchPlaceholder}
+      searchPlaceholder={resolvedSearchPlaceholder}
       columns={toolbarColumns}
       onColumnToggle={toggleColumn}
       onColumnsReset={resetToDefault}
@@ -102,7 +107,7 @@ export function SharedTable<T>({
             handleSort(col.id);
           }
         }}
-        emptyMessage={search ? "لا توجد نتائج تطابق معايير البحث" : emptyMessage}
+        emptyMessage={search ? t('states.noMatchingResults', { fallback: 'لا توجد نتائج تطابق معايير البحث' }) : resolvedEmptyMessage}
         summary={summary}
       />
     </TableShell>

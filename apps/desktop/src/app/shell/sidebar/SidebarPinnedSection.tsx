@@ -3,6 +3,7 @@ import { useNavSidebarSettings } from '@shared/hooks';
 import { cn } from '@shared/lib/utils';
 import { SidebarItem } from './SidebarItem';
 import { Pin } from 'lucide-react';
+import { useLocalization } from '@app/providers/LocalizationProvider';
 
 interface SidebarPinnedSectionProps {
   collapsed: boolean;
@@ -19,6 +20,7 @@ export function SidebarPinnedSection({
 }: SidebarPinnedSectionProps) {
   const { getPinnedItems } = useSidebarLayout();
   const { settings } = useNavSidebarSettings();
+  const { t } = useLocalization();
 
   const pinnedItems = getPinnedItems().filter(i => !hiddenItemIds?.has(i.id));
   if (pinnedItems.length === 0) return null;
@@ -38,7 +40,7 @@ export function SidebarPinnedSection({
         <div className="flex items-center gap-1.5 px-2 mb-1.5">
           <Pin className={cn("w-2.5 h-2.5", "text-amber-400")} />
           <span className={cn("text-[10px] font-bold uppercase tracking-[0.1em]", sectionHeaderClass)}>
-            المثبتات
+            {t("pinnedSection", { namespace: "shell", fallback: "المثبتات" })}
           </span>
         </div>
       )}

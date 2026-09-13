@@ -1,6 +1,7 @@
 import { SettingsSection as LayoutSection } from "@widgets/templates/SettingsLayout";
 import { BackupSettingsPanel } from "../panels/BackupSettingsPanel";
 import type { BackupConfig } from "../../../api/backupService";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 interface Props {
   config: BackupConfig;
@@ -10,8 +11,9 @@ interface Props {
 }
 
 export function SettingsSection({ config, operating, onConfigChange, onApplyRetention }: Props) {
+  const { t } = useLocalization();
   return (
-    <LayoutSection title="إعدادات النسخ الاحتياطي">
+    <LayoutSection title={t("settings.backups.settingsTitle", { namespace: "settings", fallback: "إعدادات النسخ الاحتياطي" })}>
       <BackupSettingsPanel
         config={config}
         operating={operating}

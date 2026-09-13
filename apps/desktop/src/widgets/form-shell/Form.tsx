@@ -6,6 +6,7 @@ import { Textarea } from '@shared/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@shared/ui/select';
 import { Card } from '@shared/ui/card';
 import { Separator } from '@shared/ui/separator';
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 interface FieldConfig {
   name: string;
@@ -34,11 +35,14 @@ export function Form({
   description,
   fields,
   onSubmit,
-  submitLabel = 'حفظ',
-  cancelLabel = 'إلغاء',
+  submitLabel,
+  cancelLabel,
   onCancel,
   isLoading = false,
 }: FormProps) {
+  const { t } = useLocalization();
+  const resolvedSubmitLabel = submitLabel ?? t('actions.save', { fallback: 'حفظ' });
+  const resolvedCancelLabel = cancelLabel ?? t('actions.cancel', { fallback: 'إلغاء' });
   const [formData, setFormData] = useState<Record<string, unknown>>(() => {
     const initialData: Record<string, unknown> = {};
     fields.forEach((field) => {
@@ -68,7 +72,7 @@ export function Form({
 
       // Required validation
       if (field.required && (value === undefined || value === '')) {
-        newErrors[field.name] = `${field.label} مطلوب`;
+        newErrors[field.name] = `${field.label} ${t('labels.required', { fallback: 'مطلوب' })}`;
         isValid = false;
       }
 
@@ -180,11 +184,11 @@ export function Form({
         <div className="flex items-center justify-end gap-3">
           {onCancel && (
             <Button type="button" variant="outline" onClick={onCancel} disabled={isLoading}>
-              {cancelLabel}
+              {resolvedCancelLabel}
             </Button>
           )}
           <Button type="submit" disabled={isLoading}>
-            {isLoading ? 'جاري الحفظ...' : submitLabel}
+            {isLoading ? t('states.saving', { fallback: 'جاري الحفظ...' }) : resolvedSubmitLabel}
           </Button>
         </div>
       </form>

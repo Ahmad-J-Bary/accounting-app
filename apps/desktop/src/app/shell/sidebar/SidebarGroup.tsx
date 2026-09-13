@@ -4,6 +4,7 @@ import { ICON_MAP } from '@app/shell/sidebarConfig';
 import type { SidebarGroupConfig } from '@shared/types/sidebar-config';
 import { SidebarItem } from './SidebarItem';
 import { ChevronDown, ChevronUp, FolderPlus } from 'lucide-react';
+import { useLocalization } from '@app/providers/LocalizationProvider';
 
 interface SidebarGroupProps {
   group: SidebarGroupConfig;
@@ -29,7 +30,8 @@ export function SidebarGroup({
   verticalAppearance,
 }: SidebarGroupProps) {
   const { settings } = useNavSidebarSettings();
-  const { groupTitle } = useNavLabels();
+  void useNavLabels();
+  const { t } = useLocalization();
 
   const {
     navGroupCollapseBehavior = 'free',
@@ -163,7 +165,7 @@ export function SidebarGroup({
                 sectionHeaderClass,
                 isBgLight ? "hover:bg-slate-200 hover:text-slate-700" : "hover:bg-white/10 hover:text-white"
               )}
-              title={isCollapsed ? "توسيع" : "طي"}
+              title={isCollapsed ? t("expand", { namespace: "shell", fallback: "توسيع" }) : t("collapse", { namespace: "shell", fallback: "طي" })}
             >
               {isCollapsed ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />}
             </button>

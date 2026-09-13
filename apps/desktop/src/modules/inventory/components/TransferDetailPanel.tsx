@@ -8,6 +8,7 @@ import {
   SidebarDetailGrid,
   type SidebarAction,
 } from "@widgets/sidebar-shell";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 interface TransferDetailPanelProps {
   reference: string;
@@ -34,19 +35,20 @@ export function TransferDetailPanel({
   onEdit,
   onDelete,
 }: TransferDetailPanelProps) {
+  const { t } = useLocalization();
   const actionItems: SidebarAction[] = [
     {
-      label: "تعديل",
+      label: t("labels.edit", { namespace: "inventory", fallback: "تعديل" }),
       icon: <Pencil className="w-4 h-4" />,
       variant: "warning",
       onClick: () => onEdit(reference),
     },
     {
-      label: "حذف",
+      label: t("labels.delete", { namespace: "inventory", fallback: "حذف" }),
       icon: <Trash2 className="w-4 h-4" />,
       variant: "danger",
       onClick: () => {
-        if (confirm("هل أنت متأكد من حذف هذا التحويل؟ سيتم حذف حركتي المخزون المرتبطتين به.")) {
+        if (confirm(t("transfers.deleteConfirm", { namespace: "inventory", fallback: "هل أنت متأكد من حذف هذا التحويل؟ سيتم حذف حركتي المخزون المرتبطتين به." }))) {
           onDelete(reference);
         }
       },
@@ -55,30 +57,30 @@ export function TransferDetailPanel({
 
   return (
     <SidebarShell isOpen={true} onClose={onClose}>
-      <SidebarHeader title="تفاصيل التحويل" onClose={onClose} />
+      <SidebarHeader title={t("transfers.detailTitle", { namespace: "inventory", fallback: "تفاصيل التحويل" })} onClose={onClose} />
       <SidebarActionBar actions={actionItems} />
       <SidebarBody>
         <div className="space-y-4 text-right">
           <SidebarDetailGrid
             columns={2}
             fields={[
-              { label: "المادة", value: materialName },
-              { label: "تاريخ التحويل", value: formatDateTime(transferDate) },
+              { label: t("labels.material", { namespace: "inventory", fallback: "المادة" }), value: materialName },
+              { label: t("transfers.form.transferDate", { namespace: "inventory", fallback: "تاريخ التحويل" }), value: formatDateTime(transferDate) },
             ]}
           />
           <SidebarDetailGrid
             columns={2}
             fields={[
-              { label: "من مستودع", value: sourceWarehouseName },
-              { label: "إلى مستودع", value: destWarehouseName },
+              { label: t("transfers.fromWarehouse", { namespace: "inventory", fallback: "من مستودع" }), value: sourceWarehouseName },
+              { label: t("transfers.toWarehouse", { namespace: "inventory", fallback: "إلى مستودع" }), value: destWarehouseName },
             ]}
           />
           <SidebarDetailGrid
-            title="معلومات إضافية"
+            title={t("transfers.extraInfo", { namespace: "inventory", fallback: "معلومات إضافية" })}
             fields={[
-              { label: "الكمية", value: toLocalString(parseFloat(quantity)) },
-              { label: "المرجع", value: formatNumber(parseInt(reference) || 0) },
-              ...(notes ? [{ label: "ملاحظات", value: notes }] : []),
+              { label: t("labels.quantity", { namespace: "inventory", fallback: "الكمية" }), value: toLocalString(parseFloat(quantity)) },
+              { label: t("labels.reference", { namespace: "inventory", fallback: "المرجع" }), value: formatNumber(parseInt(reference) || 0) },
+              ...(notes ? [{ label: t("labels.notes", { namespace: "inventory", fallback: "ملاحظات" }), value: notes }] : []),
             ]}
           />
         </div>

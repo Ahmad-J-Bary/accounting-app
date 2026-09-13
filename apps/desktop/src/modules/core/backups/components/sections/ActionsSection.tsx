@@ -2,6 +2,7 @@ import { SettingsSection } from "@widgets/templates/SettingsLayout";
 import { ManualBackupPanel } from "../panels/ManualBackupPanel";
 import { InspectFileFlow } from "../InspectFileFlow";
 import type { BackupFileInfo } from "../../../api/backupService";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 interface Props {
   operating: boolean;
@@ -11,8 +12,9 @@ interface Props {
 }
 
 export function ActionsSection({ operating, onDone, preset = null, onPresetConsumed }: Props) {
+  const { t } = useLocalization();
   return (
-    <SettingsSection title="إجراءات البيانات">
+    <SettingsSection title={t("settings.backups.actionsTitle", { namespace: "settings", fallback: "إجراءات البيانات" })}>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <ManualBackupPanel operating={operating} onDone={onDone} />
         <InspectFileFlow
