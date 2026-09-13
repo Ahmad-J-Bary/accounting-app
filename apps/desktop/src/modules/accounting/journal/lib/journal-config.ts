@@ -64,3 +64,10 @@ export const JOURNAL_COLUMNS = [
 export function getJournalColumnsByType(): string[] {
   return JOURNAL_COLUMNS;
 }
+
+/** Resource key for a journal type display label (see `journal.types.*`). */
+export const journalTypeKey = (type: string): string => `journal.types.${type}`;
+
+/** Resource key for a journal type filter/option label (see `journal.typeOptions.*`). */
+export const journalTypeOptionKey = (type: string): string =>
+  `journal.typeOptions.${type}`;

@@ -22,9 +22,11 @@ const TERMINOLOGY_STORAGE_KEY = "erp_terminology_overrides";
 const SAFE_FALLBACK_VALUE: LocalizationContextValue = {
   language: DEFAULT_LANGUAGE,
   direction: DIRECTION_BY_LANGUAGE[DEFAULT_LANGUAGE],
+  isRTL: DIRECTION_BY_LANGUAGE[DEFAULT_LANGUAGE] === "rtl",
   locale: LOCALE_BY_LANGUAGE[DEFAULT_LANGUAGE],
   setLanguage: () => {},
   t: (key, options) => options?.fallback ?? key,
+  resolveLabel: (key: string, fallback?: string) => fallback ?? key,
   setTerminologyOverride: () => {},
   removeTerminologyOverride: () => {},
   terminologyOverrides: [],
@@ -32,6 +34,7 @@ const SAFE_FALLBACK_VALUE: LocalizationContextValue = {
 
 const LocalizationContext = createContext<LocalizationContextValue>(SAFE_FALLBACK_VALUE);
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function applyDocumentAttributes(language: AppLanguage) {
   const direction = DIRECTION_BY_LANGUAGE[language];
   const locale = LOCALE_BY_LANGUAGE[language];
@@ -156,6 +159,7 @@ export function LocalizationProvider({ children }: { children: React.ReactNode }
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useLocalization(): LocalizationContextValue {
   return useContext(LocalizationContext);
 }

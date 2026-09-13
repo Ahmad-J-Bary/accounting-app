@@ -4,6 +4,7 @@ import { Button } from "@shared/ui/button";
 import { Plus, Eye, Printer, Settings2, Trash2 } from "lucide-react";
 import { InvoiceDto } from "@erp/shared-types";
 import type { CurrencyDisplayMode } from "@app/providers/CurrencyContext";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 import { InvoiceTable } from "./InvoiceTable";
 
 
@@ -74,6 +75,7 @@ export function InvoiceList({
   showDiscount = false,
   extraColumns = [],
 }: InvoiceListProps) {
+  const { t } = useLocalization();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
@@ -83,7 +85,7 @@ export function InvoiceList({
 
   const handleDeleteSelected = async () => {
     if (!selectedId) return;
-    if (!window.confirm("هل أنت متأكد من حذف هذه الفاتورة؟ سيتم حذف القيود المرتبطة بها أيضاً.")) return;
+    if (!window.confirm(t("invoice.confirmDeleteList", { namespace: "invoicing", fallback: "هل أنت متأكد من حذف هذه الفاتورة؟ سيتم حذف القيود المرتبطة بها أيضاً." }))) return;
     await onDelete(selectedId);
     setSelectedId(null);
   };
@@ -100,7 +102,9 @@ export function InvoiceList({
       return matchesSearch && matchesParty && matchesStatus;
     }), [invoices, search, partyIdFilter, statusFilter, partyType]);
 
-  const partyLabel = partyType === "supplier" ? "المورد" : "الزبون";
+  const partyLabel = partyType === "supplier"
+    ? t("invoice.partySupplier", { namespace: "invoicing", fallback: "المورد" })
+    : t("invoice.partyCustomer", { namespace: "invoicing", fallback: "الزبون" });
   const defaultName = partyType === "supplier" ? "مورد نقدي" : "زبون نقدي";
 
   return (
@@ -122,7 +126,7 @@ export function InvoiceList({
               }
             }}
             className="h-9 border-slate-200 hover:bg-slate-50 font-bold">
-            <Eye className="w-4 h-4 ml-2 text-blue-500" /> عرض
+            <Eye className="w-4 h-4 ml-2 text-blue-500" /> {t("actions.view", { namespace: "invoicing", fallback: "عرض" })}
           </Button>
           <Button variant="outline" size="sm" disabled={!selectedId}
             onClick={() => {
@@ -134,17 +138,17 @@ export function InvoiceList({
               }
             }}
             className="h-9 border-slate-200 hover:bg-slate-50 font-bold">
-            <Settings2 className="w-4 h-4 ml-2 text-amber-500" /> تعديل
+            <Settings2 className="w-4 h-4 ml-2 text-amber-500" /> {t("actions.edit", { namespace: "invoicing", fallback: "تعديل" })}
           </Button>
           <Button variant="outline" size="sm" disabled={!selectedId}
             onClick={handleDeleteSelected}
             className="h-9 border-slate-200 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 font-bold transition-all">
-            <Trash2 className="w-4 h-4 ml-2 text-rose-500" /> حذف
+            <Trash2 className="w-4 h-4 ml-2 text-rose-500" /> {t("actions.delete", { namespace: "invoicing", fallback: "حذف" })}
           </Button>
           <Button variant="outline" size="sm" disabled={!selectedId}
             onClick={() => { window.dispatchEvent(new Event("app:prepare-print")); requestAnimationFrame(() => window.print()); }}
             className="h-9 border-slate-200 hover:bg-slate-50 font-bold">
-            <Printer className="w-4 h-4 ml-2 text-slate-500" /> طباعة
+            <Printer className="w-4 h-4 ml-2 text-slate-500" /> {t("actions.print", { namespace: "invoicing", fallback: "طباعة" })}
           </Button>
         </div>
       }

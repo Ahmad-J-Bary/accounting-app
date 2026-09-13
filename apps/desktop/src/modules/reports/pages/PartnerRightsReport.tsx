@@ -11,16 +11,13 @@ import { ReportLoadingSkeleton, ReportErrorState } from "@widgets/reports";
 import { useReportFilters } from "@shared/hooks/useReportFilters";
 import { usePartnerRightsReport } from "@modules/reports/hooks/usePartnerRightsReport";
 import { ProfitDistributionSidePanel } from "@modules/accounting/profit-distribution/components/ProfitDistributionSidePanel";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 type ViewMode = "profit-share" | "statement";
 
-const VIEW_OPTIONS: Record<ViewMode, string> = {
-  "profit-share": "تقاسم الأرباح",
-  "statement": "كشف الحساب",
-};
-
 export default function PartnerRightsReport() {
   const { baseCurrency, currencies, formatAmount, hasMultipleCurrencies } = useCurrencyContext();
+  const { t } = useLocalization();
   const { filters, setFilters, selectedCurrency, setSelectedCurrency } = useReportFilters(
     new Date(new Date().getFullYear(), 0, 1).toISOString().split("T")[0],
     new Date().toISOString().split("T")[0]
@@ -30,6 +27,11 @@ export default function PartnerRightsReport() {
   const [showProfitDistribution, setShowProfitDistribution] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>("profit-share");
 
+  const VIEW_OPTIONS: Record<ViewMode, string> = {
+    "profit-share": t("partnerRights.viewProfitShare", { namespace: "reports", fallback: "تقاسم الأرباح" }),
+    "statement": t("partnerRights.viewStatement", { namespace: "reports", fallback: "كشف الحساب" }),
+  };
+
   const formatValue = (value: number) =>
     formatAmount(value, {
       currencyCode: selectedCurrency || baseCurrency?.code,
@@ -38,7 +40,7 @@ export default function PartnerRightsReport() {
 
   const viewSwitcher = (
     <div className="flex flex-wrap items-center gap-2">
-      <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider whitespace-nowrap">العرض:</span>
+      <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider whitespace-nowrap">{t("partnerRights.viewLabel", { namespace: "reports", fallback: "العرض:" })}</span>
       <Select value={viewMode} onValueChange={(v) => setViewMode(v as ViewMode)}>
         <SelectTrigger className="w-[125px] h-8 bg-white font-bold shadow-sm border-slate-200 text-xs">
           <SelectValue />
@@ -54,7 +56,7 @@ export default function PartnerRightsReport() {
 
   return (
     <OperationalTableTemplate
-      title="الشركاء وحقوقهم"
+      title={t("partnerRights.title", { namespace: "reports", fallback: "الشركاء وحقوقهم" })}
       toolbar={
         <ReportFilterBar
           filters={filters}
@@ -74,7 +76,7 @@ export default function PartnerRightsReport() {
               onClick={() => setShowProfitDistribution(true)}
             >
               <Coins className="me-2 h-4 w-4" />
-              توزيع الأرباح
+              {t("partnerRights.distributeButton", { namespace: "reports", fallback: "توزيع الأرباح" })}
             </Button>
           }
         />
@@ -87,7 +89,7 @@ export default function PartnerRightsReport() {
         ) : computed.profitShare.rows.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
             <Users className="mb-3 h-12 w-12" />
-            <p className="text-sm font-bold">لا يوجد شركاء نشطون لعرض التقرير</p>
+            <p className="text-sm font-bold">{t("partnerRights.empty", { namespace: "reports", fallback: "لا يوجد شركاء نشطون لعرض التقرير" })}</p>
           </div>
         ) : viewMode === "profit-share" ? (
           <PartnerProfitShareView computed={computed.profitShare} formatValue={formatValue} filterBar={viewSwitcher} />

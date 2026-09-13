@@ -11,6 +11,7 @@ import {
 import { useCurrencyContext, formatWithLocale } from "@app/providers/CurrencyContext";
 import { toFixed } from "@shared/lib/format";
 import { resolveProfitShareRatio } from "@modules/reports/lib/partnerProfitShare";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 interface PartnerDetailViewProps {
   partner: PartnerWithRatios;
@@ -28,6 +29,7 @@ export function PartnerDetailView({
   onClose,
 }: PartnerDetailViewProps) {
   const { formatAmount, currencies } = useCurrencyContext();
+  const { t } = useLocalization();
   const partnerCurrency = currencies.find(c => c.code === partner.currency);
 
   const actualProfitRatio = resolveProfitShareRatio(
@@ -40,7 +42,7 @@ export function PartnerDetailView({
     ...(onEdit
       ? [
           {
-            label: "تعديل",
+            label: t("actions.edit", { namespace: "partners", fallback: "تعديل" }),
             icon: <Pencil className="w-4 h-4" />,
             variant: "warning" as const,
             onClick: () => onEdit(),
@@ -50,11 +52,11 @@ export function PartnerDetailView({
     ...(onDelete
       ? [
           {
-            label: "حذف",
+            label: t("actions.delete", { namespace: "partners", fallback: "حذف" }),
             icon: <Trash2 className="w-4 h-4" />,
             variant: "danger" as const,
             onClick: () => {
-              if (confirm("هل أنت متأكد من حذف هذا الشريك؟")) {
+              if (confirm(t("confirm.delete", { namespace: "partners", fallback: "هل أنت متأكد من حذف هذا الشريك؟" }))) {
                 onDelete(partner.id);
               }
             },
@@ -67,7 +69,7 @@ export function PartnerDetailView({
     <SidebarShell isOpen={true} onClose={onClose}>
       <SidebarHeader
         title={partner.name}
-        subtitle={`ملف الشريك`}
+        subtitle={t("view.subtitle", { namespace: "partners", fallback: "ملف الشريك" })}
         onClose={onClose}
       />
       <SidebarActionBar actions={actions} />
@@ -75,12 +77,12 @@ export function PartnerDetailView({
         <div className="text-right space-y-6">
           <div className="p-5 border border-slate-100 rounded-2xl bg-slate-50/30">
             <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-2 mb-4">
-              معلومات الاستثمار
+              {t("view.investmentSection", { namespace: "partners", fallback: "معلومات الاستثمار" })}
             </h4>
             <div className="grid grid-cols-2 gap-3">
               <div className="p-3 bg-white rounded-xl border border-slate-100">
                 <div className="text-[10px] text-slate-400 font-bold uppercase mb-1">
-                  المبلغ الأصلي
+                  {t("view.fields.originalAmount", { namespace: "partners", fallback: "المبلغ الأصلي" })}
                 </div>
                 <div className="text-lg font-black text-slate-900 tabular-nums">
                   {formatWithLocale(parseFloat(partner.amount_original || "0"), partnerCurrency?.decimals ?? 2)} {partnerCurrency?.symbol || partner.currency || ""}
@@ -88,7 +90,7 @@ export function PartnerDetailView({
               </div>
               <div className="p-3 bg-white rounded-xl border border-slate-100">
                 <div className="text-[10px] text-slate-400 font-bold uppercase mb-1">
-                  {`المعادل بالعملة الأساسية (${baseCurrency?.symbol || baseCurrency?.code || ""})`}
+                  {t("view.fields.baseEquivalent", { namespace: "partners", vars: { currency: baseCurrency?.symbol || baseCurrency?.code || "" }, fallback: "المعادل بالعملة الأساسية ({{currency}})" })}
                 </div>
                 <div className="text-lg font-black text-slate-900 tabular-nums">
                   {formatAmount(partner.displayAmountBase, { currencyCode: baseCurrency?.code || "" })}
@@ -98,7 +100,7 @@ export function PartnerDetailView({
             <div className="grid grid-cols-2 gap-3 mt-4">
               <div className="p-3 bg-white rounded-xl border border-slate-100">
                 <div className="text-[10px] text-slate-400 font-bold uppercase mb-1">
-                  نسبة رأس المال
+                  {t("view.fields.capitalRatio", { namespace: "partners", fallback: "نسبة رأس المال" })}
                 </div>
                 <div className="text-sm font-black text-blue-700 tabular-nums">
                   {toFixed(partner.calculatedCapitalRatio, 2) || "0.00"}%
@@ -106,7 +108,7 @@ export function PartnerDetailView({
               </div>
               <div className="p-3 bg-white rounded-xl border border-slate-100">
                 <div className="text-[10px] text-slate-400 font-bold uppercase mb-1">
-                  نسبة الأرباح
+                  {t("view.fields.profitRatio", { namespace: "partners", fallback: "نسبة الأرباح" })}
                 </div>
                 <div className="text-sm font-black text-emerald-700 tabular-nums">
                   {toFixed(actualProfitRatio, 2)}%
@@ -117,7 +119,7 @@ export function PartnerDetailView({
           {partner.notes && (
             <div className="p-5 border border-slate-100 rounded-2xl bg-slate-50/30">
               <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-2 mb-4">
-                ملاحظات
+                {t("view.fields.notes", { namespace: "partners", fallback: "ملاحظات" })}
               </h4>
               <p className="text-sm text-slate-700 whitespace-pre-wrap">{partner.notes}</p>
             </div>

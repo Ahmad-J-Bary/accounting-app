@@ -20,6 +20,7 @@ import { SharedTable } from "@widgets/table-shell/SharedTable";
 import { useDataTable, useExportSetup, useBaseCurrencyColumns } from "@shared/hooks";
 import { FixedAssetForm } from "@modules/fixed-assets/components/FixedAssetForm";
 import { FixedAssetDetailPanel } from "@modules/fixed-assets/components/FixedAssetDetailPanel";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 import type { UnifiedColumn } from "@widgets/table-shell/UnifiedTable";
 import { TableActions } from "@widgets/table-shell/TableActions";
 import { WarehouseSelector } from "@modules/inventory/components/WarehouseSelector";
@@ -41,6 +42,7 @@ const TYPE_CATEGORY_NAMES: Record<string, string[]> = {
 export default function FixedAssetsPage() {
   const { isBaseCurrency, currencySuffix: cs, hasSecondaryCurrencies } = useBaseCurrencyColumns();
   const { exportData, formatAmount, currencies, rateMap, currencyMode, baseCode, ratesSheet } = useExportSetup();
+  const { t } = useLocalization();
 
   const {
     filtered: allAssets,
@@ -150,37 +152,37 @@ export default function FixedAssetsPage() {
   }, []);
 
   const handleDelete = useCallback(async (asset: FixedAssetDto) => {
-    if (!confirm(`هل أنت متأكد من حذف الأصل "${asset.name}"؟\nهذه العملية لا يمكن التراجع عنها.`)) return;
+    if (!confirm(t("confirmDeleteWithWarning", { namespace: "fixedAssets", fallback: 'هل أنت متأكد من حذف الأصل "{{name}}"؟\nهذه العملية لا يمكن التراجع عنها.', vars: { name: asset.name } }))) return;
     try {
       await fixedAssetService.delete(asset.id);
-      toast.success("تم حذف الأصل بنجاح");
+      toast.success(t("toast.deleted", { namespace: "fixedAssets", fallback: "تم حذف الأصل بنجاح" }));
       if (selectedAsset?.id === asset.id) setSelectedAsset(null);
       refresh(true);
       await invalidateKeys(queryClient, [...CHART_MUTATION_KEYS, ...ALL_INVENTORY_KEYS]);
     } catch (e) {
-      toast.error("فشل حذف الأصل: " + e);
+      toast.error(t("toast.deleteFailed", { namespace: "fixedAssets", fallback: "فشل حذف الأصل: {{error}}", vars: { error: String(e) } }));
     }
-  }, [refresh, selectedAsset]);
+  }, [refresh, selectedAsset, t]);
 
   const allColumns: UnifiedColumn<FixedAssetDto>[] = useMemo(
     () => {
       const cols: UnifiedColumn<FixedAssetDto>[] = [
         {
           id: "code",
-          header: "الكود",
+          header: t("table.colCode", { namespace: "fixedAssets", fallback: "الكود" }),
           accessor: "code",
           className: "font-mono w-24",
         },
-        { id: "name", header: "الاسم", accessor: "name" },
+        { id: "name", header: t("table.colName", { namespace: "fixedAssets", fallback: "الاسم" }), accessor: "name" },
         {
           id: "category",
-          header: "التصنيف",
+          header: t("table.colCategory", { namespace: "fixedAssets", fallback: "التصنيف" }),
           accessor: (r: FixedAssetDto) => categoryMap.get(r.category_id) || "-",
           className: "w-32 text-center",
         },
         {
           id: "warehouse",
-          header: "المستودع",
+          header: t("table.colWarehouse", { namespace: "fixedAssets", fallback: "المستودع" }),
           accessor: (r: FixedAssetDto) =>
             r.warehouse_id ? warehouseMap.get(r.warehouse_id) || "-" : "-",
           className: "w-28 text-center",
@@ -191,8 +193,8 @@ export default function FixedAssetsPage() {
         const symbol = curr.symbol || curr.code;
         cols.push({
           id: `purchase_cost_${curr.code}`,
-          header: `التكلفة${cs(symbol)}`,
-          label: `التكلفة${cs(symbol)}`,
+          header: t("table.colCost", { namespace: "fixedAssets", fallback: "التكلفة{{suffix}}", vars: { suffix: cs(symbol) } }),
+          label: t("table.colCost", { namespace: "fixedAssets", fallback: "التكلفة{{suffix}}", vars: { suffix: cs(symbol) } }),
           accessor: (r: FixedAssetDto) => {
             const val = parseFloat(r.purchase_cost.amount);
             if (Math.abs(val) === 0) return "";
@@ -210,12 +212,12 @@ export default function FixedAssetsPage() {
         const symbol = curr.symbol || curr.code;
         cols.push({
           id: `accumulated_depreciation_${curr.code}`,
-          header: `مجمع الإهلاك${cs(symbol)}`,
-          label: `مجمع الإهلاك${cs(symbol)}`,
+          header: t("table.colAccumulatedDepreciation", { namespace: "fixedAssets", fallback: "مجمع الإهلاك{{suffix}}", vars: { suffix: cs(symbol) } }),
+          label: t("table.colAccumulatedDepreciation", { namespace: "fixedAssets", fallback: "مجمع الإهلاك{{suffix}}", vars: { suffix: cs(symbol) } }),
           accessor: (r: FixedAssetDto) => {
             const val = parseFloat(r.accumulated_depreciation.amount);
             if (val === 0 && r.useful_life_months === 0)
-              return <span className="text-slate-400 text-xs">لا ينطبق</span>;
+              return <span className="text-slate-400 text-xs">{t("table.notApplicable", { namespace: "fixedAssets", fallback: "لا ينطبق" })}</span>;
             if (Math.abs(val) === 0) return "";
             if (curr.code === r.accumulated_depreciation.currency.code) {
               return formatAmount(val, { currencyCode: curr.code });
@@ -231,8 +233,8 @@ export default function FixedAssetsPage() {
         const symbol = curr.symbol || curr.code;
         cols.push({
           id: `net_book_value_${curr.code}`,
-          header: `صافي القيمة${cs(symbol)}`,
-          label: `صافي القيمة${cs(symbol)}`,
+          header: t("table.colNetBookValue", { namespace: "fixedAssets", fallback: "صافي القيمة{{suffix}}", vars: { suffix: cs(symbol) } }),
+          label: t("table.colNetBookValue", { namespace: "fixedAssets", fallback: "صافي القيمة{{suffix}}", vars: { suffix: cs(symbol) } }),
           accessor: (r: FixedAssetDto) => {
             const nbv =
               parseFloat(r.purchase_cost.amount) -
@@ -252,19 +254,19 @@ export default function FixedAssetsPage() {
       cols.push(
         {
           id: "notes",
-          header: "التوصيف",
+          header: t("table.colNotes", { namespace: "fixedAssets", fallback: "التوصيف" }),
           accessor: (r: FixedAssetDto) => r.notes || "—",
           className: "max-w-[200px] truncate text-xs",
         },
         {
           id: "purchase_date",
-          header: "تاريخ الحيازة",
+          header: t("table.colAcquisitionDate", { namespace: "fixedAssets", fallback: "تاريخ الحيازة" }),
           accessor: (r: FixedAssetDto) => toLocalDateStr(r.purchase_date),
           className: "w-36 text-center text-xs tabular-nums",
         },
         {
           id: "actions",
-          header: "إجراءات",
+          header: t("table.colActions", { namespace: "fixedAssets", fallback: "إجراءات" }),
           accessor: (r: FixedAssetDto) => (
             <TableActions
               onView={() => handleRowClick(r)}
@@ -278,7 +280,7 @@ export default function FixedAssetsPage() {
 
       return cols;
     },
-    [warehouseMap, categoryMap, handleRowClick, handleEdit, handleDelete, currencies, formatAmount, cs]
+    [warehouseMap, categoryMap, handleRowClick, handleEdit, handleDelete, currencies, formatAmount, cs, t]
   );
 
   const columns = useMemo(() => {
@@ -291,16 +293,16 @@ export default function FixedAssetsPage() {
   }, [allColumns, assetTypeFilter]);
 
   const handleRunRotation = useCallback(async () => {
-    if (!confirm("هل تريد تدوير الحسابات وترحيل إهلاك الأصول لهذا العام؟")) return;
+    if (!confirm(t("confirmRotation", { namespace: "fixedAssets", fallback: "هل تريد تدوير الحسابات وترحيل إهلاك الأصول لهذا العام؟" }))) return;
     try {
       const results = await fixedAssetService.runYearlyRotation(new Date().toISOString());
-      toast.success(`تم ترحيل إهلاك ${results.length} أصل بنجاح`);
+      toast.success(t("toast.rotationSuccess", { namespace: "fixedAssets", fallback: "تم ترحيل إهلاك {{count}} أصل بنجاح", vars: { count: results.length } }));
       refresh(true);
       await invalidateKeys(queryClient, [...CHART_MUTATION_KEYS, ...ALL_INVENTORY_KEYS]);
     } catch (e) {
-      toast.error("فشل تدوير الحسابات: " + e);
+      toast.error(t("toast.rotationFailed", { namespace: "fixedAssets", fallback: "فشل تدوير الحسابات: {{error}}", vars: { error: String(e) } }));
     }
-  }, [refresh]);
+  }, [refresh, t]);
 
   const handleExport = useCallback(async () => {
     const summary = mergeCurrencySummaries(
@@ -309,7 +311,7 @@ export default function FixedAssetsPage() {
       buildCurrencySummary("net_book_value", currencies),
     );
 
-    const purchaseCols = currencyAmountCols("purchase_cost", "التكلفة", (row) => {
+    const purchaseCols = currencyAmountCols("purchase_cost", t("table.colCost", { namespace: "fixedAssets", fallback: "التكلفة{{suffix}}", vars: { suffix: "" } }), (row) => {
       const r = row as unknown as FixedAssetDto;
       const val = parseFloat(r.purchase_cost.amount);
       if (baseCode === r.purchase_cost.currency.code) return val;
@@ -318,7 +320,7 @@ export default function FixedAssetsPage() {
     }, currencies, formatAmount, "", true, hasSecondaryCurrencies, currencyMode, baseCode, rateMap);
     applyVisibilityToCurrencyCols(purchaseCols, new Set(visibleColumnIds));
 
-    const depCols = currencyAmountCols("accumulated_depreciation", "مجمع الإهلاك", (row) => {
+    const depCols = currencyAmountCols("accumulated_depreciation", t("table.colAccumulatedDepreciation", { namespace: "fixedAssets", fallback: "مجمع الإهلاك{{suffix}}", vars: { suffix: "" } }), (row) => {
       const r = row as unknown as FixedAssetDto;
       if (r.useful_life_months === 0) return 0;
       const val = parseFloat(r.accumulated_depreciation.amount);
@@ -332,7 +334,7 @@ export default function FixedAssetsPage() {
       const nbvId = `net_book_value_${curr.code}`;
       return {
         id: nbvId,
-        label: `صافي القيمة${cs(curr.symbol || curr.code)}`,
+        label: t("table.colNetBookValue", { namespace: "fixedAssets", fallback: "صافي القيمة{{suffix}}", vars: { suffix: cs(curr.symbol || curr.code) } }),
         formula: `{col('purchase_cost_${curr.code}')}{row}-{col('accumulated_depreciation_${curr.code}')}{row}`,
         numeric: true,
         decimalPlaces: 2,
@@ -341,30 +343,30 @@ export default function FixedAssetsPage() {
     applyVisibilityToCurrencyCols(nbvCols, new Set(visibleColumnIds));
 
     const exportColumns: ExcelExportColumn[] = [
-      { id: "code", label: "الكود", hidden: !visibleColumnIds.includes("code"), accessor: (row) => String((row as Record<string, unknown>).code ?? "") },
-      { id: "name", label: "الاسم", hidden: !visibleColumnIds.includes("name"), accessor: (row) => String((row as Record<string, unknown>).name ?? "") },
-      { id: "category", label: "التصنيف", hidden: !visibleColumnIds.includes("category"), accessor: (row) => categoryMap.get((row as Record<string, unknown>).category_id as string) ?? "" },
-      { id: "warehouse", label: "المستودع", hidden: !visibleColumnIds.includes("warehouse"), accessor: (row) => {
+      { id: "code", label: t("table.colCode", { namespace: "fixedAssets", fallback: "الكود" }), hidden: !visibleColumnIds.includes("code"), accessor: (row) => String((row as Record<string, unknown>).code ?? "") },
+      { id: "name", label: t("table.colName", { namespace: "fixedAssets", fallback: "الاسم" }), hidden: !visibleColumnIds.includes("name"), accessor: (row) => String((row as Record<string, unknown>).name ?? "") },
+      { id: "category", label: t("table.colCategory", { namespace: "fixedAssets", fallback: "التصنيف" }), hidden: !visibleColumnIds.includes("category"), accessor: (row) => categoryMap.get((row as Record<string, unknown>).category_id as string) ?? "" },
+      { id: "warehouse", label: t("table.colWarehouse", { namespace: "fixedAssets", fallback: "المستودع" }), hidden: !visibleColumnIds.includes("warehouse"), accessor: (row) => {
         const r = row as Record<string, unknown>;
         return r.warehouse_id ? warehouseMap.get(r.warehouse_id as string) ?? "" : "";
       }},
       ...purchaseCols,
       ...depCols,
       ...nbvCols,
-      { id: "notes", label: "التوصيف", hidden: !visibleColumnIds.includes("notes"), accessor: (row) => String((row as Record<string, unknown>).notes ?? "") },
-      { ...dateCol("purchase_date", "تاريخ الحيازة", (row) => (row as Record<string, unknown>).purchase_date as string), hidden: !visibleColumnIds.includes("purchase_date") },
+      { id: "notes", label: t("table.colNotes", { namespace: "fixedAssets", fallback: "التوصيف" }), hidden: !visibleColumnIds.includes("notes"), accessor: (row) => String((row as Record<string, unknown>).notes ?? "") },
+      { ...dateCol("purchase_date", t("table.colAcquisitionDate", { namespace: "fixedAssets", fallback: "تاريخ الحيازة" }), (row) => (row as Record<string, unknown>).purchase_date as string), hidden: !visibleColumnIds.includes("purchase_date") },
     ];
 
     await executeExport(exportData, {
-      sheetName: "الأصول الثابتة",
-      filename: "الأصول الثابتة",
+      sheetName: t("export.sheetName", { namespace: "fixedAssets", fallback: "الأصول الثابتة" }),
+      filename: t("export.filename", { namespace: "fixedAssets", fallback: "الأصول الثابتة" }),
       data: assets as unknown as Record<string, unknown>[],
       columns: exportColumns,
       summary,
-      summaryLabel: "المجموع",
+      summaryLabel: t("export.summaryLabel", { namespace: "fixedAssets", fallback: "المجموع" }),
       currencyRatesSheet: ratesSheet,
     });
-  }, [assets, currencies, categoryMap, warehouseMap, exportData, cs, ratesSheet, formatAmount, rateMap, currencyMode, baseCode, hasSecondaryCurrencies, visibleColumnIds]);
+  }, [assets, currencies, categoryMap, warehouseMap, exportData, cs, ratesSheet, formatAmount, rateMap, currencyMode, baseCode, hasSecondaryCurrencies, visibleColumnIds, t]);
 
   const defaultVisible = useMemo(() => {
     const ids: string[] = ["code", "name", "category"];
@@ -394,7 +396,7 @@ export default function FixedAssetsPage() {
 
   return (
     <OperationalTableTemplate
-      title="الأصول الثابتة"
+      title={t("title", { namespace: "fixedAssets", fallback: "الأصول الثابتة" })}
       toolbar={
         <div className="flex items-center gap-2">
           <Button
@@ -403,7 +405,7 @@ export default function FixedAssetsPage() {
             className="bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
             onClick={handleRunRotation}
           >
-            تدوير الحسابات
+            {t("table.rotateButton", { namespace: "fixedAssets", fallback: "تدوير الحسابات" })}
           </Button>
           <Button
             size="sm"
@@ -411,7 +413,7 @@ export default function FixedAssetsPage() {
             className="bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
             onClick={handleExport}
           >
-            <Download className="w-4 h-4 ml-2 text-slate-500" /> تصدير إكسل
+            <Download className="w-4 h-4 ml-2 text-slate-500" /> {t("table.exportButton", { namespace: "fixedAssets", fallback: "تصدير إكسل" })}
           </Button>
           <Button
             size="sm"
@@ -422,7 +424,7 @@ export default function FixedAssetsPage() {
             }}
             className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100 font-bold"
           >
-            <Plus className="w-4 h-4 ml-2" /> أصل جديد
+            <Plus className="w-4 h-4 ml-2" /> {t("table.addButton", { namespace: "fixedAssets", fallback: "أصل جديد" })}
           </Button>
         </div>
       }
@@ -449,14 +451,14 @@ export default function FixedAssetsPage() {
                 }}
               >
                 <SelectTrigger className="w-[180px] bg-white border-slate-200 h-8 text-xs font-bold text-slate-700">
-                  <SelectValue placeholder="نوع الأصل" />
+                  <SelectValue placeholder={t("table.assetTypePlaceholder", { namespace: "fixedAssets", fallback: "نوع الأصل" })} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all" className="text-xs">كل الأصول</SelectItem>
-                  <SelectItem value="buildings_land" className="text-xs">أبنية وأراضي</SelectItem>
-                  <SelectItem value="automotive" className="text-xs">آليات ومركبات</SelectItem>
-                  <SelectItem value="equipment" className="text-xs">معدات وتجهيزات</SelectItem>
-                  <SelectItem value="furniture" className="text-xs">أثاث ومفروشات</SelectItem>
+                  <SelectItem value="all" className="text-xs">{t("table.allAssetTypes", { namespace: "fixedAssets", fallback: "كل الأصول" })}</SelectItem>
+                  <SelectItem value="buildings_land" className="text-xs">{t("assetTypes.buildings_land", { namespace: "fixedAssets", fallback: "أبنية وأراضي" })}</SelectItem>
+                  <SelectItem value="automotive" className="text-xs">{t("assetTypes.automotive", { namespace: "fixedAssets", fallback: "آليات ومركبات" })}</SelectItem>
+                  <SelectItem value="equipment" className="text-xs">{t("assetTypes.equipment", { namespace: "fixedAssets", fallback: "معدات وتجهيزات" })}</SelectItem>
+                  <SelectItem value="furniture" className="text-xs">{t("assetTypes.furniture", { namespace: "fixedAssets", fallback: "أثاث ومفروشات" })}</SelectItem>
                 </SelectContent>
               </Select>
 
@@ -466,7 +468,7 @@ export default function FixedAssetsPage() {
                   value={warehouseFilter}
                   onValueChange={(v) => setWarehouseFilter(v)}
                   includeAll
-                  placeholder="جميع المستودعات"
+                  placeholder={t("table.allWarehouses", { namespace: "fixedAssets", fallback: "جميع المستودعات" })}
                   className="w-[150px] h-8 text-xs"
                 />
               )}

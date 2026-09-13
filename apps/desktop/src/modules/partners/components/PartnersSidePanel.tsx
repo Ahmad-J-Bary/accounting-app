@@ -7,6 +7,7 @@ import { PaymentForm, PAYMENT_CONFIGS } from '@modules/partners/components/Payme
 import { PartnerDetailView } from '@modules/partners/components/PartnerDetailView';
 import { ProfitDistributionSidePanel } from '@modules/accounting/profit-distribution/components/ProfitDistributionSidePanel';
 import { toast } from "sonner";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 interface PartnersSidePanelProps {
   activePanel: "edit" | "drawings" | "view" | "profit-distribution" | null;
@@ -37,6 +38,8 @@ export function PartnersSidePanel({
   onSaveForm,
   onSaveDrawings,
 }: PartnersSidePanelProps) {
+  const { t } = useLocalization();
+
   if (activePanel === "profit-distribution") {
     return (
       <ProfitDistributionSidePanel
@@ -59,7 +62,7 @@ export function PartnersSidePanel({
 
   if (activePanel === "drawings" && selectedPartner) {
     if (!selectedPartner.drawings_account_id) {
-      toast.error("لم يتم إعداد حساب المسحوبات لهذا الشريك");
+      toast.error(t("toast.drawingsAccountNotConfigured", { namespace: "partners", fallback: "لم يتم إعداد حساب المسحوبات لهذا الشريك" }));
       return null;
     }
     return (

@@ -4,6 +4,7 @@ import { Button } from "@shared/ui/button";
 import { Plus, Eye, Settings2, Trash2, Printer } from "lucide-react";
 import type { SalesReturnDto, PurchaseReturnDto } from "@erp/shared-types";
 import type { CurrencyDisplayMode } from "@app/providers/CurrencyContext";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 import { ReturnsTable } from "./ReturnsTable";
 
 interface ReturnsListProps {
@@ -47,6 +48,7 @@ export function ReturnsList({
   createLabel,
   emptyMessage,
 }: ReturnsListProps) {
+  const { t } = useLocalization();
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const filtered = useMemo(() =>
@@ -64,11 +66,13 @@ export function ReturnsList({
       return matchesSearch && matchesParty;
     }), [returns, search, partyIdFilter, partyType]);
 
-  const partyLabel = partyType === "supplier" ? "المورد" : "الزبون";
+  const partyLabel = partyType === "supplier"
+    ? t("return.partySupplier", { namespace: "invoicing", fallback: "المورد" })
+    : t("return.partyCustomer", { namespace: "invoicing", fallback: "الزبون" });
 
   const handleDeleteSelected = async () => {
     if (!selectedId) return;
-    if (!window.confirm("هل أنت متأكد من حذف هذا المرتجع؟")) return;
+    if (!window.confirm(t("return.confirmDelete", { namespace: "invoicing", fallback: "هل أنت متأكد من حذف هذا المرتجع؟" }))) return;
     await onDelete(selectedId);
     setSelectedId(null);
   };
@@ -88,7 +92,7 @@ export function ReturnsList({
               if (ret) onView(ret);
             }}
             className="h-9 border-slate-200 hover:bg-slate-50 font-bold">
-            <Eye className="w-4 h-4 ml-2 text-blue-500" /> عرض
+            <Eye className="w-4 h-4 ml-2 text-blue-500" /> {t("actions.view", { namespace: "invoicing", fallback: "عرض" })}
           </Button>
           <Button variant="outline" size="sm" disabled={!selectedId}
             onClick={() => {
@@ -96,17 +100,17 @@ export function ReturnsList({
               if (ret) onEdit(ret);
             }}
             className="h-9 border-slate-200 hover:bg-slate-50 font-bold">
-            <Settings2 className="w-4 h-4 ml-2 text-amber-500" /> تعديل
+            <Settings2 className="w-4 h-4 ml-2 text-amber-500" /> {t("actions.edit", { namespace: "invoicing", fallback: "تعديل" })}
           </Button>
           <Button variant="outline" size="sm" disabled={!selectedId}
             onClick={handleDeleteSelected}
             className="h-9 border-slate-200 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 font-bold transition-all">
-            <Trash2 className="w-4 h-4 ml-2 text-rose-500" /> حذف
+            <Trash2 className="w-4 h-4 ml-2 text-rose-500" /> {t("actions.delete", { namespace: "invoicing", fallback: "حذف" })}
           </Button>
           <Button variant="outline" size="sm" disabled={!selectedId}
             onClick={() => { window.dispatchEvent(new Event("app:prepare-print")); requestAnimationFrame(() => window.print()); }}
             className="h-9 border-slate-200 hover:bg-slate-50 font-bold">
-            <Printer className="w-4 h-4 ml-2 text-slate-500" /> طباعة
+            <Printer className="w-4 h-4 ml-2 text-slate-500" /> {t("actions.print", { namespace: "invoicing", fallback: "طباعة" })}
           </Button>
         </div>
       }

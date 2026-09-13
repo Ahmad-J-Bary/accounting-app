@@ -9,6 +9,7 @@ import { SidebarSection } from "@widgets/sidebar-shell/SidebarSection";
 import { Receipt } from "lucide-react";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { getExchangeRate } from "@shared/lib/currency-strategy";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 export interface PaymentFormConfig {
   paymentType: "Receipt" | "SupplierPayment" | "DrawingsVoucher";
@@ -34,8 +35,15 @@ interface PaymentFormProps {
 
 export function PaymentForm({ config, onSave, onClose, saving }: PaymentFormProps) {
   const { currencies, baseCurrency, rateMap } = useCurrencyContext();
+  const { t } = useLocalization();
+  const payLabelKeys = PAYMENT_LABEL_KEYS[config.paymentType];
   const defaultCurrency = config.entityCurrency || baseCurrency?.code || "";
   const idFieldName = config.getIdField(config);
+  const payTitle = t(payLabelKeys.title, { namespace: "partners", fallback: config.title });
+  const payCreditLabel = t(payLabelKeys.creditLabel, { namespace: "partners", fallback: config.creditLabel });
+  const payDebitLabel = t(payLabelKeys.debitLabel, { namespace: "partners", fallback: config.debitLabel });
+  const treasury = t("payment.treasury", { namespace: "partners", fallback: "الخزينة (الصندوق)" });
+  const payNotesPrefix = t(payLabelKeys.notesPrefix, { namespace: "partners", fallback: config.notesPrefix });
 
   const [form, setForm] = useState<Partial<CreatePaymentRequest>>({
     payment_type: config.paymentType,
@@ -44,7 +52,7 @@ export function PaymentForm({ config, onSave, onClose, saving }: PaymentFormProp
     currency_code: defaultCurrency,
     exchange_rate: String(getExchangeRate(defaultCurrency, rateMap, baseCurrency?.code)),
     [idFieldName]: config.entityId,
-    notes: `${config.notesPrefix}${config.entityName}`,
+    notes: `${payNotesPrefix}${config.entityName}`,
   });
 
   const handleCurrencyChange = (val: string) => {
@@ -68,22 +76,30 @@ export function PaymentForm({ config, onSave, onClose, saving }: PaymentFormProp
 
   const isSaveDisabled = !form.amount || parseFloat(form.amount) <= 0 || !config.entityId;
 
+  const payCreditValue = config.paymentType === "Receipt" ? config.entityName : treasury;
+  const payDebitValue =
+    config.paymentType === "Receipt"
+      ? treasury
+      : config.paymentType === "DrawingsVoucher"
+        ? t("payment.debitValueDrawings", { namespace: "partners", vars: { name: config.entityName }, fallback: `مسحوبات {{name}}` })
+        : config.entityName;
+
   return (
     <FormPanel
-      title={config.title}
+      title={payTitle}
       icon={<Receipt className={`w-5 h-5 ${config.iconColor}`} />}
       onClose={onClose}
       onSave={handleSave}
       isSaving={saving}
       saveDisabled={isSaveDisabled}
-      saveLabel="حفظ السند"
+      saveLabel={t("payment.saveLabel", { namespace: "partners", fallback: "حفظ السند" })}
     >
       <div className="space-y-6 text-right">
-        <SidebarSection title="تفاصيل السند">
+        <SidebarSection title={t("payment.detailsSection", { namespace: "partners", fallback: "تفاصيل السند" })}>
           <div className="grid grid-cols-2 gap-4">
             {currencies.length > 1 && (
               <div className="space-y-1.5">
-                <FieldLabel>العملة</FieldLabel>
+                <FieldLabel>{t("payment.currency", { namespace: "partners", fallback: "العملة" })}</FieldLabel>
                 <Select value={form.currency_code} onValueChange={handleCurrencyChange}>
                   <SelectTrigger className="h-9 font-bold bg-white">
                     <SelectValue />
@@ -100,7 +116,7 @@ export function PaymentForm({ config, onSave, onClose, saving }: PaymentFormProp
             )}
 
             <div className={`space-y-1.5 ${currencies.length > 1 ? "" : "col-span-2"}`}>
-              <FieldLabel required>المبلغ</FieldLabel>
+              <FieldLabel required>{t("payment.amount", { namespace: "partners", fallback: "المبلغ" })}</FieldLabel>
               <Input
                 type="number"
                 min="0"
@@ -113,21 +129,21 @@ export function PaymentForm({ config, onSave, onClose, saving }: PaymentFormProp
 
             <div className="col-span-2 grid grid-cols-2 gap-4 p-3 bg-slate-50/50 rounded-lg border border-slate-100">
               <div className="space-y-1.5">
-                <FieldLabel>{config.creditLabel}</FieldLabel>
+                <FieldLabel>{payCreditLabel}</FieldLabel>
                 <Input
-                  value={config.paymentType === "Receipt" ? config.entityName : "الخزينة (الصندوق)"}
+                  value={payCreditValue}
                   disabled
                   className="h-9 bg-slate-50 text-slate-500 font-bold"
                 />
               </div>
               <div className="space-y-1.5">
-                <FieldLabel>{config.debitLabel}</FieldLabel>
-                <Input value={config.debitValue} disabled className="h-9 bg-slate-50 text-slate-500 font-bold" />
+                <FieldLabel>{payDebitLabel}</FieldLabel>
+                <Input value={payDebitValue} disabled className="h-9 bg-slate-50 text-slate-500 font-bold" />
               </div>
             </div>
 
             <div className="space-y-1.5 col-span-2">
-              <FieldLabel>التاريخ</FieldLabel>
+              <FieldLabel>{t("payment.date", { namespace: "partners", fallback: "التاريخ" })}</FieldLabel>
               <Input
                 type="date"
                 value={form.payment_date?.slice(0, 10) ?? ""}
@@ -137,11 +153,11 @@ export function PaymentForm({ config, onSave, onClose, saving }: PaymentFormProp
             </div>
 
             <div className="space-y-1.5 col-span-2">
-              <FieldLabel>البيان / ملاحظات</FieldLabel>
+              <FieldLabel>{t("payment.notesLabel", { namespace: "partners", fallback: "البيان / ملاحظات" })}</FieldLabel>
               <Textarea
                 value={form.notes ?? ""}
                 onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))}
-                placeholder="بيان السند (اختياري)"
+                placeholder={t("payment.notesPlaceholder", { namespace: "partners", fallback: "بيان السند (اختياري)" })}
                 className="min-h-[60px] bg-white border-slate-200"
               />
             </div>
@@ -151,6 +167,27 @@ export function PaymentForm({ config, onSave, onClose, saving }: PaymentFormProp
     </FormPanel>
   );
 }
+
+const PAYMENT_LABEL_KEYS = {
+  Receipt: {
+    title: "payment.titles.receipt",
+    creditLabel: "payment.creditLabels.receipt",
+    debitLabel: "payment.debitLabels.receipt",
+    notesPrefix: "payment.notesPrefixes.receipt",
+  },
+  SupplierPayment: {
+    title: "payment.titles.supplierPayment",
+    creditLabel: "payment.creditLabels.supplierPayment",
+    debitLabel: "payment.debitLabels.supplierPayment",
+    notesPrefix: "payment.notesPrefixes.supplierPayment",
+  },
+  DrawingsVoucher: {
+    title: "payment.titles.drawings",
+    creditLabel: "payment.creditLabels.drawings",
+    debitLabel: "payment.debitLabels.drawings",
+    notesPrefix: "payment.notesPrefixes.drawings",
+  },
+} as const;
 
 export const PAYMENT_CONFIGS = {
   customer: (customer: { id: string; name: string; currency?: string }): PaymentFormConfig => ({

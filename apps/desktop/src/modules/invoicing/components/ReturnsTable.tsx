@@ -6,6 +6,7 @@ import { useExportSetup, useUnifiedColumns, useSortable, useBaseCurrencyColumns 
 import { executeExport, dateCol, currencyAmountCols } from "@shared/lib/excel";
 import type { ExcelExportColumn } from "@shared/lib/excel";
 import { Button } from "@shared/ui/button";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 import { formatDateTime, formatNumber } from "@shared/lib/format";
 
 import type { SalesReturnDto, PurchaseReturnDto } from "@erp/shared-types";
@@ -42,6 +43,7 @@ export function ReturnsTable({
   onDelete,
   onExportRow,
 }: ReturnsTableProps) {
+  const { t } = useLocalization();
   const { isBaseCurrency, currencySuffix: cs } = useBaseCurrencyColumns();
   const { exportData, baseCurrency, currencies, formatAmount, rateMap, baseCode, currencyMode, ratesSheet } = useExportSetup();
 
@@ -57,8 +59,8 @@ export function ReturnsTable({
     const cols: UnifiedColumn<SalesReturnDto | PurchaseReturnDto>[] = [
       {
         id: "return_number",
-        header: "الرقم",
-        label: "رقم المرتجع",
+        header: t("return.colNumber", { namespace: "invoicing", fallback: "الرقم" }),
+        label: t("return.labelNumber", { namespace: "invoicing", fallback: "رقم المرتجع" }),
         accessor: (ret) => formatNumber(parseInt(ret.return_number) || 0),
         className: "font-black text-slate-900 text-center"
       },
@@ -77,8 +79,8 @@ export function ReturnsTable({
         const isBase = isBaseCurrency(curr.code);
         return {
           id: `total_amount_${curr.code}`,
-          header: `الإجمالي${cs(curr.symbol || curr.code)}`,
-          label: `الإجمالي${cs(curr.symbol || curr.code)}`,
+          header: `${t("return.totalBase", { namespace: "invoicing", fallback: "الإجمالي" })}${cs(curr.symbol || curr.code)}`,
+          label: `${t("return.totalBase", { namespace: "invoicing", fallback: "الإجمالي" })}${cs(curr.symbol || curr.code)}`,
           accessor: (ret: SalesReturnDto | PurchaseReturnDto) => {
             const val = parseFloat(ret.total_amount || "0");
             if (val === 0) return "";
@@ -91,29 +93,29 @@ export function ReturnsTable({
       }),
       {
         id: "notes",
-        header: "التوصيف",
-        label: "التوصيف",
+        header: t("return.colDescription", { namespace: "invoicing", fallback: "التوصيف" }),
+        label: t("return.colDescription", { namespace: "invoicing", fallback: "التوصيف" }),
         accessor: (ret) => ret.notes || "",
         className: "text-slate-500 italic"
       },
       {
         id: "return_date",
-        header: "التاريخ",
-        label: "التاريخ",
+        header: t("return.colDate", { namespace: "invoicing", fallback: "التاريخ" }),
+        label: t("return.colDate", { namespace: "invoicing", fallback: "التاريخ" }),
         accessor: (ret) => formatDateTime(ret.return_date),
         className: "text-slate-500 tabular-nums"
       },
       ...((onView || onEdit || onDelete) ? [{
         id: "actions",
-        header: "إجراءات",
-        label: "إجراءات",
+        header: t("return.colActions", { namespace: "invoicing", fallback: "إجراءات" }),
+        label: t("return.colActions", { namespace: "invoicing", fallback: "إجراءات" }),
         accessor: (ret: SalesReturnDto | PurchaseReturnDto) => {
           return (
             <TableActions
               onView={onView ? () => onView(ret) : undefined}
               onEdit={onEdit ? () => onEdit(ret) : undefined}
               onDelete={onDelete ? () => {
-                if (window.confirm("هل أنت متأكد من حذف هذا المرتجع؟")) {
+                if (window.confirm(t("return.confirmDelete", { namespace: "invoicing", fallback: "هل أنت متأكد من حذف هذا المرتجع؟" }))) {
                   onDelete(ret.id);
                 }
               } : undefined}
@@ -125,7 +127,7 @@ export function ReturnsTable({
       }] : []),
     ];
     return cols;
-  }, [currencies, formatAmount, partnerLabel, onView, onEdit, onDelete, onExportRow, isBaseCurrency, cs]);
+  }, [currencies, formatAmount, partnerLabel, onView, onEdit, onDelete, onExportRow, isBaseCurrency, cs, t]);
 
   // Default visible: only base currency's total column shown
   const defaultVisible = useMemo(() => {
@@ -183,7 +185,7 @@ export function ReturnsTable({
   const handleExport = useCallback(async () => {
     const summary: Record<string, 'sum' | 'subtotal' | 'average' | null> = {};
 
-    const currCols = currencyAmountCols("total_amount", "الإجمالي", (row) => parseFloat((row as unknown as (SalesReturnDto | PurchaseReturnDto)).total_amount || "0") || 0, currencies, formatAmount, "", true, currencies.length > 1, currencyMode, baseCode, rateMap);
+    const currCols = currencyAmountCols("total_amount", t("return.totalBase", { namespace: "invoicing", fallback: "الإجمالي" }), (row) => parseFloat((row as unknown as (SalesReturnDto | PurchaseReturnDto)).total_amount || "0") || 0, currencies, formatAmount, "", true, currencies.length > 1, currencyMode, baseCode, rateMap);
     const currColMap = new Map(currCols.map(c => [c.id, c]));
 
     const exportColumns: ExcelExportColumn[] = enrichedColumns
@@ -235,7 +237,7 @@ export function ReturnsTable({
         };
       });
 
-    const exportTitle = partnerLabel.includes("مورد") ? "قائمة مرتجعات المشتريات" : "قائمة مرتجعات المبيعات";
+    const exportTitle = partnerLabel.includes("مورد") ? t("return.exportListPurchase", { namespace: "invoicing", fallback: "قائمة مرتجعات المشتريات" }) : t("return.exportListSales", { namespace: "invoicing", fallback: "قائمة مرتجعات المبيعات" });
 
     await executeExport(exportData, {
       sheetName: exportTitle,
@@ -243,10 +245,10 @@ export function ReturnsTable({
       data: sortedData as unknown as Record<string, unknown>[],
       columns: exportColumns,
       summary: Object.keys(summary).length > 0 ? summary : undefined,
-      summaryLabel: "المجموع",
+      summaryLabel: t("document.summaryLabel", { namespace: "invoicing", fallback: "المجموع" }),
       currencyRatesSheet: ratesSheet,
     });
-  }, [enrichedColumns, partnerLabel, sortedData, exportData, ratesSheet, currencies, formatAmount, currencyMode, baseCode, rateMap]);
+  }, [enrichedColumns, partnerLabel, sortedData, exportData, ratesSheet, currencies, formatAmount, currencyMode, baseCode, rateMap, t]);
 
   const baseTotal = useMemo(() =>
     items.reduce((s, ret) => s + (parseFloat(ret.total_amount || "0") || 0), 0),
@@ -256,7 +258,7 @@ export function ReturnsTable({
     const colIds = enrichedColumns.map(c => c.id);
     return colIds.map(id => {
       if (id === "return_number") {
-        return { id: "count", columnId: "return_number", label: "", value: `${sortedData.length} مرتجع`, className: "text-slate-500 font-medium" };
+        return { id: "count", columnId: "return_number", label: "", value: t("return.countReturns", { namespace: "invoicing", vars: { count: sortedData.length }, fallback: `{{count}} مرتجع` }), className: "text-slate-500 font-medium" };
       }
       const match = id.match(/^total_amount_(.+)$/);
       if (match) {
@@ -265,7 +267,7 @@ export function ReturnsTable({
         return {
           id: `${id}_summary`,
           columnId: id,
-          label: `الإجمالي${cs(currCode)}`,
+          label: `${t("return.totalBase", { namespace: "invoicing", fallback: "الإجمالي" })}${cs(currCode)}`,
           value: baseTotal > 0 ? formatAmount(baseTotal, { currencyCode: currCode }) : "—",
           className: isBase
             ? "font-black text-slate-900"
@@ -274,13 +276,13 @@ export function ReturnsTable({
       }
       return { id: `${id}_spacer`, columnId: id, label: "", value: "" };
     });
-  }, [enrichedColumns, baseTotal, formatAmount, sortedData, isBaseCurrency, cs]);
+  }, [enrichedColumns, baseTotal, formatAmount, sortedData, isBaseCurrency, cs, t]);
 
   return (
     <TableShell
       search={search}
       onSearchChange={onSearchChange}
-      searchPlaceholder="بحث برقم المرتجع أو الاسم..."
+      searchPlaceholder={t("return.searchPlaceholderDefault", { namespace: "invoicing", fallback: "بحث برقم المرتجع أو الاسم..." })}
       columns={toolbarColumns}
       onColumnToggle={toggleColumn}
       onColumnsReset={resetToDefault}
@@ -294,7 +296,7 @@ export function ReturnsTable({
           onClick={handleExport}
         >
           <Download className="w-3.5 h-3.5 ml-1.5 text-emerald-600" />
-          تصدير إكسل
+          {t("actions.exportExcel", { namespace: "invoicing", fallback: "تصدير إكسل" })}
         </Button>
       )}
     >
@@ -316,7 +318,7 @@ export function ReturnsTable({
         onRowClick={(ret) => onSelect?.(ret.id)}
         selectedId={selectedId}
         summary={summaryColumns}
-        emptyMessage={emptyMessage ?? "لا توجد بيانات"}
+        emptyMessage={emptyMessage ?? t("return.emptyDefault", { namespace: "invoicing", fallback: "لا توجد بيانات" })}
       />
     </TableShell>
   );

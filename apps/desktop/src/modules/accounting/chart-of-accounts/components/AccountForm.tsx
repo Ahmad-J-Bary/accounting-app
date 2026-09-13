@@ -7,6 +7,7 @@ import { SidebarSection } from "@widgets/sidebar-shell/SidebarSection";
 import type { AccountDto } from "@erp/shared-types";
 import { accountingService, type AccountCategory, type AccountType } from "@modules/accounting/api/accountingService";
 import type { ResolvedTreeNode } from "@shared/tree/nodeTypes";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 import { suggestChildCode, resolveLevel } from "../lib/accountCodeSuggestion";
 
 interface AccountFormProps {
@@ -35,6 +36,7 @@ export function AccountForm({
   onClose,
   onSaved,
 }: AccountFormProps) {
+  const { t } = useLocalization();
   const [code, setCode] = useState("");
   const [codeSuffix, setCodeSuffix] = useState("");
   const [nameAr, setNameAr] = useState("");
@@ -93,12 +95,12 @@ export function AccountForm({
 
   const handleSave = async () => {
     if (!nameAr.trim()) {
-      setError("يرجى تعبئة اسم الحساب.");
+      setError(t("chartOfAccounts.error.accountNameRequired", { namespace: "accounting", fallback: "يرجى تعبئة اسم الحساب." }));
       return;
     }
 
     if (mode === "edit" && !code.trim()) {
-      setError("يرجى تعبئة رقم الحساب.");
+      setError(t("chartOfAccounts.error.accountCodeRequired", { namespace: "accounting", fallback: "يرجى تعبئة رقم الحساب." }));
       return;
     }
 
@@ -145,7 +147,7 @@ export function AccountForm({
       onSaved();
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "تعذر حفظ الحساب. حاول مرة أخرى.",
+        err instanceof Error ? err.message : t("chartOfAccounts.error.saveFailed", { namespace: "accounting", fallback: "تعذر حفظ الحساب. حاول مرة أخرى." }),
       );
     } finally {
       setSaving(false);
@@ -156,13 +158,13 @@ export function AccountForm({
 
   return (
     <FormPanel
-      title={mode === "edit" ? "تعديل الحساب" : "إضافة حساب جديد"}
+      title={mode === "edit" ? t("chartOfAccounts.form.editTitle", { namespace: "accounting", fallback: "تعديل الحساب" }) : t("chartOfAccounts.form.createTitle", { namespace: "accounting", fallback: "إضافة حساب جديد" })}
       icon={<span className="text-xl">{mode === "edit" ? "✎" : "＋"}</span>}
       onClose={onClose}
       onSave={handleSave}
       isSaving={saving}
       saveDisabled={!nameAr.trim()}
-      saveLabel={mode === "edit" ? "حفظ التعديلات" : "إضافة الحساب"}
+      saveLabel={mode === "edit" ? t("chartOfAccounts.form.editSave", { namespace: "accounting", fallback: "حفظ التعديلات" }) : t("chartOfAccounts.form.createSave", { namespace: "accounting", fallback: "إضافة الحساب" })}
     >
       <div className="space-y-6 text-end">
         {error && (
@@ -170,23 +172,23 @@ export function AccountForm({
             {error}
           </div>
         )}
-        <SidebarSection title="المعلومات الأساسية">
+        <SidebarSection title={t("chartOfAccounts.form.basicSection", { namespace: "accounting", fallback: "المعلومات الأساسية" })}>
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <FieldLabel>رقم الحساب</FieldLabel>
+                <FieldLabel>{t("chartOfAccounts.form.accountCode", { namespace: "accounting", fallback: "رقم الحساب" })}</FieldLabel>
                 {codeSuffix ? (
                   <div className="flex gap-1">
                     <Input
                       value={codeSuffix}
                       disabled
                       className="h-9 bg-slate-100 text-slate-500 w-16 text-center"
-                      title="الجزء الموروث من الأب ولا يمكن تعديله"
+                      title={t("chartOfAccounts.form.inheritedTitle", { namespace: "accounting", fallback: "الجزء الموروث من الأب ولا يمكن تعديله" })}
                     />
                     <Input
                       value={code}
                       onChange={(e) => setCode(e.target.value)}
-                      placeholder="الجزء الفرعي"
+                      placeholder={t("chartOfAccounts.form.subCodePlaceholder", { namespace: "accounting", fallback: "الجزء الفرعي" })}
                       className="h-9 bg-white flex-1"
                     />
                   </div>
@@ -194,26 +196,26 @@ export function AccountForm({
                   <Input
                     value={code}
                     onChange={(e) => setCode(e.target.value)}
-                    placeholder="مثال: 1101"
+                    placeholder={t("chartOfAccounts.form.codePlaceholder", { namespace: "accounting", fallback: "مثال: 1101" })}
                     className="h-9 bg-white"
                   />
                 )}
               </div>
               <div className="space-y-1.5">
-                <FieldLabel>اسم الحساب</FieldLabel>
+                <FieldLabel>{t("chartOfAccounts.form.accountName", { namespace: "accounting", fallback: "اسم الحساب" })}</FieldLabel>
                 <Input
                   value={nameAr}
                   onChange={(e) => setNameAr(e.target.value)}
-                  placeholder="مثال: صندوق فرعي"
+                  placeholder={t("chartOfAccounts.form.accountNamePlaceholder", { namespace: "accounting", fallback: "مثال: صندوق فرعي" })}
                   className="h-9 bg-white"
                 />
               </div>
             </div>
             <div className="space-y-1.5">
-              <FieldLabel>فرعي من</FieldLabel>
+              <FieldLabel>{t("chartOfAccounts.form.parentOf", { namespace: "accounting", fallback: "فرعي من" })}</FieldLabel>
               <div className="h-9 rounded-md border border-input bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
                 {parentId === "null"
-                  ? "-- مستوى أول --"
+                  ? t("chartOfAccounts.form.levelOne", { namespace: "accounting", fallback: "-- مستوى أول --" })
                   : (() => {
                       const parent = allAccounts.find((a) => a.id === parentId);
                       return parent ? `${parent.code} - ${parent.name_ar}` : "--";
@@ -226,11 +228,11 @@ export function AccountForm({
 
 
         <div className="space-y-1.5">
-          <FieldLabel>ملاحظات</FieldLabel>
+          <FieldLabel>{t("chartOfAccounts.form.notes", { namespace: "accounting", fallback: "ملاحظات" })}</FieldLabel>
           <Textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            placeholder="ملاحظات اختيارية..."
+            placeholder={t("chartOfAccounts.form.notesPlaceholder", { namespace: "accounting", fallback: "ملاحظات اختيارية..." })}
             className="min-h-[60px]"
           />
         </div>

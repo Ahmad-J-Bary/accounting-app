@@ -11,6 +11,7 @@ import { ErrorBoundary } from "@shared/ui/ErrorBoundary";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
 import { useChartOfAccounts } from "@shared/hooks/queries/useAccountQueries";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 import { JOURNAL_MUTATION_KEYS, invalidateKeys } from "@shared/hooks/queryClient";
 import { journalEntryService } from "@modules/accounting/api/journalEntryService";
 import { JournalLineEditor } from "@modules/accounting/journal/components/JournalLineEditor";
@@ -22,10 +23,12 @@ import {
   MANUAL_JOURNAL_TYPES,
   type JournalLineDraft,
 } from "@modules/accounting/journal/lib/journal-entry-utils";
+import { journalTypeKey } from "@modules/accounting/journal/lib/journal-config";
 
 export default function JournalEntryCreatePage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { t } = useLocalization();
   const { baseCurrency } = useCurrencyContext();
   const { data: accounts = [] } = useChartOfAccounts();
 
@@ -50,12 +53,12 @@ export default function JournalEntryCreatePage() {
   );
 
   const validation = useMemo(
-    () => validateJournalEntry(journalType, entryDate, description, lines),
-    [journalType, entryDate, description, lines],
+    () => validateJournalEntry(journalType, entryDate, description, lines, t),
+    [journalType, entryDate, description, lines, t],
   );
 
   const handleSubmit = useCallback(async () => {
-    const result = validateJournalEntry(journalType, entryDate, description, lines);
+    const result = validateJournalEntry(journalType, entryDate, description, lines, t);
     if (!result.isValid) {
       setFormErrors(result.errors);
       return;
@@ -67,15 +70,15 @@ export default function JournalEntryCreatePage() {
     try {
       const request = buildCreateRequest(journalType, entryDate, description, lines);
       const entry = await journalEntryService.createJournalEntry(request);
-      toast.success(`تم إنشاء القيد بنجاح — رقم ${entry.entry_number}`);
+      toast.success(t("journal.toast.created", { namespace: "accounting", vars: { number: entry.entry_number }, fallback: `تم إنشاء القيد بنجاح — رقم ${entry.entry_number}` }));
       await invalidateKeys(queryClient, JOURNAL_MUTATION_KEYS);
       navigate(`/journal/${entry.id}`, { replace: true });
     } catch (e) {
-      toast.error("فشل إنشاء القيد: " + (e instanceof Error ? e.message : String(e)));
+      toast.error(t("journal.toast.createFailed", { namespace: "accounting", vars: { error: e instanceof Error ? e.message : String(e) }, fallback: `فشل إنشاء القيد: ${e instanceof Error ? e.message : String(e)}` }));
     } finally {
       setIsSubmitting(false);
     }
-  }, [journalType, entryDate, description, lines, queryClient, navigate]);
+  }, [journalType, entryDate, description, lines, queryClient, navigate, t]);
 
   const handleBack = useCallback(() => {
     navigate("/journal");
@@ -92,13 +95,13 @@ export default function JournalEntryCreatePage() {
               size="sm"
               onClick={handleBack}
               className="h-8 w-8 p-0"
-              aria-label="العودة"
+              aria-label={t("journal.back", { namespace: "accounting", fallback: "العودة" })}
             >
               <ArrowRight className="h-4 w-4" />
             </Button>
             <div>
-              <h1 className="text-lg font-bold text-slate-800">قيد يومية جديد</h1>
-              <p className="text-xs text-slate-500">إنشاء قيد يومية جديد في دفتر الأستاذ</p>
+              <h1 className="text-lg font-bold text-slate-800">{t("journal.create.title", { namespace: "accounting", fallback: "قيد يومية جديد" })}</h1>
+              <p className="text-xs text-slate-500">{t("journal.create.subtitle", { namespace: "accounting", fallback: "إنشاء قيد يومية جديد في دفتر الأستاذ" })}</p>
             </div>
           </div>
 
@@ -108,7 +111,7 @@ export default function JournalEntryCreatePage() {
             disabled={isSubmitting || !validation.isValid}
             className="h-9 px-5 font-bold bg-blue-600 hover:bg-blue-700 text-white"
           >
-            {isSubmitting ? "جاري الإنشاء..." : "إنشاء القيد"}
+            {isSubmitting ? t("journal.create.submitting", { namespace: "accounting", fallback: "جاري الإنشاء..." }) : t("journal.create.submit", { namespace: "accounting", fallback: "إنشاء القيد" })}
           </Button>
         </header>
 
@@ -125,13 +128,13 @@ export default function JournalEntryCreatePage() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">معلومات القيد</CardTitle>
+              <CardTitle className="text-base">{t("journal.create.infoSection", { namespace: "accounting", fallback: "معلومات القيد" })}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-1.5">
                   <label className="text-sm font-bold text-slate-600">
-                    نوع اليومية <span className="text-red-500">*</span>
+                    {t("journal.create.journalType", { namespace: "accounting", fallback: "نوع اليومية" })} <span className="text-red-500">*</span>
                   </label>
                   <Select
                     value={journalType}
@@ -143,7 +146,7 @@ export default function JournalEntryCreatePage() {
                     <SelectContent>
                       {MANUAL_JOURNAL_TYPES.map((jt) => (
                         <SelectItem key={jt.value} value={jt.value} className="font-bold">
-                          {jt.label}
+                          {t(journalTypeKey(jt.value), { namespace: "accounting", fallback: jt.label })}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -152,7 +155,7 @@ export default function JournalEntryCreatePage() {
 
                 <div className="space-y-1.5">
                   <label className="text-sm font-bold text-slate-600">
-                    التاريخ <span className="text-red-500">*</span>
+                    {t("journal.create.date", { namespace: "accounting", fallback: "التاريخ" })} <span className="text-red-500">*</span>
                   </label>
                   <Input
                     type="date"
@@ -164,12 +167,12 @@ export default function JournalEntryCreatePage() {
 
                 <div className="space-y-1.5 md:col-span-1 md:row-span-1">
                   <label className="text-sm font-bold text-slate-600">
-                    البيان <span className="text-red-500">*</span>
+                    {t("journal.create.description", { namespace: "accounting", fallback: "البيان" })} <span className="text-red-500">*</span>
                   </label>
                   <Input
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
-                    placeholder="وصف القيد..."
+                    placeholder={t("journal.create.descriptionPlaceholder", { namespace: "accounting", fallback: "وصف القيد..." })}
                     className="h-10 font-bold"
                   />
                 </div>
@@ -179,7 +182,7 @@ export default function JournalEntryCreatePage() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">بنود القيد</CardTitle>
+              <CardTitle className="text-base">{t("journal.create.linesSection", { namespace: "accounting", fallback: "بنود القيد" })}</CardTitle>
             </CardHeader>
             <CardContent>
               <JournalLineEditor

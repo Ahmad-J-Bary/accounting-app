@@ -2,21 +2,23 @@ import { FileDown, Info } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
 import { SettingsSection } from "@widgets/templates/SettingsLayout";
 import { useExportSettings, type ExportCurrencyMode } from "@shared/hooks/useExportSettings";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 export function ExportSettings() {
   const { currencyMode, setCurrencyMode } = useExportSettings();
+  const { t } = useLocalization();
 
   return (
     <SettingsSection
-      title="إعدادات التصدير"
-      description="تخصيص طريقة عرض العملات في ملفات Excel المُصدَّرة."
+      title={t("settings.export.title", { namespace: "settings", fallback: "إعدادات التصدير" })}
+      description={t("settings.export.description", { namespace: "settings", fallback: "تخصيص طريقة عرض العملات في ملفات Excel المُصدَّرة." })}
     >
       <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
         <div className="space-y-6">
           <div className="space-y-3">
             <label className="font-black text-slate-700 flex items-center gap-2">
               <FileDown className="w-4 h-4 text-indigo-600" />
-              نمط العملات في التصدير
+              {t("settings.export.currencyMode", { namespace: "settings", fallback: "نمط العملات في التصدير" })}
             </label>
             <Select
               value={currencyMode}
@@ -27,10 +29,10 @@ export function ExportSettings() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="fixed" className="font-bold">
-                  ثابتة — أعمدة العملات تظهر كما هي
+                  {t("settings.export.fixed", { namespace: "settings", fallback: "ثابتة — أعمدة العملات تظهر كما هي" })}
                 </SelectItem>
                 <SelectItem value="variable" className="font-bold">
-                  متغيرة — العملة الأساسية فقط + ورقة أسعار الصرف
+                  {t("settings.export.variable", { namespace: "settings", fallback: "متغيرة — العملة الأساسية فقط + ورقة أسعار الصرف" })}
                 </SelectItem>
               </SelectContent>
             </Select>
@@ -41,17 +43,14 @@ export function ExportSettings() {
           <div className="p-4 rounded-xl bg-blue-50 border border-blue-100 space-y-2">
             <div className="flex items-center gap-2 text-blue-800 font-bold text-sm">
               <Info className="w-4 h-4" />
-              شرح النمطين
+              {t("settings.export.explainerTitle", { namespace: "settings", fallback: "شرح النمطين" })}
             </div>
             <div className="text-xs text-blue-700 space-y-1.5 leading-relaxed">
               <p>
-                <strong>ثابتة (Fixed):</strong> تظهر أعمدة لكل عملة في الملف
-                — نفس ما يظهر في الشاشة. مناسبة للفواتير متعددة العملات.
+                <strong>{t("settings.export.fixedStrong", { namespace: "settings", fallback: "ثابتة (Fixed):" })}</strong> {t("settings.export.fixedBody", { namespace: "settings", fallback: "تظهر أعمدة لكل عملة في الملف — نفس ما يظهر في الشاشة. مناسبة للفواتير متعددة العملات." })}
               </p>
               <p>
-                <strong>متغيرة (Variable):</strong> تظهر مبالغ العملة الأساسية فقط
-                في الورقة الرئيسية، وتُضاف ورقة ثانية &quot;أسعار الصرف&quot;
-                تحتوي على سعر كل عملة مستخدمة. مناسبة للتصدير للبرامج الخارجية.
+                <strong>{t("settings.export.variableStrong", { namespace: "settings", fallback: "متغيرة (Variable):" })}</strong> {t("settings.export.variableBody", { namespace: "settings", fallback: "تظهر مبالغ العملة الأساسية فقط في الورقة الرئيسية، وتُضاف ورقة ثانية \"أسعار الصرف\" تحتوي على سعر كل عملة مستخدمة. مناسبة للتصدير للبرامج الخارجية." })}
               </p>
             </div>
           </div>

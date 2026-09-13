@@ -2,6 +2,7 @@ import type { AccountDto } from "@erp/shared-types";
 import { DetailPanel } from "@widgets/sidebar-shell/DetailPanel";
 import { SidebarDetailGrid } from "@widgets/sidebar-shell/SidebarDetailGrid";
 import type { ResolvedTreeNode } from "@shared/tree/nodeTypes";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 import { AccountForm } from "./AccountForm";
 import { useLinkedEntityFields } from "../hooks/useLinkedEntityFields";
 import { mergeAccountEntityFields, toDetailFields, type AccountField } from "../lib/account-fields";
@@ -43,6 +44,7 @@ export function AccountPanel({
   onClose,
   onSaved,
 }: AccountPanelProps) {
+  const { t } = useLocalization();
   const { hasMultipleCurrencies } = useCurrencyContext();
   const entity = useLinkedEntityFields(resolved, selected ?? null);
 
@@ -66,31 +68,31 @@ export function AccountPanel({
   const typeMeta = TYPE_LABELS[selected.account_type];
   const categoryLabel =
     selected.category === "Summary"
-      ? "مجموعة ملخص"
+      ? t("chartOfAccounts.detail.summaryCategory", { namespace: "accounting", fallback: "مجموعة ملخص" })
       : selected.category === "Detail"
-        ? "حساب تفصيلي"
+        ? t("chartOfAccounts.detail.detailCategory", { namespace: "accounting", fallback: "حساب تفصيلي" })
         : selected.category;
 
-  // Single merged detail grid: "بيانات الحساب" + the linked entity panel, with
-  // duplicate العملة / الرصيد entries removed (see `mergeAccountEntityFields`).
+  // Single merged detail grid: account data + linked entity panel, with
+  // duplicate currency / balance entries removed (see `mergeAccountEntityFields`).
   const accountFields: AccountField[] = [
-    { key: "account-code", label: "رقم الحساب", value: selected.code ?? "—" },
-    { key: "account-name", label: "اسم الحساب", value: selected.name_ar ?? "—" },
+    { key: "account-code", label: t("chartOfAccounts.detail.accountCode", { namespace: "accounting", fallback: "رقم الحساب" }), value: selected.code ?? "—" },
+    { key: "account-name", label: t("chartOfAccounts.detail.accountName", { namespace: "accounting", fallback: "اسم الحساب" }), value: selected.name_ar ?? "—" },
     {
       key: "account-parent",
-      label: "فرعي من",
+      label: t("chartOfAccounts.detail.parentOf", { namespace: "accounting", fallback: "فرعي من" }),
       value: parentName && parentName.trim().length > 0 ? parentName : "—",
     },
-    { key: "account-level", label: "المستوى", value: String(selected.level ?? 1) },
+    { key: "account-level", label: t("chartOfAccounts.detail.level", { namespace: "accounting", fallback: "المستوى" }), value: String(selected.level ?? 1) },
     {
       key: "account-type",
-      label: "نوع الحساب",
-      value: typeMeta?.label ?? selected.account_type ?? "—",
+      label: t("chartOfAccounts.detail.type", { namespace: "accounting", fallback: "نوع الحساب" }),
+      value: t(`chartOfAccounts.typeLabels.${selected.account_type}`, { namespace: "accounting", fallback: typeMeta?.label ?? selected.account_type ?? "—" }),
     },
-    { key: "account-category", label: "التصنيف", value: categoryLabel ?? "—" },
-    { key: "account-is-final", label: "حساب نهائي (ورقة)", value: selected.is_final ? "نعم" : "لا" },
-    { key: "account-currency", label: "العملة", value: selected.currency || "—" },
-    { key: "account-balance", label: "الرصيد", value: selected.balance ?? "0" },
+    { key: "account-category", label: t("chartOfAccounts.detail.category", { namespace: "accounting", fallback: "التصنيف" }), value: categoryLabel ?? "—" },
+    { key: "account-is-final", label: t("chartOfAccounts.detail.isFinal", { namespace: "accounting", fallback: "حساب نهائي (ورقة)" }), value: selected.is_final ? t("chartOfAccounts.detail.yes", { namespace: "accounting", fallback: "نعم" }) : t("chartOfAccounts.detail.no", { namespace: "accounting", fallback: "لا" }) },
+    { key: "account-currency", label: t("chartOfAccounts.detail.currency", { namespace: "accounting", fallback: "العملة" }), value: selected.currency || "—" },
+    { key: "account-balance", label: t("chartOfAccounts.detail.balance", { namespace: "accounting", fallback: "الرصيد" }), value: selected.balance ?? "0" },
   ];
 
   const mergedFields = mergeAccountEntityFields(
@@ -102,7 +104,7 @@ export function AccountPanel({
   );
 
   return (
-      <DetailPanel title="تفاصيل الحساب" subtitle={selected.code ?? undefined} onClose={onClose}>
+      <DetailPanel title={t("chartOfAccounts.detail.title", { namespace: "accounting", fallback: "تفاصيل الحساب" })} subtitle={selected.code ?? undefined} onClose={onClose}>
         <SidebarDetailGrid
           title={entity.title}
           columns={2}

@@ -8,6 +8,7 @@ import { useReportFilters } from "@shared/hooks/useReportFilters";
 import { useAccountMovementsReport } from "../hooks/useAccountMovementsReport";
 import { AccountMovementView } from "../components/AccountMovementView";
 import type { AccountDto } from "@erp/shared-types";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 function getDescendantIds(accountId: string, accounts: AccountDto[]): string[] {
   const children = accounts.filter(a => a.parent_id === accountId);
@@ -16,6 +17,7 @@ function getDescendantIds(accountId: string, accounts: AccountDto[]): string[] {
 
 export default function AccountMovementsReport() {
   const { filters, setFilters, baseCurrency } = useReportFilters();
+  const { t } = useLocalization();
   const [searchParams] = useSearchParams();
   const { data: accounts = [] } = useChartOfAccounts();
   const [selectedAccountId, setSelectedAccountId] = useState<string>(searchParams.get('accountId') || '');
@@ -32,11 +34,11 @@ export default function AccountMovementsReport() {
 
   return (
     <OperationalTableTemplate
-      title="حركة الحساب"
+      title={t("accountMovements.title", { namespace: "reports", fallback: "حركة الحساب" })}
       badge={
         <Select value={selectedAccountId} onValueChange={setSelectedAccountId}>
           <SelectTrigger className="h-9 w-auto min-w-[160px] rounded-lg border-slate-200 bg-white text-xs font-bold">
-            <SelectValue placeholder="اختر الحساب..." />
+            <SelectValue placeholder={t("accountMovements.selectAccountPlaceholder", { namespace: "reports", fallback: "اختر الحساب..." })} />
           </SelectTrigger>
           <SelectContent>
             {accounts.map(a => (

@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { toFixed } from "@shared/lib/format";
 import { cn } from "@shared/lib/utils";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 import type { JournalLineDraft } from "../lib/journal-entry-utils";
 
 interface JournalEntrySummaryProps {
@@ -8,6 +9,7 @@ interface JournalEntrySummaryProps {
 }
 
 export function JournalEntrySummary({ lines }: JournalEntrySummaryProps) {
+  const { t } = useLocalization();
   const { totalDebit, totalCredit, difference, isBalanced, hasLines } = useMemo(() => {
     const totalDebit = lines.reduce(
       (sum, l) => (l.side === "debit" ? sum + (parseFloat(l.amount) || 0) : sum),
@@ -38,19 +40,21 @@ export function JournalEntrySummary({ lines }: JournalEntrySummaryProps) {
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-4">
           <span className="font-bold">
-            إجمالي المدين: <span className="tabular-nums">{toFixed(totalDebit, 2)}</span>
+            {t("journal.summary.totalDebit", { namespace: "accounting", fallback: "إجمالي المدين: " })}
+            <span className="tabular-nums">{toFixed(totalDebit, 2)}</span>
           </span>
           <span className="font-bold">
-            إجمالي الدائن: <span className="tabular-nums">{toFixed(totalCredit, 2)}</span>
+            {t("journal.summary.totalCredit", { namespace: "accounting", fallback: "إجمالي الدائن: " })}
+            <span className="tabular-nums">{toFixed(totalCredit, 2)}</span>
           </span>
         </div>
 
         <div className="flex items-center gap-2">
           {isBalanced ? (
-            <span className="font-bold text-emerald-700">متوازن</span>
+            <span className="font-bold text-emerald-700">{t("journal.summary.balanced", { namespace: "accounting", fallback: "متوازن" })}</span>
           ) : (
             <span className="font-bold text-amber-700">
-              غير متوازن — فارق: {toFixed(difference, 2)}
+              {t("journal.summary.unbalanced", { namespace: "accounting", vars: { difference: toFixed(difference, 2) }, fallback: `غير متوازن — فارق: ${toFixed(difference, 2)}` })}
             </span>
           )}
         </div>

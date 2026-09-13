@@ -18,6 +18,7 @@ import { getHeaderText, getPrimitiveCellValue, SHARED_COLUMN_IDS } from "./group
 
 import type { JournalEntryDto } from "@erp/shared-types";
 import type { JournalFilters } from "@modules/accounting/api/journalEntryService";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 import { auditGroupKey, toJournalLines, toJournalLinesSingleLine, journalTwoLineCompare, type JournalRowLine, type JournalSingleLineRow, type ReversalContext } from "../lib/journal-view";
 import { isOpeningEntry } from "@modules/reports/lib/accountingEntryClassifier";
 
@@ -97,6 +98,7 @@ export function JournalTable({
 }: JournalTableProps) {
   const { isBaseCurrency, currencySuffix: cs, hasSecondaryCurrencies } = useBaseCurrencyColumns();
   const { settings, getDensityPadding } = useTableSettings();
+  const { t } = useLocalization();
   const containerRef = useRef<HTMLDivElement>(null);
 
   const { exportData, baseCurrency, rateMap, sortedCurrencies, formatAmount, baseCode, ratesSheet, currencyMode } = useExportSetup();
@@ -105,20 +107,20 @@ export function JournalTable({
 
   // ============ DATA (computed for both modes, but typed separately) ============
   const twoLineData = useMemo(() => {
-    const lines = entries.flatMap(e => toJournalLines(e, reversalContext));
+    const lines = entries.flatMap(e => toJournalLines(e, reversalContext, t));
     return lines.map((line, idx) => ({
       ...line,
       isFirstInGroup: idx === 0 || line.group_key !== lines[idx - 1].group_key,
     })) as JournalTableRow[];
-  }, [entries, reversalContext]);
+  }, [entries, reversalContext, t]);
 
   const singleLineData = useMemo(() => {
-    const lines = entries.flatMap(e => toJournalLinesSingleLine(e, reversalContext));
+    const lines = entries.flatMap(e => toJournalLinesSingleLine(e, reversalContext, t));
     return lines.map((line, idx) => ({
       ...line,
       isFirstInGroup: idx === 0 || line.group_key !== lines[idx - 1].group_key,
     })) as JournalSingleLineTableRow[];
-  }, [entries, reversalContext]);
+  }, [entries, reversalContext, t]);
 
   // ============ SORTING (separate hooks per mode) ============
   const twoLineSort = useSortable({
@@ -160,8 +162,8 @@ export function JournalTable({
     const cols: UnifiedColumn<JournalTableRow>[] = [
       {
         id: "entry_number",
-        header: "رقم القيد",
-        label: "رقم القيد",
+        header: t("journal.table.colEntryNumber", { namespace: "accounting", fallback: "رقم القيد" }),
+        label: t("journal.table.colEntryNumber", { namespace: "accounting", fallback: "رقم القيد" }),
         accessor: (e) => e.isFirstInGroup ? (
           onEntryClick ? (
             <button
@@ -179,8 +181,8 @@ export function JournalTable({
       },
       {
         id: "journal_type",
-        header: "نوع الحركة",
-        label: "نوع الحركة",
+        header: t("journal.table.colType", { namespace: "accounting", fallback: "نوع الحركة" }),
+        label: t("journal.table.colType", { namespace: "accounting", fallback: "نوع الحركة" }),
         accessor: (e) => e.isFirstInGroup ? (
           <span className="inline-flex flex-col items-start gap-0.5">
             <span className="inline-flex items-center gap-1">
@@ -189,22 +191,22 @@ export function JournalTable({
               </span>
               {e.is_contra && (
                 <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black bg-amber-100 text-amber-700">
-                  عكس
+                  {t("journal.table.badgeContra", { namespace: "accounting", fallback: "عكس" })}
                 </span>
               )}
               {e.status === "Reversed" && (
                 <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black bg-red-100 text-red-600">
-                  معكوس
+                  {t("journal.table.badgeReversed", { namespace: "accounting", fallback: "معكوس" })}
                 </span>
               )}
               {e.status === "Draft" && (
                 <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black bg-slate-200 text-slate-600">
-                  مسودة
+                  {t("journal.table.badgeDraft", { namespace: "accounting", fallback: "مسودة" })}
                 </span>
               )}
               {e.status === "Cancelled" && (
                 <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black bg-slate-300 text-slate-700">
-                  ملغي
+                  {t("journal.table.badgeCancelled", { namespace: "accounting", fallback: "ملغي" })}
                 </span>
               )}
               {e.status === "Posted" && !e.is_contra && !isOpeningEntry(e) && onReverse && (
@@ -216,13 +218,15 @@ export function JournalTable({
                   className="h-6 px-2 text-[10px] font-bold text-red-600 hover:bg-red-50"
                 >
                   <Undo2 className="w-3 h-3 ms-1" />
-                  {reversingId === e.id ? "جارٍ..." : "عكس"}
+                  {reversingId === e.id ? t("journal.table.reverseInProgress", { namespace: "accounting", fallback: "جارٍ..." }) : t("journal.table.reverse", { namespace: "accounting", fallback: "عكس" })}
                 </Button>
               )}
             </span>
             {e.reversal_entry_number && (
               <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-slate-50 text-slate-500">
-                {e.is_contra ? `عكس القيد #${e.reversal_entry_number}` : `عكسه القيد #${e.reversal_entry_number}`}
+                {e.is_contra
+                  ? t("journal.table.reversalOf", { namespace: "accounting", vars: { number: e.reversal_entry_number }, fallback: `عكس القيد #${e.reversal_entry_number}` })
+                  : t("journal.table.reversedBy", { namespace: "accounting", vars: { number: e.reversal_entry_number }, fallback: `عكسه القيد #${e.reversal_entry_number}` })}
               </span>
             )}
           </span>
@@ -235,8 +239,8 @@ export function JournalTable({
       const isBase = isBaseCurrency(curr.code);
       cols.push({
         id: `debit_${curr.code}`,
-        header: `عليه / مدين${cs(symbol)}`,
-        label: `عليه / مدين${cs(symbol)}`,
+        header: t("journal.table.debitHeader", { namespace: "accounting", vars: { currency: cs(symbol) }, fallback: `عليه / مدين${cs(symbol)}` }),
+        label: t("journal.table.debitHeader", { namespace: "accounting", vars: { currency: cs(symbol) }, fallback: `عليه / مدين${cs(symbol)}` }),
         accessor: (e: JournalTableRow) => {
           if (e.side !== "debit") return "";
           return e.amount_base > 0 ? formatAmount(e.amount_base, { currencyCode: curr.code }) : "";
@@ -252,8 +256,8 @@ export function JournalTable({
       const isBase = isBaseCurrency(curr.code);
       cols.push({
         id: `credit_${curr.code}`,
-        header: `له / دائن${cs(symbol)}`,
-        label: `له / دائن${cs(symbol)}`,
+        header: t("journal.table.creditHeader", { namespace: "accounting", vars: { currency: cs(symbol) }, fallback: `له / دائن${cs(symbol)}` }),
+        label: t("journal.table.creditHeader", { namespace: "accounting", vars: { currency: cs(symbol) }, fallback: `له / دائن${cs(symbol)}` }),
         accessor: (e: JournalTableRow) => {
           if (e.side !== "credit") return "";
           return e.amount_base > 0 ? formatAmount(e.amount_base, { currencyCode: curr.code }) : "";
@@ -267,15 +271,15 @@ export function JournalTable({
     cols.push(
       {
         id: "description",
-        header: "البيان",
-        label: "البيان",
+        header: t("journal.table.colDescription", { namespace: "accounting", fallback: "البيان" }),
+        label: t("journal.table.colDescription", { namespace: "accounting", fallback: "البيان" }),
         accessor: (e) => e.isFirstInGroup ? e.description : "",
         className: "text-slate-700 font-bold"
       },
       {
         id: "account",
-        header: "الحساب",
-        label: "الحساب",
+        header: t("journal.table.colAccount", { namespace: "accounting", fallback: "الحساب" }),
+        label: t("journal.table.colAccount", { namespace: "accounting", fallback: "الحساب" }),
         accessor: (e: JournalTableRow) => (
           <span className={e.side === "debit" ? "text-blue-600 font-bold" : "text-emerald-600 font-bold"}>
             {e.account_name}
@@ -284,21 +288,21 @@ export function JournalTable({
       },
       {
         id: "entry_date",
-        header: "التاريخ",
-        label: "التاريخ",
+        header: t("journal.table.colDate", { namespace: "accounting", fallback: "التاريخ" }),
+        label: t("journal.table.colDate", { namespace: "accounting", fallback: "التاريخ" }),
         accessor: (e) => e.isFirstInGroup ? formatDateTime(e.entry_date) : "",
         className: "text-slate-500 tabular-nums"
       },
     );
     return cols;
-  }, [sortedCurrencies, formatAmount, isBaseCurrency, cs, onReverse, reversingId, onEntryClick]);
+  }, [sortedCurrencies, formatAmount, isBaseCurrency, cs, onReverse, reversingId, onEntryClick, t]);
 
   const singleLineColumns = useMemo<UnifiedColumn<JournalSingleLineTableRow>[]>(() => {
     const cols: UnifiedColumn<JournalSingleLineTableRow>[] = [
       {
         id: "entry_number",
-        header: "رقم القيد",
-        label: "رقم القيد",
+        header: t("journal.table.colEntryNumber", { namespace: "accounting", fallback: "رقم القيد" }),
+        label: t("journal.table.colEntryNumber", { namespace: "accounting", fallback: "رقم القيد" }),
         accessor: (e) => onEntryClick ? (
           <button
             type="button"
@@ -314,8 +318,8 @@ export function JournalTable({
       },
       {
         id: "journal_type",
-        header: "نوع الحركة",
-        label: "نوع الحركة",
+        header: t("journal.table.colType", { namespace: "accounting", fallback: "نوع الحركة" }),
+        label: t("journal.table.colType", { namespace: "accounting", fallback: "نوع الحركة" }),
         accessor: (e) => (
           <span className="inline-flex flex-col items-start gap-0.5">
             <span className="inline-flex items-center gap-1">
@@ -324,22 +328,22 @@ export function JournalTable({
               </span>
               {e.is_contra && (
                 <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black bg-amber-100 text-amber-700">
-                  عكس
+                  {t("journal.table.badgeContra", { namespace: "accounting", fallback: "عكس" })}
                 </span>
               )}
               {e.status === "Reversed" && (
                 <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black bg-red-100 text-red-600">
-                  معكوس
+                  {t("journal.table.badgeReversed", { namespace: "accounting", fallback: "معكوس" })}
                 </span>
               )}
               {e.status === "Draft" && (
                 <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black bg-slate-200 text-slate-600">
-                  مسودة
+                  {t("journal.table.badgeDraft", { namespace: "accounting", fallback: "مسودة" })}
                 </span>
               )}
               {e.status === "Cancelled" && (
                 <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black bg-slate-300 text-slate-700">
-                  ملغي
+                  {t("journal.table.badgeCancelled", { namespace: "accounting", fallback: "ملغي" })}
                 </span>
               )}
               {e.status === "Posted" && !e.is_contra && !isOpeningEntry(e) && onReverse && (
@@ -351,13 +355,15 @@ export function JournalTable({
                   className="h-6 px-2 text-[10px] font-bold text-red-600 hover:bg-red-50"
                 >
                   <Undo2 className="w-3 h-3 ms-1" />
-                  {reversingId === e.id ? "جارٍ..." : "عكس"}
+                  {reversingId === e.id ? t("journal.table.reverseInProgress", { namespace: "accounting", fallback: "جارٍ..." }) : t("journal.table.reverse", { namespace: "accounting", fallback: "عكس" })}
                 </Button>
               )}
             </span>
             {e.reversal_entry_number && (
               <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-slate-50 text-slate-500">
-                {e.is_contra ? `عكس القيد #${e.reversal_entry_number}` : `عكسه القيد #${e.reversal_entry_number}`}
+                {e.is_contra
+                  ? t("journal.table.reversalOf", { namespace: "accounting", vars: { number: e.reversal_entry_number }, fallback: `عكس القيد #${e.reversal_entry_number}` })
+                  : t("journal.table.reversedBy", { namespace: "accounting", vars: { number: e.reversal_entry_number }, fallback: `عكسه القيد #${e.reversal_entry_number}` })}
               </span>
             )}
           </span>
@@ -370,8 +376,8 @@ export function JournalTable({
       const isBase = isBaseCurrency(curr.code);
       cols.push({
         id: `debit_${curr.code}`,
-        header: `عليه / مدين${cs(symbol)}`,
-        label: `عليه / مدين${cs(symbol)}`,
+        header: t("journal.table.debitHeader", { namespace: "accounting", vars: { currency: cs(symbol) }, fallback: `عليه / مدين${cs(symbol)}` }),
+        label: t("journal.table.debitHeader", { namespace: "accounting", vars: { currency: cs(symbol) }, fallback: `عليه / مدين${cs(symbol)}` }),
         accessor: (e: JournalSingleLineTableRow) =>
           e.debit_amount_base > 0 ? formatAmount(e.debit_amount_base, { currencyCode: curr.code }) : "",
         className: isBase
@@ -385,8 +391,8 @@ export function JournalTable({
       const isBase = isBaseCurrency(curr.code);
       cols.push({
         id: `credit_${curr.code}`,
-        header: `له / دائن${cs(symbol)}`,
-        label: `له / دائن${cs(symbol)}`,
+        header: t("journal.table.creditHeader", { namespace: "accounting", vars: { currency: cs(symbol) }, fallback: `له / دائن${cs(symbol)}` }),
+        label: t("journal.table.creditHeader", { namespace: "accounting", vars: { currency: cs(symbol) }, fallback: `له / دائن${cs(symbol)}` }),
         accessor: (e: JournalSingleLineTableRow) =>
           e.credit_amount_base > 0 ? formatAmount(e.credit_amount_base, { currencyCode: curr.code }) : "",
         className: isBase
@@ -397,37 +403,37 @@ export function JournalTable({
 
     cols.push({
         id: "description",
-        header: "البيان",
-        label: "البيان",
+        header: t("journal.table.colDescription", { namespace: "accounting", fallback: "البيان" }),
+        label: t("journal.table.colDescription", { namespace: "accounting", fallback: "البيان" }),
         accessor: (e) => e.description,
         className: "text-slate-700 font-bold"
       },
       {
         id: "debit_accounts",
-        header: "الحساب المدين / الوجهة",
-        label: "الحساب المدين / الوجهة",
+        header: t("journal.table.colDebitAccounts", { namespace: "accounting", fallback: "الحساب المدين / الوجهة" }),
+        label: t("journal.table.colDebitAccounts", { namespace: "accounting", fallback: "الحساب المدين / الوجهة" }),
         accessor: (e: JournalSingleLineTableRow) => (
           <span className="text-blue-600 font-bold">{e.debit_account_names}</span>
         ),
       },
       {
         id: "credit_accounts",
-        header: "الحساب الدائن / المصدر",
-        label: "الحساب الدائن / المصدر",
+        header: t("journal.table.colCreditAccounts", { namespace: "accounting", fallback: "الحساب الدائن / المصدر" }),
+        label: t("journal.table.colCreditAccounts", { namespace: "accounting", fallback: "الحساب الدائن / المصدر" }),
         accessor: (e: JournalSingleLineTableRow) => (
           <span className="text-emerald-600 font-bold">{e.credit_account_names}</span>
         ),
       },
       {
         id: "entry_date",
-        header: "التاريخ",
-        label: "التاريخ",
+        header: t("journal.table.colDate", { namespace: "accounting", fallback: "التاريخ" }),
+        label: t("journal.table.colDate", { namespace: "accounting", fallback: "التاريخ" }),
         accessor: (e) => formatDateTime(e.entry_date),
         className: "text-slate-500 tabular-nums"
       },
     );
     return cols;
-  }, [formatAmount, cs, sortedCurrencies, isBaseCurrency, onReverse, reversingId, onEntryClick]);
+  }, [formatAmount, cs, sortedCurrencies, isBaseCurrency, onReverse, reversingId, onEntryClick, t]);
 
   // ============ SELECT ACTIVE DATA/COLUMNS/SORT ============
   const sortedData = isTwoLine ? twoLineSort.sortedData : singleLineSort.sortedData;
@@ -602,7 +608,7 @@ export function JournalTable({
   const auditGroupedData = useMemo(() => {
     if (auditEntriesSorted.length === 0) return [];
     if (isTwoLine) {
-      const lines = auditEntriesSorted.flatMap((e) => toJournalLines(e, reversalContext)) as JournalRowLine[];
+      const lines = auditEntriesSorted.flatMap((e) => toJournalLines(e, reversalContext, t)) as JournalRowLine[];
       const rows = lines.map((line, idx) => ({
         ...line,
         isFirstInGroup: idx === 0 || line.group_key !== lines[idx - 1].group_key,
@@ -619,7 +625,7 @@ export function JournalTable({
       if (group.length > 0) groups.push(group);
       return groups;
     }
-    const lines = auditEntriesSorted.flatMap((e) => toJournalLinesSingleLine(e, reversalContext)) as JournalSingleLineRow[];
+    const lines = auditEntriesSorted.flatMap((e) => toJournalLinesSingleLine(e, reversalContext, t)) as JournalSingleLineRow[];
     const rows = lines.map((line, idx) => ({
       ...line,
       isFirstInGroup: idx === 0 || line.group_key !== lines[idx - 1].group_key,
@@ -635,7 +641,7 @@ export function JournalTable({
     }
     if (group.length > 0) groups.push(group);
     return groups;
-  }, [auditEntriesSorted, isTwoLine, reversalContext]);
+  }, [auditEntriesSorted, isTwoLine, reversalContext, t]);
 
   // ============ SUMMARY COLUMNS ============
   const summaryColumns = useMemo<SummaryColumn[]>(() => {
@@ -656,7 +662,7 @@ export function JournalTable({
     return enrichedColumns.map((col) => {
       const id = col.id;
       if (id === "entry_number") {
-        return { id: "count", columnId: "entry_number", label: "", value: `${sortedData.length} سطر`, className: "text-slate-500 font-medium" };
+        return { id: "count", columnId: "entry_number", label: "", value: t("journal.table.count", { namespace: "accounting", vars: { count: sortedData.length }, fallback: `${sortedData.length} سطر` }), className: "text-slate-500 font-medium" };
       }
       if (id === "journal_type" || id === "description") {
         return { id: `${id}_spacer`, columnId: id, label: "", value: "" };
@@ -664,8 +670,9 @@ export function JournalTable({
 
       if (isTwoLine) {
         if (id === "account") {
-          const sign = baseBalance > 0 ? "مدين" : baseBalance < 0 ? "دائن" : "متزن";
-          const label = `الرصيد / ${sign}${cs(baseSymbol)}`;
+          const signKey = baseBalance > 0 ? "debit" : baseBalance < 0 ? "credit" : "balanced";
+          const sign = t(`journal.sign.${signKey}`, { namespace: "accounting", fallback: baseBalance > 0 ? "مدين" : baseBalance < 0 ? "دائن" : "متزن" });
+          const label = t("journal.table.balanceLabel", { namespace: "accounting", vars: { sign, currency: cs(baseSymbol) }, fallback: `الرصيد / ${sign}${cs(baseSymbol)}` });
           const value = formatAmount(Math.abs(baseBalance), { currencyCode: baseCurrency?.code || "" });
           const valueClass = baseBalance > 0
             ? "text-blue-700 font-black"
@@ -679,8 +686,9 @@ export function JournalTable({
           const curr = sec || baseCurrency;
           const code = curr?.code || "";
           const sym = curr?.symbol || code;
-          const sign = baseBalance > 0 ? "مدين" : baseBalance < 0 ? "دائن" : "متزن";
-          const label = `الرصيد / ${sign}${cs(sym)}`;
+          const signKey = baseBalance > 0 ? "debit" : baseBalance < 0 ? "credit" : "balanced";
+          const sign = t(`journal.sign.${signKey}`, { namespace: "accounting", fallback: baseBalance > 0 ? "مدين" : baseBalance < 0 ? "دائن" : "متزن" });
+          const label = t("journal.table.balanceLabel", { namespace: "accounting", vars: { sign, currency: cs(sym) }, fallback: `الرصيد / ${sign}${cs(sym)}` });
           const value = formatAmount(Math.abs(baseBalance), { currencyCode: code });
           const valueClass = baseBalance > 0
             ? "text-blue-700 font-black"
@@ -725,7 +733,7 @@ export function JournalTable({
 
       return { id: `${id}_spacer`, columnId: id, label: "", value: "" };
     });
-  }, [enrichedColumns, formatAmount, isBaseCurrency, baseCurrency, sortedCurrencies, sortedData, isTwoLine, twoLineData, singleLineData, cs]);
+  }, [enrichedColumns, formatAmount, isBaseCurrency, baseCurrency, sortedCurrencies, sortedData, isTwoLine, twoLineData, singleLineData, cs, t]);
 
   const visibleColumnIds = useMemo(
     () => new Set(visibleColumns.map(c => c.id)),
@@ -881,19 +889,19 @@ export function JournalTable({
     });
 
     await executeExport(exportData, {
-      sheetName: "القيود اليومية",
-      filename: "القيود اليومية",
+      sheetName: t("journal.table.sheetName", { namespace: "accounting", fallback: "القيود اليومية" }),
+      filename: t("journal.table.filename", { namespace: "accounting", fallback: "القيود اليومية" }),
       data: sortedData as unknown as Record<string, unknown>[],
       columns: exportColumns,
       summary: Object.keys(summary).length > 0 ? summary : undefined,
-      summaryLabel: "المجموع",
+      summaryLabel: t("journal.table.summaryLabel", { namespace: "accounting", fallback: "المجموع" }),
       currencyRatesSheet: ratesSheet,
       mergeCells: isTwoLine ? buildJournalMergeRanges(
         sortedData as JournalTableRow[],
         exportColumns.filter(c => !c.hidden).map((col) => col.id),
       ) : [],
     });
-  }, [getColumnSampleValues, getTwoLineExportValue, getSingleLineExportValue, sortedData, enrichedColumns, isTwoLine, exportData, baseCode, rateMap, ratesSheet, sortedCurrencies, hasSecondaryCurrencies, currencyMode]);
+  }, [getColumnSampleValues, getTwoLineExportValue, getSingleLineExportValue, sortedData, enrichedColumns, isTwoLine, exportData, baseCode, rateMap, ratesSheet, sortedCurrencies, hasSecondaryCurrencies, currencyMode, t]);
 
   // ============ RENDER BODY ============
   // Shared group-grid renderer used by BOTH the operational list and the
@@ -1020,7 +1028,7 @@ export function JournalTable({
     }
 
     if (groupedData.length === 0) {
-      return <EmptyState message="لا توجد قيود يومية مسجلة" />;
+      return <EmptyState message={t("journal.table.empty", { namespace: "accounting", fallback: "لا توجد قيود يومية مسجلة" })} />;
     }
 
     return groupedData.map((group, groupIdx) => renderGroupGrid(group, groupIdx, "group"));
@@ -1030,7 +1038,7 @@ export function JournalTable({
     <TableShell
       search={search}
       onSearchChange={onSearchChange}
-      searchPlaceholder="بحث برقم القيد أو البيان..."
+      searchPlaceholder={t("journal.table.searchPlaceholder", { namespace: "accounting", fallback: "بحث برقم القيد أو البيان..." })}
       columns={toolbarColumns}
       onColumnToggle={toggleColumn}
       onColumnsReset={resetToDefault}
@@ -1044,7 +1052,7 @@ export function JournalTable({
           onClick={handleExport}
         >
           <Download className="w-3.5 h-3.5 ms-1.5 text-slate-500" />
-          تصدير إكسل
+          {t("journal.table.export", { namespace: "accounting", fallback: "تصدير إكسل" })}
         </Button>
       )}
     >
@@ -1075,8 +1083,8 @@ export function JournalTable({
         {auditGroupedData.length > 0 && (
           <div dir="rtl">
             <div className="flex items-center justify-between px-4 py-2 bg-amber-50 border-y-2 border-amber-300" style={{ fontFamily: settings.fontFamily, fontSize: settings.fontSize }}>
-              <span className="text-sm font-black text-amber-800">أرشيف التدقيق — القيود المعكوسة والملغاة</span>
-              <span className="text-xs font-bold text-amber-700">{(auditEntries || []).length} قيد</span>
+              <span className="text-sm font-black text-amber-800">{t("journal.table.auditTitle", { namespace: "accounting", fallback: "أرشيف التدقيق — القيود المعكوسة والملغاة" })}</span>
+              <span className="text-xs font-bold text-amber-700">{t("journal.table.auditCount", { namespace: "accounting", vars: { count: (auditEntries || []).length }, fallback: `${(auditEntries || []).length} قيد` })}</span>
             </div>
             {auditGroupedData.map((group, groupIdx) => renderGroupGrid(group, groupIdx, "audit"))}
           </div>

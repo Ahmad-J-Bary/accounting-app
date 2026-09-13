@@ -8,6 +8,7 @@ import { TrendingUp } from "lucide-react";
 import type { PartnerDto, PartnerRequest } from '@modules/partners/api/partnerService';
 import { useCurrencyField } from "@shared/hooks/useCurrencyField";
 import { CurrencyField } from "@shared/ui/CurrencyField";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 interface PartnerFormProps {
   open: boolean;
@@ -19,6 +20,7 @@ interface PartnerFormProps {
 }
 
 export function PartnerForm({ open, onClose, partner, onSave, saving, accountInfo }: PartnerFormProps) {
+  const { t } = useLocalization();
   const currencyField = useCurrencyField({
     initialCurrency: partner?.currency || undefined,
     initialFxRate: partner?.exchange_rate || undefined,
@@ -81,31 +83,31 @@ export function PartnerForm({ open, onClose, partner, onSave, saving, accountInf
 
   return (
     <FormPanel
-      title={partner ? "تعديل بيانات الشريك" : "إضافة شريك جديد"}
+      title={partner ? t("form.editTitle", { namespace: "partners", fallback: "تعديل بيانات الشريك" }) : t("form.createTitle", { namespace: "partners", fallback: "إضافة شريك جديد" })}
       onClose={onClose}
       onSave={() => handleSubmit()}
       isSaving={saving}
       saveDisabled={!formData.name || !currencyField.amount}
-      saveLabel={partner ? "تحديث البيانات" : "حفظ الشريك"}
+      saveLabel={partner ? t("form.updateSave", { namespace: "partners", fallback: "تحديث البيانات" }) : t("form.createSave", { namespace: "partners", fallback: "حفظ الشريك" })}
     >
       <div className="space-y-4 text-right">
             {accountInfo && (
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <FieldLabel>رقم الحساب</FieldLabel>
+                  <FieldLabel>{t("form.accountNumber", { namespace: "partners", fallback: "رقم الحساب" })}</FieldLabel>
                   <Input value={accountInfo.code} readOnly className="h-9 bg-slate-50 border-slate-200 cursor-not-allowed" />
                 </div>
                 <div className="space-y-1.5">
-                  <FieldLabel>فرعي من</FieldLabel>
+                  <FieldLabel>{t("form.parentOf", { namespace: "partners", fallback: "فرعي من" })}</FieldLabel>
                   <Input value={accountInfo.parentName} readOnly className="h-9 bg-slate-50 border-slate-200 cursor-not-allowed" />
                 </div>
               </div>
             )}
             <div className="space-y-2">
-              <Label>اسم الشريك</Label>
+              <Label>{t("form.partnerName", { namespace: "partners", fallback: "اسم الشريك" })}</Label>
               <Input 
                 required
-                placeholder="مثال: أحمد محمد" 
+                placeholder={t("form.namePlaceholder", { namespace: "partners", fallback: "مثال: أحمد محمد" })} 
                 value={formData.name} 
                 onChange={e => setFormData({...formData, name: e.target.value})} 
                 className="text-right"
@@ -114,7 +116,7 @@ export function PartnerForm({ open, onClose, partner, onSave, saving, accountInf
 
             <div className="space-y-3 border p-4 rounded-lg bg-slate-50/50">
               <CurrencyField
-                label="المبلغ المشارك به"
+                label={t("form.contributedAmount", { namespace: "partners", fallback: "المبلغ المشارك به" })}
                 currency={currencyField.currency}
                 onCurrencyChange={currencyField.setCurrency}
                 amount={currencyField.amount}
@@ -127,12 +129,12 @@ export function PartnerForm({ open, onClose, partner, onSave, saving, accountInf
             </div>
 
             <div className="space-y-2 pt-2">
-              <Label className="block text-right font-medium">نسبة الأرباح المخصصة (%) - اختياري</Label>
+              <Label className="block text-right font-medium">{t("form.profitRatioOptional", { namespace: "partners", fallback: "نسبة الأرباح المخصصة (%) - اختياري" })}</Label>
               <div className="relative">
                 <Input 
                   type="number" 
                   step="any"
-                  placeholder="توزيع تلقائي" 
+                  placeholder={t("form.autoDistribution", { namespace: "partners", fallback: "توزيع تلقائي" })} 
                   value={formData.manualRatio} 
                   onChange={e => setFormData({...formData, manualRatio: e.target.value})} 
                   className="text-left pl-8"
@@ -142,11 +144,11 @@ export function PartnerForm({ open, onClose, partner, onSave, saving, accountInf
             </div>
 
             <div className="space-y-1.5">
-              <FieldLabel>ملاحظات</FieldLabel>
+              <FieldLabel>{t("form.notes", { namespace: "partners", fallback: "ملاحظات" })}</FieldLabel>
               <Textarea
                 value={formData.notes}
                 onChange={(e) => setFormData({...formData, notes: e.target.value})}
-                placeholder="ملاحظات اختيارية..."
+                placeholder={t("form.notesPlaceholder", { namespace: "partners", fallback: "ملاحظات اختيارية..." })}
                 className="min-h-[60px] bg-white border-slate-200"
               />
             </div>

@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { Search, User, Truck, X, Plus, Loader2 } from "lucide-react";
 import type { CustomerDto, SupplierDto } from "@erp/shared-types";
 import { cn } from '@shared/lib/utils';
+import { useLocalization } from "@app/providers/LocalizationProvider";
 import { customerService } from '@modules/partners/api/customerService';
 import { supplierService } from '@modules/partners/api/supplierService';
 
@@ -39,6 +40,7 @@ export function InvoicePartySelector({
   onSearchActive,
   onCreateParty,
 }: InvoicePartySelectorProps) {
+  const { t } = useLocalization();
   const [isEditing, setIsEditing] = useState(!selectedId);
   const [inputValue, setInputValue] = useState("");
   const [debouncedValue, setDebouncedValue] = useState("");
@@ -61,7 +63,7 @@ export function InvoicePartySelector({
   selectedIdRef.current = selectedId;
   selectedNameRef.current = selectedName;
 
-  const label = type === "customer" ? "العميل" : "المورد";
+  const label = type === "customer" ? t("party.customer", { namespace: "partners", fallback: "العميل" }) : t("party.supplier", { namespace: "partners", fallback: "المورد" });
   const Icon = type === "customer" ? User : Truck;
   const placeholder = type === "customer" ? (defaultName ?? "زبون نقدي") : (defaultName ?? "مورد نقدي");
 
@@ -218,10 +220,10 @@ export function InvoicePartySelector({
     if (!currentBalance) return null;
     const d = parseFloat(currentBalance.debit);
     const c = parseFloat(currentBalance.credit);
-    if (d > 0) return `مدين ${currentBalance.debit}`;
-    if (c > 0) return `دائن ${currentBalance.credit}`;
+    if (d > 0) return t("invoice.balanceDebit", { namespace: "invoicing", vars: { amount: currentBalance.debit }, fallback: `مدين {{amount}}` });
+    if (c > 0) return t("invoice.balanceCredit", { namespace: "invoicing", vars: { amount: currentBalance.credit }, fallback: `دائن {{amount}}` });
     return null;
-  }, [currentBalance]);
+  }, [currentBalance, t]);
 
   const renderSelectedMode = () => (
     <div className={cn(
@@ -357,7 +359,7 @@ export function InvoicePartySelector({
             {filtered.length === 0 && debouncedValue && (
               <div className="py-6 text-center flex flex-col items-center gap-2">
                 <Search className="w-6 h-6 text-muted-foreground/20" />
-                <span className="text-sm text-muted-foreground">لا توجد نتائج</span>
+                <span className="text-sm text-muted-foreground">{t("invoice.noResults", { namespace: "invoicing", fallback: "لا توجد نتائج" })}</span>
                 {onCreateParty && (
                   <button
                     type="button"
@@ -382,7 +384,7 @@ export function InvoicePartySelector({
                     ) : (
                       <Plus className="w-3.5 h-3.5" />
                     )}
-                    <span>إنشاء "{debouncedValue}"</span>
+                    <span>{t("invoice.createParty", { namespace: "invoicing", vars: { name: debouncedValue }, fallback: `إنشاء "{{name}}"` })}</span>
                   </button>
                 )}
               </div>
@@ -391,7 +393,7 @@ export function InvoicePartySelector({
             {filtered.length === 0 && !debouncedValue && !selectedId && (
               <div className="py-8 text-center flex flex-col items-center gap-2">
                 <Search className="w-6 h-6 text-muted-foreground/20" />
-                <span className="text-sm text-muted-foreground">ابدأ بالبحث...</span>
+                <span className="text-sm text-muted-foreground">{t("invoice.startSearching", { namespace: "invoicing", fallback: "ابدأ بالبحث..." })}</span>
               </div>
             )}
           </div>

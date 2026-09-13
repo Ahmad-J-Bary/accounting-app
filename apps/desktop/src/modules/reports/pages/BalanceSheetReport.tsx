@@ -8,9 +8,11 @@ import { useBalanceSheet } from "@shared/hooks/queries/useReportQueries";
 import { BalanceSheetView } from "@modules/reports/components/BalanceSheetView";
 import { ReportFilterBar } from "@widgets/reports/ReportFilterBar";
 import { ReportLoadingSkeleton } from "@widgets/reports";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 export default function BalanceSheetReport() {
   const { baseCurrency, currencies, formatAmount, hasMultipleCurrencies } = useCurrencyContext();
+  const { t } = useLocalization();
   const {
     filters,
     setFilters,
@@ -66,7 +68,7 @@ export default function BalanceSheetReport() {
 
   return (
     <OperationalTableTemplate
-      title="الميزانية العمومية"
+      title={t("balanceSheet.title", { namespace: "reports", fallback: "الميزانية العمومية" })}
       toolbar={
         <ReportFilterBar
           filters={filters}

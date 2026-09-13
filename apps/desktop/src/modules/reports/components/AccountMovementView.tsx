@@ -5,6 +5,7 @@ import { AccountMovementTable } from "@modules/accounting/account-movements/comp
 import { computeClosingBalance } from "@modules/accounting/account-movements/lib/openingLines";
 import type { LoadedAccountMovementsData } from "../hooks/useAccountMovementsReport";
 import { StatCard } from "@widgets/stats/StatCard";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 type AccountMovementViewProps = {
   data: LoadedAccountMovementsData;
@@ -18,22 +19,23 @@ export function AccountMovementView({ data, loading, search, onSearchChange, sym
   const { accountName, openingBalance, openingEntry, openingEntries, openingBalanceDate, filteredLines, totals, openingDebitTotal, openingCreditTotal } = data;
   const closing = computeClosingBalance(openingBalance + totals.debit + openingDebitTotal, totals.credit + openingCreditTotal);
   const openingClosing = computeClosingBalance(openingDebitTotal, openingCreditTotal);
+  const { t } = useLocalization();
 
   return (
     <div className="flex flex-col h-full">
-      <ReportMeta title="دفتر الأستاذ / كشف حركات الحساب" description="عرض تفصيلي لجميع الحركات المالية والقيود المؤثرة على حساب معين خلال فترة" />
+      <ReportMeta title={t("accountMovements.ledgerTitle", { namespace: "reports", fallback: "دفتر الأستاذ / كشف حركات الحساب" })} description={t("accountMovements.metaDescription", { namespace: "reports", fallback: "عرض تفصيلي لجميع الحركات المالية والقيود المؤثرة على حساب معين خلال فترة" })} />
 
       <div className="grid grid-cols-4 gap-2 px-4 pt-4 pb-2">
-        <StatCard label="افتتاحي / مدين" value={formatCurrency(openingDebitTotal, symbol)} icon={ArrowUpRight} />
-        <StatCard label="افتتاحي / دائن" value={formatCurrency(openingCreditTotal, symbol)} icon={ArrowDownLeft} />
+        <StatCard label={t("accountMovements.stat.openingDebit", { namespace: "reports", fallback: "افتتاحي / مدين" })} value={formatCurrency(openingDebitTotal, symbol)} icon={ArrowUpRight} />
+        <StatCard label={t("accountMovements.stat.openingCredit", { namespace: "reports", fallback: "افتتاحي / دائن" })} value={formatCurrency(openingCreditTotal, symbol)} icon={ArrowDownLeft} />
         <StatCard
-          label={`صافي الافتتاحي / ${openingClosing.sign}`}
+          label={t("accountMovements.stat.netOpening", { namespace: "reports", fallback: "صافي الافتتاحي / {{sign}}", vars: { sign: openingClosing.sign } })}
           value={formatCurrency(Math.abs(openingClosing.net), symbol)}
           icon={Landmark}
           variant={openingClosing.net >= 0 ? "positive" : "negative"}
         />
         <StatCard
-          label={`الختامي / ${closing.sign}`}
+          label={t("accountMovements.stat.closing", { namespace: "reports", fallback: "الختامي / {{sign}}", vars: { sign: closing.sign } })}
           value={formatCurrency(Math.abs(closing.net), symbol)}
           icon={FileText}
           variant="accent"

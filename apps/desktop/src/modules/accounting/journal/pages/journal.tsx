@@ -15,12 +15,13 @@ import { useReportFilters } from "@shared/hooks/useReportFilters";
 import { toLocalDateStr } from "@shared/lib/format";
 import { JOURNAL_MUTATION_KEYS, invalidateKeys } from "@shared/hooks/queryClient";
 import { useTabs } from "@app/providers/TabContext";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 // Refactored Components & Hooks
 import { useDataTable } from '@shared/hooks';
 import { JournalTable } from '@modules/accounting/journal/components/JournalTable';
 import { partitionJournalEntries, type ReversalContext } from "@modules/accounting/journal/lib/journal-view";
-import { JOURNAL_TYPES } from "@modules/accounting/journal/lib/journal-config";
+import { JOURNAL_TYPES, journalTypeOptionKey } from "@modules/accounting/journal/lib/journal-config";
 
 type DisplayMode = "two-line" | "one-line";
 
@@ -28,6 +29,7 @@ export default function Journal() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { openTab } = useTabs();
+  const { t } = useLocalization();
   const typeParam = searchParams.get('type') as JournalType | null;
 
   // Date range: same defaults + URL sync as the Account Movements page
@@ -137,7 +139,9 @@ export default function Journal() {
     [displayEntries],
   );
 
-  const journalTitle = JOURNAL_TYPES.find(t => t.value === (journalType || 'GeneralJournal'))?.label || 'القيود اليومية';
+  const journalTitle = JOURNAL_TYPES.find(x => x.value === (journalType || 'GeneralJournal'))
+    ? t(journalTypeOptionKey(journalType || 'GeneralJournal'), { namespace: "accounting", fallback: JOURNAL_TYPES.find(x => x.value === (journalType || 'GeneralJournal'))?.label ?? 'القيود اليومية' })
+    : t('journal.fallbackTitle', { namespace: "accounting", fallback: 'القيود اليومية' });
 
   const handleReverseRequest = useCallback((id: string) => {
     setPendingReverseId(id);
@@ -150,24 +154,24 @@ export default function Journal() {
     setReversingId(pendingReverseId);
     try {
       const reversal = await journalEntryService.reverseJournalEntry(pendingReverseId);
-      toast.success(`تم ترحيل القيد العكسي ${reversal.entry_number}`);
+      toast.success(t("journal.toast.reversePosted", { namespace: "accounting", vars: { number: reversal.entry_number }, fallback: `تم ترحيل القيد العكسي ${reversal.entry_number}` }));
       await invalidateKeys(queryClient, JOURNAL_MUTATION_KEYS);
     } catch (e) {
-      toast.error("فشل عكس القيد: " + e);
+      toast.error(t("journal.toast.reverseFailed", { namespace: "accounting", vars: { error: String(e) }, fallback: `فشل عكس القيد: ${String(e)}` }));
     } finally {
       setReversingId(null);
       setPendingReverseId(null);
     }
-  }, [pendingReverseId, queryClient]);
+  }, [pendingReverseId, queryClient, t]);
 
   const handleEntryClick = useCallback((entryId: string) => {
     openTab({
       id: `journal-entry-${entryId}`,
-      title: "تفاصيل القيد",
+      title: t("journal.toast.entryTab", { namespace: "accounting", fallback: "تفاصيل القيد" }),
       path: `/journal/${entryId}`,
       closable: true,
     });
-  }, [openTab]);
+  }, [openTab, t]);
 
   const handleNewEntry = useCallback(() => {
     navigate("/journal/new");
@@ -185,7 +189,7 @@ export default function Journal() {
               className="h-10 px-4 font-bold bg-blue-600 hover:bg-blue-700 text-white"
             >
               <Plus className="w-4 h-4 ms-2" />
-              قيد جديد
+              {t("journal.newEntry", { namespace: "accounting", fallback: "قيد جديد" })}
             </Button>
             <DateRangePicker
               from={dateFilters.from_date}
@@ -203,11 +207,11 @@ export default function Journal() {
             >
               <SelectTrigger className="w-[180px] h-10 bg-white font-bold shadow-sm border-slate-200">
                 <Filter className="w-4 h-4 ms-2 text-slate-400" />
-                <SelectValue placeholder="نوع اليومية" />
+                <SelectValue placeholder={t("journal.typePlaceholder", { namespace: "accounting", fallback: "نوع اليومية" })} />
               </SelectTrigger>
               <SelectContent>
-                {JOURNAL_TYPES.map(t => (
-                  <SelectItem key={t.value} value={t.value} className="font-bold">{t.label}</SelectItem>
+                {JOURNAL_TYPES.map((jt) => (
+                  <SelectItem key={jt.value} value={jt.value} className="font-bold">{t(journalTypeOptionKey(jt.value), { namespace: "accounting", fallback: jt.label })}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -220,9 +224,9 @@ export default function Journal() {
                   ? "bg-slate-800 text-white border-slate-800"
                   : "bg-white text-slate-600 border-slate-200 hover:bg-slate-100"
               }`}
-              title="عرض / إخفاء أرشيف التدقيق: القيود المعكوسة والملغاة والمسودات — منفصل عن القيود التشغيلية"
+              title={t("journal.audit.title", { namespace: "accounting", fallback: "عرض / إخفاء أرشيف التدقيق: القيود المعكوسة والملغاة والمسودات — منفصل عن القيود التشغيلية" })}
             >
-              {showAudit ? "إخفاء أرشيف التدقيق" : "عرض أرشيف التدقيق"}
+              {showAudit ? t("journal.audit.hide", { namespace: "accounting", fallback: "إخفاء أرشيف التدقيق" }) : t("journal.audit.show", { namespace: "accounting", fallback: "عرض أرشيف التدقيق" })}
             </button>
 
             <div className="flex items-center gap-1 border-slate-200 border rounded-lg overflow-hidden">
@@ -234,7 +238,7 @@ export default function Journal() {
                     ? "bg-blue-600 text-white"
                     : "text-slate-500 hover:bg-slate-100"
                 }`}
-                title="شكل السطرين (افتراضي)"
+                title={t("journal.display.twoLine", { namespace: "accounting", fallback: "شكل السطرين (افتراضي)" })}
               >
                 <LayoutList className="w-4 h-4" />
               </button>
@@ -246,7 +250,7 @@ export default function Journal() {
                     ? "bg-blue-600 text-white"
                     : "text-slate-500 hover:bg-slate-100"
                 }`}
-                title="شكل السطر الواحد"
+                title={t("journal.display.oneLine", { namespace: "accounting", fallback: "شكل السطر الواحد" })}
               >
                 <LayoutGrid className="w-4 h-4" />
               </button>
@@ -275,10 +279,10 @@ export default function Journal() {
       <ConfirmDialog
         open={confirmOpen}
         onOpenChange={setConfirmOpen}
-        title="تأكيد عكس القيد"
-        description="سيتم ترحيل قيد عكسي (معاكس) يُلغي أثر القيد ويحدد القيد الأصلي كمعكوس. هل تريد المتابعة؟"
-        confirmLabel="عكس القيد"
-        cancelLabel="إلغاء"
+        title={t("journal.confirmReverse.title", { namespace: "accounting", fallback: "تأكيد عكس القيد" })}
+        description={t("journal.confirmReverse.description", { namespace: "accounting", fallback: "سيتم ترحيل قيد عكسي (معاكس) يُلغي أثر القيد ويحدد القيد الأصلي كمعكوس. هل تريد المتابعة؟" })}
+        confirmLabel={t("journal.confirmReverse.confirm", { namespace: "accounting", fallback: "عكس القيد" })}
+        cancelLabel={t("journal.confirmReverse.cancel", { namespace: "accounting", fallback: "إلغاء" })}
         destructive
         onConfirm={handleReverseConfirm}
       />

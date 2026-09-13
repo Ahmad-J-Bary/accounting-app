@@ -1,6 +1,7 @@
 import { FileText, FolderOpen, Folder, Lock, ShieldCheck, Hash } from "lucide-react";
 import { cn } from '@shared/lib/utils';
 import { formatCurrency } from '@shared/lib/format';
+import { useLocalization } from "@app/providers/LocalizationProvider";
 import { TYPE_LABELS, type AccountTreeNode, type ToggleNodeHandler } from "../lib/types";
 import { isSummaryAccount, isOpeningStockAccount } from "../lib/tree-utils";
 import { parseSafeNumber } from "@shared/lib/parseSafeNumber";
@@ -27,6 +28,7 @@ export function AccountTreeNodeItem({
   toggleNode,
   virtualRootId,
 }: AccountTreeNodeItemProps) {
+  const { t } = useLocalization();
   const isVirtualRoot = virtualRootId === account.id;
   const isSummary = isVirtualRoot || isSummaryAccount(account);
 
@@ -96,16 +98,16 @@ export function AccountTreeNodeItem({
       <>
         <div className="w-[90px]">
           {node.is_final ? (
-            <span className="text-[10px] px-2 py-0.5 rounded-md font-medium bg-emerald-50 text-emerald-700">نهائي</span>
+            <span className="text-[10px] px-2 py-0.5 rounded-md font-medium bg-emerald-50 text-emerald-700">{t("chartOfAccounts.badges.leaf", { namespace: "accounting", fallback: "نهائي" })}</span>
           ) : (
             <span className={cn("text-[10px] px-2 py-0.5 rounded-md font-medium", isSummaryAccount(node) ? "bg-amber-50 text-amber-700" : "bg-slate-100 text-slate-600")}>
-              {isSummaryAccount(node) ? "تجميعي" : "فرعي"}
+              {isSummaryAccount(node) ? t("chartOfAccounts.badges.summary", { namespace: "accounting", fallback: "تجميعي" }) : t("chartOfAccounts.badges.sub", { namespace: "accounting", fallback: "فرعي" })}
             </span>
           )}
         </div>
         <div className="w-[100px]">
           <span className={cn("text-[10px] px-2 py-0.5 rounded-md font-medium border", TYPE_LABELS[node.account_type]?.color || "bg-slate-50 text-slate-600 border-slate-200")}>
-            {TYPE_LABELS[node.account_type]?.label || node.account_type}
+            {t(`chartOfAccounts.typeLabels.${node.account_type}`, { namespace: "accounting", fallback: TYPE_LABELS[node.account_type]?.label || node.account_type })}
           </span>
         </div>
         <div className="w-[120px] text-start tabular-nums">

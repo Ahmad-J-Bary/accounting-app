@@ -5,6 +5,7 @@ import { FISCAL_MUTATION_KEYS, invalidateKeys, QUERY_KEYS } from "@shared/hooks/
 import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTemplate";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { toLocalDateStr } from "@shared/lib/format";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 import { fiscalPeriodService, periodWindowFromDateInput } from "@modules/accounting/api/fiscalPeriodService";
 import { ConfirmDialog } from "@shared/ui/confirm-dialog";
 import { ErrorBoundary } from "@shared/ui/ErrorBoundary";
@@ -42,6 +43,7 @@ const CONFIRM_COPY: Record<PeriodActionType, { title: string; description: strin
 export default function FiscalPeriodsPage() {
   const qc = useQueryClient();
   const { formatAmount, baseCurrency } = useCurrencyContext();
+  const { t } = useLocalization();
   const [start, setStart] = useState("");
   const [end, setEnd] = useState("");
   const [confirm, setConfirm] = useState<ConfirmState | null>(null);
@@ -63,10 +65,10 @@ export default function FiscalPeriodsPage() {
     onSuccess: () => {
       setStart("");
       setEnd("");
-      toast.success("تم إنشاء الفترة المالية");
+      toast.success(t("fiscalPeriods.toast.created", { namespace: "accounting", fallback: "تم إنشاء الفترة المالية" }));
       invalidate();
     },
-    onError: (e) => toast.error("فشل الإنشاء: " + e),
+    onError: (e) => toast.error(t("fiscalPeriods.toast.createFailed", { namespace: "accounting", vars: { error: e instanceof Error ? e.message : String(e) }, fallback: "فشل الإنشاء: " + (e instanceof Error ? e.message : String(e)) })),
   });
 
   const act = useMutation({
@@ -82,14 +84,14 @@ export default function FiscalPeriodsPage() {
     onSuccess: (_dto, vars) => {
       toast.success(
         vars.type === "close"
-          ? "تم إغلاق الفترة — لن تقبل حركات جديدة"
+          ? t("fiscalPeriods.toast.closed", { namespace: "accounting", fallback: "تم إغلاق الفترة — لن تقبل حركات جديدة" })
           : vars.type === "lock"
-            ? "تم قفل الفترة بشكل نهائي — لا يمكن فتحها بعد الآن"
-            : "تم إعادة فتح الفترة",
+            ? t("fiscalPeriods.toast.locked", { namespace: "accounting", fallback: "تم قفل الفترة بشكل نهائي — لا يمكن فتحها بعد الآن" })
+            : t("fiscalPeriods.toast.reopened", { namespace: "accounting", fallback: "تم إعادة فتح الفترة" }),
       );
       invalidate();
     },
-    onError: (e) => toast.error("فشلت العملية: " + e),
+    onError: (e) => toast.error(t("fiscalPeriods.toast.operationFailed", { namespace: "accounting", vars: { error: e instanceof Error ? e.message : String(e) }, fallback: "فشلت العملية: " + (e instanceof Error ? e.message : String(e)) })),
   });
 
   // Current period is DERIVED from the date: the Open/Reopened period whose
@@ -124,12 +126,15 @@ export default function FiscalPeriodsPage() {
 
   const confirmCopy = confirm
     ? (() => {
-        const copy = CONFIRM_COPY[confirm.type];
-        return {
-          ...copy,
-          description: copy.description
+        const base = CONFIRM_COPY[confirm.type];
+        const descriptionSource = CONFIRM_COPY[confirm.type].description
             .replace("{start}", toLocalDateStr(confirm.period.start_date))
-            .replace("{end}", toLocalDateStr(confirm.period.end_date)),
+            .replace("{end}", toLocalDateStr(confirm.period.end_date));
+        const keyPath = `fiscalPeriods.confirm.${confirm.type}` as const;
+        return {
+          title: t(`${keyPath}.title`, { namespace: "accounting", fallback: base.title }),
+          description: t(`${keyPath}.description`, { namespace: "accounting", vars: { start: toLocalDateStr(confirm.period.start_date), end: toLocalDateStr(confirm.period.end_date) }, fallback: descriptionSource }),
+          confirmLabel: t(`${keyPath}.confirm`, { namespace: "accounting", fallback: base.confirmLabel }),
         };
       })()
     : null;
@@ -137,11 +142,10 @@ export default function FiscalPeriodsPage() {
   return (
     <ErrorBoundary>
     <OperationalTableTemplate
-      title="الفترات المالية"
+      title={t("fiscalPeriods.title", { namespace: "accounting", fallback: "الفترات المالية" })}
       toolbar={
         <p className="text-xs text-slate-500">
-          الفترة المالية بنية أساسية للمحاسبة لكل الشركات: كل قيد مرحَّل يجب أن يقع ضمن فترة مفتوحة،
-          والحركة في فترة مغلقة أو مقفلة مرفوضة إلا عبر mechanism صريح (قيد عكسي أو رصيد افتتاحي).
+          {t("fiscalPeriods.description", { namespace: "accounting", fallback: "الفترة المالية بنية أساسية للمحاسبة لكل الشركات: كل قيد مرحَّل يجب أن يقع ضمن فترة مفتوحة، والحركة في فترة مغلقة أو مقفلة مرفوضة إلا عبر mechanism صريح (قيد عكسي أو رصيد افتتاحي)." })}
         </p>
       }
       tableContent={

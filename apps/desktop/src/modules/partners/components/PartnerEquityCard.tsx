@@ -4,10 +4,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@shared/ui/card";
 import { Skeleton } from "@shared/ui/skeleton";
 import { partnerService, type PartnerEquityStatementDto } from "@modules/partners/api/partnerService";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 import { QUERY_KEYS } from "@shared/hooks/queryClient";
 
 export function PartnerEquityCard() {
   const { formatAmount, baseCurrency } = useCurrencyContext();
+  const { t } = useLocalization();
   const { data, isLoading, error } = useQuery<PartnerEquityStatementDto>({
     queryKey: QUERY_KEYS.partnerEquityStatement(),
     queryFn: () => partnerService.getPartnerEquityStatement(),
@@ -20,7 +22,7 @@ export function PartnerEquityCard() {
     <Card className="border-slate-200 shadow-sm">
       <CardHeader className="py-3">
         <CardTitle className="text-base font-bold text-slate-800 flex items-center gap-2">
-          <Wallet className="w-4 h-4 text-indigo-600" /> بيان شركاء — حقوق الملكية ({sym})
+          <Wallet className="w-4 h-4 text-indigo-600" /> {t("chart.equityTitle", { namespace: "partners", vars: { currency: sym }, fallback: "بيان شركاء — حقوق الملكية ({{currency}})" })}
         </CardTitle>
       </CardHeader>
       <CardContent className="p-0">
@@ -29,26 +31,26 @@ export function PartnerEquityCard() {
             {[0, 1, 2].map((i) => <Skeleton key={i} className="h-8 rounded" />)}
           </div>
         )}
-        {error && <p className="text-xs text-red-500 p-4">فشل تحميل بيان الشركاء: {String(error)}</p>}
+        {error && <p className="text-xs text-red-500 p-4">{t("chart.equityLoadError", { namespace: "partners", vars: { error: String(error) }, fallback: "فشل تحميل بيان الشركاء: {{error}}" })}</p>}
         {data && (
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
               <thead>
                 <tr className="border-b border-slate-200 text-slate-500">
-                  <th className="text-right px-4 py-2 font-semibold">الشريك</th>
-                  <th className="text-right px-4 py-2 font-semibold">رأس المال المسجل</th>
-                  <th className="text-right px-4 py-2 font-semibold">رصيد دفتر الأستاذ</th>
-                  <th className="text-right px-4 py-2 font-semibold">الحساب الجاري</th>
-                  <th className="text-right px-4 py-2 font-semibold">المسحوبات</th>
-                  <th className="text-right px-4 py-2 font-semibold">الأرباح المتراكمة</th>
-                  <th className="text-right px-4 py-2 font-semibold">الخسائر المتراكمة</th>
-                  <th className="text-right px-4 py-2 font-semibold">إجمالي حقوق الملكية</th>
+                  <th className="text-right px-4 py-2 font-semibold">{t("chart.equityColumns.partner", { namespace: "partners", fallback: "الشريك" })}</th>
+                  <th className="text-right px-4 py-2 font-semibold">{t("chart.equityColumns.capitalRegistered", { namespace: "partners", fallback: "رأس المال المسجل" })}</th>
+                  <th className="text-right px-4 py-2 font-semibold">{t("chart.equityColumns.ledgerBalance", { namespace: "partners", fallback: "رصيد دفتر الأستاذ" })}</th>
+                  <th className="text-right px-4 py-2 font-semibold">{t("chart.equityColumns.currentBalance", { namespace: "partners", fallback: "الحساب الجاري" })}</th>
+                  <th className="text-right px-4 py-2 font-semibold">{t("chart.equityColumns.drawings", { namespace: "partners", fallback: "المسحوبات" })}</th>
+                  <th className="text-right px-4 py-2 font-semibold">{t("chart.equityColumns.accumulatedProfit", { namespace: "partners", fallback: "الأرباح المتراكمة" })}</th>
+                  <th className="text-right px-4 py-2 font-semibold">{t("chart.equityColumns.accumulatedLoss", { namespace: "partners", fallback: "الخسائر المتراكمة" })}</th>
+                  <th className="text-right px-4 py-2 font-semibold">{t("chart.equityColumns.totalEquity", { namespace: "partners", fallback: "إجمالي حقوق الملكية" })}</th>
                 </tr>
               </thead>
               <tbody>
                 {data.rows.length === 0 && (
                   <tr>
-                    <td colSpan={8} className="text-center py-4 text-slate-400">لا يوجد شركاء</td>
+                    <td colSpan={8} className="text-center py-4 text-slate-400">{t("chart.equityEmpty", { namespace: "partners", fallback: "لا يوجد شركاء" })}</td>
                   </tr>
                 )}
                 {data.rows.map((r) => (
@@ -69,7 +71,7 @@ export function PartnerEquityCard() {
                 ))}
                 {data.rows.length > 0 && (
                   <tr className="bg-slate-50 font-black text-slate-800">
-                    <td className="px-4 py-2">الإجمالي</td>
+                    <td className="px-4 py-2">{t("chart.equityTotal", { namespace: "partners", fallback: "الإجمالي" })}</td>
                     <td className="px-4 py-2 tabular-nums">{show(data.total_capital)}</td>
                     <td className="px-4 py-2 tabular-nums">—</td>
                     <td className="px-4 py-2 tabular-nums">—</td>

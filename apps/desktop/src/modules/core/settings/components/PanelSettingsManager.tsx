@@ -9,8 +9,10 @@ import { Button } from "@shared/ui/button";
 import { LayoutGrid, Type, Monitor, Eye, PanelRightOpen, PanelRightClose } from "lucide-react";
 import { SidebarShell, SidebarHeader, SidebarBody, SidebarFooter, SidebarSection, SidebarFieldGroup } from '@widgets/sidebar-shell';
 import { SettingsManagerLayout, SettingsGroup } from '@widgets/templates/SettingsManagerLayout';
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 export const PanelSettingsManager: React.FC = () => {
+  const { t } = useLocalization();
   const { settings: sideSettings, updateSetting: updateSideSetting, resetSettings: resetSideSettings } = useSidePanelSettings();
   const [previewOverlay, setPreviewOverlay] = useState(false);
 
@@ -24,33 +26,33 @@ export const PanelSettingsManager: React.FC = () => {
     <SettingsManagerLayout resetAction={resetSideSettings}>
       <div className="space-y-5">
         <div className="flex flex-col gap-1 border-r-4 border-emerald-600 pr-3 pb-1 mb-2">
-          <h2 className="text-xl font-black text-slate-800">لوحة العمليات والنماذج الجانبية</h2>
-          <p className="text-xs text-slate-500">تخصيص مظهر وأبعاد وسلوك لوحة النماذج والمدخلات الجانبية المنبثقة (Drawer / Operations Panel)</p>
+          <h2 className="text-xl font-black text-slate-800">{t("settings.panel.title", { namespace: "settings", fallback: "لوحة العمليات والنماذج الجانبية" })}</h2>
+          <p className="text-xs text-slate-500">{t("settings.panel.description", { namespace: "settings", fallback: "تخصيص مظهر وأبعاد وسلوك لوحة النماذج والمدخلات الجانبية المنبثقة (Drawer / Operations Panel)" })}</p>
         </div>
 
-        <SettingsGroup title="تخطيط وأبعاد لوحة العمليات" icon={LayoutGrid} color="text-emerald-600">
+        <SettingsGroup title={t("settings.panel.layoutTitle", { namespace: "settings", fallback: "تخطيط وأبعاد لوحة العمليات" })} icon={LayoutGrid} color="text-emerald-600">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
-              <Label className="text-slate-600 font-semibold">العرض الافتراضي للوحة</Label>
+              <Label className="text-slate-600 font-semibold">{t("settings.panel.defaultWidth", { namespace: "settings", fallback: "العرض الافتراضي للوحة" })}</Label>
               <Select
                 value={sideSettings.widthPreset}
                 onValueChange={(v) => updateSideSetting('widthPreset', v as SidebarWidthPreset)}
               >
                 <SelectTrigger className="h-10 rounded-lg border-slate-200">
-                  <SelectValue placeholder="اختر العرض" />
+                  <SelectValue placeholder={t("settings.panel.widthPlaceholder", { namespace: "settings", fallback: "اختر العرض" })} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="narrow">ضيق (380px)</SelectItem>
-                  <SelectItem value="standard">قياسي (500px)</SelectItem>
-                  <SelectItem value="wide">عريض (640px)</SelectItem>
-                  <SelectItem value="extra-wide">عريض جداً (800px)</SelectItem>
+                  <SelectItem value="narrow">{t("settings.panel.widths.narrow", { namespace: "settings", fallback: "ضيق (380px)" })}</SelectItem>
+                  <SelectItem value="standard">{t("settings.panel.widths.standard", { namespace: "settings", fallback: "قياسي (500px)" })}</SelectItem>
+                  <SelectItem value="wide">{t("settings.panel.widths.wide", { namespace: "settings", fallback: "عريض (640px)" })}</SelectItem>
+                  <SelectItem value="extra-wide">{t("settings.panel.widths.extraWide", { namespace: "settings", fallback: "عريض جداً (800px)" })}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-3">
               <div className="flex justify-between items-center">
-                <Label className="text-slate-600 font-semibold">العرض المخصص للوحة ({sideSettings.customWidth}px)</Label>
+                <Label className="text-slate-600 font-semibold">{t("settings.panel.customWidth", { namespace: "settings", fallback: "العرض المخصص للوحة ({{width}}px)", vars: { width: sideSettings.customWidth } })}</Label>
               </div>
               <Slider
                 value={[sideSettings.customWidth]}
@@ -63,82 +65,82 @@ export const PanelSettingsManager: React.FC = () => {
             </div>
 
             <div className="space-y-2">
-              <Label className="text-slate-600 font-semibold">التباعد الداخلي للوحة (الحشوة)</Label>
+              <Label className="text-slate-600 font-semibold">{t("settings.panel.padding", { namespace: "settings", fallback: "التباعد الداخلي للوحة (الحشوة)" })}</Label>
               <Select
                 value={sideSettings.paddingPreset}
                 onValueChange={(v) => updateSideSetting('paddingPreset', v as PresetUnion)}
               >
                 <SelectTrigger className="h-10 rounded-lg border-slate-200">
-                  <SelectValue placeholder="اختر التباعد" />
+                  <SelectValue placeholder={t("settings.panel.paddingPlaceholder", { namespace: "settings", fallback: "اختر التباعد" })} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="compact">مكتنز (صغير)</SelectItem>
-                  <SelectItem value="comfortable">مريح (متوسط)</SelectItem>
-                  <SelectItem value="spacious">متسع (كبير)</SelectItem>
+                  <SelectItem value="compact">{t("settings.panel.paddings.compact", { namespace: "settings", fallback: "مكتنز (صغير)" })}</SelectItem>
+                  <SelectItem value="comfortable">{t("settings.panel.paddings.comfortable", { namespace: "settings", fallback: "مريح (متوسط)" })}</SelectItem>
+                  <SelectItem value="spacious">{t("settings.panel.paddings.spacious", { namespace: "settings", fallback: "متسع (كبير)" })}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-2">
-              <Label className="text-slate-600 font-semibold">التباعد بين حقول النموذج</Label>
+              <Label className="text-slate-600 font-semibold">{t("settings.panel.spacing", { namespace: "settings", fallback: "التباعد بين حقول النموذج" })}</Label>
               <Select
                 value={sideSettings.spacingPreset}
                 onValueChange={(v) => updateSideSetting('spacingPreset', v as PresetUnion)}
               >
                 <SelectTrigger className="h-10 rounded-lg border-slate-200">
-                  <SelectValue placeholder="اختر التباعد" />
+                  <SelectValue placeholder={t("settings.panel.spacingPlaceholder", { namespace: "settings", fallback: "اختر التباعد" })} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="compact">مكتنز (متراص)</SelectItem>
-                  <SelectItem value="comfortable">مريح (متناسب)</SelectItem>
-                  <SelectItem value="spacious">متسع (متباعد)</SelectItem>
+                  <SelectItem value="compact">{t("settings.panel.spacings.compact", { namespace: "settings", fallback: "مكتنز (متراص)" })}</SelectItem>
+                  <SelectItem value="comfortable">{t("settings.panel.spacings.comfortable", { namespace: "settings", fallback: "مريح (متناسب)" })}</SelectItem>
+                  <SelectItem value="spacious">{t("settings.panel.spacings.spacious", { namespace: "settings", fallback: "متسع (متباعد)" })}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-2">
-              <Label className="text-slate-600 font-semibold">لون خلفية اللوحة</Label>
+              <Label className="text-slate-600 font-semibold">{t("settings.panel.background", { namespace: "settings", fallback: "لون خلفية اللوحة" })}</Label>
               <Select
                 value={sideSettings.background}
                 onValueChange={(v) => updateSideSetting('background', v)}
               >
                 <SelectTrigger className="h-10 rounded-lg border-slate-200">
-                  <SelectValue placeholder="اختر اللون" />
+                  <SelectValue placeholder={t("settings.panel.backgroundPlaceholder", { namespace: "settings", fallback: "اختر اللون" })} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="bg-white">أبيض ناصع</SelectItem>
-                  <SelectItem value="bg-slate-50">رمادي بارد</SelectItem>
-                  <SelectItem value="bg-zinc-50">رمادي دافئ</SelectItem>
+                  <SelectItem value="bg-white">{t("settings.panel.backgrounds.white", { namespace: "settings", fallback: "أبيض ناصع" })}</SelectItem>
+                  <SelectItem value="bg-slate-50">{t("settings.panel.backgrounds.slate", { namespace: "settings", fallback: "رمادي بارد" })}</SelectItem>
+                  <SelectItem value="bg-zinc-50">{t("settings.panel.backgrounds.zinc", { namespace: "settings", fallback: "رمادي دافئ" })}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-2">
-              <Label className="text-slate-600 font-semibold">درجة ظل لوحة العمليات</Label>
+              <Label className="text-slate-600 font-semibold">{t("settings.panel.shadow", { namespace: "settings", fallback: "درجة ظل لوحة العمليات" })}</Label>
               <Select
                 value={sideSettings.shadow}
                 onValueChange={(v) => updateSideSetting('shadow', v as ShadowUnion)}
               >
                 <SelectTrigger className="h-10 rounded-lg border-slate-200">
-                  <SelectValue placeholder="اختر مستوى الظل" />
+                  <SelectValue placeholder={t("settings.panel.shadowPlaceholder", { namespace: "settings", fallback: "اختر مستوى الظل" })} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">بدون ظل (مسطح)</SelectItem>
-                  <SelectItem value="sm">خفيف</SelectItem>
-                  <SelectItem value="md">متوسط</SelectItem>
-                  <SelectItem value="lg">قوي (بارز)</SelectItem>
-                  <SelectItem value="xl">قوي جداً</SelectItem>
+                  <SelectItem value="none">{t("settings.panel.shadows.none", { namespace: "settings", fallback: "بدون ظل (مسطح)" })}</SelectItem>
+                  <SelectItem value="sm">{t("settings.panel.shadows.sm", { namespace: "settings", fallback: "خفيف" })}</SelectItem>
+                  <SelectItem value="md">{t("settings.panel.shadows.md", { namespace: "settings", fallback: "متوسط" })}</SelectItem>
+                  <SelectItem value="lg">{t("settings.panel.shadows.lg", { namespace: "settings", fallback: "قوي (بارز)" })}</SelectItem>
+                  <SelectItem value="xl">{t("settings.panel.shadows.xl", { namespace: "settings", fallback: "قوي جداً" })}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
         </SettingsGroup>
 
-        <SettingsGroup title="الخطوط والحدود الفاصلة للوحة" icon={Type} color="text-amber-600">
+        <SettingsGroup title={t("settings.panel.typographyTitle", { namespace: "settings", fallback: "الخطوط والحدود الفاصلة للوحة" })} icon={Type} color="text-amber-600">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-3">
               <div className="flex justify-between items-center">
-                <Label className="text-slate-600 font-semibold">حجم خط حقول اللوحة ({sideSettings.fontSize}px)</Label>
+                <Label className="text-slate-600 font-semibold">{t("settings.panel.fieldFontSize", { namespace: "settings", fallback: "حجم خط حقول اللوحة ({{size}}px)", vars: { size: sideSettings.fontSize } })}</Label>
               </div>
               <Slider
                 value={[sideSettings.fontSize]}
@@ -151,30 +153,30 @@ export const PanelSettingsManager: React.FC = () => {
             </div>
 
             <div className="space-y-2">
-              <Label className="text-slate-600 font-semibold">نمط حدود لوحة العمليات</Label>
+              <Label className="text-slate-600 font-semibold">{t("settings.panel.borderStyleTitle", { namespace: "settings", fallback: "نمط حدود لوحة العمليات" })}</Label>
               <Select
                 value={sideSettings.borderStyle}
                 onValueChange={(v) => updateSideSetting('borderStyle', v as BorderUnion)}
               >
                 <SelectTrigger className="h-10 rounded-lg border-slate-200">
-                  <SelectValue placeholder="اختر الحدود" />
+                  <SelectValue placeholder={t("settings.panel.borderPlaceholder", { namespace: "settings", fallback: "اختر الحدود" })} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">بدون حدود</SelectItem>
-                  <SelectItem value="left">حد أيسر فقط (فاصل)</SelectItem>
-                  <SelectItem value="right">حد أيمن فقط</SelectItem>
-                  <SelectItem value="all">حدود كاملة</SelectItem>
+                  <SelectItem value="none">{t("settings.panel.borders.none", { namespace: "settings", fallback: "بدون حدود" })}</SelectItem>
+                  <SelectItem value="left">{t("settings.panel.borders.left", { namespace: "settings", fallback: "حد أيسر فقط (فاصل)" })}</SelectItem>
+                  <SelectItem value="right">{t("settings.panel.borders.right", { namespace: "settings", fallback: "حد أيمن فقط" })}</SelectItem>
+                  <SelectItem value="all">{t("settings.panel.borders.all", { namespace: "settings", fallback: "حدود كاملة" })}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
         </SettingsGroup>
 
-        <SettingsGroup title="تفاعل وسلوك لوحة العمليات" icon={Monitor} color="text-orange-600">
+        <SettingsGroup title={t("settings.panel.behaviorTitle", { namespace: "settings", fallback: "تفاعل وسلوك لوحة العمليات" })} icon={Monitor} color="text-orange-600">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <div className="flex items-center justify-between p-3 rounded-xl border border-slate-100 bg-slate-50/30">
               <div className="space-y-0.5">
-                <Label className="text-slate-700 font-semibold">سلوك عرض اللوحة</Label>
+                <Label className="text-slate-700 font-semibold">{t("settings.panel.displayBehavior", { namespace: "settings", fallback: "سلوك عرض اللوحة" })}</Label>
               </div>
               <Select
                 value={sideSettings.overlayVsInline}
@@ -184,15 +186,15 @@ export const PanelSettingsManager: React.FC = () => {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="inline">مضمنة (تدفع المحتوى)</SelectItem>
-                  <SelectItem value="overlay">عائمة (فوق المحتوى)</SelectItem>
+                  <SelectItem value="inline">{t("settings.panel.overlayModes.inline", { namespace: "settings", fallback: "مضمنة (تدفع المحتوى)" })}</SelectItem>
+                  <SelectItem value="overlay">{t("settings.panel.overlayModes.overlay", { namespace: "settings", fallback: "عائمة (فوق المحتوى)" })}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div className="flex items-center justify-between p-3 rounded-xl border border-slate-100 bg-slate-50/30">
               <div className="space-y-0.5">
-                <Label className="text-slate-700 font-semibold">ترويسة وتذييل ثابتين</Label>
+                <Label className="text-slate-700 font-semibold">{t("settings.panel.stickyHeaderFooter", { namespace: "settings", fallback: "ترويسة وتذييل ثابتين" })}</Label>
               </div>
               <Switch
                 checked={sideSettings.stickyHeaderFooter}
@@ -202,7 +204,7 @@ export const PanelSettingsManager: React.FC = () => {
 
             <div className="flex items-center justify-between p-3 rounded-xl border border-slate-100 bg-slate-50/30">
               <div className="space-y-0.5">
-                <Label className="text-slate-700 font-semibold">موقع أزرار الحفظ والإجراءات</Label>
+                <Label className="text-slate-700 font-semibold">{t("settings.panel.saveButtonPlacement", { namespace: "settings", fallback: "موقع أزرار الحفظ والإجراءات" })}</Label>
               </div>
               <Select
                 value={sideSettings.saveButtonPlacement}
@@ -212,16 +214,16 @@ export const PanelSettingsManager: React.FC = () => {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="right">يمين (افتراضي)</SelectItem>
-                  <SelectItem value="left">يسار</SelectItem>
-                  <SelectItem value="justify">توزيع متساوي</SelectItem>
+                  <SelectItem value="right">{t("settings.panel.placements.right", { namespace: "settings", fallback: "يمين (افتراضي)" })}</SelectItem>
+                  <SelectItem value="left">{t("settings.panel.placements.left", { namespace: "settings", fallback: "يسار" })}</SelectItem>
+                  <SelectItem value="justify">{t("settings.panel.placements.justify", { namespace: "settings", fallback: "توزيع متساوي" })}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div className="flex items-center justify-between p-3 rounded-xl border border-slate-100 bg-slate-50/30">
               <div className="space-y-0.5">
-                <Label className="text-slate-700 font-semibold">إظهار زر الإغلاق العلوي</Label>
+                <Label className="text-slate-700 font-semibold">{t("settings.panel.closeButton", { namespace: "settings", fallback: "إظهار زر الإغلاق العلوي" })}</Label>
               </div>
               <Switch
                 checked={sideSettings.closeButtonVisibility}
@@ -231,7 +233,7 @@ export const PanelSettingsManager: React.FC = () => {
 
             <div className="flex items-center justify-between p-3 rounded-xl border border-slate-100 bg-slate-50/30">
               <div className="space-y-0.5">
-                <Label className="text-slate-700 font-semibold">سرعة حركة ظهور اللوحة</Label>
+                <Label className="text-slate-700 font-semibold">{t("settings.panel.animationSpeed", { namespace: "settings", fallback: "سرعة حركة ظهور اللوحة" })}</Label>
               </div>
               <Select
                 value={sideSettings.animationSpeed.toString()}
@@ -241,16 +243,16 @@ export const PanelSettingsManager: React.FC = () => {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="150">سريع (150ms)</SelectItem>
-                  <SelectItem value="300">متوسط (300ms)</SelectItem>
-                  <SelectItem value="500">سلس (500ms)</SelectItem>
+                  <SelectItem value="150">{t("settings.panel.animations.fast", { namespace: "settings", fallback: "سريع (150ms)" })}</SelectItem>
+                  <SelectItem value="300">{t("settings.panel.animations.medium", { namespace: "settings", fallback: "متوسط (300ms)" })}</SelectItem>
+                  <SelectItem value="500">{t("settings.panel.animations.smooth", { namespace: "settings", fallback: "سلس (500ms)" })}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
         </SettingsGroup>
 
-        <SettingsGroup title="معاينة حية لتصميم لوحة العمليات" icon={Eye} color="text-violet-600">
+        <SettingsGroup title={t("settings.panel.previewTitle", { namespace: "settings", fallback: "معاينة حية لتصميم لوحة العمليات" })} icon={Eye} color="text-violet-600">
           <div className="flex items-center gap-2 mb-4">
             <Button
               variant={previewOverlay ? "default" : "outline"}
@@ -259,7 +261,7 @@ export const PanelSettingsManager: React.FC = () => {
               className="rounded-lg h-9 text-xs font-bold gap-1.5"
             >
               <PanelRightOpen className="w-3.5 h-3.5" />
-              لوحة عائمة (Overlay)
+              {t("settings.panel.previewOverlay", { namespace: "settings", fallback: "لوحة عائمة (Overlay)" })}
             </Button>
             <Button
               variant={!previewOverlay ? "default" : "outline"}
@@ -268,43 +270,43 @@ export const PanelSettingsManager: React.FC = () => {
               className="rounded-lg h-9 text-xs font-bold gap-1.5"
             >
               <PanelRightClose className="w-3.5 h-3.5" />
-              لوحة مضمنة (Inline)
+              {t("settings.panel.previewInline", { namespace: "settings", fallback: "لوحة مضمنة (Inline)" })}
             </Button>
           </div>
 
           <div className="border border-slate-200 rounded-xl overflow-hidden bg-slate-50/40 p-4 flex justify-center items-stretch h-[350px]">
             <div className="flex-1 flex items-center justify-center text-slate-400 text-xs font-bold border border-dashed border-slate-200 rounded-lg ml-3 bg-white">
-              محتوى الشاشة الرئيسي للتطبيق
+              {t("settings.panel.mainContent", { namespace: "settings", fallback: "محتوى الشاشة الرئيسي للتطبيق" })}
             </div>
             {!previewOverlay ? (
               <SidebarShell isOpen={true} onClose={() => {}} forceOverlay={false} className="h-full border border-slate-200 rounded-lg overflow-hidden">
-                <SidebarHeader title="إضافة عميل جديد" subtitle="تعريف بطاقة عميل جديدة" onClose={() => {}} />
+                <SidebarHeader title={t("settings.panel.preview.addCustomer", { namespace: "settings", fallback: "إضافة عميل جديد" })} subtitle={t("settings.panel.preview.addCustomerSub", { namespace: "settings", fallback: "تعريف بطاقة عميل جديدة" })} onClose={() => {}} />
                 <SidebarBody>
-                  <SidebarSection title="البيانات الأساسية">
+                  <SidebarSection title={t("settings.panel.preview.basicSection", { namespace: "settings", fallback: "البيانات الأساسية" })}>
                     <SidebarFieldGroup>
                       <div className="space-y-1">
-                        <span className="text-[10px] text-slate-500 font-bold">اسم العميل *</span>
-                        <div className="h-9 border border-slate-200 rounded bg-white px-3 flex items-center text-xs text-slate-400">شركة المُواكب التجارية</div>
+                        <span className="text-[10px] text-slate-500 font-bold">{t("settings.panel.preview.customerName", { namespace: "settings", fallback: "اسم العميل *" })}</span>
+                        <div className="h-9 border border-slate-200 rounded bg-white px-3 flex items-center text-xs text-slate-400">{t("settings.panel.preview.companyName", { namespace: "settings", fallback: "شركة المُواكب التجارية" })}</div>
                       </div>
                     </SidebarFieldGroup>
                   </SidebarSection>
                 </SidebarBody>
-                <SidebarFooter onCancel={() => {}} onSave={() => {}} saveLabel="حفظ العميل" />
+                <SidebarFooter onCancel={() => {}} onSave={() => {}} saveLabel={t("settings.panel.preview.saveCustomer", { namespace: "settings", fallback: "حفظ العميل" })} />
               </SidebarShell>
             ) : (
               <SidebarShell isOpen={true} onClose={() => setPreviewOverlay(false)} forceOverlay={true} className="h-full border border-slate-200 rounded-lg overflow-hidden">
-                <SidebarHeader title="إضافة عميل جديد" subtitle="تعريف بطاقة عميل جديدة" onClose={() => setPreviewOverlay(false)} />
+                <SidebarHeader title={t("settings.panel.preview.addCustomer", { namespace: "settings", fallback: "إضافة عميل جديد" })} subtitle={t("settings.panel.preview.addCustomerSub", { namespace: "settings", fallback: "تعريف بطاقة عميل جديدة" })} onClose={() => setPreviewOverlay(false)} />
                 <SidebarBody>
-                  <SidebarSection title="البيانات الأساسية">
+                  <SidebarSection title={t("settings.panel.preview.basicSection", { namespace: "settings", fallback: "البيانات الأساسية" })}>
                     <SidebarFieldGroup>
                       <div className="space-y-1">
-                        <span className="text-[10px] text-slate-500 font-bold">اسم العميل *</span>
-                        <div className="h-9 border border-slate-200 rounded bg-white px-3 flex items-center text-xs text-slate-400">شركة المُواكب التجارية</div>
+                        <span className="text-[10px] text-slate-500 font-bold">{t("settings.panel.preview.customerName", { namespace: "settings", fallback: "اسم العميل *" })}</span>
+                        <div className="h-9 border border-slate-200 rounded bg-white px-3 flex items-center text-xs text-slate-400">{t("settings.panel.preview.companyName", { namespace: "settings", fallback: "شركة المُواكب التجارية" })}</div>
                       </div>
                     </SidebarFieldGroup>
                   </SidebarSection>
                 </SidebarBody>
-                <SidebarFooter onCancel={() => setPreviewOverlay(false)} onSave={() => setPreviewOverlay(false)} saveLabel="حفظ العميل" />
+                <SidebarFooter onCancel={() => setPreviewOverlay(false)} onSave={() => setPreviewOverlay(false)} saveLabel={t("settings.panel.preview.saveCustomer", { namespace: "settings", fallback: "حفظ العميل" })} />
               </SidebarShell>
             )}
           </div>

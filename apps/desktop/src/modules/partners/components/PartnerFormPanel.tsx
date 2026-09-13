@@ -8,6 +8,7 @@ import { FieldLabel } from '@widgets/sidebar-shell/FieldLabel';
 import { SidebarSection } from '@widgets/sidebar-shell/SidebarSection';
 import { User, Building2 } from "lucide-react";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 import { useCompanyCapabilities } from "@shared/hooks";
 import { toFixed } from "@shared/lib/format";
 import { cn } from "@shared/lib/utils";
@@ -60,6 +61,7 @@ export function PartnerFormPanel({
   accountInfo
 }: PartnerFormPanelProps) {
   const { currencies, baseCurrency, rateMap } = useCurrencyContext();
+  const { t } = useLocalization();
   const { canAccessOpeningWorkflow, isExistingCompany } = useCompanyCapabilities();
   const isCustomer = type === "customer";
   // An existing company (شركة قائمة) records opening balances against vendors
@@ -68,11 +70,11 @@ export function PartnerFormPanel({
   const defaultBalanceDirection: "debit" | "credit" =
     isExistingCompany && !isCustomer ? "credit" : "debit";
   const title = isCustomer 
-    ? (partner ? "تعديل بيانات العميل" : "إضافة عميل جديد")
-    : (partner ? "تعديل بيانات المورد" : "إضافة مورد جديد");
+    ? (partner ? t("partyForm.customerTitleEdit", { namespace: "partners", fallback: "تعديل بيانات العميل" }) : t("partyForm.customerTitleCreate", { namespace: "partners", fallback: "إضافة عميل جديد" }))
+    : (partner ? t("partyForm.supplierTitleEdit", { namespace: "partners", fallback: "تعديل بيانات المورد" }) : t("partyForm.supplierTitleCreate", { namespace: "partners", fallback: "إضافة مورد جديد" }));
   
-  const labelName = isCustomer ? "اسم العميل *" : "اسم المورد *";
-  const placeholderName = isCustomer ? "اسم العميل الكامل" : "اسم الشركة أو المورد";
+  const labelName = isCustomer ? t("columns.nameCustomer", { namespace: "partners", fallback: "اسم العميل *" }) : t("columns.nameSupplier", { namespace: "partners", fallback: "اسم المورد *" });
+  const placeholderName = isCustomer ? t("partyForm.customerNamePlaceholder", { namespace: "partners", fallback: "اسم العميل الكامل" }) : t("partyForm.supplierNamePlaceholder", { namespace: "partners", fallback: "اسم الشركة أو المورد" });
   const Icon = isCustomer ? User : Building2;
 
   const [form, setForm] = useState({ name: "", phone: "", address: "", notes: "" });
@@ -170,22 +172,22 @@ export function PartnerFormPanel({
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>تأكيد تعديل الرصيد</AlertDialogTitle>
+            <AlertDialogTitle>{t("partyForm.confirmTitle", { namespace: "partners", fallback: "تأكيد تعديل الرصيد" })}</AlertDialogTitle>
             <AlertDialogDescription className="space-y-3">
-              <p>سيتم تعديل رصيد {isCustomer ? "العميل" : "المورد"} مع إنشاء قيد يومية مقابل للتسوية.</p>
+              <p>{isCustomer ? t("partyForm.confirmDescCustomer", { namespace: "partners", fallback: 'سيتم تعديل رصيد العميل مع إنشاء قيد يومية مقابل للتسوية.' }) : t("partyForm.confirmDescSupplier", { namespace: "partners", fallback: 'سيتم تعديل رصيد المورد مع إنشاء قيد يومية مقابل للتسوية.' })}</p>
               <div className="bg-muted p-3 rounded-lg text-sm space-y-1">
-                <p><span className="font-bold">الرصيد القديم:</span> {toFixed(oldBal, 2)}</p>
-                <p><span className="font-bold">الرصيد الجديد:</span> {toFixed(newBal, 2)}</p>
-                <p><span className="font-bold">الفرق:</span> {toFixed(newBal - oldBal, 2)}</p>
+                <p><span className="font-bold">{t("partyForm.oldBalance", { namespace: "partners", fallback: "الرصيد القديم:" })}</span> {toFixed(oldBal, 2)}</p>
+                <p><span className="font-bold">{t("partyForm.newBalance", { namespace: "partners", fallback: "الرصيد الجديد:" })}</span> {toFixed(newBal, 2)}</p>
+                <p><span className="font-bold">{t("partyForm.difference", { namespace: "partners", fallback: "الفرق:" })}</span> {toFixed(newBal - oldBal, 2)}</p>
               </div>
               <p className="text-xs text-muted-foreground mt-2">
-                سيتم إنشاء قيد محاسبي من نوع "رصيد افتتاحي" بين حساب {isCustomer ? "العميل" : "المورد"} وحساب الرصيد الافتتاحي (53).
+                {isCustomer ? t("partyForm.confirmFootnoteCustomer", { namespace: "partners", fallback: 'سيتم إنشاء قيد محاسبي من نوع "رصيد افتتاحي" بين حساب العميل وحساب الرصيد الافتتاحي (53).' }) : t("partyForm.confirmFootnoteSupplier", { namespace: "partners", fallback: 'سيتم إنشاء قيد محاسبي من نوع "رصيد افتتاحي" بين حساب المورد وحساب الرصيد الافتتاحي (53).' })}
               </p>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>إلغاء</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmed}>تأكيد التعديل</AlertDialogAction>
+            <AlertDialogCancel>{t("actions.cancel", { namespace: "partners", fallback: "إلغاء" })}</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmed}>{t("partyForm.confirmApply", { namespace: "partners", fallback: "تأكيد التعديل" })}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -198,16 +200,16 @@ export function PartnerFormPanel({
         isSaving={saving}
       >
         <div className="space-y-6 text-right">
-          <SidebarSection title="المعلومات الأساسية">
+          <SidebarSection title={t("partyForm.basicSection", { namespace: "partners", fallback: "المعلومات الأساسية" })}>
             <div className="space-y-3">
               {accountInfo && (
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
-                    <FieldLabel>رقم الحساب</FieldLabel>
+                    <FieldLabel>{t("form.accountNumber", { namespace: "partners", fallback: "رقم الحساب" })}</FieldLabel>
                     <Input value={accountInfo.code} readOnly className="h-9 bg-slate-50 border-slate-200 cursor-not-allowed" />
                   </div>
                   <div className="space-y-1.5">
-                    <FieldLabel>فرعي من</FieldLabel>
+                    <FieldLabel>{t("form.parentOf", { namespace: "partners", fallback: "فرعي من" })}</FieldLabel>
                     <Input value={accountInfo.parentName} readOnly className="h-9 bg-slate-50 border-slate-200 cursor-not-allowed" />
                   </div>
                 </div>
@@ -217,21 +219,21 @@ export function PartnerFormPanel({
                 <Input required value={form.name} onChange={(e) => setForm({...form, name: e.target.value})} placeholder={placeholderName} className="h-9" />
               </div>
               <div className="space-y-1.5">
-                <FieldLabel>رقم الهاتف</FieldLabel>
-                <Input value={form.phone} onChange={(e) => setForm({...form, phone: e.target.value})} placeholder="09xxxxxxx" className="h-9" />
+                <FieldLabel>{t("partyForm.phone", { namespace: "partners", fallback: "رقم الهاتف" })}</FieldLabel>
+                <Input value={form.phone} onChange={(e) => setForm({...form, phone: e.target.value})} placeholder={t("partyForm.phonePlaceholder", { namespace: "partners", fallback: "09xxxxxxx" })} className="h-9" />
               </div>
               <div className="space-y-1.5">
-                <FieldLabel>العنوان</FieldLabel>
-                <Input value={form.address} onChange={(e) => setForm({...form, address: e.target.value})} placeholder="المدينة، الشارع..." className="h-9" />
+                <FieldLabel>{t("partyForm.address", { namespace: "partners", fallback: "العنوان" })}</FieldLabel>
+                <Input value={form.address} onChange={(e) => setForm({...form, address: e.target.value})} placeholder={t("partyForm.addressPlaceholder", { namespace: "partners", fallback: "المدينة، الشارع..." })} className="h-9" />
               </div>
             </div>
           </SidebarSection>
 
           {canAccessOpeningWorkflow && (
-          <SidebarSection title="البيانات المالية">
+          <SidebarSection title={t("partyForm.financialSection", { namespace: "partners", fallback: "البيانات المالية" })}>
             {currencies.length > 1 && (
               <div className="space-y-1.5 mb-3">
-                <FieldLabel>العملة الافتراضية</FieldLabel>
+                <FieldLabel>{t("partyForm.defaultCurrency", { namespace: "partners", fallback: "العملة الافتراضية" })}</FieldLabel>
                 <Select value={currency} onValueChange={setCurrency}>
                   <SelectTrigger className="h-9 font-bold"><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -244,11 +246,11 @@ export function PartnerFormPanel({
             )}
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5 col-span-2 sm:col-span-1">
-                <FieldLabel>الرصيد الافتتاحي</FieldLabel>
+                <FieldLabel>{t("partyForm.openingBalance", { namespace: "partners", fallback: "الرصيد الافتتاحي" })}</FieldLabel>
                 <Input type="number" step="any" value={openingBalance} onChange={e => setOpeningBalance(e.target.value)} className="h-9 tabular-nums" />
               </div>
               <div className="space-y-1.5 col-span-2 sm:col-span-1">
-                <FieldLabel>اتجاه الرصيد</FieldLabel>
+                <FieldLabel>{t("partyForm.balanceDirection", { namespace: "partners", fallback: "اتجاه الرصيد" })}</FieldLabel>
                 <div className="flex gap-2 h-9">
                   <button
                     type="button"
@@ -260,7 +262,7 @@ export function PartnerFormPanel({
                     )}
                     onClick={() => setBalanceDirection("debit")}
                   >
-                    مدين
+                    {t("directions.debit", { namespace: "partners", fallback: "مدين" })}
                   </button>
                   <button
                     type="button"
@@ -272,7 +274,7 @@ export function PartnerFormPanel({
                     )}
                     onClick={() => setBalanceDirection("credit")}
                   >
-                    دائن
+                    {t("directions.credit", { namespace: "partners", fallback: "دائن" })}
                   </button>
                 </div>
               </div>
@@ -281,8 +283,8 @@ export function PartnerFormPanel({
         )}
 
           <div className="space-y-1.5">
-            <FieldLabel>ملاحظات</FieldLabel>
-            <Textarea value={form.notes} onChange={(e) => setForm({...form, notes: e.target.value})} className="min-h-[60px] bg-white border-slate-200" placeholder="ملاحظات اختيارية..." />
+            <FieldLabel>{t("form.notes", { namespace: "partners", fallback: "ملاحظات" })}</FieldLabel>
+            <Textarea value={form.notes} onChange={(e) => setForm({...form, notes: e.target.value})} className="min-h-[60px] bg-white border-slate-200" placeholder={t("form.notesPlaceholder", { namespace: "partners", fallback: "ملاحظات اختيارية..." })} />
           </div>
         </div>
       </FormPanel>

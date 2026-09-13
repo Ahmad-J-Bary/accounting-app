@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { QUERY_KEYS, invalidateKeys } from "@shared/hooks/queryClient";
 import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTemplate";
 import { toLocalDateStr } from "@shared/lib/format";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 import { fiscalYearService } from "@modules/accounting/api/fiscalYearService";
 import { ConfirmDialog } from "@shared/ui/confirm-dialog";
 import { ErrorBoundary } from "@shared/ui/ErrorBoundary";
@@ -51,6 +52,7 @@ function periodWindowFromDateInput(start: string, end: string): { start_date: st
 
 export default function FiscalYearsPage() {
   const qc = useQueryClient();
+  const { t } = useLocalization();
   const [label, setLabel] = useState("");
   const [start, setStart] = useState("");
   const [end, setEnd] = useState("");
@@ -78,10 +80,10 @@ export default function FiscalYearsPage() {
       setLabel("");
       setStart("");
       setEnd("");
-      toast.success("تم إنشاء السنة المالية");
+      toast.success(t("fiscalYears.toast.created", { namespace: "accounting", fallback: "تم إنشاء السنة المالية" }));
       invalidate();
     },
-    onError: (e) => toast.error("فشل الإنشاء: " + e),
+    onError: (e) => toast.error(t("fiscalYears.toast.createFailed", { namespace: "accounting", vars: { error: e instanceof Error ? e.message : String(e) }, fallback: "فشل الإنشاء: " + (e instanceof Error ? e.message : String(e)) })),
   });
 
   const act = useMutation({
@@ -103,25 +105,35 @@ export default function FiscalYearsPage() {
     onSuccess: (_dto, vars) => {
       toast.success(
         vars.type === "close"
-          ? "تم إغلاق السنة المالية"
-          : "تم إعادة فتح السنة المالية",
+          ? t("fiscalYears.toast.closed", { namespace: "accounting", fallback: "تم إغلاق السنة المالية" })
+          : t("fiscalYears.toast.reopened", { namespace: "accounting", fallback: "تم إعادة فتح السنة المالية" }),
       );
       invalidate();
     },
-    onError: (e) => toast.error("فشلت العملية: " + e),
+    onError: (e) => toast.error(
+      t("fiscalYears.toast.operationFailed", {
+        namespace: "accounting",
+        vars: { error: e instanceof Error ? e.message : String(e) },
+        fallback: "فشلت العملية: " + (e instanceof Error ? e.message : String(e)),
+      })
+    ),
   });
 
   const canCreate = label.trim().length > 0 && start && end && new Date(start) < new Date(end);
 
   const confirmCopy = confirm
     ? (() => {
-        const copy = CONFIRM_COPY[confirm.type];
-        return {
-          ...copy,
-          description: copy.description
+        const base = CONFIRM_COPY[confirm.type];
+        const descriptionSource = CONFIRM_COPY[confirm.type].description
             .replace("{label}", confirm.year.label)
             .replace("{start}", toLocalDateStr(confirm.year.start_date))
-            .replace("{end}", toLocalDateStr(confirm.year.end_date)),
+            .replace("{end}", toLocalDateStr(confirm.year.end_date));
+        const keyPath = `fiscalYears.confirm.${confirm.type}` as const;
+        return {
+          title: t(`${keyPath}.title`, { namespace: "accounting", fallback: base.title }),
+          description: t(`${keyPath}.description`, { namespace: "accounting", vars: { label: confirm.year.label, start: toLocalDateStr(confirm.year.start_date), end: toLocalDateStr(confirm.year.end_date) }, fallback: descriptionSource }),
+          confirmLabel: t(`${keyPath}.confirm`, { namespace: "accounting", fallback: base.confirmLabel }),
+          destructive: base.destructive,
         };
       })()
     : null;
@@ -129,10 +141,10 @@ export default function FiscalYearsPage() {
   return (
     <ErrorBoundary>
     <OperationalTableTemplate
-      title="السنوات المالية"
+      title={t("fiscalYears.title", { namespace: "accounting", fallback: "السنوات المالية" })}
       toolbar={
         <p className="text-xs text-slate-500">
-          السنة المالية هي الفترة الزمنية الأساسية للتقارير المالية. تجمع الفترات المالية وتحكّم في دورة الإغلاق والترحيل.
+          {t("fiscalYears.description", { namespace: "accounting", fallback: "السنة المالية هي الفترة الزمنية الأساسية للتقارير المالية. تجمع الفترات المالية وتحكّم في دورة الإغلاق والترحيل." })}
         </p>
       }
       tableContent={

@@ -1,6 +1,7 @@
 import type { AccountDto, CustomerDto, PartnerDto, SupplierDto } from "@erp/shared-types";
 import type { ResolvedTreeNode } from "@shared/tree/nodeTypes";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 import { useCompanyCapabilities } from "@shared/hooks";
 import { effectiveBalance, balanceDirectionLabel } from "@shared/lib/balance-utils";
 import { toFixed } from "@shared/lib/format";
@@ -49,7 +50,20 @@ export function useLinkedEntityFields(
   account: AccountDto | null,
 ): LinkedEntityFieldsResult {
   const { currencies, baseCurrency } = useCurrencyContext();
+  const { t } = useLocalization();
   const { canAccessOpeningWorkflow } = useCompanyCapabilities();
+
+  const profitTypeKey = (type: string | undefined): string =>
+    type === "BasedOnCapitalLocal"
+      ? "chartOfAccounts.linked.profitCapitalLocal"
+      : type === "BasedOnCapitalOriginal"
+        ? "chartOfAccounts.linked.profitCapitalOriginal"
+        : type === "Manual"
+          ? "chartOfAccounts.linked.profitManual"
+          : "";
+
+  const roleKey = (role: PartnerAccountRole): string =>
+    `chartOfAccounts.linked.role${role.charAt(0).toUpperCase()}${role.slice(1)}`;
 
   const isCustomer = resolved?.entityType === "customer-account";
   const isSupplier = resolved?.entityType === "supplier-account";
@@ -82,12 +96,12 @@ export function useLinkedEntityFields(
         ? "partner"
         : null;
   const title = isCustomer
-    ? "بيانات الحساب والعميل"
+    ? t("chartOfAccounts.linked.customerTitle", { namespace: "accounting", fallback: "بيانات الحساب والعميل" })
     : isSupplier
-      ? "بيانات الحساب والمورد"
+      ? t("chartOfAccounts.linked.supplierTitle", { namespace: "accounting", fallback: "بيانات الحساب والمورد" })
       : isPartner
-        ? "بيانات الحساب والشريك"
-        : "بيانات الحساب";
+        ? t("chartOfAccounts.linked.partnerTitle", { namespace: "accounting", fallback: "بيانات الحساب والشريك" })
+        : t("chartOfAccounts.linked.title", { namespace: "accounting", fallback: "بيانات الحساب" });
 
   const entity = query.data;
   if (!kind || !entity) return { isLoading, kind, title, fields: [] };
@@ -104,8 +118,16 @@ export function useLinkedEntityFields(
         kind,
         title,
         fields: [
-          { key: "partner-name", label: "الشريك", value: partner.name || "—" },
-          { key: "partner-role", label: "دور الحساب", value: ROLE_LABELS[role] },
+          {
+            key: "partner-name",
+            label: t("chartOfAccounts.linked.partnerName", { namespace: "accounting", fallback: "الشريك" }),
+            value: partner.name || "—",
+          },
+          {
+            key: "partner-role",
+            label: t("chartOfAccounts.linked.partnerRole", { namespace: "accounting", fallback: "دور الحساب" }),
+            value: t(roleKey(role), { namespace: "accounting", fallback: ROLE_LABELS[role] }),
+          },
         ],
       };
     }
@@ -117,26 +139,30 @@ export function useLinkedEntityFields(
       kind,
       title,
       fields: [
-        { key: "partner-role", label: "دور الحساب", value: ROLE_LABELS[role] },
+        {
+          key: "partner-role",
+          label: t("chartOfAccounts.linked.partnerRole", { namespace: "accounting", fallback: "دور الحساب" }),
+          value: t(roleKey(role), { namespace: "accounting", fallback: ROLE_LABELS[role] }),
+        },
         {
           key: "partner-amount-original",
-          label: "المبلغ المشارك به",
+          label: t("chartOfAccounts.linked.amountOriginal", { namespace: "accounting", fallback: "المبلغ المشارك به" }),
           value: `${toFixed(parseFloat(partner.amount_original || "0"), 2)} ${currencyName?.symbol || partner.currency || ""}`.trim(),
         },
         {
           key: "partner-amount-local",
-          label: `المبلغ (${baseCurrency?.symbol || baseCurrency?.code || ""})`,
+          label: t("chartOfAccounts.linked.amountLocal", { namespace: "accounting", vars: { symbol: baseCurrency?.symbol || baseCurrency?.code || "" }, fallback: `المبلغ (${baseCurrency?.symbol || baseCurrency?.code || ""})` }),
           value: toFixed(parseFloat(partner.amount_local || "0"), 2),
         },
         {
           key: "partner-ratio",
-          label: "نسبة الأرباح المخصصة (%)",
+          label: t("chartOfAccounts.linked.profitRatio", { namespace: "accounting", fallback: "نسبة الأرباح المخصصة (%)" }),
           value: profitRatio != null ? `${toFixed(profitRatio, 2)}%` : "—",
         },
         {
           key: "partner-distribution",
-          label: "طريقة التوزيع",
-          value: PROFIT_TYPE_LABELS[partner.profit_sharing_type] || "—",
+          label: t("chartOfAccounts.linked.distribution", { namespace: "accounting", fallback: "طريقة التوزيع" }),
+          value: t(profitTypeKey(partner.profit_sharing_type), { namespace: "accounting", fallback: PROFIT_TYPE_LABELS[partner.profit_sharing_type] || "—" }),
         },
       ],
     };
@@ -147,20 +173,20 @@ export function useLinkedEntityFields(
   const bal = effectiveBalance(parseFloat(p.debit || "0") || 0, parseFloat(p.credit || "0") || 0, type);
 
   const fields: AccountField[] = [
-    { key: "entity-phone", label: "رقم الهاتف", value: p.phone || "—" },
-    { key: "entity-address", label: "العنوان", value: p.address || "—" },
+    { key: "entity-phone", label: t("chartOfAccounts.linked.phone", { namespace: "accounting", fallback: "رقم الهاتف" }), value: p.phone || "—" },
+    { key: "entity-address", label: t("chartOfAccounts.linked.address", { namespace: "accounting", fallback: "العنوان" }), value: p.address || "—" },
   ];
 
   if (canAccessOpeningWorkflow) {
-    fields.push({ key: "entity-opening", label: "الرصيد الافتتاحي", value: p.opening_balance || "0" });
+    fields.push({ key: "entity-opening", label: t("chartOfAccounts.linked.openingBalance", { namespace: "accounting", fallback: "الرصيد الافتتاحي" }), value: p.opening_balance || "0" });
     fields.push({
       key: "entity-direction",
-      label: "اتجاه الرصيد",
+      label: t("chartOfAccounts.linked.balanceDirection", { namespace: "accounting", fallback: "اتجاه الرصيد" }),
       value: balanceDirectionLabel(parseFloat(p.debit || "0") || 0, parseFloat(p.credit || "0") || 0, type),
     });
   }
 
-  fields.push({ key: "entity-balance", label: "الرصيد الحالي", value: String(bal) });
+  fields.push({ key: "entity-balance", label: t("chartOfAccounts.linked.currentBalance", { namespace: "accounting", fallback: "الرصيد الحالي" }), value: String(bal) });
 
   return { isLoading, kind, title, fields };
 }

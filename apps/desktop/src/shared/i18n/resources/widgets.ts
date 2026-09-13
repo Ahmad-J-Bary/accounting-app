@@ -1,6 +1,66 @@
 import type { AppLanguage, TranslationTree } from "@shared/types/i18n";
 
 export const widgets: Record<AppLanguage, TranslationTree> = {
-  ar: {},
-  en: {},
+  ar: {
+    backups: {
+      dialogFilterSqlite: "قاعدة بيانات SQLite",
+      copySuccess: "تم نسخ النسخة الاحتياطية إلى الوجهة المختارة",
+      deleteSuccess: "تم حذف النسخة الاحتياطية",
+      deleteLabel: "حذف النسخة الاحتياطية",
+      deleteConfirmDescription: "هل تريد حذف هذه النسخة الاحتياطية نهائيًا؟ لا يمكن التراجع عن هذا الإجراء.",
+      cancel: "إلغاء",
+      deleteForever: "حذف نهائيًا",
+      empty: "لا توجد نسخ احتياطية بعد",
+      pendingRestore: "توجد استعادة معلقة — أكملها من الشريط أعلاه.",
+      columns: {
+        date: "التاريخ",
+        type: "النوع",
+        status: "الحالة",
+        actions: "الإجراءات",
+      },
+      restore: "استعادة",
+      copyAriaLabel: "نسخ النسخة إلى مكان آخر",
+      openAriaLabel: "فتح موقع النسخة",
+      copy: "نسخ",
+      open: "فتح الموقع",
+      cannotDeleteCurrentDb: "لا يمكن حذف قاعدة البيانات الحالية (النسخ الاحتياطية فقط).",
+    },
+    manualBackup: {
+      createdSuccess: "تم إنشاء النسخة ✓ ({{size}})",
+      title: "إنشاء نسخة احتياطية الآن",
+      description: "حفظ نسخة آمنة من قاعدة بياناتك الحالية.",
+      creating: "جارٍ الإنشاء...",
+    },
+  },
+  en: {
+    backups: {
+      dialogFilterSqlite: "SQLite database",
+      copySuccess: "Backup copied to the selected destination",
+      deleteSuccess: "Backup deleted",
+      deleteLabel: "Delete backup",
+      deleteConfirmDescription: "Do you want to permanently delete this backup? This action cannot be undone.",
+      cancel: "Cancel",
+      deleteForever: "Delete permanently",
+      empty: "No backups yet",
+      pendingRestore: "A restore is pending — complete it from the bar above.",
+      columns: {
+        date: "Date",
+        type: "Type",
+        status: "Status",
+        actions: "Actions",
+      },
+      restore: "Restore",
+      copyAriaLabel: "Copy backup to another location",
+      openAriaLabel: "Open backup location",
+      copy: "Copy",
+      open: "Open location",
+      cannotDeleteCurrentDb: "The current database cannot be deleted (backups only).",
+    },
+    manualBackup: {
+      createdSuccess: "Backup created ✓ ({{size}})",
+      title: "Create Backup Now",
+      description: "Save a secure copy of your current database.",
+      creating: "Creating...",
+    },
+  },
 };

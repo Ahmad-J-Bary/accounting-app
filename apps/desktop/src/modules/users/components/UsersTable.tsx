@@ -7,6 +7,7 @@ import { UnifiedTable, type UnifiedColumn } from '@widgets/table-shell/UnifiedTa
 import { TableShell } from '@widgets/table-shell/TableShell';
 import { TableActions } from '@widgets/table-shell/TableActions';
 import { useUnifiedColumns, useSortable } from '@shared/hooks';
+import { useLocalization } from '@app/providers/LocalizationProvider';
 
 interface UsersTableProps {
   data: User[];
@@ -17,59 +18,60 @@ interface UsersTableProps {
 }
 
 export function UsersTable({ data, loading, search, onSearchChange, roles }: UsersTableProps) {
+  const { t } = useLocalization();
   const columns = useMemo<UnifiedColumn<User>[]>(() => [
     {
       id: "full_name",
-      header: "الاسم الكامل",
-      label: "الاسم الكامل",
+      header: t("users.columns.fullName", { namespace: "users", fallback: "الاسم الكامل" }),
+      label: t("users.columns.fullName", { namespace: "users", fallback: "الاسم الكامل" }),
       accessor: "full_name",
       className: "font-bold text-slate-800"
     },
     {
       id: "username",
-      header: "اسم المستخدم",
-      label: "اسم المستخدم",
+      header: t("users.columns.username", { namespace: "users", fallback: "اسم المستخدم" }),
+      label: t("users.columns.username", { namespace: "users", fallback: "اسم المستخدم" }),
       accessor: "username",
       className: "font-mono font-medium text-slate-500"
     },
     {
       id: "role",
-      header: "الصلاحية",
-      label: "الدور/الصلاحية",
+      header: t("users.columns.role", { namespace: "users", fallback: "الصلاحية" }),
+      label: t("users.columns.roleLabel", { namespace: "users", fallback: "الدور/الصلاحية" }),
       accessor: (u) => {
         const role = roles.find(r => r.id === u.role_id);
         return (
           <span className="bg-blue-50 text-blue-700 border border-blue-100 px-2.5 py-0.5 rounded-full text-[11px] font-bold">
-            {role?.name ?? u.role_name ?? "غير محدد"}
+            {role?.name ?? u.role_name ?? t("users.columns.unspecified", { namespace: "users", fallback: "غير محدد" })}
           </span>
         );
       },
     },
     {
       id: "last_login",
-      header: "آخر ظهور",
-      label: "تاريخ آخر دخول",
+      header: t("users.columns.lastSeen", { namespace: "users", fallback: "آخر ظهور" }),
+      label: t("users.columns.lastSeenLabel", { namespace: "users", fallback: "تاريخ آخر دخول" }),
       accessor: (u) => u.last_login ? formatDateTime(u.last_login) : "",
       className: "text-slate-500 tabular-nums"
     },
     {
       id: "status",
-      header: "الحالة",
-      label: "حالة الحساب",
+      header: t("users.columns.status", { namespace: "users", fallback: "الحالة" }),
+      label: t("users.columns.statusLabel", { namespace: "users", fallback: "حالة الحساب" }),
       accessor: (u) => <StatusBadge status={u.is_active ? "active" : "inactive"} />,
     },
     {
       id: "actions",
-      header: "إجراءات",
-      label: "إجراءات",
+      header: t("users.columns.actions", { namespace: "users", fallback: "إجراءات" }),
+      label: t("users.columns.actions", { namespace: "users", fallback: "إجراءات" }),
       accessor: () => (
         <TableActions
-          onEdit={() => toast.info("تعديل المستخدم قيد التطوير")}
-          onDelete={() => toast.warning("حذف المستخدم قيد التطوير")}
+          onEdit={() => toast.info(t("users.toasts.editDevelopment", { namespace: "users", fallback: "تعديل المستخدم قيد التطوير" }))}
+          onDelete={() => toast.warning(t("users.toasts.deleteDevelopment", { namespace: "users", fallback: "حذف المستخدم قيد التطوير" }))}
         />
       ),
     }
-  ], [roles]);
+  ], [roles, t]);
 
   type SortField = "full_name" | "username" | "role" | "last_login" | "status";
 
@@ -115,7 +117,7 @@ export function UsersTable({ data, loading, search, onSearchChange, roles }: Use
     <TableShell
       search={search}
       onSearchChange={onSearchChange}
-      searchPlaceholder="بحث بالاسم أو اسم المستخدم..."
+      searchPlaceholder={t("users.searchPlaceholder", { namespace: "users", fallback: "بحث بالاسم أو اسم المستخدم..." })}
       columns={toolbarColumns}
       onColumnToggle={toggleColumn}
       onColumnsReset={resetToDefault}
@@ -136,7 +138,7 @@ export function UsersTable({ data, loading, search, onSearchChange, roles }: Use
             handleSort(col.id as SortField);
           }
         }}
-        emptyMessage={search ? "لا توجد نتائج للبحث" : "لا يوجد مستخدمين مضافين"}
+        emptyMessage={search ? t("users.empty.searchResults", { namespace: "users", fallback: "لا توجد نتائج للبحث" }) : t("users.empty.noUsers", { namespace: "users", fallback: "لا يوجد مستخدمين مضافين" })}
       />
     </TableShell>
   );

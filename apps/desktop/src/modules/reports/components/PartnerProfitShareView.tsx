@@ -9,6 +9,7 @@ import { toFixed } from "@shared/lib/format";
 import { ReportMeta } from "@widgets/reports";
 import { createSummarySpacer } from "../lib/table-meta";
 import { StatCard } from "@widgets/stats/StatCard";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 type PartnerProfitShareViewProps = {
   computed: PartnerProfitShareComputed;
@@ -17,127 +18,138 @@ type PartnerProfitShareViewProps = {
 };
 
 const summaryCards = [
-  { label: "رأس المال", key: "totalCapital" as const, icon: Users },
-  { label: "صافي الأرباح", key: "netProfit" as const, icon: TrendingUp },
-  { label: "قيمة البضاعة", key: "inventoryValue" as const, icon: Package },
-  { label: "ديون العملاء", key: "totalCustomerDebts" as const, icon: CreditCard },
-  { label: "الأصول الثابتة", key: "fixedAssetsValue" as const, icon: Building2 },
-  { label: "الأصول التشغيلية", key: "totalOperationalAssets" as const, icon: BarChart3 },
+  { labelPath: "statCapital", key: "totalCapital" as const, icon: Users },
+  { labelPath: "statNetProfit", key: "netProfit" as const, icon: TrendingUp },
+  { labelPath: "statInventoryValue", key: "inventoryValue" as const, icon: Package },
+  { labelPath: "statCustomerDebts", key: "totalCustomerDebts" as const, icon: CreditCard },
+  { labelPath: "statFixedAssets", key: "fixedAssetsValue" as const, icon: Building2 },
+  { labelPath: "statOperationalAssets", key: "totalOperationalAssets" as const, icon: BarChart3 },
 ];
 
 function SummaryCards({ computed, formatValue }: { computed: PartnerProfitShareComputed; formatValue: (value: number) => string }) {
+  const { t } = useLocalization();
+  const statLabels: Record<string, string> = {
+    statCapital: t("partnerRights.profitShare.statCapital", { namespace: "reports", fallback: "رأس المال" }),
+    statNetProfit: t("partnerRights.profitShare.statNetProfit", { namespace: "reports", fallback: "صافي الأرباح" }),
+    statInventoryValue: t("partnerRights.profitShare.statInventoryValue", { namespace: "reports", fallback: "قيمة البضاعة" }),
+    statCustomerDebts: t("partnerRights.profitShare.statCustomerDebts", { namespace: "reports", fallback: "ديون العملاء" }),
+    statFixedAssets: t("partnerRights.profitShare.statFixedAssets", { namespace: "reports", fallback: "الأصول الثابتة" }),
+    statOperationalAssets: t("partnerRights.profitShare.statOperationalAssets", { namespace: "reports", fallback: "الأصول التشغيلية" }),
+  };
   return (
     <div className="grid grid-cols-6 gap-2 px-4 pt-4 pb-2">
       {summaryCards.map((card) => (
-        <StatCard key={card.label} label={card.label} value={formatValue(computed[card.key])} icon={card.icon} />
+        <StatCard key={card.labelPath} label={statLabels[card.labelPath]} value={formatValue(computed[card.key])} icon={card.icon} />
       ))}
     </div>
   );
 }
 
 function usePartnerProfitShareColumns(formatValue: (value: number) => string) {
+  const { t } = useLocalization();
   return useMemo<UnifiedColumn<PartnerProfitShareRow>[]>(() => [
     {
       id: "partnerName",
-      header: "اسم الشريك",
-      label: "اسم الشريك",
+      header: t("partnerRights.profitShare.colPartnerName", { namespace: "reports", fallback: "اسم الشريك" }),
+      label: t("partnerRights.profitShare.colPartnerName", { namespace: "reports", fallback: "اسم الشريك" }),
       accessor: (row) => <span className="font-bold text-slate-800">{row.partnerName}</span>,
       align: "right",
       className: "justify-start",
     },
     {
       id: "capitalRatio",
-      header: "نسبة المشاركة برأس المال",
-      label: "نسبة المشاركة برأس المال",
+      header: t("partnerRights.profitShare.colCapitalRatio", { namespace: "reports", fallback: "نسبة المشاركة برأس المال" }),
+      label: t("partnerRights.profitShare.colCapitalRatio", { namespace: "reports", fallback: "نسبة المشاركة برأس المال" }),
       accessor: (row) => toFixed(row.capitalRatio, 2) + "%",
       align: "left",
       className: "justify-end tabular-nums text-slate-600 font-bold",
     },
     {
       id: "capitalAmount",
-      header: "المبلغ المشارك به",
-      label: "المبلغ المشارك به",
+      header: t("partnerRights.profitShare.colCapitalAmount", { namespace: "reports", fallback: "المبلغ المشارك به" }),
+      label: t("partnerRights.profitShare.colCapitalAmount", { namespace: "reports", fallback: "المبلغ المشارك به" }),
       accessor: (row) => formatValue(row.capitalAmount),
       align: "left",
       className: "justify-end tabular-nums font-black text-slate-900",
     },
     {
       id: "profitShareRatio",
-      header: "نسبة تقاسم الأرباح",
-      label: "نسبة تقاسم الأرباح",
+      header: t("partnerRights.profitShare.colProfitShareRatio", { namespace: "reports", fallback: "نسبة تقاسم الأرباح" }),
+      label: t("partnerRights.profitShare.colProfitShareRatio", { namespace: "reports", fallback: "نسبة تقاسم الأرباح" }),
       accessor: (row) => toFixed(row.profitShareRatio, 2) + "%",
       align: "left",
       className: "justify-end tabular-nums text-slate-600 font-bold",
     },
     {
       id: "profitShareAmount",
-      header: "الأرباح الموزعة (أرباح مبقاة)",
-      label: "الأرباح الموزعة (أرباح مبقاة)",
+      header: t("partnerRights.profitShare.colProfitShareAmount", { namespace: "reports", fallback: "الأرباح الموزعة (أرباح مبقاة)" }),
+      label: t("partnerRights.profitShare.colProfitShareAmount", { namespace: "reports", fallback: "الأرباح الموزعة (أرباح مبقاة)" }),
       accessor: (row) => formatValue(row.profitShareAmount),
       align: "left",
       className: "justify-end tabular-nums font-black text-emerald-700",
     },
     {
       id: "currentYearProfitShare",
-      header: "حصته من ربح السنة الحالية",
-      label: "حصته من ربح السنة الحالية",
+      header: t("partnerRights.profitShare.colCurrentYearShare", { namespace: "reports", fallback: "حصته من ربح السنة الحالية" }),
+      label: t("partnerRights.profitShare.colCurrentYearShare", { namespace: "reports", fallback: "حصته من ربح السنة الحالية" }),
       accessor: (row) => formatValue(row.currentYearProfitShare),
       align: "left",
       className: "justify-end tabular-nums font-black text-emerald-600",
     },
     {
       id: "totalProfitAllocated",
-      header: "إجمالي الأرباح المخصصة",
-      label: "إجمالي الأرباح المخصصة",
+      header: t("partnerRights.profitShare.colTotalAllocated", { namespace: "reports", fallback: "إجمالي الأرباح المخصصة" }),
+      label: t("partnerRights.profitShare.colTotalAllocated", { namespace: "reports", fallback: "إجمالي الأرباح المخصصة" }),
       accessor: (row) => formatValue(row.totalProfitAllocated),
       align: "left",
       className: "justify-end tabular-nums font-black text-emerald-800",
     },
     {
       id: "drawings",
-      header: "المسحوبات",
-      label: "المسحوبات",
+      header: t("partnerRights.profitShare.colDrawings", { namespace: "reports", fallback: "المسحوبات" }),
+      label: t("partnerRights.profitShare.colDrawings", { namespace: "reports", fallback: "المسحوبات" }),
       accessor: (row) => formatValue(row.drawings),
       align: "left",
       className: "justify-end tabular-nums font-black text-rose-700",
     },
     {
       id: "finalAmount",
-      header: "المبلغ النهائي للشريك",
-      label: "المبلغ النهائي للشريك",
+      header: t("partnerRights.profitShare.colFinalAmount", { namespace: "reports", fallback: "المبلغ النهائي للشريك" }),
+      label: t("partnerRights.profitShare.colFinalAmount", { namespace: "reports", fallback: "المبلغ النهائي للشريك" }),
       accessor: (row) => formatValue(row.finalAmount),
       align: "left",
       className: "justify-end tabular-nums font-black text-indigo-700",
     },
     {
       id: "inventoryShare",
-      header: "حصته من البضاعة",
-      label: "حصته من البضاعة",
+      header: t("partnerRights.profitShare.colInventoryShare", { namespace: "reports", fallback: "حصته من البضاعة" }),
+      label: t("partnerRights.profitShare.colInventoryShare", { namespace: "reports", fallback: "حصته من البضاعة" }),
       accessor: (row) => formatValue(row.inventoryShare),
       align: "left",
       className: "justify-end tabular-nums font-medium text-amber-700",
     },
     {
       id: "fixedAssetsShare",
-      header: "حصته من الأصول الثابتة",
-      label: "حصته من الأصول الثابتة",
+      header: t("partnerRights.profitShare.colFixedAssetsShare", { namespace: "reports", fallback: "حصته من الأصول الثابتة" }),
+      label: t("partnerRights.profitShare.colFixedAssetsShare", { namespace: "reports", fallback: "حصته من الأصول الثابتة" }),
       accessor: (row) => formatValue(row.fixedAssetsShare),
       align: "left",
       className: "justify-end tabular-nums font-medium text-violet-700",
     },
     {
       id: "operationalAssetShare",
-      header: "حصته من الأصول التشغيلية",
-      label: "حصته من الأصول التشغيلية",
+      header: t("partnerRights.profitShare.colOperationalShare", { namespace: "reports", fallback: "حصته من الأصول التشغيلية" }),
+      label: t("partnerRights.profitShare.colOperationalShare", { namespace: "reports", fallback: "حصته من الأصول التشغيلية" }),
       accessor: (row) => formatValue(row.operationalAssetShare),
       align: "left",
       className: "justify-end tabular-nums font-medium text-slate-700",
     },
-  ], [formatValue]);
+  ], [formatValue, t]);
 }
 
 export function PartnerProfitShareView(props: PartnerProfitShareViewProps) {
   const { computed, formatValue, filterBar } = props;
+  const { t } = useLocalization();
   const [search, setSearch] = useState("");
 
   const allColumns = usePartnerProfitShareColumns(formatValue);
@@ -186,54 +198,54 @@ export function PartnerProfitShareView(props: PartnerProfitShareViewProps) {
   const summaryColumns = useMemo<SummaryColumn[]>(() => {
     return enrichedColumns.map((col) => {
       if (col.id === "partnerName") {
-        return { id: "count", columnId: "partnerName", align: "right", label: "", value: `${totals.count} شريك`, className: "text-slate-500 font-medium" };
+        return { id: "count", columnId: "partnerName", align: "right", label: "", value: t("partnerRights.profitShare.countPartners", { namespace: "reports", fallback: "{{count}} شريك", vars: { count: totals.count } }), className: "text-slate-500 font-medium" };
       }
       if (col.id === "capitalRatio") {
-        return { id: "capitalRatio_summary", columnId: "capitalRatio", align: "left", label: "نسبة المشاركة", value: toFixed(totals.capitalRatio, 2) + "%", className: "text-slate-700 font-bold" };
+        return { id: "capitalRatio_summary", columnId: "capitalRatio", align: "left", label: t("partnerRights.profitShare.summaryCapitalRatio", { namespace: "reports", fallback: "نسبة المشاركة" }), value: toFixed(totals.capitalRatio, 2) + "%", className: "text-slate-700 font-bold" };
       }
       if (col.id === "capitalAmount") {
-        return { id: "capitalAmount_summary", columnId: "capitalAmount", align: "left", label: "إجمالي رأس المال", value: formatValue(totals.capitalAmount), className: "text-indigo-700 font-black" };
+        return { id: "capitalAmount_summary", columnId: "capitalAmount", align: "left", label: t("partnerRights.profitShare.summaryCapital", { namespace: "reports", fallback: "إجمالي رأس المال" }), value: formatValue(totals.capitalAmount), className: "text-indigo-700 font-black" };
       }
       if (col.id === "profitShareRatio") {
-        return { id: "profitShareRatio_summary", columnId: "profitShareRatio", align: "left", label: "نسبة الأرباح", value: toFixed(totals.profitShareRatio, 2) + "%", className: "text-slate-700 font-bold" };
+        return { id: "profitShareRatio_summary", columnId: "profitShareRatio", align: "left", label: t("partnerRights.profitShare.summaryProfitRatio", { namespace: "reports", fallback: "نسبة الأرباح" }), value: toFixed(totals.profitShareRatio, 2) + "%", className: "text-slate-700 font-bold" };
       }
       if (col.id === "profitShareAmount") {
-        return { id: "profitShareAmount_summary", columnId: "profitShareAmount", align: "left", label: "الأرباح الموزعة", value: formatValue(totals.profitShareAmount), className: "text-emerald-700 font-black" };
+        return { id: "profitShareAmount_summary", columnId: "profitShareAmount", align: "left", label: t("partnerRights.profitShare.summaryDistributed", { namespace: "reports", fallback: "الأرباح الموزعة" }), value: formatValue(totals.profitShareAmount), className: "text-emerald-700 font-black" };
       }
       if (col.id === "currentYearProfitShare") {
-        return { id: "currentYearProfitShare_summary", columnId: "currentYearProfitShare", align: "left", label: "ربح السنة الحالية", value: formatValue(totals.currentYearProfitShare), className: "text-emerald-600 font-black" };
+        return { id: "currentYearProfitShare_summary", columnId: "currentYearProfitShare", align: "left", label: t("partnerRights.profitShare.summaryCurrentYearShare", { namespace: "reports", fallback: "ربح السنة الحالية" }), value: formatValue(totals.currentYearProfitShare), className: "text-emerald-600 font-black" };
       }
       if (col.id === "totalProfitAllocated") {
-        return { id: "totalProfitAllocated_summary", columnId: "totalProfitAllocated", align: "left", label: "إجمالي الأرباح", value: formatValue(totals.totalProfitAllocated), className: "text-emerald-800 font-black" };
+        return { id: "totalProfitAllocated_summary", columnId: "totalProfitAllocated", align: "left", label: t("partnerRights.profitShare.summaryTotalAllocated", { namespace: "reports", fallback: "إجمالي الأرباح" }), value: formatValue(totals.totalProfitAllocated), className: "text-emerald-800 font-black" };
       }
       if (col.id === "drawings") {
-        return { id: "drawings_summary", columnId: "drawings", align: "left", label: "إجمالي المسحوبات", value: formatValue(totals.drawings), className: "text-rose-700 font-black" };
+        return { id: "drawings_summary", columnId: "drawings", align: "left", label: t("partnerRights.profitShare.summaryDrawings", { namespace: "reports", fallback: "إجمالي المسحوبات" }), value: formatValue(totals.drawings), className: "text-rose-700 font-black" };
       }
       if (col.id === "finalAmount") {
-        return { id: "finalAmount_summary", columnId: "finalAmount", align: "left", label: "إجمالي حقوق الشركاء", value: formatValue(totals.finalAmount), className: "text-indigo-700 font-black" };
+        return { id: "finalAmount_summary", columnId: "finalAmount", align: "left", label: t("partnerRights.profitShare.summaryFinalAmount", { namespace: "reports", fallback: "إجمالي حقوق الشركاء" }), value: formatValue(totals.finalAmount), className: "text-indigo-700 font-black" };
       }
       if (col.id === "inventoryShare") {
-        return { id: "inventoryShare_summary", columnId: "inventoryShare", align: "left", label: "حصص البضاعة", value: formatValue(totals.inventoryShare), className: "text-amber-700 font-bold" };
+        return { id: "inventoryShare_summary", columnId: "inventoryShare", align: "left", label: t("partnerRights.profitShare.summaryInventoryShare", { namespace: "reports", fallback: "حصص البضاعة" }), value: formatValue(totals.inventoryShare), className: "text-amber-700 font-bold" };
       }
       if (col.id === "fixedAssetsShare") {
-        return { id: "fixedAssetsShare_summary", columnId: "fixedAssetsShare", align: "left", label: "حصص الأصول الثابتة", value: formatValue(totals.fixedAssetsShare), className: "text-violet-700 font-bold" };
+        return { id: "fixedAssetsShare_summary", columnId: "fixedAssetsShare", align: "left", label: t("partnerRights.profitShare.summaryFixedAssetsShare", { namespace: "reports", fallback: "حصص الأصول الثابتة" }), value: formatValue(totals.fixedAssetsShare), className: "text-violet-700 font-bold" };
       }
       if (col.id === "operationalAssetShare") {
-        return { id: "operationalAssetShare_summary", columnId: "operationalAssetShare", align: "left", label: "حصص الأصول التشغيلية", value: formatValue(totals.operationalAssetShare), className: "text-slate-700 font-bold" };
+        return { id: "operationalAssetShare_summary", columnId: "operationalAssetShare", align: "left", label: t("partnerRights.profitShare.summaryOperationalShare", { namespace: "reports", fallback: "حصص الأصول التشغيلية" }), value: formatValue(totals.operationalAssetShare), className: "text-slate-700 font-bold" };
       }
       return createSummarySpacer(col.id);
     });
-  }, [enrichedColumns, totals, formatValue]);
+  }, [enrichedColumns, totals, formatValue, t]);
 
   return (
     <div className="flex flex-col h-full">
-      <ReportMeta title="الشركاء وحقوقهم" description="تقرير مفصل يوضح نسب الشراكة والأرباح الموزعة وربح السنة الحالية وإجمالي حقوق كل شريك" />
+      <ReportMeta title={t("partnerRights.title", { namespace: "reports", fallback: "الشركاء وحقوقهم" })} description={t("partnerRights.profitShare.metaDescription", { namespace: "reports", fallback: "تقرير مفصل يوضح نسب الشراكة والأرباح الموزعة وربح السنة الحالية وإجمالي حقوق كل شريك" })} />
       <SummaryCards computed={computed} formatValue={formatValue} />
       <div className="flex-1 min-h-0 overflow-hidden pb-4">
         <TableShell
           search={search}
           onSearchChange={setSearch}
-          searchPlaceholder="بحث باسم الشريك..."
+          searchPlaceholder={t("partnerRights.profitShare.searchPlaceholder", { namespace: "reports", fallback: "بحث باسم الشريك..." })}
           columns={toolbarColumns}
           onColumnToggle={toggleColumn}
           onColumnsReset={resetToDefault}
@@ -244,7 +256,7 @@ export function PartnerProfitShareView(props: PartnerProfitShareViewProps) {
             data={filteredRows}
             columns={enrichedColumns}
             tableId="partner-profit-share"
-            emptyMessage="لا يوجد شركاء نشطون لعرض التقرير"
+            emptyMessage={t("partnerRights.profitShare.empty", { namespace: "reports", fallback: "لا يوجد شركاء نشطون لعرض التقرير" })}
             summary={summaryColumns}
             enableResize
           />

@@ -1,3 +1,4 @@
+import { useLocalization } from "@app/providers/LocalizationProvider";
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { openingBalanceService, type OpeningBalanceMigrationDto, type ProfitDistributionSource } from "@modules/accounting/api/openingBalanceService";
@@ -21,6 +22,7 @@ interface DistributionSourceResult {
  * 3. Otherwise → null
  */
 export function useDistributionSource(): DistributionSourceResult {
+  const { t } = useLocalization();
   const { data: migrations = [], isLoading: migrationsLoading } = useQuery<OpeningBalanceMigrationDto[]>({
     queryKey: ["opening-balance-migrations"],
     queryFn: () => openingBalanceService.listMigrations(),
@@ -39,7 +41,11 @@ export function useDistributionSource(): DistributionSourceResult {
     if (latestMigration) {
       return {
         source: { OpeningMigration: { migration_id: latestMigration.id } } as const,
-        sourceLabel: `ترحيل الرصيد الافتتاحي — ${latestMigration.cutover_date}`,
+        sourceLabel: t("profitDistribution.sourceLabelMigration", {
+          namespace: "accounting",
+          vars: { date: latestMigration.cutover_date },
+          fallback: `ترحيل الرصيد الافتتاحي — ${latestMigration.cutover_date}`,
+        }),
         windowStart: "1970-01-01T00:00:00Z",
         windowEnd: normalizeToUtcIso(latestMigration.cutover_date, true),
         isLoading: false,
@@ -53,7 +59,11 @@ export function useDistributionSource(): DistributionSourceResult {
     if (activePeriod) {
       return {
         source: { ClosedPeriod: { period_id: activePeriod.id } } as const,
-        sourceLabel: `الفترة المالية — ${activePeriod.start_date} إلى ${activePeriod.end_date}`,
+        sourceLabel: t("profitDistribution.sourceLabelPeriod", {
+          namespace: "accounting",
+          vars: { start: activePeriod.start_date, end: activePeriod.end_date },
+          fallback: `الفترة المالية — ${activePeriod.start_date} إلى ${activePeriod.end_date}`,
+        }),
         windowStart: normalizeToUtcIso(activePeriod.start_date, false),
         windowEnd: normalizeToUtcIso(activePeriod.end_date, true),
         isLoading: false,
@@ -67,7 +77,7 @@ export function useDistributionSource(): DistributionSourceResult {
       windowEnd: "",
       isLoading: false,
     };
-  }, [migrations, periods]);
+  }, [migrations, periods, t]);
 
   return {
     ...result,

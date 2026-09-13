@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Loader2 } from 'lucide-react';
 import { customerService } from '../api/customerService';
 import { supplierService } from '../api/supplierService';
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 interface StatementConfig {
   notFoundMessage: string;
@@ -27,6 +28,7 @@ interface PartyStatementPageProps {
 
 export default function PartyStatementPage({ entityName }: PartyStatementPageProps) {
   const { id } = useParams<{ id: string }>();
+  const { t } = useLocalization();
   const cfg = STATEMENT_CONFIGS[entityName];
 
   const { data: entity, isLoading } = useQuery({
@@ -44,7 +46,7 @@ export default function PartyStatementPage({ entityName }: PartyStatementPagePro
   }
 
   if (!id || !entity) {
-    return <div className="p-8 text-center text-red-500 font-bold">{cfg.notFoundMessage}</div>;
+    return <div className="p-8 text-center text-red-500 font-bold">{t(entityName === "customer" ? "partyStatement.notFoundCustomer" : "partyStatement.notFoundSupplier", { namespace: "partners", fallback: cfg.notFoundMessage })}</div>;
   }
 
   return (

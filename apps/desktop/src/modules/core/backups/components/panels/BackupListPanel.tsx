@@ -19,6 +19,7 @@ import {
 } from "../../lib/backupFormat";
 import { friendlyBackupError } from "../../lib/backupErrors";
 import { BackupStatusBadge } from "../BackupStatusBadge";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 interface Props {
   backups: BackupFileInfo[];
@@ -29,17 +30,18 @@ interface Props {
 }
 
 export function BackupListPanel({ backups, pending, operating, onRestore, onDone }: Props) {
+  const { t } = useLocalization();
   const disabled = operating || !!pending;
 
   const handleCopy = async (b: BackupFileInfo) => {
     const dest = await save({
       defaultPath: b.name,
-      filters: [{ name: "قاعدة بيانات SQLite", extensions: ["sqlite", "db"] }],
+      filters: [{ name: t("backups.dialogFilterSqlite", { namespace: "widgets", fallback: "قاعدة بيانات SQLite" }), extensions: ["sqlite", "db"] }],
     });
     if (!dest) return;
     try {
       await backupService.copyFileBackup(b.name, dest);
-      toast.success("تم نسخ النسخة الاحتياطية إلى الوجهة المختارة");
+      toast.success(t("backups.copySuccess", { namespace: "widgets", fallback: "تم نسخ النسخة الاحتياطية إلى الوجهة المختارة" }));
     } catch (e) {
       toast.error(friendlyBackupError(e).friendly);
     }
@@ -56,7 +58,7 @@ export function BackupListPanel({ backups, pending, operating, onRestore, onDone
   const handleDelete = async (b: BackupFileInfo) => {
     try {
       await backupService.deleteFileBackup(b.name);
-      toast.success("تم حذف النسخة الاحتياطية");
+      toast.success(t("backups.deleteSuccess", { namespace: "widgets", fallback: "تم حذف النسخة الاحتياطية" }));
       await onDone();
     } catch (e) {
       toast.error(friendlyBackupError(e).friendly);
@@ -66,21 +68,21 @@ export function BackupListPanel({ backups, pending, operating, onRestore, onDone
   const ConfirmDelete = ({ b }: { b: BackupFileInfo }) => (
     <AlertDialog>
       <AlertDialogTrigger asChild>
-        <Button size="sm" variant="ghost" className="text-red-500 hover:text-red-600" disabled={disabled} aria-label="حذف النسخة الاحتياطية">
+        <Button size="sm" variant="ghost" className="text-red-500 hover:text-red-600" disabled={disabled} aria-label={t("backups.deleteLabel", { namespace: "widgets", fallback: "حذف النسخة الاحتياطية" })}>
           <Trash2 className="w-4 h-4" />
         </Button>
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>حذف النسخة الاحتياطية</AlertDialogTitle>
+          <AlertDialogTitle>{t("backups.deleteLabel", { namespace: "widgets", fallback: "حذف النسخة الاحتياطية" })}</AlertDialogTitle>
           <AlertDialogDescription>
-            هل تريد حذف هذه النسخة الاحتياطية نهائيًا؟ لا يمكن التراجع عن هذا الإجراء.
+            {t("backups.deleteConfirmDescription", { namespace: "widgets", fallback: "هل تريد حذف هذه النسخة الاحتياطية نهائيًا؟ لا يمكن التراجع عن هذا الإجراء." })}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>إلغاء</AlertDialogCancel>
+          <AlertDialogCancel>{t("backups.cancel", { namespace: "widgets", fallback: "إلغاء" })}</AlertDialogCancel>
           <AlertDialogAction className="bg-red-600 hover:bg-red-700" onClick={() => void handleDelete(b)}>
-            حذف نهائيًا
+            {t("backups.deleteForever", { namespace: "widgets", fallback: "حذف نهائيًا" })}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
@@ -91,7 +93,7 @@ export function BackupListPanel({ backups, pending, operating, onRestore, onDone
     return (
       <div className="py-12 text-center">
         <Database className="w-12 h-12 mx-auto mb-3 text-slate-300" />
-        <p className="font-bold text-slate-400">لا توجد نسخ احتياطية بعد</p>
+        <p className="font-bold text-slate-400">{t("backups.empty", { namespace: "widgets", fallback: "لا توجد نسخ احتياطية بعد" })}</p>
       </div>
     );
   }
@@ -101,7 +103,7 @@ export function BackupListPanel({ backups, pending, operating, onRestore, onDone
       {pending && (
         <div className="flex items-center gap-2 p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs font-bold">
           <Lock className="w-4 h-4" />
-          توجد استعادة معلقة — أكملها من الشريط أعلاه.
+          {t("backups.pendingRestore", { namespace: "widgets", fallback: "توجد استعادة معلقة — أكملها من الشريط أعلاه." })}
         </div>
       )}
 
@@ -110,10 +112,10 @@ export function BackupListPanel({ backups, pending, operating, onRestore, onDone
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-slate-50 text-xs font-bold text-slate-400">
-              <th className="text-right px-4 py-2.5">التاريخ</th>
-              <th className="text-right px-4 py-2.5">النوع</th>
-              <th className="text-right px-4 py-2.5">الحالة</th>
-              <th className="text-right px-4 py-2.5">الإجراءات</th>
+              <th className="text-right px-4 py-2.5">{t("backups.columns.date", { namespace: "widgets", fallback: "التاريخ" })}</th>
+              <th className="text-right px-4 py-2.5">{t("backups.columns.type", { namespace: "widgets", fallback: "النوع" })}</th>
+              <th className="text-right px-4 py-2.5">{t("backups.columns.status", { namespace: "widgets", fallback: "الحالة" })}</th>
+              <th className="text-right px-4 py-2.5">{t("backups.columns.actions", { namespace: "widgets", fallback: "الإجراءات" })}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -128,13 +130,13 @@ export function BackupListPanel({ backups, pending, operating, onRestore, onDone
                 <td className="px-4 py-2.5">
                   <div className="flex items-center gap-1">
                     <Button size="sm" variant="outline" disabled={disabled} onClick={() => void onRestore(b)}>
-                      استعادة
+                      {t("backups.restore", { namespace: "widgets", fallback: "استعادة" })}
                     </Button>
                     <Button
                       size="sm"
                       variant="ghost"
                       disabled={disabled}
-                      aria-label="نسخ النسخة إلى مكان آخر"
+                      aria-label={t("backups.copyAriaLabel", { namespace: "widgets", fallback: "نسخ النسخة إلى مكان آخر" })}
                       onClick={() => void handleCopy(b)}
                     >
                       <Save className="w-4 h-4" />
@@ -143,7 +145,7 @@ export function BackupListPanel({ backups, pending, operating, onRestore, onDone
                       size="sm"
                       variant="ghost"
                       disabled={disabled}
-                      aria-label="فتح موقع النسخة"
+                      aria-label={t("backups.openAriaLabel", { namespace: "widgets", fallback: "فتح موقع النسخة" })}
                       onClick={() => void handleOpen(b)}
                     >
                       <FolderOpen className="w-4 h-4" />
@@ -172,13 +174,13 @@ export function BackupListPanel({ backups, pending, operating, onRestore, onDone
             </div>
             <div className="flex items-center gap-1.5 flex-wrap">
               <Button size="sm" variant="outline" disabled={disabled} onClick={() => void onRestore(b)}>
-                استعادة
+                {t("backups.restore", { namespace: "widgets", fallback: "استعادة" })}
               </Button>
               <Button size="sm" variant="outline" disabled={disabled} onClick={() => void handleCopy(b)}>
-                <Save className="w-3.5 h-3.5 ml-1" /> نسخ
+                <Save className="w-3.5 h-3.5 ml-1" /> {t("backups.copy", { namespace: "widgets", fallback: "نسخ" })}
               </Button>
               <Button size="sm" variant="outline" disabled={disabled} onClick={() => void handleOpen(b)}>
-                <FolderOpen className="w-3.5 h-3.5 ml-1" /> فتح الموقع
+                <FolderOpen className="w-3.5 h-3.5 ml-1" /> {t("backups.open", { namespace: "widgets", fallback: "فتح الموقع" })}
               </Button>
               <ConfirmDelete b={b} />
             </div>
@@ -188,7 +190,7 @@ export function BackupListPanel({ backups, pending, operating, onRestore, onDone
 
       <p className="text-xs text-slate-400 flex items-center gap-1.5 pt-2">
         <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
-        لا يمكن حذف قاعدة البيانات الحالية (النسخ الاحتياطية فقط).
+        {t("backups.cannotDeleteCurrentDb", { namespace: "widgets", fallback: "لا يمكن حذف قاعدة البيانات الحالية (النسخ الاحتياطية فقط)." })}
       </p>
     </div>
   );

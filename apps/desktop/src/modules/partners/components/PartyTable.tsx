@@ -7,6 +7,7 @@ import { useUnifiedColumns, useSortable, useTableColumns, useBaseCurrencyColumns
 import { formatNumber } from "@shared/lib/format";
 import { NotebookText, Receipt, User, Truck } from "lucide-react";
 import { TableActions } from "@widgets/table-shell/TableActions";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 interface PartyTableProps<T extends { id: string; name: string; code?: string; phone?: string | null; balance?: string | number; notes?: string | null }> {
   entityName: "customer" | "supplier";
@@ -70,9 +71,18 @@ export function PartyTable<T extends { id: string; name: string; code?: string; 
 }: PartyTableProps<T>) {
   const cfg = ENTITY_CONFIG[entityName];
   const Icon = cfg.icon;
+  const { t } = useLocalization();
   const { currencies } = useCurrencyContext();
   const { isBaseCurrency } = useBaseCurrencyColumns();
   const { getAccountStatusColumn, getBalanceColumns, getSummaryColumns } = useTableColumns();
+
+  const labels = useMemo(() => ({
+    title: t(entityName === "customer" ? "partyTable.titleCustomer" : "partyTable.titleSupplier", { namespace: "partners", fallback: cfg.title }),
+    searchPlaceholder: t(entityName === "customer" ? "partyTable.searchPlaceholderCustomer" : "partyTable.searchPlaceholderSupplier", { namespace: "partners", fallback: cfg.searchPlaceholder }),
+    emptyMessage: t(entityName === "customer" ? "partyTable.emptyCustomer" : "partyTable.emptySupplier", { namespace: "partners", fallback: cfg.emptyMessage }),
+    summaryLabel: t(entityName === "customer" ? "partyTable.summaryLabelCustomer" : "partyTable.summaryLabelSupplier", { namespace: "partners", fallback: cfg.summaryLabel }),
+    documentLabel: t(entityName === "customer" ? "partyTable.documentLabelCustomer" : "partyTable.documentLabelSupplier", { namespace: "partners", fallback: cfg.documentLabel }),
+  }), [t, entityName, cfg]);
 
   const { sortedData, sortField, sortDirection, handleSort } = useSortable({
     data,
@@ -99,14 +109,14 @@ export function PartyTable<T extends { id: string; name: string; code?: string; 
       {
         id: "code",
         header: "#",
-        label: "رقم الحساب",
+        label: t("columns.accountNumber", { namespace: "partners", fallback: "رقم الحساب" }),
         accessor: (item) => formatNumber(parseInt(item.code) || 0),
         className: "font-black text-slate-900 text-center",
       },
       {
         id: "name",
-        header: entityName === "customer" ? "اسم العميل" : "اسم المورد",
-        label: entityName === "customer" ? "اسم العميل" : "اسم المورد",
+        header: entityName === "customer" ? t("columns.partyNameCustomer", { namespace: "partners", fallback: "اسم العميل" }) : t("columns.partyNameSupplier", { namespace: "partners", fallback: "اسم المورد" }),
+        label: entityName === "customer" ? t("columns.partyNameCustomer", { namespace: "partners", fallback: "اسم العميل" }) : t("columns.partyNameSupplier", { namespace: "partners", fallback: "اسم المورد" }),
         accessor: (item) => (
           <div className="flex items-center gap-3">
             <div className={`w-8 h-8 rounded-full ${cfg.avatarBg} flex items-center justify-center ${cfg.avatarText} shrink-0`}>
@@ -118,14 +128,14 @@ export function PartyTable<T extends { id: string; name: string; code?: string; 
       },
       {
         id: "phone",
-        header: "رقم الهاتف",
-        label: "رقم الهاتف",
+        header: t("columns.phone", { namespace: "partners", fallback: "رقم الهاتف" }),
+        label: t("columns.phone", { namespace: "partners", fallback: "رقم الهاتف" }),
         accessor: (item) => item.phone || "",
         className: "tabular-nums text-slate-500",
       },
     ];
 
-    cols.push(getAccountStatusColumn("حالة الحساب", { partnerType: cfg.isCreditFirst ? "supplier" : "customer" }) as UnifiedColumn<T>);
+    cols.push(getAccountStatusColumn(t("columns.accountStatus", { namespace: "partners", fallback: "حالة الحساب" }), { partnerType: cfg.isCreditFirst ? "supplier" : "customer" }) as UnifiedColumn<T>);
 
     const balanceCols = getBalanceColumns().map((c) => {
       const m = c.id.match(/^balance_(.+)$/);
@@ -142,8 +152,8 @@ export function PartyTable<T extends { id: string; name: string; code?: string; 
 
     cols.push({
       id: "notes",
-      header: "ملاحظات",
-      label: "ملاحظات",
+      header: t("columns.notes", { namespace: "partners", fallback: "ملاحظات" }),
+      label: t("columns.notes", { namespace: "partners", fallback: "ملاحظات" }),
       accessor: (item) => (
         <span className="text-slate-500 text-xs truncate max-w-[200px] block" title={item.notes || ""}>
           {item.notes || ""}
@@ -153,17 +163,17 @@ export function PartyTable<T extends { id: string; name: string; code?: string; 
 
     cols.push({
       id: "actions",
-      header: "إجراءات",
-      label: "إجراءات",
+      header: t("columns.actions", { namespace: "partners", fallback: "إجراءات" }),
+      label: t("columns.actions", { namespace: "partners", fallback: "إجراءات" }),
       accessor: (item) => (
         <TableActions
           onView={() => onView(item)}
           onEdit={() => onEdit(item)}
           onDelete={onDelete ? () => onDelete(item.id) : undefined}
           extraActions={[
-            ...(onJournal ? [{ label: "اليومية", icon: NotebookText, onClick: () => onJournal(item) }] : []),
+            ...(onJournal ? [{ label: t("actions.journal", { namespace: "partners", fallback: "اليومية" }), icon: NotebookText, onClick: () => onJournal(item) }] : []),
             ...(onDocument
-              ? [{ label: cfg.documentLabel, icon: cfg.documentIcon, onClick: () => onDocument(item) }]
+              ? [{ label: labels.documentLabel, icon: cfg.documentIcon, onClick: () => onDocument(item) }]
               : []),
           ]}
         />
@@ -171,7 +181,7 @@ export function PartyTable<T extends { id: string; name: string; code?: string; 
     });
 
     return cols;
-  }, [onView, onEdit, onDelete, onJournal, onDocument, getAccountStatusColumn, getBalanceColumns, isBaseCurrency, entityName, cfg, Icon]);
+  }, [onView, onEdit, onDelete, onJournal, onDocument, getAccountStatusColumn, getBalanceColumns, isBaseCurrency, entityName, cfg, Icon, labels, t]);
 
   const defaultVisible = useMemo(() => {
     const ids: string[] = ["code", "name", "status"];
@@ -197,16 +207,16 @@ export function PartyTable<T extends { id: string; name: string; code?: string; 
   const summaryColumns: SummaryColumn[] = getSummaryColumns(
     enrichedColumns as UnifiedColumn<{ balance?: number | string; debit?: number | string; credit?: number | string; currency?: string }>[],
     sortedData,
-    cfg.summaryLabel,
+    labels.summaryLabel,
     cfg.isCreditFirst ? { partnerType: "supplier" } : { partnerType: "customer" }
   );
 
   return (
     <TableShell
-      title={cfg.title}
+      title={labels.title}
       search={search}
       onSearchChange={onSearchChange}
-      searchPlaceholder={cfg.searchPlaceholder}
+      searchPlaceholder={labels.searchPlaceholder}
       columns={toolbarColumns}
       onColumnToggle={toggleColumn}
       onColumnsReset={resetToDefault}
@@ -227,7 +237,7 @@ export function PartyTable<T extends { id: string; name: string; code?: string; 
           if (col.id === "code" || col.id === "name") handleSort(col.id);
           if (col.id === "status" || col.id?.startsWith("balance_")) handleSort("balance");
         }}
-        emptyMessage={search ? "لا توجد نتائج بحث تطابق استعلامك" : cfg.emptyMessage}
+        emptyMessage={search ? t("partyTable.emptySearch", { namespace: "partners", fallback: "لا توجد نتائج بحث تطابق استعلامك" }) : labels.emptyMessage}
         summary={summaryColumns}
       />
     </TableShell>

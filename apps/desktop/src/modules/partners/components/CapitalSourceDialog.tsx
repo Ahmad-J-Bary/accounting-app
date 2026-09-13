@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { accountingService } from '@modules/accounting/api/accountingService';
 import { Wallet, Landmark, Package, HandCoins } from 'lucide-react';
 import type { AccountDto } from "@erp/shared-types";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 export type CapitalSource = 'Cash' | 'Bank' | 'InKind' | 'Owed';
 
@@ -55,6 +56,7 @@ export function CapitalSourceDialog({
   onConfirm,
   submitting,
 }: CapitalSourceDialogProps) {
+  const { t } = useLocalization();
   const [source, setSource] = useState<CapitalSource>('Cash');
   const [fundingAccountId, setFundingAccountId] = useState('');
   const [accounts, setAccounts] = useState<AccountDto[]>([]);
@@ -82,13 +84,32 @@ export function CapitalSourceDialog({
 
   const canSubmit = !!partnerId && !!fundingAccountId;
 
+  const sourceLabels: Record<CapitalSource, { label: string; hint: string }> = {
+    Cash: {
+      label: t("capitalSource.options.cashLabel", { namespace: "partners", fallback: "نقداً" }),
+      hint: t("capitalSource.options.cashHint", { namespace: "partners", fallback: "إيداع نقدي في الصندوق (خزينة)" }),
+    },
+    Bank: {
+      label: t("capitalSource.options.bankLabel", { namespace: "partners", fallback: "بنكي" }),
+      hint: t("capitalSource.options.bankHint", { namespace: "partners", fallback: "تحويل إلى حساب بنكي" }),
+    },
+    InKind: {
+      label: t("capitalSource.options.inKindLabel", { namespace: "partners", fallback: "أصل عيني" }),
+      hint: t("capitalSource.options.inKindHint", { namespace: "partners", fallback: "تقديم أصل (سيارة/معدات/مخزون)" }),
+    },
+    Owed: {
+      label: t("capitalSource.options.owedLabel", { namespace: "partners", fallback: "ذمة برأس المال" }),
+      hint: t("capitalSource.options.owedHint", { namespace: "partners", fallback: "رأس المال معلق على الشريك — يُسدد لاحقاً (ذمة مدين للشركة)" }),
+    },
+  };
+
   return (
     <Dialog open={open} onOpenChange={(v) => !v && !submitting && onClose()}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>كيف تم تقديم رأس المال؟</DialogTitle>
+          <DialogTitle>{t("capitalSource.title", { namespace: "partners", fallback: "كيف تم تقديم رأس المال؟" })}</DialogTitle>
           <DialogDescription>
-            تسجيل مساهمة رأس مال الشريك (المبلغ: {amount || '0'}) — اختر مصدر التمويل وحسابه.
+            {t("capitalSource.description", { namespace: "partners", vars: { amount: amount || '0' }, fallback: "تسجيل مساهمة رأس مال الشريك (المبلغ: {{amount}}) — اختر مصدر التمويل وحسابه." })}
           </DialogDescription>
         </DialogHeader>
 
@@ -108,21 +129,21 @@ export function CapitalSourceDialog({
               >
                 <opt.icon className={'w-4 h-4 mt-0.5 ' + (source === opt.id ? 'text-blue-600' : 'text-slate-500')} />
                 <span className="space-y-0.5">
-                  <span className="block text-xs font-bold text-slate-800">{opt.label}</span>
-                  <span className="block text-[10px] leading-tight text-slate-500">{opt.hint}</span>
+                  <span className="block text-xs font-bold text-slate-800">{sourceLabels[opt.id].label}</span>
+                  <span className="block text-[10px] leading-tight text-slate-500">{sourceLabels[opt.id].hint}</span>
                 </span>
               </button>
             ))}
           </div>
 
           <div className="space-y-1.5">
-            <Label className="text-xs font-bold text-slate-600">حساب التمويل (الجانب المدين)</Label>
+            <Label className="text-xs font-bold text-slate-600">{t("capitalSource.fundingAccount", { namespace: "partners", fallback: "حساب التمويل (الجانب المدين)" })}</Label>
             {candidates.length === 0 ? (
-              <p className="text-[11px] text-amber-600">لا توجد حسابات مطابقة لهذا المصدر — اختر مصدراً آخر.</p>
+              <p className="text-[11px] text-amber-600">{t("capitalSource.noAccounts", { namespace: "partners", fallback: "لا توجد حسابات مطابقة لهذا المصدر — اختر مصدراً آخر." })}</p>
             ) : (
               <Select value={fundingAccountId} onValueChange={setFundingAccountId}>
                 <SelectTrigger className="h-9 bg-white border-slate-200 text-xs">
-                  <SelectValue placeholder="اختر حساب التمويل..." />
+                  <SelectValue placeholder={t("capitalSource.selectPlaceholder", { namespace: "partners", fallback: "اختر حساب التمويل..." })} />
                 </SelectTrigger>
                 <SelectContent>
                   {candidates.map((a) => (
@@ -137,13 +158,13 @@ export function CapitalSourceDialog({
         </div>
 
         <DialogFooter className="gap-2">
-          <Button variant="outline" onClick={onClose} disabled={submitting}>إلغاء</Button>
+          <Button variant="outline" onClick={onClose} disabled={submitting}>{t("actions.cancel", { namespace: "partners", fallback: "إلغاء" })}</Button>
           <Button
             onClick={() => onConfirm(source, fundingAccountId)}
             disabled={!canSubmit || submitting}
             className="bg-blue-600 hover:bg-blue-700 text-white font-bold"
           >
-            {submitting ? 'جارٍ التسجيل...' : 'تسجيل المساهمة'}
+            {submitting ? t("capitalSource.submitting", { namespace: "partners", fallback: "جارٍ التسجيل..." }) : t("capitalSource.confirm", { namespace: "partners", fallback: "تسجيل المساهمة" })}
           </Button>
         </DialogFooter>
       </DialogContent>

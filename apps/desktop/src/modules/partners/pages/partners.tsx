@@ -23,8 +23,10 @@ import { type CreatePaymentRequest } from '@erp/shared-types';
 import { usePartnerRatios } from '@modules/partners/hooks/usePartnerRatios';
 import { queryClient, PARTNER_MUTATION_KEYS, invalidateKeys } from "@shared/hooks/queryClient";
 import { START_MODE_EXISTING } from "@modules/opening-balance/lib/wizard-types";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 export default function Partners() {
+  const { t } = useLocalization();
   const { openTab } = useTabs();
   const { formatAmount, baseCurrency, currencies } = useCurrencyContext();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -41,7 +43,7 @@ export default function Partners() {
     queryKey: ["partners"],
     fetchData: () => partnerService.listPartners(),
     searchFields: ["name"],
-    errorLabel: "فشل جلب الشركاء",
+    errorLabel: t("page.loadError", { namespace: "partners", fallback: "فشل جلب الشركاء" }),
   });
 
   const [activePanel, setActivePanel] = useState<"edit" | "drawings" | "view" | "profit-distribution" | null>(null);
@@ -91,7 +93,7 @@ export default function Partners() {
       setSaving(true);
       if (payload.id) {
         await partnerService.updatePartner(payload);
-        toast.success("تم التحديث بنجاح");
+        toast.success(t("toast.updateSuccess", { namespace: "partners", fallback: "تم التحديث بنجاح" }));
       } else {
         const partnerId = await partnerService.addPartner(payload);
         // Two accounting-start modes (company-level setting):
@@ -109,35 +111,35 @@ export default function Partners() {
         }
         toast.success(
           startMode === START_MODE_EXISTING
-            ? "تمت إضافة الشريك (رأس مال افتتاحي، بدون حركة صندوق)"
-            : "تمت الإضافة بنجاح",
+            ? t("toast.addedOpening", { namespace: "partners", fallback: "تمت إضافة الشريك (رأس مال افتتاحي، بدون حركة صندوق)" })
+            : t("toast.added", { namespace: "partners", fallback: "تمت الإضافة بنجاح" }),
         );
       }
       setActivePanel(null);
       await invalidateKeys(queryClient, PARTNER_MUTATION_KEYS);
       refresh(true);
     } catch (error) {
-      toast.error("خطأ: " + error);
+      toast.error(t("toast.genericError", { namespace: "partners", vars: { error: String(error) }, fallback: "خطأ: {{error}}" }));
     } finally {
       setSaving(false);
     }
   };
 
   const handleDelete = useCallback(async (id: string) => {
-    if (!confirm("هل أنت متأكد من حذف هذا الشريك؟")) return;
+    if (!confirm(t("confirm.delete", { namespace: "partners", fallback: "هل أنت متأكد من حذف هذا الشريك؟" }))) return;
     try {
       await partnerService.deletePartner(id);
-      toast.success("تم الحذف بنجاح");
+      toast.success(t("toast.deleted", { namespace: "partners", fallback: "تم الحذف بنجاح" }));
       await invalidateKeys(queryClient, PARTNER_MUTATION_KEYS);
       refresh(true);
     } catch (error) {
-      toast.error("فشل الحذف: " + error);
+      toast.error(t("toast.deleteError", { namespace: "partners", vars: { error: String(error) }, fallback: "فشل الحذف: {{error}}" }));
     }
-  }, [refresh]);
+  }, [refresh, t]);
 
   const handleSaveDrawings = async (payload: CreatePaymentRequest) => {
     if (!selectedPartner?.drawings_account_id) {
-      toast.error("لم يتم إعداد حساب المسحوبات لهذا الشريك");
+      toast.error(t("toast.drawingsAccountNotConfigured", { namespace: "partners", fallback: "لم يتم إعداد حساب المسحوبات لهذا الشريك" }));
       return;
     }
     try {
@@ -146,9 +148,9 @@ export default function Partners() {
       await invalidateKeys(queryClient, PARTNER_MUTATION_KEYS);
       await refresh(true);
       setActivePanel(null);
-      toast.success("تم تسجيل سند المسحوبات بنجاح");
+      toast.success(t("toast.drawingsVoucherSaved", { namespace: "partners", fallback: "تم تسجيل سند المسحوبات بنجاح" }));
     } catch (error) {
-      toast.error("فشل تسجيل السند: " + error);
+      toast.error(t("toast.voucherSaveFailed", { namespace: "partners", vars: { error: String(error) }, fallback: "فشل تسجيل السند: {{error}}" }));
     } finally {
       setDrawingsSaving(false);
     }
@@ -171,9 +173,9 @@ export default function Partners() {
       setEditPartner(null);
       await invalidateKeys(queryClient, PARTNER_MUTATION_KEYS);
       refresh(true);
-      toast.success("تم تسجيل مساهمة رأس المال بنجاح");
+      toast.success(t("toast.capitalSaved", { namespace: "partners", fallback: "تم تسجيل مساهمة رأس المال بنجاح" }));
     } catch (error) {
-      toast.error("فشل تسجيل المساهمة: " + error);
+      toast.error(t("toast.capitalFailed", { namespace: "partners", vars: { error: String(error) }, fallback: "فشل تسجيل المساهمة: {{error}}" }));
     } finally {
       setCapitalSubmitting(false);
     }
@@ -184,14 +186,14 @@ export default function Partners() {
   return (
     <>
       <OperationalTableTemplate
-      title="الشركاء ورأس المال"
+      title={t("page.title", { namespace: "partners", fallback: "الشركاء ورأس المال" })}
       toolbar={
         <PartnersToolbar
           selectedPartner={selectedPartner}
           onOpenDrawingsLedger={(_id, accountId, name) =>
             openTab({
               id: `ledger-${accountId}`,
-              title: `مسحوبات ${name}`,
+              title: t("page.ledgerTab", { namespace: "partners", vars: { name }, fallback: "مسحوبات {{name}}" }),
               path: `/accounting/account-ledger/${accountId}`,
               closable: true,
             })
@@ -201,7 +203,7 @@ export default function Partners() {
           onOpenPartnerStatement={() =>
             openTab({
               id: "partner-rights",
-              title: "الشركاء وحقوقهم",
+              title: t("page.statementTab", { namespace: "partners", fallback: "الشركاء وحقوقهم" }),
               path: "/accounting/reports/partners",
               closable: true,
             })
@@ -218,16 +220,16 @@ export default function Partners() {
           onSearchChange={setSearch}
           filterBar={
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider whitespace-nowrap">التوزيع:</span>
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider whitespace-nowrap">{t("filter.distribution", { namespace: "partners", fallback: "التوزيع:" })}</span>
               <Select value={globalStrategy} onValueChange={persistStrategy}>
                 <SelectTrigger className="w-[120px] h-8 bg-white font-bold shadow-sm border-slate-200 text-xs">
-                  <SelectValue placeholder="اختر" />
+                  <SelectValue placeholder={t("filter.select", { namespace: "partners", fallback: "اختر" })} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="auto" className="text-xs font-bold">تلقائي حسب الشريك</SelectItem>
-                  <SelectItem value="BasedOnCapitalLocal" className="text-xs font-bold">رأس المال المحلي</SelectItem>
-                  <SelectItem value="BasedOnCapitalOriginal" className="text-xs font-bold">رأس المال الأصلي</SelectItem>
-                  <SelectItem value="Manual" className="text-xs font-bold">يدوي</SelectItem>
+                  <SelectItem value="auto" className="text-xs font-bold">{t("filter.strategyAuto", { namespace: "partners", fallback: "تلقائي حسب الشريك" })}</SelectItem>
+                  <SelectItem value="BasedOnCapitalLocal" className="text-xs font-bold">{t("filter.strategyCapitalLocal", { namespace: "partners", fallback: "رأس المال المحلي" })}</SelectItem>
+                  <SelectItem value="BasedOnCapitalOriginal" className="text-xs font-bold">{t("filter.strategyCapitalOriginal", { namespace: "partners", fallback: "رأس المال الأصلي" })}</SelectItem>
+                  <SelectItem value="Manual" className="text-xs font-bold">{t("filter.strategyManual", { namespace: "partners", fallback: "يدوي" })}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -237,10 +239,10 @@ export default function Partners() {
           onDelete={(id) => handleDelete(id)}
           onJournal={(p) => p.drawings_account_id ? openTab({
             id: `ledger-${p.drawings_account_id}`,
-            title: `مسحوبات ${p.name}`,
+            title: t("page.ledgerTab", { namespace: "partners", vars: { name: p.name }, fallback: "مسحوبات {{name}}" }),
             path: `/accounting/account-ledger/${p.drawings_account_id}`,
             closable: true
-          }) : toast.error("لا يوجد حساب مسحوبات مرتبط بهذا الشريك")}
+          }) : toast.error(t("filter.noDrawingsAccount", { namespace: "partners", fallback: "لا يوجد حساب مسحوبات مرتبط بهذا الشريك" }))}
           onDocument={(p) => {
             setSelectedId(p.id);
             setActivePanel("drawings");
@@ -254,8 +256,8 @@ export default function Partners() {
       }
       bottomWidgets={
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <ChartCard title="حصص رأس المال" icon={PieChartIcon} data={partnersWithRatios.map(p => ({ name: p.name, value: p.calculatedCapitalRatio }))} formatter={(v: number) => `${v.toFixed(2)}%`} />
-          <ChartCard title="توزيع الأرباح" icon={TrendingUp} data={partnersWithRatios.map(p => ({ name: p.name, value: p.calculatedRatio }))} formatter={(v: number) => `${v.toFixed(2)}%`} />
+          <ChartCard title={t("chart.capitalShares", { namespace: "partners", fallback: "حصص رأس المال" })} icon={PieChartIcon} data={partnersWithRatios.map(p => ({ name: p.name, value: p.calculatedCapitalRatio }))} formatter={(v: number) => `${v.toFixed(2)}%`} />
+          <ChartCard title={t("chart.profitDistribution", { namespace: "partners", fallback: "توزيع الأرباح" })} icon={TrendingUp} data={partnersWithRatios.map(p => ({ name: p.name, value: p.calculatedRatio }))} formatter={(v: number) => `${v.toFixed(2)}%`} />
         </div>
       }
       sidePanel={

@@ -20,6 +20,7 @@ import {
   Check, Monitor, Sun, Moon, RotateCcw,
 } from 'lucide-react';
 import { LayoutSettings } from './layout/LayoutSettings';
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 function ToggleRow({
   label, desc, checked, onChange,
@@ -36,6 +37,7 @@ function ToggleRow({
 }
 
 export function AppearanceSettings() {
+  const { t } = useLocalization();
   const { settings, updateSettings, resetSettings } = useAppearance();
   const { settings: navSettings, updateSetting: updateNav } = useNavSidebarSettings();
 
@@ -60,12 +62,12 @@ export function AppearanceSettings() {
           className="flex items-center gap-1 px-2 py-1 rounded-lg border border-slate-200 text-slate-500 text-[10px] font-semibold hover:bg-slate-50 transition-all"
         >
           <RotateCcw className="w-3 h-3" />
-          إعادة تعيين
+          {t("settings.appearance.reset", { namespace: "settings", fallback: "إعادة تعيين" })}
         </button>
       </div>
 
       {/* ── Layout Builder ── */}
-      <SettingsSection title="تخطيط الصفحة" description="اختر نمط التخطيط الذي يناسب سير عملك">
+      <SettingsSection title={t("settings.appearance.layoutTitle", { namespace: "settings", fallback: "تخطيط الصفحة" })} description={t("settings.appearance.layoutDescription", { namespace: "settings", fallback: "اختر نمط التخطيط الذي يناسب سير عملك" })}>
         <LayoutSettings
           navMenuType={settings.navMenuType}
           sidenavShape={settings.sidenavShape}
@@ -77,7 +79,7 @@ export function AppearanceSettings() {
       </SettingsSection>
 
       {/* ── Themes ── */}
-      <SettingsSection title="السمات" description="اختر السمة البصرية للتطبيق">
+      <SettingsSection title={t("settings.appearance.themesTitle", { namespace: "settings", fallback: "السمات" })} description={t("settings.appearance.themesDescription", { namespace: "settings", fallback: "اختر السمة البصرية للتطبيق" })}>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-1.5">
           {THEME_LIST.map((theme) => {
             const isActive = settings.theme === theme.id;
@@ -117,12 +119,12 @@ export function AppearanceSettings() {
       </SettingsSection>
 
       {/* ── Color Mode ── */}
-      <SettingsSection title="الوضع اللوني" description="اختر بين الوضع الفاتح والداكن أو النظام">
+      <SettingsSection title={t("settings.appearance.colorModeTitle", { namespace: "settings", fallback: "الوضع اللوني" })} description={t("settings.appearance.colorModeDescription", { namespace: "settings", fallback: "اختر بين الوضع الفاتح والداكن أو النظام" })}>
         <div className="flex gap-1.5">
           {([
-            { id: 'light' as ColorMode, label: 'فاتح', icon: Sun },
-            { id: 'dark' as ColorMode, label: 'داكن', icon: Moon },
-            { id: 'system' as ColorMode, label: 'النظام', icon: Monitor },
+            { id: 'light' as ColorMode, label: t("settings.appearance.colorModes.light", { namespace: "settings", fallback: "فاتح" }), icon: Sun },
+            { id: 'dark' as ColorMode, label: t("settings.appearance.colorModes.dark", { namespace: "settings", fallback: "داكن" }), icon: Moon },
+            { id: 'system' as ColorMode, label: t("settings.appearance.colorModes.system", { namespace: "settings", fallback: "النظام" }), icon: Monitor },
           ]).map(({ id, label, icon: Icon }) => (
             <button
               key={id}
@@ -142,7 +144,7 @@ export function AppearanceSettings() {
       </SettingsSection>
 
       {/* ── Primary Color ── */}
-      <SettingsSection title="اللون الأساسي" description="اختر لون التطبيق الأساسي">
+      <SettingsSection title={t("settings.appearance.primaryColorTitle", { namespace: "settings", fallback: "اللون الأساسي" })} description={t("settings.appearance.primaryColorDescription", { namespace: "settings", fallback: "اختر لون التطبيق الأساسي" })}>
         <div className="flex flex-wrap gap-1.5">
           {PRIMARY_COLORS.map((pc) => {
             const isActive = settings.primaryColor === pc.id;
@@ -170,12 +172,12 @@ export function AppearanceSettings() {
       </SettingsSection>
 
       {/* ── Density ── */}
-      <SettingsSection title="كثافة العرض" description="تحكم في المسافات وحجم العناصر">
+      <SettingsSection title={t("settings.appearance.densityTitle", { namespace: "settings", fallback: "كثافة العرض" })} description={t("settings.appearance.densityDescription", { namespace: "settings", fallback: "تحكم في المسافات وحجم العناصر" })}>
         <div className="flex gap-1.5">
           {([
-            { id: 'compact' as DensityMode, label: 'مضغوط', desc: 'مسافات أصغر', bars: [4, 3, 4, 3, 4] },
-            { id: 'comfortable' as DensityMode, label: 'مريح', desc: 'مسافات متوسطة', bars: [5, 4, 5, 4, 5] },
-            { id: 'spacious' as DensityMode, label: 'واسع', desc: 'مسافات أكبر', bars: [6, 5, 6, 5, 6] },
+            { id: 'compact' as DensityMode, label: t("settings.appearance.density.compact", { namespace: "settings", fallback: "مضغوط" }), desc: t("settings.appearance.densityDescriptions.compact", { namespace: "settings", fallback: "مسافات أصغر" }), bars: [4, 3, 4, 3, 4] },
+            { id: 'comfortable' as DensityMode, label: t("settings.appearance.density.comfortable", { namespace: "settings", fallback: "مريح" }), desc: t("settings.appearance.densityDescriptions.comfortable", { namespace: "settings", fallback: "مسافات متوسطة" }), bars: [5, 4, 5, 4, 5] },
+            { id: 'spacious' as DensityMode, label: t("settings.appearance.density.spacious", { namespace: "settings", fallback: "واسع" }), desc: t("settings.appearance.densityDescriptions.spacious", { namespace: "settings", fallback: "مسافات أكبر" }), bars: [6, 5, 6, 5, 6] },
           ]).map(({ id, label, desc, bars }) => (
             <button
               key={id}
@@ -205,15 +207,15 @@ export function AppearanceSettings() {
         </div>
       </SettingsSection>
 
-      <SettingsSection title="أسلوب التبويبات والحركة" description="اختر طريقة عرض التبويبات ومستوى الحركة المرئية">
+      <SettingsSection title={t("settings.appearance.tabsMotionTitle", { namespace: "settings", fallback: "أسلوب التبويبات والحركة" })} description={t("settings.appearance.tabsMotionDescription", { namespace: "settings", fallback: "اختر طريقة عرض التبويبات ومستوى الحركة المرئية" })}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div>
-            <span className="font-semibold text-[11px] text-slate-700 block mb-1.5">أسلوب التبويبات</span>
+            <span className="font-semibold text-[11px] text-slate-700 block mb-1.5">{t("settings.appearance.tabStyleLabel", { namespace: "settings", fallback: "أسلوب التبويبات" })}</span>
             <div className="flex gap-1.5">
               {([
-                { id: 'default' as TabStyleMode, label: 'افتراضي' },
-                { id: 'browser' as TabStyleMode, label: 'متصفح' },
-                { id: 'vscode' as TabStyleMode, label: 'VS Code' },
+                { id: 'default' as TabStyleMode, label: t("settings.appearance.tabStyles.default", { namespace: "settings", fallback: "افتراضي" }) },
+                { id: 'browser' as TabStyleMode, label: t("settings.appearance.tabStyles.browser", { namespace: "settings", fallback: "متصفح" }) },
+                { id: 'vscode' as TabStyleMode, label: t("settings.appearance.tabStyles.vscode", { namespace: "settings", fallback: "VS Code" }) },
               ]).map(({ id, label }) => (
                 <button
                   key={id}
@@ -232,11 +234,11 @@ export function AppearanceSettings() {
           </div>
 
           <div>
-            <span className="font-semibold text-[11px] text-slate-700 block mb-1.5">الحركة المرئية</span>
+            <span className="font-semibold text-[11px] text-slate-700 block mb-1.5">{t("settings.appearance.motionLabel", { namespace: "settings", fallback: "الحركة المرئية" })}</span>
             <div className="flex gap-1.5">
               {([
-                { id: 'full' as MotionMode, label: 'كاملة' },
-                { id: 'reduced' as MotionMode, label: 'مخففة' },
+                { id: 'full' as MotionMode, label: t("settings.appearance.motions.full", { namespace: "settings", fallback: "كاملة" }) },
+                { id: 'reduced' as MotionMode, label: t("settings.appearance.motions.reduced", { namespace: "settings", fallback: "مخففة" }) },
               ]).map(({ id, label }) => (
                 <button
                   key={id}
@@ -257,33 +259,33 @@ export function AppearanceSettings() {
       </SettingsSection>
 
       {/* ── Show / Hide ── */}
-      <SettingsSection title="إظهار / إخفاء العناصر" description="تحكم في ظهور العناصر المختلفة في الواجهة">
+      <SettingsSection title={t("settings.appearance.showHideTitle", { namespace: "settings", fallback: "إظهار / إخفاء العناصر" })} description={t("settings.appearance.showHideDescription", { namespace: "settings", fallback: "تحكم في ظهور العناصر المختلفة في الواجهة" })}>
         <div>
-          <ToggleRow label="الشريط الجانبي" desc="إظهار أو إخفاء شريط التنقل الجانبي" checked={settings.show.sidebar} onChange={v => updateSettings({ show: { ...settings.show, sidebar: v } })} />
-          <ToggleRow label="الشريط العلوي" desc="إظهار أو إخفاء شريط الأدوات العلوي" checked={settings.show.topBar} onChange={v => updateSettings({ show: { ...settings.show, topBar: v } })} />
-          <ToggleRow label="بحث" desc="إظهار أو إخفاء حقل البحث" checked={settings.show.search} onChange={v => updateSettings({ show: { ...settings.show, search: v } })} />
-          <ToggleRow label="الإشعارات" desc="إظهار أو إخفاء زر الإشعارات" checked={settings.show.notifications} onChange={v => updateSettings({ show: { ...settings.show, notifications: v } })} />
-          <ToggleRow label="مسار التنقل" desc="إظهار أو إخفاء مسار التنقل" checked={settings.show.breadcrumbs} onChange={v => updateSettings({ show: { ...settings.show, breadcrumbs: v } })} />
+          <ToggleRow label={t("settings.appearance.show.sidebar", { namespace: "settings", fallback: "الشريط الجانبي" })} desc={t("settings.appearance.show.sidebarDesc", { namespace: "settings", fallback: "إظهار أو إخفاء شريط التنقل الجانبي" })} checked={settings.show.sidebar} onChange={v => updateSettings({ show: { ...settings.show, sidebar: v } })} />
+          <ToggleRow label={t("settings.appearance.show.topBar", { namespace: "settings", fallback: "الشريط العلوي" })} desc={t("settings.appearance.show.topBarDesc", { namespace: "settings", fallback: "إظهار أو إخفاء شريط الأدوات العلوي" })} checked={settings.show.topBar} onChange={v => updateSettings({ show: { ...settings.show, topBar: v } })} />
+          <ToggleRow label={t("settings.appearance.show.search", { namespace: "settings", fallback: "بحث" })} desc={t("settings.appearance.show.searchDesc", { namespace: "settings", fallback: "إظهار أو إخفاء حقل البحث" })} checked={settings.show.search} onChange={v => updateSettings({ show: { ...settings.show, search: v } })} />
+          <ToggleRow label={t("settings.appearance.show.notifications", { namespace: "settings", fallback: "الإشعارات" })} desc={t("settings.appearance.show.notificationsDesc", { namespace: "settings", fallback: "إظهار أو إخفاء زر الإشعارات" })} checked={settings.show.notifications} onChange={v => updateSettings({ show: { ...settings.show, notifications: v } })} />
+          <ToggleRow label={t("settings.appearance.show.breadcrumbs", { namespace: "settings", fallback: "مسار التنقل" })} desc={t("settings.appearance.show.breadcrumbsDesc", { namespace: "settings", fallback: "إظهار أو إخفاء مسار التنقل" })} checked={settings.show.breadcrumbs} onChange={v => updateSettings({ show: { ...settings.show, breadcrumbs: v } })} />
         </div>
       </SettingsSection>
 
       {/* ── Sidebar Overrides ── */}
-      <SettingsSection title="تجاوزات الشريط الجانبي" description="إعدادات إضافية للشريط الجانبي">
+      <SettingsSection title={t("settings.appearance.sidebarOverridesTitle", { namespace: "settings", fallback: "تجاوزات الشريط الجانبي" })} description={t("settings.appearance.sidebarOverridesDescription", { namespace: "settings", fallback: "إعدادات إضافية للشريط الجانبي" })}>
         <div>
-          <ToggleRow label="مطوي" desc="طي الشريط الجانبي بشكل افتراضي" checked={navSettings.navCollapsed} onChange={v => updateNav('navCollapsed', v)} />
-          <ToggleRow label="مجموعات الشريط الجانبي" desc="إظهار أو إخفاء المجموعات داخل الشريط الجانبي" checked={navSettings.navShowSectionHeaders} onChange={v => updateNav('navShowSectionHeaders', v)} />
-          <ToggleRow label="أيقونات الشريط الجانبي" desc="إظهار الأيقونات في الشريط الجانبي" checked={!navSettings.navIconOnly} onChange={v => updateNav('navIconOnly', !v)} />
+          <ToggleRow label={t("settings.appearance.sidebarOverrides.collapsed", { namespace: "settings", fallback: "مطوي" })} desc={t("settings.appearance.sidebarOverrides.collapsedDesc", { namespace: "settings", fallback: "طي الشريط الجانبي بشكل افتراضي" })} checked={navSettings.navCollapsed} onChange={v => updateNav('navCollapsed', v)} />
+          <ToggleRow label={t("settings.appearance.sidebarOverrides.groupHeaders", { namespace: "settings", fallback: "مجموعات الشريط الجانبي" })} desc={t("settings.appearance.sidebarOverrides.groupHeadersDesc", { namespace: "settings", fallback: "إظهار أو إخفاء المجموعات داخل الشريط الجانبي" })} checked={navSettings.navShowSectionHeaders} onChange={v => updateNav('navShowSectionHeaders', v)} />
+          <ToggleRow label={t("settings.appearance.sidebarOverrides.icons", { namespace: "settings", fallback: "أيقونات الشريط الجانبي" })} desc={t("settings.appearance.sidebarOverrides.iconsDesc", { namespace: "settings", fallback: "إظهار الأيقونات في الشريط الجانبي" })} checked={!navSettings.navIconOnly} onChange={v => updateNav('navIconOnly', !v)} />
         </div>
 
         <div className="mt-2 pt-2 border-t border-slate-100">
-          <span className="font-semibold text-[11px] text-slate-700 block mb-1.5">خلفية الشريط الجانبي</span>
+          <span className="font-semibold text-[11px] text-slate-700 block mb-1.5">{t("settings.appearance.sidebarBackground", { namespace: "settings", fallback: "خلفية الشريط الجانبي" })}</span>
           <div className="flex flex-wrap gap-1">
             {[
-              { id: 'bg-slate-900', label: 'داكن', color: '#0f172a' },
-              { id: 'bg-slate-950', label: 'داكن جداً', color: '#020617' },
-              { id: 'bg-slate-800', label: 'رمادي داكن', color: '#1e293b' },
-              { id: 'bg-white', label: 'أبيض', color: '#ffffff' },
-              { id: 'bg-slate-50', label: 'رمادي فاتح', color: '#f8fafc' },
+              { id: 'bg-slate-900', label: t("settings.appearance.sidebarBackgrounds.dark", { namespace: "settings", fallback: "داكن" }), color: '#0f172a' },
+              { id: 'bg-slate-950', label: t("settings.appearance.sidebarBackgrounds.veryDark", { namespace: "settings", fallback: "داكن جداً" }), color: '#020617' },
+              { id: 'bg-slate-800', label: t("settings.appearance.sidebarBackgrounds.darkGray", { namespace: "settings", fallback: "رمادي داكن" }), color: '#1e293b' },
+              { id: 'bg-white', label: t("settings.appearance.sidebarBackgrounds.white", { namespace: "settings", fallback: "أبيض" }), color: '#ffffff' },
+              { id: 'bg-slate-50', label: t("settings.appearance.sidebarBackgrounds.lightGray", { namespace: "settings", fallback: "رمادي فاتح" }), color: '#f8fafc' },
             ].map((opt) => {
               const isActive = navSettings.navBackground === opt.id;
               return (

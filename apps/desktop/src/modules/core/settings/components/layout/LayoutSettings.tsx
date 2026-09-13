@@ -4,6 +4,7 @@ import { Check } from 'lucide-react';
 import type { LayoutType, NavMenuType, SidenavShape, TopnavShape, NavbarAppearance } from '@shared/types/appearance';
 import { computeLayoutType } from '@shared/config/computeLayoutType';
 import { getLayoutDefinition } from '@shared/config/layoutRegistry';
+import { useLocalization } from "@app/providers/LocalizationProvider";
 import {
   SidenavPreview,
   TopnavPreview,
@@ -193,6 +194,30 @@ export function LayoutSettings({
   horizontalNavbarAppearance,
   onChange,
 }: LayoutSettingsProps) {
+  const { t } = useLocalization();
+  const L = {
+    navMenu: t("settings.layout.navMenu", { namespace: "settings", fallback: "قائمة التنقل" }),
+    sidebar: t("settings.layout.navMenuOptions.sidebar", { namespace: "settings", fallback: "شريط جانبي" }),
+    topbar: t("settings.layout.navMenuOptions.topbar", { namespace: "settings", fallback: "شريط علوي" }),
+    combo: t("settings.layout.navMenuOptions.combo", { namespace: "settings", fallback: "مدمج" }),
+    sidenavShape: t("settings.layout.sidenavShape", { namespace: "settings", fallback: "شكل الشريط العمودي" }),
+    topnavShape: t("settings.layout.topnavShape", { namespace: "settings", fallback: "شكل الشريط الأفقي" }),
+    sidenavAppearance: t("settings.layout.sidenavAppearance", { namespace: "settings", fallback: "مظهر الشريط العمودي" }),
+    topnavAppearance: t("settings.layout.topnavAppearance", { namespace: "settings", fallback: "مظهر الشريط الأفقي" }),
+    full: t("settings.layout.shapes.full", { namespace: "settings", fallback: "كامل" }),
+    slim: t("settings.layout.shapes.slim", { namespace: "settings", fallback: "نحيف" }),
+    stacked: t("settings.layout.shapes.stacked", { namespace: "settings", fallback: "مكدس" }),
+    light: t("settings.layout.appearances.light", { namespace: "settings", fallback: "فاتح" }),
+    dark: t("settings.layout.appearances.dark", { namespace: "settings", fallback: "داكن" }),
+    preview: t("settings.layout.preview", { namespace: "settings", fallback: "معاينة التخطيط المختار" }),
+    tagNav: t("settings.layout.tags.nav", { namespace: "settings", fallback: "جانبي" }),
+    tagTop: t("settings.layout.tags.top", { namespace: "settings", fallback: "علوي" }),
+    tagCombo: t("settings.layout.tags.combo", { namespace: "settings", fallback: "مدمج" }),
+    tagSidenav: t("settings.layout.tags.sidenav", { namespace: "settings", fallback: "جانبي: {{shape}}" }),
+    tagTopnav: t("settings.layout.tags.topnav", { namespace: "settings", fallback: "علوي: {{shape}}" }),
+    tagHorizontal: t("settings.layout.tags.horizontal", { namespace: "settings", fallback: "أفقي: {{appearance}}" }),
+    tagVertical: t("settings.layout.tags.vertical", { namespace: "settings", fallback: "عمودي: {{appearance}}" }),
+  };
   const layoutType = computeLayoutType({ navMenuType, sidenavShape, topnavShape, verticalNavbarAppearance, horizontalNavbarAppearance });
   const layoutDef = getLayoutDefinition(layoutType);
   const FinalPreview = getFinalPreview(layoutType);
@@ -204,11 +229,11 @@ export function LayoutSettings({
     <div className="space-y-1.5">
 
       {/* ── قائمة التنقل ── */}
-      <CardGroup label="قائمة التنقل" cols={3}>
+      <CardGroup label={L.navMenu} cols={3}>
         {([
-          { id: 'sidenav' as NavMenuType, label: 'شريط جانبي', preview: <SidenavPreview /> },
-          { id: 'topnav'  as NavMenuType, label: 'شريط علوي',  preview: <TopnavPreview /> },
-          { id: 'combo'   as NavMenuType, label: 'مدمج',        preview: <ComboPreview /> },
+          { id: 'sidenav' as NavMenuType, label: L.sidebar, preview: <SidenavPreview /> },
+          { id: 'topnav'  as NavMenuType, label: L.topbar,  preview: <TopnavPreview /> },
+          { id: 'combo'   as NavMenuType, label: L.combo,   preview: <ComboPreview /> },
         ]).map(opt => (
           <OptionCard
             key={opt.id}
@@ -223,10 +248,10 @@ export function LayoutSettings({
       {/* ── شكل العمودي + مظهر العمودي (صف واحد) ── */}
       {showSidenav && (
         <div className="flex gap-1.5 items-start">
-          <CardGroup label="شكل الشريط العمودي" cols={2}>
+          <CardGroup label={L.sidenavShape} cols={2}>
             {([
-              { id: 'default' as SidenavShape, label: 'كامل', preview: <SidenavDefaultPreview /> },
-              { id: 'stacked' as SidenavShape, label: 'مكدس', preview: <SidenavStackedPreview /> },
+              { id: 'default' as SidenavShape, label: L.full, preview: <SidenavDefaultPreview /> },
+              { id: 'stacked' as SidenavShape, label: L.stacked, preview: <SidenavStackedPreview /> },
             ]).map(opt => (
               <OptionCard
                 key={opt.id}
@@ -238,10 +263,10 @@ export function LayoutSettings({
             ))}
           </CardGroup>
 
-          <CardGroup label="مظهر الشريط العمودي" cols={2}>
+          <CardGroup label={L.sidenavAppearance} cols={2}>
             {([
-              { id: 'light' as NavbarAppearance, label: 'فاتح', preview: <VerticalLightPreview /> },
-              { id: 'dark'  as NavbarAppearance, label: 'داكن', preview: <VerticalDarkPreview /> },
+              { id: 'light' as NavbarAppearance, label: L.light, preview: <VerticalLightPreview /> },
+              { id: 'dark'  as NavbarAppearance, label: L.dark,  preview: <VerticalDarkPreview /> },
             ]).map(opt => (
               <OptionCard
                 key={opt.id}
@@ -258,11 +283,11 @@ export function LayoutSettings({
       {/* ── شكل الأفقي (فقط للشريط العلوي) ── */}
       {showTopnav && (
         <div className="flex gap-1.5 items-start">
-          <CardGroup label="شكل الشريط الأفقي" cols={3}>
+          <CardGroup label={L.topnavShape} cols={3}>
             {([
-              { id: 'default' as TopnavShape, label: 'كامل', preview: <TopnavDefaultPreview /> },
-              { id: 'slim'    as TopnavShape, label: 'نحيف', preview: <TopnavSlimPreview /> },
-              { id: 'stacked' as TopnavShape, label: 'مكدس', preview: <TopnavStackedPreview /> },
+              { id: 'default' as TopnavShape, label: L.full, preview: <TopnavDefaultPreview /> },
+              { id: 'slim'    as TopnavShape, label: L.slim, preview: <TopnavSlimPreview /> },
+              { id: 'stacked' as TopnavShape, label: L.stacked, preview: <TopnavStackedPreview /> },
             ]).map(opt => (
               <OptionCard
                 key={opt.id}
@@ -278,10 +303,10 @@ export function LayoutSettings({
 
       {/* ── مظهر الأفقي (دائماً) ── */}
       <div className="flex gap-1.5 items-start">
-        <CardGroup label="مظهر الشريط الأفقي" cols={2}>
+        <CardGroup label={L.topnavAppearance} cols={2}>
           {([
-            { id: 'light' as NavbarAppearance, label: 'فاتح', preview: <HorizontalLightPreview /> },
-            { id: 'dark'  as NavbarAppearance, label: 'داكن', preview: <HorizontalDarkPreview /> },
+            { id: 'light' as NavbarAppearance, label: L.light, preview: <HorizontalLightPreview /> },
+            { id: 'dark'  as NavbarAppearance, label: L.dark,  preview: <HorizontalDarkPreview /> },
           ]).map(opt => (
             <OptionCard
               key={opt.id}
@@ -296,7 +321,7 @@ export function LayoutSettings({
 
       {/* ── معاينة التخطيط المختار ── */}
       <div className="border-t border-slate-100 pt-1.5">
-        <SubLabel>معاينة التخطيط المختار</SubLabel>
+        <SubLabel>{L.preview}</SubLabel>
         <div className="rounded-lg border border-primary/20 bg-primary/[0.02] p-1 flex gap-1.5 items-center">
           <div className="w-14 shrink-0 overflow-hidden rounded border border-slate-200 shadow-sm">
             <FinalPreview />
@@ -306,11 +331,13 @@ export function LayoutSettings({
             <p className="text-[8px] text-slate-400 leading-snug line-clamp-2">{layoutDef.description}</p>
             <div className="flex flex-wrap gap-1 mt-0.5">
               {([
-                navMenuType === 'sidenav' ? 'جانبي' : navMenuType === 'topnav' ? 'علوي' : 'مدمج',
-                navMenuType !== 'topnav'  ? `جانبي: ${sidenavShape === 'default' ? 'كامل' : 'مكدس'}` : null,
-                navMenuType !== 'sidenav' ? `علوي: ${topnavShape === 'default' ? 'كامل' : topnavShape === 'slim' ? 'نحيف' : 'مكدس'}` : null,
-                `أفقي: ${horizontalNavbarAppearance === 'dark' ? 'داكن' : 'فاتح'}`,
-                verticalNavbarAppearance === 'dark' ? 'عمودي: داكن' : 'عمودي: فاتح',
+                navMenuType === 'sidenav' ? L.tagNav : navMenuType === 'topnav' ? L.tagTop : L.tagCombo,
+                navMenuType !== 'topnav'  ? t("settings.layout.tags.sidenav", { namespace: "settings", fallback: "جانبي: {{shape}}", vars: { shape: sidenavShape === 'default' ? L.full : L.stacked } }) : null,
+                navMenuType !== 'sidenav' ? t("settings.layout.tags.topnav", { namespace: "settings", fallback: "علوي: {{shape}}", vars: { shape: topnavShape === 'default' ? L.full : topnavShape === 'slim' ? L.slim : L.stacked } }) : null,
+                t("settings.layout.tags.horizontal", { namespace: "settings", fallback: "أفقي: {{appearance}}", vars: { appearance: horizontalNavbarAppearance === 'dark' ? L.dark : L.light } }),
+                verticalNavbarAppearance === 'dark'
+                  ? t("settings.layout.tags.vertical", { namespace: "settings", fallback: "عمودي: {{appearance}}", vars: { appearance: L.dark } })
+                  : t("settings.layout.tags.vertical", { namespace: "settings", fallback: "عمودي: {{appearance}}", vars: { appearance: L.light } }),
               ].filter(Boolean) as string[]).map(tag => (
                 <span key={tag} className="px-1 py-px rounded bg-slate-100 text-[7px] font-semibold text-slate-500">
                   {tag}

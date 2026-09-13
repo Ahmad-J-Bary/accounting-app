@@ -1,6 +1,7 @@
 import { Button } from "@shared/ui/button";
 import { Plus, History as HistoryIcon, PlusCircle, Download, TrendingUp, Coins } from "lucide-react";
 import { toast } from "sonner";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 interface PartnersToolbarProps {
   selectedPartner: { id: string; name: string; drawings_account_id?: string | null } | null;
@@ -19,6 +20,7 @@ export function PartnersToolbar({
   onOpenPartnerStatement,
   onOpenProfitDistribution,
 }: PartnersToolbarProps) {
+  const { t } = useLocalization();
   return (
     <div className="flex items-center gap-2">
       <Button
@@ -27,7 +29,7 @@ export function PartnersToolbar({
         disabled={!selectedPartner}
         onClick={() => {
           if (!selectedPartner?.drawings_account_id) {
-            toast.error("لا يوجد حساب مسحوبات مرتبط بهذا الشريك");
+            toast.error(t("toast.noDrawingsAccount", { namespace: "partners", fallback: "لا يوجد حساب مسحوبات مرتبط بهذا الشريك" }));
             return;
           }
           onOpenDrawingsLedger(
@@ -38,7 +40,7 @@ export function PartnersToolbar({
         }}
         className="border-slate-200 text-slate-700 hover:bg-slate-50"
       >
-        <HistoryIcon className="w-4 h-4 ml-2 text-slate-500" /> مسحوبات الشريك
+        <HistoryIcon className="w-4 h-4 ml-2 text-slate-500" /> {t("toolbar.drawings", { namespace: "partners", fallback: "مسحوبات الشريك" })}
       </Button>
 
       <Button
@@ -47,23 +49,23 @@ export function PartnersToolbar({
         disabled={!selectedPartner}
         onClick={() => {
           if (!selectedPartner?.drawings_account_id) {
-            toast.error("لا يوجد حساب مسحوبات مرتبط بهذا الشريك");
+            toast.error(t("toast.noDrawingsAccount", { namespace: "partners", fallback: "لا يوجد حساب مسحوبات مرتبط بهذا الشريك" }));
             return;
           }
           onOpenDrawingsForm(selectedPartner.id);
         }}
         className="border-slate-200 text-slate-700 hover:bg-slate-50"
       >
-        <PlusCircle className="w-4 h-4 ml-2 text-amber-500" /> سند مسحوبات
+        <PlusCircle className="w-4 h-4 ml-2 text-amber-500" /> {t("toolbar.drawingsVoucher", { namespace: "partners", fallback: "سند مسحوبات" })}
       </Button>
 
       <Button
         size="sm"
         variant="outline"
-        onClick={() => toast.info("جاري التصدير...")}
+        onClick={() => toast.info(t("toolbar.exporting", { namespace: "partners", fallback: "جاري التصدير..." }))}
         className="border-slate-200 text-slate-700 hover:bg-slate-50"
       >
-        <Download className="w-4 h-4 ml-2 text-emerald-500" /> تصدير إكسل
+        <Download className="w-4 h-4 ml-2 text-emerald-500" /> {t("toolbar.exportExcel", { namespace: "partners", fallback: "تصدير إكسل" })}
       </Button>
 
       <Button
@@ -72,7 +74,7 @@ export function PartnersToolbar({
         onClick={onOpenPartnerStatement}
         className="border-slate-200 text-slate-700 hover:bg-slate-50"
       >
-        <TrendingUp className="w-4 h-4 ml-2 text-emerald-500" /> الشركاء وحقوقهم
+        <TrendingUp className="w-4 h-4 ml-2 text-emerald-500" /> {t("toolbar.statement", { namespace: "partners", fallback: "الشركاء وحقوقهم" })}
       </Button>
 
       <Button
@@ -81,7 +83,7 @@ export function PartnersToolbar({
         onClick={onOpenProfitDistribution}
         className="border-slate-200 text-slate-700 hover:bg-slate-50"
       >
-        <Coins className="w-4 h-4 ml-2 text-amber-500" /> توزيع الأرباح
+        <Coins className="w-4 h-4 ml-2 text-amber-500" /> {t("toolbar.profitDistribution", { namespace: "partners", fallback: "توزيع الأرباح" })}
       </Button>
 
       <div className="w-px h-6 bg-slate-200 mx-1" />
@@ -91,7 +93,7 @@ export function PartnersToolbar({
         onClick={onAddPartner}
         className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100 font-bold"
       >
-        <Plus className="w-4 h-4 ml-2" /> إضافة شريك جديد
+        <Plus className="w-4 h-4 ml-2" /> {t("toolbar.addPartner", { namespace: "partners", fallback: "إضافة شريك جديد" })}
       </Button>
     </div>
   );

@@ -5,6 +5,7 @@ import { Label } from "@shared/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@shared/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
 import type { CreateUserRequest, Role } from "@erp/shared-types";
+import { useLocalization } from '@app/providers/LocalizationProvider';
 
 interface UserFormProps {
   open: boolean;
@@ -15,6 +16,7 @@ interface UserFormProps {
 }
 
 export function UserForm({ open, onOpenChange, roles, onSave, saving }: UserFormProps) {
+  const { t } = useLocalization();
   const [form, setForm] = useState<Partial<CreateUserRequest>>({
     username: "",
     full_name: "",
@@ -38,26 +40,26 @@ export function UserForm({ open, onOpenChange, roles, onSave, saving }: UserForm
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-md" dir="rtl">
         <DialogHeader>
-          <DialogTitle>إضافة مستخدم جديد</DialogTitle>
-          <DialogDescription>أدخل بيانات الحساب الجديد وتعيين الصلاحيات له.</DialogDescription>
+          <DialogTitle>{t("users.form.titleAdd", { namespace: "users", fallback: "إضافة مستخدم جديد" })}</DialogTitle>
+          <DialogDescription>{t("users.form.description", { namespace: "users", fallback: "أدخل بيانات الحساب الجديد وتعيين الصلاحيات له." })}</DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-2">
           <div className="space-y-1">
-            <Label>الاسم الكامل *</Label>
-            <Input value={form.full_name ?? ""} onChange={e => setForm(p => ({ ...p, full_name: e.target.value }))} placeholder="أحمد محمد" />
+            <Label>{t("users.form.fullNameLabel", { namespace: "users", fallback: "الاسم الكامل *" })}</Label>
+            <Input value={form.full_name ?? ""} onChange={e => setForm(p => ({ ...p, full_name: e.target.value }))} placeholder={t("users.form.fullNamePlaceholder", { namespace: "users", fallback: "أحمد محمد" })} />
           </div>
           <div className="space-y-1">
-            <Label>اسم المستخدم للولوج *</Label>
-            <Input value={form.username ?? ""} onChange={e => setForm(p => ({ ...p, username: e.target.value }))} placeholder="ahmad_m" />
+            <Label>{t("users.form.usernameLabel", { namespace: "users", fallback: "اسم المستخدم للولوج *" })}</Label>
+            <Input value={form.username ?? ""} onChange={e => setForm(p => ({ ...p, username: e.target.value }))} placeholder={t("users.form.usernamePlaceholder", { namespace: "users", fallback: "ahmad_m" })} />
           </div>
           <div className="space-y-1">
-            <Label>كلمة المرور *</Label>
+            <Label>{t("users.form.passwordLabel", { namespace: "users", fallback: "كلمة المرور *" })}</Label>
             <Input type="password" value={form.password ?? ""} onChange={e => setForm(p => ({ ...p, password: e.target.value }))} />
           </div>
           <div className="space-y-1">
-            <Label>دور النظام (الصلاحية) *</Label>
+            <Label>{t("users.form.roleLabel", { namespace: "users", fallback: "دور النظام (الصلاحية) *" })}</Label>
             <Select value={form.role_id} onValueChange={v => setForm(p => ({ ...p, role_id: v }))}>
-              <SelectTrigger><SelectValue placeholder="اختر الدور" /></SelectTrigger>
+              <SelectTrigger><SelectValue placeholder={t("users.form.rolePlaceholder", { namespace: "users", fallback: "اختر الدور" })} /></SelectTrigger>
               <SelectContent>
                 {roles.map(r => (
                   <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
@@ -67,9 +69,9 @@ export function UserForm({ open, onOpenChange, roles, onSave, saving }: UserForm
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>إلغاء</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>{t("users.form.cancel", { namespace: "users", fallback: "إلغاء" })}</Button>
           <Button onClick={handleSave} disabled={saving || !form.username || !form.full_name || !form.password || !form.role_id}>
-            {saving ? "جاري الحفظ..." : "حفظ المستخدم"}
+            {saving ? t("users.form.saving", { namespace: "users", fallback: "جاري الحفظ..." }) : t("users.form.save", { namespace: "users", fallback: "حفظ المستخدم" })}
           </Button>
         </DialogFooter>
       </DialogContent>

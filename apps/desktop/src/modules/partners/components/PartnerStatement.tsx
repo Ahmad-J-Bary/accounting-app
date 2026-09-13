@@ -18,6 +18,8 @@ import { Button } from "@shared/ui/button";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { toLocalString, formatNumber } from "@shared/lib/format";
 import { partnerDirectionMultiplier } from "@shared/lib/balance-utils";
+import { useLocalization } from "@app/providers/LocalizationProvider";
+import type { LocalizationContextValue } from "@shared/types/i18n";
 
 interface PartnerStatementProps {
   partnerId: string;
@@ -25,7 +27,7 @@ interface PartnerStatementProps {
   partnerType: "customer" | "supplier";
 }
 
-function getJournalDisplay(entry: JournalEntryDto): string {
+function getJournalDisplay(entry: JournalEntryDto, t: LocalizationContextValue["t"]): string {
   if (entry.journal_type === "GeneralJournal") {
     const hasDebit = entry.lines.some((l) => {
       const accCode = l.account_code || "";
@@ -38,8 +40,8 @@ function getJournalDisplay(entry: JournalEntryDto): string {
       });
       if (matchedAccount) {
         const code = matchedAccount.account_code || "";
-        if (code.startsWith("332")) return "خصوم مكتسب";
-        if (code.startsWith("47")) return "خصوم ممنوح";
+        if (code.startsWith("332")) return t("statement.liabilityEarned", { namespace: "partners", fallback: "خصوم مكتسب" });
+        if (code.startsWith("47")) return t("statement.liabilityGranted", { namespace: "partners", fallback: "خصوم ممنوح" });
       }
     }
   }
@@ -55,6 +57,7 @@ export const PartnerStatement: React.FC<PartnerStatementProps> = ({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { currencies, baseCurrency } = useCurrencyContext();
+  const { t } = useLocalization();
 
   const dirMul = partnerDirectionMultiplier(partnerType);
 
@@ -74,7 +77,7 @@ export const PartnerStatement: React.FC<PartnerStatementProps> = ({
         setEntries(sorted);
       } catch (err) {
         console.error("Failed to fetch statement:", err);
-        setError("فشل تحميل كشف الحساب");
+        setError(t("statement.loadError", { namespace: "partners", fallback: "فشل تحميل كشف الحساب" }));
       } finally {
         setLoading(false);
       }
@@ -83,7 +86,7 @@ export const PartnerStatement: React.FC<PartnerStatementProps> = ({
     if (partnerId) {
       fetchStatement();
     }
-  }, [partnerId]);
+  }, [partnerId, t]);
 
   const totals = useMemo(() => {
     const acc: Record<string, { debit: number; credit: number }> = {};
@@ -115,7 +118,7 @@ export const PartnerStatement: React.FC<PartnerStatementProps> = ({
     return (
       <div className="flex flex-col items-center justify-center h-64 space-y-4">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
-        <p className="text-slate-500 font-bold">جاري تحضير كشف الحساب...</p>
+        <p className="text-slate-500 font-bold">{t("statement.loading", { namespace: "partners", fallback: "جاري تحضير كشف الحساب..." })}</p>
       </div>
     );
   }
@@ -125,11 +128,11 @@ export const PartnerStatement: React.FC<PartnerStatementProps> = ({
   }
 
   const runningBalances: Record<string, number> = {};
-  const titlePrefix = partnerType === "customer" ? "كشف حساب العميل" : "كشف حساب المورد";
+  const titlePrefix = partnerType === "customer" ? t("statement.titleCustomer", { namespace: "partners", fallback: "كشف حساب العميل" }) : t("statement.titleSupplier", { namespace: "partners", fallback: "كشف حساب المورد" });
   const emptyText =
     partnerType === "customer"
-      ? "لا توجد حركات مسجلة لهذا العميل حتى الآن."
-      : "لا توجد حركات مسجلة لهذا المورد حتى الآن.";
+      ? t("statement.emptyCustomer", { namespace: "partners", fallback: "لا توجد حركات مسجلة لهذا العميل حتى الآن." })
+      : t("statement.emptySupplier", { namespace: "partners", fallback: "لا توجد حركات مسجلة لهذا المورد حتى الآن." });
 
   return (
     <Card className="border-none shadow-none bg-transparent">
@@ -140,7 +143,7 @@ export const PartnerStatement: React.FC<PartnerStatementProps> = ({
             {titlePrefix}: {partnerName}
           </CardTitle>
           <Button variant="outline" size="sm" onClick={() => { window.dispatchEvent(new Event("app:prepare-print")); requestAnimationFrame(() => window.print()); }} className="font-bold">
-            طباعة الكشف
+            {t("statement.print", { namespace: "partners", fallback: "طباعة الكشف" })}
           </Button>
         </div>
       </CardHeader>
@@ -149,14 +152,14 @@ export const PartnerStatement: React.FC<PartnerStatementProps> = ({
           <Table>
             <TableHeader className="bg-slate-50/50">
               <TableRow>
-                <TableHead className="text-right font-bold w-[120px]">التاريخ</TableHead>
-                <TableHead className="text-right font-bold w-[100px]">رقم القيد</TableHead>
-                <TableHead className="text-right font-bold">البيان / الحركة</TableHead>
+                <TableHead className="text-right font-bold w-[120px]">{t("statement.colDate", { namespace: "partners", fallback: "التاريخ" })}</TableHead>
+                <TableHead className="text-right font-bold w-[100px]">{t("statement.colEntryNumber", { namespace: "partners", fallback: "رقم القيد" })}</TableHead>
+                <TableHead className="text-right font-bold">{t("statement.colDescription", { namespace: "partners", fallback: "البيان / الحركة" })}</TableHead>
                 {sortedCurrencies.map((c) => (
                   <React.Fragment key={c.code}>
-                    <TableHead className="text-left font-bold w-[100px]">مدين ({c.symbol})</TableHead>
-                    <TableHead className="text-left font-bold w-[100px]">دائن ({c.symbol})</TableHead>
-                    <TableHead className="text-left font-bold w-[110px]">الرصيد ({c.symbol})</TableHead>
+                    <TableHead className="text-left font-bold w-[100px]">{t("statement.colDebit", { namespace: "partners", vars: { currency: c.symbol }, fallback: "مدين ({{currency}})" })}</TableHead>
+                    <TableHead className="text-left font-bold w-[100px]">{t("statement.colCredit", { namespace: "partners", vars: { currency: c.symbol }, fallback: "دائن ({{currency}})" })}</TableHead>
+                    <TableHead className="text-left font-bold w-[110px]">{t("statement.colBalance", { namespace: "partners", vars: { currency: c.symbol }, fallback: "الرصيد ({{currency}})" })}</TableHead>
                   </React.Fragment>
                 ))}
               </TableRow>
@@ -202,7 +205,7 @@ export const PartnerStatement: React.FC<PartnerStatementProps> = ({
                         <div className="flex flex-col">
                           <span className="font-bold text-slate-800">{entry.description}</span>
                           <span className="text-xs text-slate-400">
-                            {getJournalDisplay(entry)}
+                            {getJournalDisplay(entry, t)}
                           </span>
                         </div>
                       </TableCell>
@@ -243,23 +246,23 @@ export const PartnerStatement: React.FC<PartnerStatementProps> = ({
         </div>
         <TableFooter>
           {sortedCurrencies.map((targetCurr, targetIdx) => {
-            const t = totals.find((t) => t.currencyCode === targetCurr.code);
-            if (!t) return null;
-            const bal = (t.debit - t.credit) * dirMul;
+            const row = totals.find((totalRow) => totalRow.currencyCode === targetCurr.code);
+            if (!row) return null;
+            const bal = (row.debit - row.credit) * dirMul;
             return (
               <TableRow key={targetCurr.code} className="bg-slate-50 font-bold">
                 <TableCell className="text-slate-400 text-xs" colSpan={3}>
-                  {`الإجمالي (${targetCurr.symbol})`}
+                  {t("statement.total", { namespace: "partners", vars: { currency: targetCurr.symbol }, fallback: "الإجمالي ({{currency}})" })}
                 </TableCell>
                 {sortedCurrencies.map((_, idx) => {
                   if (idx === targetIdx) {
                     return (
                       <React.Fragment key={targetCurr.code}>
                         <TableCell className="text-left text-red-600">
-                          {toLocalString(t.debit) || "0"}
+                          {toLocalString(row.debit) || "0"}
                         </TableCell>
                         <TableCell className="text-left text-emerald-600">
-                          {toLocalString(t.credit) || "0"}
+                          {toLocalString(row.credit) || "0"}
                         </TableCell>
                         <TableCell className="text-left font-black text-slate-900">
                           {toLocalString(bal)}

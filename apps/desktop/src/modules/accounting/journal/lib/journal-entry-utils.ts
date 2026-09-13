@@ -35,41 +35,53 @@ export interface JournalEntryValidation {
   isBalanced: boolean;
 }
 
+/** Minimal translate signature accepted by the validation helpers. */
+export type TranslateFn = (
+  key: string,
+  options?: {
+    namespace?: string;
+    fallback?: string;
+    vars?: Record<string, string | number>;
+    count?: number;
+  },
+) => string;
+
 export function validateJournalEntry(
   journalType: JournalType | null,
   entryDate: string,
   description: string,
   lines: JournalLineDraft[],
+  t?: TranslateFn,
 ): JournalEntryValidation {
   const errors: string[] = [];
 
   if (!journalType) {
-    errors.push("اختر نوع اليومية");
+    errors.push(t?.("journal.validation.typeRequired", { namespace: "accounting", fallback: "اختر نوع اليومية" }) ?? "اختر نوع اليومية");
   }
 
   if (!entryDate.trim()) {
-    errors.push("تاريخ القيد مطلوب");
+    errors.push(t?.("journal.validation.dateRequired", { namespace: "accounting", fallback: "تاريخ القيد مطلوب" }) ?? "تاريخ القيد مطلوب");
   }
 
   if (!description.trim()) {
-    errors.push("وصف القيد مطلوب");
+    errors.push(t?.("journal.validation.descriptionRequired", { namespace: "accounting", fallback: "وصف القيد مطلوب" }) ?? "وصف القيد مطلوب");
   }
 
   if (lines.length === 0) {
-    errors.push("يجب إضافة سطر واحد على الأقل");
+    errors.push(t?.("journal.validation.linesRequired", { namespace: "accounting", fallback: "يجب إضافة سطر واحد على الأقل" }) ?? "يجب إضافة سطر واحد على الأقل");
   }
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
-    const label = `السطر ${i + 1}`;
+    const label = t?.("journal.validation.lineLabel", { namespace: "accounting", vars: { index: String(i + 1) }, fallback: `السطر ${i + 1}` }) ?? `السطر ${i + 1}`;
 
     if (!line.account_id) {
-      errors.push(`${label}: اختر حساباً`);
+      errors.push(t?.("journal.validation.lineAccountRequired", { namespace: "accounting", vars: { line: label }, fallback: `${label}: اختر حساباً` }) ?? `${label}: اختر حساباً`);
     }
 
     const amount = parseFloat(line.amount);
     if (!line.amount.trim() || Number.isNaN(amount) || amount <= 0) {
-      errors.push(`${label}: أدخل مبلغاً صحيحاً أكبر من صفر`);
+      errors.push(t?.("journal.validation.lineAmountInvalid", { namespace: "accounting", vars: { line: label }, fallback: `${label}: أدخل مبلغاً صحيحاً أكبر من صفر` }) ?? `${label}: أدخل مبلغاً صحيحاً أكبر من صفر`);
     }
   }
 
@@ -85,7 +97,7 @@ export function validateJournalEntry(
   const isBalanced = totalDebit > 0 && Math.abs(totalDebit - totalCredit) < 0.001;
 
   if (lines.length > 0 && !isBalanced) {
-    errors.push("القيد غير متوازن — إجمالي المدين يجب أن يساوي إجمالي الدائن");
+    errors.push(t?.("journal.validation.unbalanced", { namespace: "accounting", fallback: "القيد غير متوازن — إجمالي المدين يجب أن يساوي إجمالي الدائن" }) ?? "القيد غير متوازن — إجمالي المدين يجب أن يساوي إجمالي الدائن");
   }
 
   return {

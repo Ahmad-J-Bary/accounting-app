@@ -16,12 +16,7 @@ import {
   SidebarDetailGrid,
   type SidebarAction,
 } from "@widgets/sidebar-shell";
-
-const PROFIT_TYPE_LABELS: Record<string, string> = {
-  BasedOnCapitalLocal: "على أساس رأس المال المحلي",
-  BasedOnCapitalOriginal: "على أساس رأس المال الأصلي",
-  Manual: "يدوي",
-};
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 interface PartnerDetailPanelProps {
   type: "customer" | "supplier";
@@ -41,6 +36,7 @@ export function PartnerDetailPanel({
   onRefresh,
 }: PartnerDetailPanelProps) {
   const { currencies, baseCurrency } = useCurrencyContext();
+  const { t } = useLocalization();
   const { openTab } = useTabs();
   const { canAccessOpeningWorkflow } = useCompanyCapabilities();
   const [settled, setSettled] = useState(false);
@@ -62,11 +58,17 @@ export function PartnerDetailPanel({
   const hasAccountId = (p: typeof partner): p is CustomerDto | SupplierDto => "account_id" in p;
   const partnerAccountId = hasAccountId(partner) ? partner.account_id : null;
 
+  const PROFIT_TYPE_LABELS: Record<string, string> = {
+    BasedOnCapitalLocal: t("detail.profitTypeLabels.basedOnLocal", { namespace: "partners", fallback: "على أساس رأس المال المحلي" }),
+    BasedOnCapitalOriginal: t("detail.profitTypeLabels.basedOnOriginal", { namespace: "partners", fallback: "على أساس رأس المال الأصلي" }),
+    Manual: t("detail.profitTypeLabels.manual", { namespace: "partners", fallback: "يدوي" }),
+  };
+
   const title = isPartner
-    ? "بيانات الشريك"
+    ? t("detail.titlePartner", { namespace: "partners", fallback: "بيانات الشريك" })
     : isCustomer
-    ? "بيانات العميل"
-    : "بيانات المورد";
+    ? t("detail.titleCustomer", { namespace: "partners", fallback: "بيانات العميل" })
+    : t("detail.titleSupplier", { namespace: "partners", fallback: "بيانات المورد" });
 
   const statementPath = isCustomer
     ? `/partners/customer-statement/${partner.id}`
@@ -77,64 +79,64 @@ export function PartnerDetailPanel({
 
   const actions: SidebarAction[] = [
     {
-      label: "تعديل",
+      label: t("actions.edit", { namespace: "partners", fallback: "تعديل" }),
       icon: <Pencil className="w-4 h-4" />,
       variant: "warning",
       onClick: () => onEdit(partner),
     },
     {
-      label: "حذف",
+      label: t("actions.delete", { namespace: "partners", fallback: "حذف" }),
       icon: <Trash2 className="w-4 h-4" />,
       variant: "danger",
       onClick: () => {
-        if (confirm(`هل أنت متأكد من حذف "${partner.name}"؟`)) {
+        if (confirm(t("detail.confirmDelete", { namespace: "partners", vars: { name: partner.name }, fallback: `هل أنت متأكد من حذف "{{name}}"؟` }))) {
           onDelete(partner.id, partner.name);
         }
       },
     },
     {
-      label: "اليومية",
+      label: t("actions.journal", { namespace: "partners", fallback: "اليومية" }),
       icon: <BookOpen className="w-4 h-4" />,
       variant: "primary",
       hidden: isPartner || !partnerAccountId,
       onClick: () =>
         openTab({
           id: `ledger-${partnerAccountId}`,
-          title: `حركة: ${partner.name}`,
+          title: t("detail.ledgerTab", { namespace: "partners", vars: { name: partner.name }, fallback: "حركة: {{name}}" }),
           path: `/accounting/account-ledger/${partnerAccountId}`,
           closable: true,
         }),
     },
     {
-      label: "الكشف",
+      label: t("actions.statement", { namespace: "partners", fallback: "الكشف" }),
       icon: <FileText className="w-4 h-4" />,
       variant: "success",
       hidden: isPartner || !partnerAccountId,
       onClick: () =>
         openTab({
           id: statementTabId,
-          title: `كشف: ${partner.name}`,
+          title: t("detail.statementTab", { namespace: "partners", vars: { name: partner.name }, fallback: "كشف: {{name}}" }),
           path: statementPath,
           closable: true,
         }),
     },
     {
-      label: "تسديد المبلغ كاملا",
+      label: t("actions.settleFull", { namespace: "partners", fallback: "تسديد المبلغ كاملا" }),
       icon: <Scale className="w-4 h-4" />,
       variant: "danger",
       hidden: isPartner || !partnerAccountId || isBalanceZero || settled,
       disabled: settling,
       onClick: async () => {
         if (isBalanceZero) {
-          toast.info("الرصيد صفر — لا حاجة للتسوية");
+          toast.info(t("detail.balanceZeroInfo", { namespace: "partners", fallback: "الرصيد صفر — لا حاجة للتسوية" }));
           return;
         }
         const isDebt = bal > 0;
         const voucherLabel = isCustomer
-          ? (isDebt ? "سند قبض (RCV)" : "سند دفع لعميل (CPY)")
-          : (isDebt ? "سند دفع (PAY)" : "سند قبض من مورد (SRC)");
+          ? (isDebt ? t("detail.voucherReceiptDebt", { namespace: "partners", fallback: "سند قبض (RCV)" }) : t("detail.voucherCustomerPayment", { namespace: "partners", fallback: "سند دفع لعميل (CPY)" }))
+          : (isDebt ? t("detail.voucherPayment", { namespace: "partners", fallback: "سند دفع (PAY)" }) : t("detail.voucherSupplierReceipt", { namespace: "partners", fallback: "سند قبض من مورد (SRC)" }));
         const amount = Math.abs(bal);
-        const ok = confirm(`تأكيد تسديد رصيد "${partner.name}"؟\nسيتم إنشاء ${voucherLabel} بقيمة ${amount}`);
+        const ok = confirm(t("detail.settleConfirm", { namespace: "partners", vars: { name: partner.name, voucher: voucherLabel, amount }, fallback: `تأكيد تسديد رصيد "{{name}}"؟\nسيتم إنشاء {{voucher}} بقيمة {{amount}}` }));
         if (!ok) return;
         setSettling(true);
         try {
@@ -142,12 +144,12 @@ export function PartnerDetailPanel({
           setSettled(true);
           onRefresh?.();
           if (entryNumber === "0") {
-            toast.info("الرصيد صفر بالفعل — تم تحديث العرض");
+            toast.info(t("detail.alreadyZeroInfo", { namespace: "partners", fallback: "الرصيد صفر بالفعل — تم تحديث العرض" }));
           } else {
-            toast.success(`تم تسديد المبلغ كاملاً — رقم القيد: ${entryNumber}`);
+            toast.success(t("detail.settledSuccess", { namespace: "partners", vars: { number: entryNumber }, fallback: `تم تسديد المبلغ كاملاً — رقم القيد: {{number}}` }));
           }
         } catch (e) {
-          toast.error("فشل تسديد المبلغ: " + e);
+          toast.error(t("detail.settleFailed", { namespace: "partners", vars: { error: String(e) }, fallback: "فشل تسديد المبلغ: {{error}}" }));
         } finally {
           setSettling(false);
         }
@@ -169,18 +171,18 @@ export function PartnerDetailPanel({
             <SidebarDetailGrid
               columns={2}
               fields={[
-                { label: "الاسم", value: partner.name },
+                { label: t("detail.fields.name", { namespace: "partners", fallback: "الاسم" }), value: partner.name },
               ]}
             />
             <SidebarDetailGrid
               columns={2}
               fields={[
-                { label: "المبلغ الأصلي", value: `${partner.amount_original || "0"} ${currencyName?.symbol || partner.currency || ""}` },
-                { label: `المعادل (${baseCurrency?.symbol || baseCurrency?.code || ""})`, value: partner.amount_local || "0" },
-                { label: "نسبة الأرباح", value: partner.profit_sharing_type === "Manual" && partner.profit_sharing_ratio
+                { label: t("detail.fields.originalAmount", { namespace: "partners", fallback: "المبلغ الأصلي" }), value: `${partner.amount_original || "0"} ${currencyName?.symbol || partner.currency || ""}` },
+                { label: t("detail.fields.localEquivalent", { namespace: "partners", vars: { currency: baseCurrency?.symbol || baseCurrency?.code || "" }, fallback: "المعادل ({{currency}})" }), value: partner.amount_local || "0" },
+                { label: t("detail.fields.profitRatio", { namespace: "partners", fallback: "نسبة الأرباح" }), value: partner.profit_sharing_type === "Manual" && partner.profit_sharing_ratio
                   ? `${toFixed(parseFloat(partner.profit_sharing_ratio), 2)}%`
-                  : "تلقائي (حسب رأس المال)" },
-                { label: "طريقة التوزيع", value: PROFIT_TYPE_LABELS[partner.profit_sharing_type || "BasedOnCapitalLocal"] },
+                  : t("detail.fields.autoRatio", { namespace: "partners", fallback: "تلقائي (حسب رأس المال)" }) },
+                { label: t("detail.fields.distributionMethod", { namespace: "partners", fallback: "طريقة التوزيع" }), value: PROFIT_TYPE_LABELS[partner.profit_sharing_type || "BasedOnCapitalLocal"] },
               ]}
             />
           </div>
@@ -189,10 +191,10 @@ export function PartnerDetailPanel({
             <SidebarDetailGrid
               columns={2}
               fields={[
-                { label: "رقم الحساب", value: (partner as CustomerDto | SupplierDto).code || "" },
-                { label: isCustomer ? "اسم العميل" : "اسم المورد", value: partner.name },
-                { label: "رقم الهاتف", value: (partner as CustomerDto | SupplierDto).phone || "—" },
-                { label: "العنوان", value: (partner as CustomerDto | SupplierDto).address || "—" },
+                { label: t("detail.fields.accountNumber", { namespace: "partners", fallback: "رقم الحساب" }), value: (partner as CustomerDto | SupplierDto).code || "" },
+                { label: isCustomer ? t("columns.partyNameCustomer", { namespace: "partners", fallback: "اسم العميل" }) : t("columns.partyNameSupplier", { namespace: "partners", fallback: "اسم المورد" }), value: partner.name },
+                { label: t("detail.fields.phone", { namespace: "partners", fallback: "رقم الهاتف" }), value: (partner as CustomerDto | SupplierDto).phone || "—" },
+                { label: t("detail.fields.address", { namespace: "partners", fallback: "العنوان" }), value: (partner as CustomerDto | SupplierDto).address || "—" },
               ]}
             />
             <SidebarDetailGrid
@@ -200,16 +202,16 @@ export function PartnerDetailPanel({
               fields={[
                 ...(canAccessOpeningWorkflow
                   ? [
-                      { label: "الرصيد الافتتاحي", value: (partner as CustomerDto | SupplierDto).opening_balance || "0" },
-                      { label: "اتجاه الرصيد", value: settled ? "—" : balanceDirectionLabel(parseFloat((partner as CustomerDto | SupplierDto).debit || "0"), parseFloat((partner as CustomerDto | SupplierDto).credit || "0"), type) },
+                      { label: t("detail.fields.openingBalance", { namespace: "partners", fallback: "الرصيد الافتتاحي" }), value: (partner as CustomerDto | SupplierDto).opening_balance || "0" },
+                      { label: t("detail.fields.balanceDirection", { namespace: "partners", fallback: "اتجاه الرصيد" }), value: settled ? "—" : balanceDirectionLabel(parseFloat((partner as CustomerDto | SupplierDto).debit || "0"), parseFloat((partner as CustomerDto | SupplierDto).credit || "0"), type) },
                     ]
                   : []),
-                { label: "الرصيد الحالي", value: settled ? "0" : String(bal) },
+                { label: t("detail.fields.currentBalance", { namespace: "partners", fallback: "الرصيد الحالي" }), value: settled ? "0" : String(bal) },
               ]}
             />
             {(partner as CustomerDto | SupplierDto).notes && (
               <SidebarDetailGrid
-                fields={[{ label: "ملاحظات", value: (partner as CustomerDto | SupplierDto).notes || "" }]}
+                fields={[{ label: t("detail.fields.notes", { namespace: "partners", fallback: "ملاحظات" }), value: (partner as CustomerDto | SupplierDto).notes || "" }]}
               />
             )}
           </div>

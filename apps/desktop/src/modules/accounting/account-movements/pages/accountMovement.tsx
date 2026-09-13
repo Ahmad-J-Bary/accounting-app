@@ -29,6 +29,7 @@ import { useDataTable } from "@shared/hooks";
 import { invalidateKeys, PAYMENT_RECEIPT_KEYS, queryClient } from "@shared/hooks/queryClient";
 import { toast } from "sonner";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 import { ErrorBoundary } from "@shared/ui/ErrorBoundary";
 
 import { PaymentForm, PAYMENT_CONFIGS } from "@modules/partners/components/PaymentForm";
@@ -51,6 +52,7 @@ export default function AccountMovement() {
   const { accountId } = useParams<{ accountId: string }>();
   const { openTab } = useTabs();
   const { baseCurrency } = useCurrencyContext();
+  const { t } = useLocalization();
   const [ledger, setLedger] = useState<AccountLedgerDto | null>(null);
 
   // Date Filters (same defaults + URL sync as the Account Movements report page)
@@ -204,25 +206,25 @@ export default function AccountMovement() {
       await paymentService.createPayment(payload);
       await invalidateKeys(queryClient, PAYMENT_RECEIPT_KEYS);
       await refresh(true);
-      toast.success("تم تسجيل السند بنجاح");
+      toast.success(t("ledger.toast.voucherSaved", { namespace: "accounting", fallback: "تم تسجيل السند بنجاح" }));
       setIsVoucherOpen(false);
     } catch (error) {
-      toast.error("فشل تسجيل السند: " + error);
+      toast.error(t("ledger.toast.voucherSaveFailed", { namespace: "accounting", vars: { error: error instanceof Error ? error.message : String(error) }, fallback: "فشل تسجيل السند: " + (error instanceof Error ? error.message : String(error)) }));
     } finally {
       setSavingVoucher(false);
     }
   };
 
   const accountTitle = useMemo(
-    () => `حركة الحساب: ${ledger?.account_name || "..."}`,
-    [ledger?.account_name],
+    () => t("ledger.accountTitle", { namespace: "accounting", vars: { name: ledger?.account_name || "..." }, fallback: `حركة الحساب: ${ledger?.account_name || "..."}` }),
+    [ledger?.account_name, t],
   );
 
   const toolbarButtons = useMemo(() => {
     const commonPrint = (
       <Button key="print" variant="outline" size="sm" className={OUTLINE_BUTTON_CLASS}>
         <Printer className="w-4 h-4 ms-2 text-blue-500" />
-        طباعة كشف حساب
+        {t("ledger.print", { namespace: "accounting", fallback: "طباعة كشف حساب" })}
       </Button>
     );
 
@@ -234,14 +236,14 @@ export default function AccountMovement() {
         return [
           <Button key="drawings" size="sm" onClick={() => setIsVoucherOpen(true)} className={TOOLBAR_CLASS_BY_TYPE.partner}>
             <PlusCircle className="w-4 h-4 ms-2" />
-            إنشاء سند مسحوبات جديد
+            {t("ledger.createDrawings", { namespace: "accounting", fallback: "إنشاء سند مسحوبات جديد" })}
           </Button>
         ];
       case 'customer':
         return [
           <Button key="receipt" size="sm" onClick={() => setIsVoucherOpen(true)} className={TOOLBAR_CLASS_BY_TYPE.customer}>
             <PlusCircle className="w-4 h-4 ms-2" />
-            إنشاء سند قبض جديد
+            {t("ledger.createReceipt", { namespace: "accounting", fallback: "إنشاء سند قبض جديد" })}
           </Button>,
           commonPrint,
           linkedEntityId && linkedEntityName ? (
@@ -252,7 +254,7 @@ export default function AccountMovement() {
               onClick={() => {
                 openTab({
                   id: `sales-cust-${linkedEntityId}`,
-                  title: `مبيعات ${linkedEntityName}`,
+                  title: t("ledger.salesTab", { namespace: "accounting", vars: { name: linkedEntityName }, fallback: `مبيعات ${linkedEntityName}` }),
                   path: `/sales-invoices?customerId=${linkedEntityId}`,
                   closable: true
                 });
@@ -260,7 +262,7 @@ export default function AccountMovement() {
               className={OUTLINE_BUTTON_CLASS}
             >
               <ShoppingCart className="w-4 h-4 ms-2 text-blue-500" />
-              المبيعات للعميل {linkedEntityName}
+              {t("ledger.salesFor", { namespace: "accounting", vars: { name: linkedEntityName }, fallback: `المبيعات للعميل ${linkedEntityName}` })}
             </Button>
           ) : null
         ].filter(Boolean);
@@ -268,7 +270,7 @@ export default function AccountMovement() {
         return [
           <Button key="payment" size="sm" onClick={() => setIsVoucherOpen(true)} className={TOOLBAR_CLASS_BY_TYPE.supplier}>
             <PlusCircle className="w-4 h-4 ms-2" />
-            إنشاء سند دفع جديد
+            {t("ledger.createPayment", { namespace: "accounting", fallback: "إنشاء سند دفع جديد" })}
           </Button>,
           commonPrint,
           linkedEntityId && linkedEntityName ? (
@@ -279,7 +281,7 @@ export default function AccountMovement() {
               onClick={() => {
                 openTab({
                   id: `purchase-supp-${linkedEntityId}`,
-                  title: `مشتريات ${linkedEntityName}`,
+                  title: t("ledger.purchasesTab", { namespace: "accounting", vars: { name: linkedEntityName }, fallback: `مشتريات ${linkedEntityName}` }),
                   path: `/purchase-invoices?supplierId=${linkedEntityId}`,
                   closable: true
                 });
@@ -287,7 +289,7 @@ export default function AccountMovement() {
               className={OUTLINE_BUTTON_CLASS}
             >
               <ShoppingCart className="w-4 h-4 ms-2 text-emerald-500" />
-              المشتريات للمورد {linkedEntityName}
+              {t("ledger.purchasesFor", { namespace: "accounting", vars: { name: linkedEntityName }, fallback: `المشتريات للمورد ${linkedEntityName}` })}
             </Button>
           ) : null
         ].filter(Boolean);
@@ -295,13 +297,13 @@ export default function AccountMovement() {
         return [
           <Button key="expense" size="sm" onClick={() => setIsVoucherOpen(true)} className={TOOLBAR_CLASS_BY_TYPE.expense}>
             <PlusCircle className="w-4 h-4 ms-2" />
-            إنشاء سند صرف جديد
+            {t("ledger.createExpense", { namespace: "accounting", fallback: "إنشاء سند صرف جديد" })}
           </Button>
         ];
       default:
         return [];
     }
-  }, [accountType, linkedEntity, openTab]);
+  }, [accountType, linkedEntity, openTab, t]);
 
   return (
     <ErrorBoundary>
@@ -325,16 +327,16 @@ export default function AccountMovement() {
           {/* Statistics Bar */}
           {ledger && (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2 px-4 pt-4 pb-2">
-              <StatCard label="افتتاحي / مدين" value={formatCurrency(openingDebitTotal, symbol)} icon={ArrowUpRight} />
-              <StatCard label="افتتاحي / دائن" value={formatCurrency(openingCreditTotal, symbol)} icon={ArrowDownLeft} />
+              <StatCard label={t("ledger.stat.openingDebit", { namespace: "accounting", fallback: "افتتاحي / مدين" })} value={formatCurrency(openingDebitTotal, symbol)} icon={ArrowUpRight} />
+              <StatCard label={t("ledger.stat.openingCredit", { namespace: "accounting", fallback: "افتتاحي / دائن" })} value={formatCurrency(openingCreditTotal, symbol)} icon={ArrowDownLeft} />
               <StatCard
-                label={`صافي الافتتاحي / ${openingClosing.sign}`}
+                label={t("ledger.stat.netOpening", { namespace: "accounting", vars: { sign: openingClosing.sign }, fallback: `صافي الافتتاحي / ${openingClosing.sign}` })}
                 value={formatCurrency(Math.abs(openingClosing.net), symbol)}
                 icon={Landmark}
                 variant={openingClosing.net >= 0 ? "positive" : "negative"}
               />
               <StatCard
-                label={`الختامي / ${closing.sign}`}
+                label={t("ledger.stat.closing", { namespace: "accounting", vars: { sign: closing.sign }, fallback: `الختامي / ${closing.sign}` })}
                 value={formatCurrency(Math.abs(closing.net), symbol)}
                 icon={FileText}
                 variant="accent"

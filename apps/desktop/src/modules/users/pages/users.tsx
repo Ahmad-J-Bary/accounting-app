@@ -10,12 +10,14 @@ import { cn } from "@shared/lib/utils";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@shared/ui/tabs";
 
 import { useDataTable } from '@shared/hooks';
+import { useLocalization } from '@app/providers/LocalizationProvider';
 import { UsersTable } from '@modules/users/components/UsersTable';
 import { UserForm } from '@modules/users/components/UserForm';
 import { RoleTable } from '@modules/users/components/RoleTable';
 import { RoleForm } from '@modules/users/components/RoleForm';
 
 export default function UsersPage() {
+  const { t } = useLocalization();
   const [activeTab, setActiveTab] = useState("users");
   
   const {
@@ -28,7 +30,7 @@ export default function UsersPage() {
     queryKey: ["users"],
     fetchData: () => userService.listUsers(),
     searchFields: ["username", "full_name"],
-    errorLabel: "فشل تحميل المستخدمين",
+    errorLabel: t("users.errors.loadUsersFailed", { namespace: "users", fallback: "فشل تحميل المستخدمين" }),
   });
 
   const [roles, setRoles] = useState<Role[]>([]);
@@ -44,11 +46,11 @@ export default function UsersPage() {
       const rArgs = await userService.listRoles();
       setRoles(rArgs);
     } catch (_e) {
-      toast.error("فشل تحميل الصلاحيات");
+      toast.error(t("users.toasts.rolesLoadFailed", { namespace: "users", fallback: "فشل تحميل الصلاحيات" }));
     } finally {
       setLoadingRoles(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => { loadRoles(); }, [loadRoles]);
 
@@ -60,9 +62,9 @@ export default function UsersPage() {
       await userService.createUser(payload);
       setShowUserDialog(false);
       refreshUsers(true);
-      toast.success("تم إضافة المستخدم بنجاح");
+      toast.success(t("users.toasts.userAdded", { namespace: "users", fallback: "تم إضافة المستخدم بنجاح" }));
     } catch (e) {
-      toast.error("فشل الحفظ: " + e);
+      toast.error(t("users.toasts.saveFailed", { namespace: "users", fallback: "فشل الحفظ: " }) + e);
     } finally {
       setSaving(false);
     }
@@ -73,37 +75,37 @@ export default function UsersPage() {
     try {
       if (payload.id) {
         await userService.updateRole(payload as Role);
-        toast.success("تم تحديث الصلاحية بنجاح");
+        toast.success(t("users.toasts.roleUpdated", { namespace: "users", fallback: "تم تحديث الصلاحية بنجاح" }));
       } else {
         await userService.createRole(payload);
-        toast.success("تم إضافة الصلاحية بنجاح");
+        toast.success(t("users.toasts.roleAdded", { namespace: "users", fallback: "تم إضافة الصلاحية بنجاح" }));
       }
       setShowRoleDialog(false);
       loadRoles();
     } catch (e) {
-      toast.error("فشل حفظ الصلاحية: " + e);
+      toast.error(t("users.toasts.roleSaveFailed", { namespace: "users", fallback: "فشل حفظ الصلاحية: " }) + e);
     } finally {
       setSaving(false);
     }
   };
 
   const handleDeleteRole = async (id: string) => {
-    if (!confirm("هل أنت متأكد من حذف هذه الصلاحية؟")) return;
+    if (!confirm(t("users.confirmDeleteRole", { namespace: "users", fallback: "هل أنت متأكد من حذف هذه الصلاحية؟" }))) return;
     try {
       await userService.deleteRole(id);
-      toast.success("تم حذف الصلاحية");
+      toast.success(t("users.toasts.roleDeleted", { namespace: "users", fallback: "تم حذف الصلاحية" }));
       loadRoles();
     } catch (e) {
-      toast.error("فشل الحذف: " + e);
+      toast.error(t("users.toasts.deleteFailed", { namespace: "users", fallback: "فشل الحذف: " }) + e);
     }
   };
 
   return (
     <div className="flex flex-col gap-6" dir="rtl">
       <PageHeader
-        title="المستخدمون والصلاحيات"
-        subtitle="إدارة حسابات المستخدمين وصلاحيات الوصول للنظام"
-        breadcrumbs={[{ label: "الرئيسية", to: "/dashboard" }, { label: "الإعدادات" }, { label: "المستخدمون" }]}
+        title={t("users.title", { namespace: "users", fallback: "المستخدمون والصلاحيات" })}
+        subtitle={t("users.subtitle", { namespace: "users", fallback: "إدارة حسابات المستخدمين وصلاحيات الوصول للنظام" })}
+        breadcrumbs={[{ label: t("users.breadcrumbHome", { namespace: "users", fallback: "الرئيسية" }), to: "/dashboard" }, { label: t("users.breadcrumbSettings", { namespace: "users", fallback: "الإعدادات" }) }, { label: t("users.breadcrumbUsers", { namespace: "users", fallback: "المستخدمون" }) }]}
         actions={
           <Button onClick={() => {
             if (activeTab === "users") {
@@ -114,24 +116,24 @@ export default function UsersPage() {
             }
           }} className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100 font-bold">
             <Plus className="w-4 h-4 ml-2" />
-            {activeTab === "users" ? "مستخدم جديد" : "صلاحية جديدة"}
+            {activeTab === "users" ? t("users.actions.newUser", { namespace: "users", fallback: "مستخدم جديد" }) : t("users.actions.newRole", { namespace: "users", fallback: "صلاحية جديدة" })}
           </Button>
         }
       />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <StatSummary label="إجمالي المستخدمين" value={users.length} icon={<UsersIcon />} />
-        <StatSummary label="مستخدم نشط" value={activeCount} icon={<ShieldCheck />} color="text-emerald-600" />
-        <StatSummary label="أدوار النظام" value={roles.length} icon={<Shield />} color="text-blue-600" />
+        <StatSummary label={t("users.stats.totalUsers", { namespace: "users", fallback: "إجمالي المستخدمين" })} value={users.length} icon={<UsersIcon />} />
+        <StatSummary label={t("users.stats.activeUsers", { namespace: "users", fallback: "مستخدم نشط" })} value={activeCount} icon={<ShieldCheck />} color="text-emerald-600" />
+        <StatSummary label={t("users.stats.systemRoles", { namespace: "users", fallback: "أدوار النظام" })} value={roles.length} icon={<Shield />} color="text-blue-600" />
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList className="bg-white border border-slate-200 p-1 h-12 rounded-xl shadow-sm">
           <TabsTrigger value="users" className="rounded-lg px-6 gap-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white transition-all">
-            <UsersIcon className="w-4 h-4" /> قائمة المستخدمين
+            <UsersIcon className="w-4 h-4" /> {t("users.tabs.users", { namespace: "users", fallback: "قائمة المستخدمين" })}
           </TabsTrigger>
           <TabsTrigger value="roles" className="rounded-lg px-6 gap-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white transition-all">
-            <Shield className="w-4 h-4" /> أدوار الوصول
+            <Shield className="w-4 h-4" /> {t("users.tabs.roles", { namespace: "users", fallback: "أدوار الوصول" })}
           </TabsTrigger>
         </TabsList>
 

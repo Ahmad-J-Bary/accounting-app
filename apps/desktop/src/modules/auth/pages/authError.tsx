@@ -2,13 +2,15 @@ import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Button } from '@shared/ui/button';
 import { AlertCircle } from 'lucide-react';
+import { useLocalization } from '@app/providers/LocalizationProvider';
 
 export default function AuthErrorPage() {
+  const { t } = useLocalization();
   const [searchParams] = useSearchParams();
   const [countdown, setCountdown] = useState(3);
   const errorMessage =
     searchParams.get('msg') ||
-    'Sorry, your authentication information is invalid or has expired';
+    t("auth.error.defaultMessage", { namespace: "auth", fallback: "Sorry, your authentication information is invalid or has expired" });
 
   useEffect(() => {
     // Countdown logic
@@ -49,7 +51,7 @@ export default function AuthErrorPage() {
 
           {/* Error title */}
           <h1 className="text-2xl font-bold text-gray-800">
-            Authentication Error
+            {t("auth.error.title", { namespace: "auth", fallback: "Authentication Error" })}
           </h1>
 
           {/* Error description */}
@@ -60,14 +62,14 @@ export default function AuthErrorPage() {
             <p className="text-sm text-gray-500">
               {countdown > 0 ? (
                 <>
-                  Will automatically return to the home page in{' '}
+                  {t("auth.error.countdownPrefix", { namespace: "auth", fallback: "Will automatically return to the home page in" })}{' '}
                   <span className="text-blue-600 font-semibold text-base">
                     {countdown}
                   </span>{' '}
-                  seconds
+                  {t("auth.error.countdownSuffix", { namespace: "auth", fallback: "seconds" })}
                 </>
               ) : (
-                'Redirecting...'
+                t("auth.error.redirecting", { namespace: "auth", fallback: "Redirecting..." })
               )}
             </p>
           </div>
@@ -76,7 +78,7 @@ export default function AuthErrorPage() {
         {/* Return to home button */}
         <div className="flex justify-center pt-2">
           <Button onClick={handleReturnHome} className="px-6">
-            Return to Home
+            {t("auth.error.returnHome", { namespace: "auth", fallback: "Return to Home" })}
           </Button>
         </div>
       </div>

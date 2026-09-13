@@ -1,10 +1,24 @@
 import type { JournalEntryDto, JournalLineDto } from "@erp/shared-types";
 import { isOfficialJournalEntry } from "@modules/reports/lib/report-policies";
+import { journalTypeKey } from "./journal-config";
+import type { TranslateFn } from "./journal-entry-utils";
 
 const isOriginalAmount = (currencyCode?: string, fxRate?: string) => {
   const rate = parseFloat(fxRate || "1");
   return Boolean(currencyCode) && Math.abs(rate - 1) > Number.EPSILON;
 };
+
+/** Resource key for a fixed-asset subtype label (see `journal.assetSubtypes.*`). */
+const assetSubtypeKey = (label: string): string =>
+  label === "أبنية وأراضي"
+    ? "journal.assetSubtypes.buildings"
+    : label === "آليات ومركبات"
+      ? "journal.assetSubtypes.vehicles"
+      : label === "معدات وتجهيزات"
+        ? "journal.assetSubtypes.equipment"
+        : label === "أثاث ومفروشات"
+          ? "journal.assetSubtypes.furniture"
+          : "";
 
 /** نوع فرعي لعنوان تلخيص القيد (عرض فقط). يرتكز على الغرض أولاً ثم الكود/الاسم. */
 function classifyAssetSubType(line: JournalLineDto): "أبنية وأراضي" | "آليات ومركبات" | "معدات وتجهيزات" | "أثاث ومفروشات" | null {
@@ -66,26 +80,29 @@ function classifyAssetSubType(line: JournalLineDto): "أبنية وأراضي" |
  * by both the two-line and one-line report shapes so the derivation cannot
  * drift between them.
  */
-export function deriveJournalTypeDisplay(entry: JournalEntryDto): string {
+export function deriveJournalTypeDisplay(entry: JournalEntryDto, t?: TranslateFn): string {
+  const tr = (key: string, fallback: string, vars?: Record<string, string>): string =>
+    t ? t(key, { namespace: "accounting", fallback, vars }) : fallback;
+
   let journalTypeDisplay = entry.journal_type_display;
 
   if (
     entry.journal_type === "CashSalesJournal" ||
     entry.journal_type === "CreditSalesJournal"
   ) {
-    journalTypeDisplay = "مبيعات نقدية";
+    journalTypeDisplay = tr("journal.display.cashSales", "مبيعات نقدية");
   }
   if (entry.journal_type === "PurchaseReturnJournal") {
-    journalTypeDisplay = "مرتجعات المشتريات";
+    journalTypeDisplay = tr("journal.display.purchaseReturns", "مرتجعات المشتريات");
   }
   if (entry.journal_type === "SalesReturnJournal") {
-    journalTypeDisplay = "مرتجعات المبيعات";
+    journalTypeDisplay = tr("journal.display.salesReturns", "مرتجعات المبيعات");
   }
   if (entry.journal_type === "SupplierReceiptJournal") {
-    journalTypeDisplay = "سند قبض من مورد";
+    journalTypeDisplay = tr(journalTypeKey("SupplierReceiptJournal"), "سند قبض من مورد");
   }
   if (entry.journal_type === "CustomerPaymentJournal") {
-    journalTypeDisplay = "سند دفع لعميل";
+    journalTypeDisplay = tr(journalTypeKey("CustomerPaymentJournal"), "سند دفع لعميل");
   }
 
   if (entry.journal_type === "GeneralJournal") {
@@ -95,22 +112,22 @@ export function deriveJournalTypeDisplay(entry: JournalEntryDto): string {
     const isPurchase = desc.includes("شراء أصل ثابت") || desc.includes("اثبات شراء");
 
     if (isDepreciation || isOpening || isPurchase) {
-      let assetType: string = "أصول ثابتة";
+      let assetType: string = tr("journal.display.fixedAssets", "أصول ثابتة");
       for (const line of entry.lines) {
         if (line.account_purpose === "fixed_asset") continue;
         const subtype = classifyAssetSubType(line);
         if (subtype) {
-          assetType = subtype;
+          assetType = tr(assetSubtypeKey(subtype), subtype);
           break;
         }
       }
 
       if (isDepreciation) {
-        journalTypeDisplay = "إهلاك سنوي";
+        journalTypeDisplay = tr("journal.display.depreciation", "إهلاك سنوي");
       } else if (isOpening) {
-        journalTypeDisplay = `رصيد افتتاحي للأصول الثابتة / ${assetType}`;
+        journalTypeDisplay = tr("journal.display.openingFixedAssets", `رصيد افتتاحي للأصول الثابتة / ${assetType}`, { type: assetType });
       } else if (isPurchase) {
-        journalTypeDisplay = `شراء أصل ثابت / ${assetType}`;
+        journalTypeDisplay = tr("journal.display.purchaseFixedAssets", `شراء أصل ثابت / ${assetType}`, { type: assetType });
       }
     } else {
       const debits = entry.lines.filter((l) => parseFloat(l.debit || "0") > 0);
@@ -123,20 +140,22 @@ export function deriveJournalTypeDisplay(entry: JournalEntryDto): string {
           crLine.account_code?.startsWith("332") ||
           crLine.account_name?.includes("خصوم مكتسبة")
         ) {
-          journalTypeDisplay = "حسم مكتسب";
+          journalTypeDisplay = tr(journalTypeKey("DiscountEarnedJournal"), "حسم مكتسب");
         } else if (
           (!drLine.partner_id && crLine.partner_id) ||
           drLine.account_code?.startsWith("47") ||
           drLine.account_name?.includes("خصوم ممنوحة")
         ) {
-          journalTypeDisplay = "حسم ممنوح";
+          journalTypeDisplay = tr(journalTypeKey("DiscountGrantedJournal"), "حسم ممنوح");
         }
       }
     }
   }
 
   const isReversalParty = Boolean(entry.reversal_of_entry_id) || entry.status === "Reversed";
-  return isReversalParty ? `${journalTypeDisplay} — معكوس` : journalTypeDisplay;
+  return isReversalParty
+    ? tr("journal.display.reversedLabel", `${journalTypeDisplay} — معكوس`, { base: journalTypeDisplay })
+    : journalTypeDisplay;
 }
 
 /**
@@ -196,8 +215,8 @@ export interface JournalRowLine {
   currency?: string;
 }
 
-export function toJournalLines(entry: JournalEntryDto, ctx?: ReversalContext): JournalRowLine[] {
-  const journalTypeDisplay = deriveJournalTypeDisplay(entry);
+export function toJournalLines(entry: JournalEntryDto, ctx?: ReversalContext, t?: TranslateFn): JournalRowLine[] {
+  const journalTypeDisplay = deriveJournalTypeDisplay(entry, t);
   const reversalNumber = reversalEntryNumber(entry, ctx);
 
   const lines: JournalRowLine[] = [];
@@ -362,8 +381,8 @@ export interface JournalSingleLineRow {
   credit_currency?: string;
 }
 
-export function toJournalLinesSingleLine(entry: JournalEntryDto, ctx?: ReversalContext): JournalSingleLineRow[] {
-  const journalTypeDisplay = deriveJournalTypeDisplay(entry);
+export function toJournalLinesSingleLine(entry: JournalEntryDto, ctx?: ReversalContext, t?: TranslateFn): JournalSingleLineRow[] {
+  const journalTypeDisplay = deriveJournalTypeDisplay(entry, t);
   const reversalNumber = reversalEntryNumber(entry, ctx);
 
   const debits = entry.lines.filter((l) => parseFloat(l.debit || "0") > 0);

@@ -7,9 +7,11 @@ import { IncomeStatementView } from "@modules/reports/components/IncomeStatement
 import { ReportFilterBar } from "@widgets/reports/ReportFilterBar";
 import { ReportLoadingSkeleton } from "@widgets/reports";
 import type { IncomeStatementComputed, IncomeStatementSection, IncomeStatementRow } from "@modules/reports/lib/incomeStatement";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 export default function IncomeStatementReport() {
   const { baseCurrency, currencies, formatAmount, hasMultipleCurrencies } = useCurrencyContext();
+  const { t } = useLocalization();
   const {
     filters,
     setFilters,
@@ -47,26 +49,26 @@ export default function IncomeStatementReport() {
     const sections: IncomeStatementSection[] = [
       {
         id: "revenues",
-        title: "الإيرادات",
-        totalLabel: "إجمالي الإيرادات",
+        title: t("incomeStatement.sections.revenues.title", { namespace: "reports", fallback: "الإيرادات" }),
+        totalLabel: t("incomeStatement.sections.revenues.totalLabel", { namespace: "reports", fallback: "إجمالي الإيرادات" }),
         totalValue: totalRevenue,
         rows: revenueRows,
       },
       {
         id: "liabilities",
-        title: "التكاليف والمصروفات",
-        totalLabel: "إجمالي التكاليف",
+        title: t("incomeStatement.sections.costs.title", { namespace: "reports", fallback: "التكاليف والمصروفات" }),
+        totalLabel: t("incomeStatement.sections.costs.totalLabel", { namespace: "reports", fallback: "إجمالي التكاليف" }),
         totalValue: totalExpenses,
         rows: expenseRows,
       },
       {
         id: "profit-loss",
-        title: "صافي الربح",
-        totalLabel: "صافي الربح",
+        title: t("incomeStatement.sections.profitLoss.title", { namespace: "reports", fallback: "صافي الربح" }),
+        totalLabel: t("incomeStatement.sections.profitLoss.totalLabel", { namespace: "reports", fallback: "صافي الربح" }),
         totalValue: netProfit,
         rows: [
-          { label: "الإيرادات", value: totalRevenue },
-          { label: "التكاليف والمصروفات", value: totalExpenses },
+          { label: t("incomeStatement.sections.profitLoss.rowRevenue", { namespace: "reports", fallback: "الإيرادات" }), value: totalRevenue },
+          { label: t("incomeStatement.sections.profitLoss.rowCosts", { namespace: "reports", fallback: "التكاليف والمصروفات" }), value: totalExpenses },
         ],
       },
     ];
@@ -91,7 +93,7 @@ export default function IncomeStatementReport() {
       expenseRows,
       sections,
     };
-  }, [backendData]);
+  }, [backendData, t]);
 
   const formatValue = useCallback(
     (value: number) =>
@@ -111,7 +113,7 @@ export default function IncomeStatementReport() {
 
   return (
     <OperationalTableTemplate
-      title="قائمة الدخل"
+      title={t("incomeStatement.title", { namespace: "reports", fallback: "قائمة الدخل" })}
       toolbar={
         <ReportFilterBar
           filters={filters}

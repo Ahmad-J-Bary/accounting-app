@@ -11,6 +11,7 @@ import {
 import { ReportLoadingSkeleton } from "@widgets/reports";
 import { formatNumber } from "@shared/lib/format";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 import type { StockMovementDetailDto } from "@erp/shared-types";
 
 /**
@@ -25,6 +26,7 @@ export default function InventoryValuationReport() {
   const { data: baseData, isLoading, refetch } = useReportBaseData();
   const { loadMaterialExpenseLedgers } = useMaterialExpenseLedgers();
   const { formatAmount, baseCurrency } = useCurrencyContext();
+  const { t } = useLocalization();
 
   const [ledgers, setLedgers] = useState<Map<string, StockMovementDetailDto[]>>(new Map());
   const [loadingLedgers, setLoadingLedgers] = useState(false);
@@ -71,13 +73,13 @@ export default function InventoryValuationReport() {
 
   return (
     <OperationalTableTemplate
-      title="جرد وقيمة المخزون"
+      title={t("inventoryValuation.title", { namespace: "reports", fallback: "جرد وقيمة المخزون" })}
       toolbar={
         <div className="flex items-center gap-2">
           {busy ? (
             <span className="flex h-9 items-center gap-1.5 rounded-lg bg-white px-2.5 text-xs text-slate-500 border border-slate-200">
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              جارٍ التحديث…
+              {t("inventoryValuation.updating", { namespace: "reports", fallback: "جارٍ التحديث…" })}
             </span>
           ) : (
             <Button
@@ -88,11 +90,11 @@ export default function InventoryValuationReport() {
               onClick={() => void refetch()}
             >
               <RefreshCw className="h-3.5 w-3.5" />
-              تحديث
+              {t("inventoryValuation.refresh", { namespace: "reports", fallback: "تحديث" })}
             </Button>
           )}
           <span className="text-xs text-slate-400">
-            التقييم لحظة العرض (حتى الآن) — القيمة النهائية بعد تسويات 331/45
+            {t("inventoryValuation.hint", { namespace: "reports", fallback: "التقييم لحظة العرض (حتى الآن) — القيمة النهائية بعد تسويات 331/45" })}
           </span>
         </div>
       }
@@ -104,11 +106,11 @@ export default function InventoryValuationReport() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-slate-400 font-black text-[10px] uppercase tracking-widest border-b border-slate-100">
-                  <th className="text-end pb-4">الكود</th>
-                  <th className="text-end pb-4">الصنف</th>
-                  <th className="text-start pb-4">الكمية المتاحة</th>
-                  <th className="text-start pb-4">متوسط التكلفة المحلية</th>
-                  <th className="text-start pb-4">القيمة التقديرية</th>
+                  <th className="text-end pb-4">{t("inventoryValuation.colCode", { namespace: "reports", fallback: "الكود" })}</th>
+                  <th className="text-end pb-4">{t("inventoryValuation.colItem", { namespace: "reports", fallback: "الصنف" })}</th>
+                  <th className="text-start pb-4">{t("inventoryValuation.colQuantity", { namespace: "reports", fallback: "الكمية المتاحة" })}</th>
+                  <th className="text-start pb-4">{t("inventoryValuation.colAverageCost", { namespace: "reports", fallback: "متوسط التكلفة المحلية" })}</th>
+                  <th className="text-start pb-4">{t("inventoryValuation.colValue", { namespace: "reports", fallback: "القيمة التقديرية" })}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
@@ -116,7 +118,7 @@ export default function InventoryValuationReport() {
                   <tr>
                     <td colSpan={5} className="py-12 text-center text-slate-300 font-bold text-sm">
                       <Package className="mx-auto mb-2 h-8 w-8" />
-                      لا توجد أصناف مسجلة بعد
+                      {t("inventoryValuation.empty", { namespace: "reports", fallback: "لا توجد أصناف مسجلة بعد" })}
                     </td>
                   </tr>
                 )}
@@ -145,7 +147,7 @@ export default function InventoryValuationReport() {
               <tfoot>
                 <tr className="border-t-2 border-slate-200">
                   <td colSpan={2} className="py-4 font-black text-slate-700">
-                    الإجمالي قبل التسويات
+                    {t("inventoryValuation.totalBeforeAdjustments", { namespace: "reports", fallback: "الإجمالي قبل التسويات" })}
                   </td>
                   <td className="py-4" />
                   <td className="py-4" />
@@ -155,7 +157,7 @@ export default function InventoryValuationReport() {
                 </tr>
                 <tr className="border-t border-slate-100">
                   <td colSpan={2} className="py-4 font-bold text-slate-500">
-                    تسويات قيد جرد المخزون (331 − 45)
+                    {t("inventoryValuation.adjustments", { namespace: "reports", fallback: "تسويات قيد جرد المخزون (331 − 45)" })}
                   </td>
                   <td className="py-4" />
                   <td className="py-4" />
@@ -165,7 +167,7 @@ export default function InventoryValuationReport() {
                 </tr>
                 <tr className="border-t-2 border-slate-200 bg-slate-50/60">
                   <td colSpan={2} className="py-4 text-base font-black text-slate-800">
-                    إجمالي قيمة المخزون
+                    {t("inventoryValuation.totalValue", { namespace: "reports", fallback: "إجمالي قيمة المخزون" })}
                   </td>
                   <td className="py-4" />
                   <td className="py-4" />

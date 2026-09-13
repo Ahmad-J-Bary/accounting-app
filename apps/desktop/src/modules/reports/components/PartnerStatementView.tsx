@@ -8,6 +8,7 @@ import { useUnifiedColumns } from "@shared/hooks";
 import { ReportMeta } from "@widgets/reports";
 import { createSummarySpacer } from "../lib/table-meta";
 import { StatCard } from "@widgets/stats/StatCard";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 type PartnerStatementViewProps = {
   computed: PartnerStatementComputed;
@@ -26,88 +27,91 @@ function SummaryCards({ computed, formatValue }: { computed: PartnerStatementCom
     }
     return { capital, profits, drawings, finalAmount };
   }, [computed.rows]);
+  const { t } = useLocalization();
 
   return (
     <div className="grid grid-cols-4 gap-2 px-4 pt-4 pb-2">
-      <StatCard label="إجمالي رأس المال" value={formatValue(totals.capital)} icon={Users} />
-      <StatCard label="إجمالي الأرباح" value={formatValue(totals.profits)} icon={TrendingUp} />
-      <StatCard label="إجمالي المسحوبات" value={formatValue(totals.drawings)} icon={Wallet} />
-      <StatCard label="المبلغ النهائي" value={formatValue(totals.finalAmount)} icon={Percent} />
+      <StatCard label={t("partnerRights.statement.statTotalCapital", { namespace: "reports", fallback: "إجمالي رأس المال" })} value={formatValue(totals.capital)} icon={Users} />
+      <StatCard label={t("partnerRights.statement.statTotalProfit", { namespace: "reports", fallback: "إجمالي الأرباح" })} value={formatValue(totals.profits)} icon={TrendingUp} />
+      <StatCard label={t("partnerRights.statement.statTotalDrawings", { namespace: "reports", fallback: "إجمالي المسحوبات" })} value={formatValue(totals.drawings)} icon={Wallet} />
+      <StatCard label={t("partnerRights.statement.statFinalAmount", { namespace: "reports", fallback: "المبلغ النهائي" })} value={formatValue(totals.finalAmount)} icon={Percent} />
     </div>
   );
 }
 
 function usePartnerStatementColumns(formatValue: (value: number) => string) {
+  const { t } = useLocalization();
   return useMemo<UnifiedColumn<PartnerStatementRow>[]>(() => [
     {
       id: "partnerName",
-      header: "اسم الشريك",
-      label: "اسم الشريك",
+      header: t("partnerRights.statement.colPartnerName", { namespace: "reports", fallback: "اسم الشريك" }),
+      label: t("partnerRights.statement.colPartnerName", { namespace: "reports", fallback: "اسم الشريك" }),
       accessor: (row) => <span className="font-bold text-slate-800">{row.partnerName}</span>,
       align: "right",
       className: "justify-start",
     },
     {
       id: "capitalAmount",
-      header: "رأس المال",
-      label: "رأس المال",
+      header: t("partnerRights.statement.colCapital", { namespace: "reports", fallback: "رأس المال" }),
+      label: t("partnerRights.statement.colCapital", { namespace: "reports", fallback: "رأس المال" }),
       accessor: (row) => formatValue(row.capitalAmount),
       align: "left",
       className: "justify-end tabular-nums font-black text-slate-900",
     },
     {
       id: "accumulatedProfits",
-      header: "أرباح مبقاة (فترات سابقة)",
-      label: "أرباح مبقاة (فترات سابقة)",
+      header: t("partnerRights.statement.colAccumulatedProfits", { namespace: "reports", fallback: "أرباح مبقاة (فترات سابقة)" }),
+      label: t("partnerRights.statement.colAccumulatedProfits", { namespace: "reports", fallback: "أرباح مبقاة (فترات سابقة)" }),
       accessor: (row) => formatValue(row.accumulatedProfits),
       align: "left",
       className: "justify-end tabular-nums font-black text-emerald-700",
     },
     {
       id: "accumulatedDrawings",
-      header: "مسحوبات (فترات سابقة)",
-      label: "مسحوبات (فترات سابقة)",
+      header: t("partnerRights.statement.colAccumulatedDrawings", { namespace: "reports", fallback: "مسحوبات (فترات سابقة)" }),
+      label: t("partnerRights.statement.colAccumulatedDrawings", { namespace: "reports", fallback: "مسحوبات (فترات سابقة)" }),
       accessor: (row) => formatValue(row.accumulatedDrawings),
       align: "left",
       className: "justify-end tabular-nums font-black text-rose-700",
     },
     {
       id: "currentAccount",
-      header: "الحساب الجاري (الأرباح المتراكمة)",
-      label: "الحساب الجاري (الأرباح المتراكمة)",
+      header: t("partnerRights.statement.colCurrentAccount", { namespace: "reports", fallback: "الحساب الجاري (الأرباح المتراكمة)" }),
+      label: t("partnerRights.statement.colCurrentAccount", { namespace: "reports", fallback: "الحساب الجاري (الأرباح المتراكمة)" }),
       accessor: (row) => formatValue(row.currentAccount),
       align: "left",
       className: "justify-end tabular-nums font-black text-indigo-700",
     },
     {
       id: "thisYearProfit",
-      header: "أرباح السنة الحالية",
-      label: "أرباح السنة الحالية",
+      header: t("partnerRights.statement.colThisYearProfit", { namespace: "reports", fallback: "أرباح السنة الحالية" }),
+      label: t("partnerRights.statement.colThisYearProfit", { namespace: "reports", fallback: "أرباح السنة الحالية" }),
       accessor: (row) => formatValue(row.thisYearProfit),
       align: "left",
       className: "justify-end tabular-nums font-black text-emerald-700",
     },
     {
       id: "thisYearDrawings",
-      header: "مسحوبات السنة الحالية",
-      label: "مسحوبات السنة الحالية",
+      header: t("partnerRights.statement.colThisYearDrawings", { namespace: "reports", fallback: "مسحوبات السنة الحالية" }),
+      label: t("partnerRights.statement.colThisYearDrawings", { namespace: "reports", fallback: "مسحوبات السنة الحالية" }),
       accessor: (row) => formatValue(row.thisYearDrawings),
       align: "left",
       className: "justify-end tabular-nums font-black text-rose-700",
     },
     {
       id: "finalAmount",
-      header: "إجمالي حقوق الشريك",
-      label: "إجمالي حقوق الشريك",
+      header: t("partnerRights.statement.colFinalAmount", { namespace: "reports", fallback: "إجمالي حقوق الشريك" }),
+      label: t("partnerRights.statement.colFinalAmount", { namespace: "reports", fallback: "إجمالي حقوق الشريك" }),
       accessor: (row) => formatValue(row.finalAmount),
       align: "left",
       className: "justify-end tabular-nums font-black text-indigo-700",
     },
-  ], [formatValue]);
+  ], [formatValue, t]);
 }
 
 export function PartnerStatementView({ computed, formatValue, filterBar }: PartnerStatementViewProps) {
   const [search, setSearch] = useState("");
+  const { t } = useLocalization();
 
   const allColumns = usePartnerStatementColumns(formatValue);
 
@@ -148,42 +152,42 @@ export function PartnerStatementView({ computed, formatValue, filterBar }: Partn
   const summaryColumns = useMemo<SummaryColumn[]>(() => {
     return enrichedColumns.map((col) => {
       if (col.id === "partnerName") {
-        return { id: "count", columnId: "partnerName", align: "right", label: "", value: `${totals.count} شريك`, className: "text-slate-500 font-medium" };
+        return { id: "count", columnId: "partnerName", align: "right", label: "", value: t("partnerRights.statement.countPartners", { namespace: "reports", fallback: "{{count}} شريك", vars: { count: totals.count } }), className: "text-slate-500 font-medium" };
       }
       if (col.id === "capitalAmount") {
-        return { id: "capitalAmount_summary", columnId: "capitalAmount", align: "left", label: "إجمالي رأس المال", value: formatValue(totals.capitalAmount), className: "text-indigo-700 font-black" };
+        return { id: "capitalAmount_summary", columnId: "capitalAmount", align: "left", label: t("partnerRights.statement.summaryCapital", { namespace: "reports", fallback: "إجمالي رأس المال" }), value: formatValue(totals.capitalAmount), className: "text-indigo-700 font-black" };
       }
       if (col.id === "accumulatedProfits") {
-        return { id: "accumulatedProfits_summary", columnId: "accumulatedProfits", align: "left", label: "إجمالي أرباح مبقاة", value: formatValue(totals.accumulatedProfits), className: "text-emerald-700 font-black" };
+        return { id: "accumulatedProfits_summary", columnId: "accumulatedProfits", align: "left", label: t("partnerRights.statement.summaryAccumulatedProfits", { namespace: "reports", fallback: "إجمالي أرباح مبقاة" }), value: formatValue(totals.accumulatedProfits), className: "text-emerald-700 font-black" };
       }
       if (col.id === "accumulatedDrawings") {
-        return { id: "accumulatedDrawings_summary", columnId: "accumulatedDrawings", align: "left", label: "إجمالي مسحوبات سابقة", value: formatValue(totals.accumulatedDrawings), className: "text-rose-700 font-black" };
+        return { id: "accumulatedDrawings_summary", columnId: "accumulatedDrawings", align: "left", label: t("partnerRights.statement.summaryAccumulatedDrawings", { namespace: "reports", fallback: "إجمالي مسحوبات سابقة" }), value: formatValue(totals.accumulatedDrawings), className: "text-rose-700 font-black" };
       }
       if (col.id === "currentAccount") {
-        return { id: "currentAccount_summary", columnId: "currentAccount", align: "left", label: "الحساب الجاري", value: formatValue(totals.currentAccount), className: "text-indigo-700 font-black" };
+        return { id: "currentAccount_summary", columnId: "currentAccount", align: "left", label: t("partnerRights.statement.summaryCurrentAccount", { namespace: "reports", fallback: "الحساب الجاري" }), value: formatValue(totals.currentAccount), className: "text-indigo-700 font-black" };
       }
       if (col.id === "thisYearProfit") {
-        return { id: "thisYearProfit_summary", columnId: "thisYearProfit", align: "left", label: "أرباح السنة الحالية", value: formatValue(totals.thisYearProfit), className: "text-emerald-700 font-black" };
+        return { id: "thisYearProfit_summary", columnId: "thisYearProfit", align: "left", label: t("partnerRights.statement.summaryThisYearProfit", { namespace: "reports", fallback: "أرباح السنة الحالية" }), value: formatValue(totals.thisYearProfit), className: "text-emerald-700 font-black" };
       }
       if (col.id === "thisYearDrawings") {
-        return { id: "thisYearDrawings_summary", columnId: "thisYearDrawings", align: "left", label: "مسحوبات السنة الحالية", value: formatValue(totals.thisYearDrawings), className: "text-rose-700 font-black" };
+        return { id: "thisYearDrawings_summary", columnId: "thisYearDrawings", align: "left", label: t("partnerRights.statement.summaryThisYearDrawings", { namespace: "reports", fallback: "مسحوبات السنة الحالية" }), value: formatValue(totals.thisYearDrawings), className: "text-rose-700 font-black" };
       }
       if (col.id === "finalAmount") {
-        return { id: "finalAmount_summary", columnId: "finalAmount", align: "left", label: "إجمالي حقوق الشريك", value: formatValue(totals.finalAmount), className: "text-indigo-700 font-black" };
+        return { id: "finalAmount_summary", columnId: "finalAmount", align: "left", label: t("partnerRights.statement.summaryFinalAmount", { namespace: "reports", fallback: "إجمالي حقوق الشريك" }), value: formatValue(totals.finalAmount), className: "text-indigo-700 font-black" };
       }
       return createSummarySpacer(col.id);
     });
-  }, [enrichedColumns, totals, formatValue]);
+  }, [enrichedColumns, totals, formatValue, t]);
 
   return (
     <div className="flex flex-col h-full">
-      <ReportMeta title="كشف حساب الشريك" description="تقرير شامل يوضح رأس المال والحساب الجاري والأرباح المبقاة والمسحوبات وإجمالي حقوق كل شريك" />
+      <ReportMeta title={t("partnerRights.statement.metaTitle", { namespace: "reports", fallback: "كشف حساب الشريك" })} description={t("partnerRights.statement.metaDescription", { namespace: "reports", fallback: "تقرير شامل يوضح رأس المال والحساب الجاري والأرباح المبقاة والمسحوبات وإجمالي حقوق كل شريك" })} />
       <SummaryCards computed={computed} formatValue={formatValue} />
       <div className="flex-1 min-h-0 overflow-hidden pb-4">
         <TableShell
           search={search}
           onSearchChange={setSearch}
-          searchPlaceholder="بحث باسم الشريك..."
+          searchPlaceholder={t("partnerRights.statement.searchPlaceholder", { namespace: "reports", fallback: "بحث باسم الشريك..." })}
           columns={toolbarColumns}
           onColumnToggle={toggleColumn}
           onColumnsReset={resetToDefault}
@@ -194,7 +198,7 @@ export function PartnerStatementView({ computed, formatValue, filterBar }: Partn
             data={filteredRows}
             columns={enrichedColumns}
             tableId="partner-statement"
-            emptyMessage="لا يوجد شركاء لعرض كشف الحساب"
+            emptyMessage={t("partnerRights.statement.empty", { namespace: "reports", fallback: "لا يوجد شركاء لعرض كشف الحساب" })}
             summary={summaryColumns}
             enableResize
           />

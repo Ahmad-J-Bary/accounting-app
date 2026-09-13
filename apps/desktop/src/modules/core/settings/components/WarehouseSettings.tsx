@@ -9,6 +9,7 @@ import type { CompanySettings as CompanySettingsType, WarehouseDto } from "@erp/
 import { warehouseService } from "@modules/inventory/api/warehouseService";
 import { settingsService } from '@modules/core/api/settingsService';
 import { toast } from "sonner";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 interface WarehouseSettingsProps {
   settings: CompanySettingsType;
@@ -16,6 +17,7 @@ interface WarehouseSettingsProps {
 }
 
 export function WarehouseSettings({ settings, onChange }: WarehouseSettingsProps) {
+  const { t } = useLocalization();
   const [warehouses, setWarehouses] = useState<WarehouseDto[]>([]);
 
   useEffect(() => {
@@ -44,9 +46,9 @@ export function WarehouseSettings({ settings, onChange }: WarehouseSettingsProps
         numeral_system: settings.numeral_system || "western",
       });
       publishSettingsUpdated();
-      toast.success("تم الحفظ", { description: "تم حفظ إعدادات المستودعات بنجاح" });
+      toast.success(t("settings.toasts.saved", { namespace: "settings", fallback: "تم الحفظ" }), { description: t("settings.toasts.savedWarehouses", { namespace: "settings", fallback: "تم حفظ إعدادات المستودعات بنجاح" }) });
     } catch (e) {
-      toast.error("خطأ في الحفظ", { description: String(e) });
+      toast.error(t("settings.toasts.saveError", { namespace: "settings", fallback: "خطأ في الحفظ" }), { description: String(e) });
     }
   };
 
@@ -56,55 +58,55 @@ export function WarehouseSettings({ settings, onChange }: WarehouseSettingsProps
   const fromSelectValue = (v: string) => v === "__default" ? undefined : v;
 
   return (
-    <SettingsSection title="المستودعات الافتراضية" description="اختر المستودع الافتراضي لفواتير المشتريات والمبيعات.">
+    <SettingsSection title={t("settings.warehouses.title", { namespace: "settings", fallback: "المستودعات الافتراضية" })} description={t("settings.warehouses.description", { namespace: "settings", fallback: "اختر المستودع الافتراضي لفواتير المشتريات والمبيعات." })}>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-3">
           <Label className="font-bold text-slate-700 flex items-center gap-2">
             <Building className="w-4 h-4 text-blue-600" />
-            مستودع المشتريات
+            {t("settings.warehouses.purchase", { namespace: "settings", fallback: "مستودع المشتريات" })}
           </Label>
           <Select
             value={toSelectValue(settings.purchase_warehouse_id)}
             onValueChange={(v) => onChange("purchase_warehouse_id", fromSelectValue(v) ?? "")}
           >
             <SelectTrigger className="h-12 rounded-lg border-slate-200 font-bold">
-              <SelectValue placeholder="اختر المستودع" />
+              <SelectValue placeholder={t("settings.warehouses.selectPlaceholder", { namespace: "settings", fallback: "اختر المستودع" })} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="__default" className="font-bold text-slate-400">افتراضي{defaultWarehouse ? ` (${defaultWarehouse.name})` : ""}</SelectItem>
+              <SelectItem value="__default" className="font-bold text-slate-400">{t("settings.warehouses.defaultOption", { namespace: "settings", fallback: "افتراضي" })}{defaultWarehouse ? ` (${defaultWarehouse.name})` : ""}</SelectItem>
               {otherWarehouses.map((w) => (
                 <SelectItem key={w.id} value={w.id} className="font-bold">{w.name}</SelectItem>
               ))}
             </SelectContent>
           </Select>
-          <p className="text-xs text-slate-400 font-medium">سيتم استخدام هذا المستودع كقيمة افتراضية في بنود فواتير المشتريات.</p>
+          <p className="text-xs text-slate-400 font-medium">{t("settings.warehouses.purchaseHint", { namespace: "settings", fallback: "سيتم استخدام هذا المستودع كقيمة افتراضية في بنود فواتير المشتريات." })}</p>
         </div>
         <div className="space-y-3">
           <Label className="font-bold text-slate-700 flex items-center gap-2">
             <Warehouse className="w-4 h-4 text-emerald-600" />
-            مستودع المبيعات
+            {t("settings.warehouses.sales", { namespace: "settings", fallback: "مستودع المبيعات" })}
           </Label>
           <Select
             value={toSelectValue(settings.sales_warehouse_id)}
             onValueChange={(v) => onChange("sales_warehouse_id", fromSelectValue(v) ?? "")}
           >
             <SelectTrigger className="h-12 rounded-lg border-slate-200 font-bold">
-              <SelectValue placeholder="اختر المستودع" />
+              <SelectValue placeholder={t("settings.warehouses.selectPlaceholder", { namespace: "settings", fallback: "اختر المستودع" })} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="__default" className="font-bold text-slate-400">افتراضي{defaultWarehouse ? ` (${defaultWarehouse.name})` : ""}</SelectItem>
+              <SelectItem value="__default" className="font-bold text-slate-400">{t("settings.warehouses.defaultOption", { namespace: "settings", fallback: "افتراضي" })}{defaultWarehouse ? ` (${defaultWarehouse.name})` : ""}</SelectItem>
               {otherWarehouses.map((w) => (
                 <SelectItem key={w.id} value={w.id} className="font-bold">{w.name}</SelectItem>
               ))}
             </SelectContent>
           </Select>
-          <p className="text-xs text-slate-400 font-medium">سيتم استخدام هذا المستودع كقيمة افتراضية في بنود فواتير المبيعات.</p>
+          <p className="text-xs text-slate-400 font-medium">{t("settings.warehouses.salesHint", { namespace: "settings", fallback: "سيتم استخدام هذا المستودع كقيمة افتراضية في بنود فواتير المبيعات." })}</p>
         </div>
       </div>
       <div className="flex justify-end mt-6 pt-6 border-t border-slate-100">
         <Button onClick={handleSave} className="gap-2 h-11 px-6">
           <Save className="w-4 h-4" />
-          حفظ التعديلات
+          {t("settings.saveEdits", { namespace: "settings", fallback: "حفظ التعديلات" })}
         </Button>
       </div>
     </SettingsSection>

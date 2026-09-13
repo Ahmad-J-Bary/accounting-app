@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { X, Search, Hash, Calendar, FileText } from "lucide-react";
 import type { MaterialDto } from "@erp/shared-types";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 export interface ReturnOccurrenceItem {
   material: MaterialDto;
@@ -41,6 +42,8 @@ export function ReturnMaterialSearchPanel({
   onClose,
   style,
 }: ReturnMaterialSearchPanelProps) {
+  const { t } = useLocalization();
+
   const filtered = useMemo(() => {
     if (!search) return [];
     const s = search.toLowerCase();
@@ -63,12 +66,12 @@ export function ReturnMaterialSearchPanel({
     >
       <div className="flex items-center gap-2.5 px-5 py-3 bg-white border-b border-slate-100">
         <span className="text-[11px] font-black text-slate-500 tracking-wider">
-          نتائج البحث (فواتير سابقة)
+          {t("returnMaterial.searchResultsTitle", { namespace: "invoicing", fallback: "نتائج البحث (فواتير سابقة)" })}
         </span>
         <span className="text-[10px] tabular-nums font-bold px-1.5 py-0.5 rounded bg-blue-50 text-blue-600">
           {filtered.length}
         </span>
-        <span className="text-[10px] text-slate-400 font-semibold">صنف</span>
+        <span className="text-[10px] text-slate-400 font-semibold">{t("returnMaterial.itemLabel", { namespace: "invoicing", fallback: "صنف" })}</span>
         <button
           onClick={onClose}
           className="mr-auto p-1 rounded-lg text-slate-300 hover:text-slate-500 hover:bg-slate-100 transition-all"
@@ -82,7 +85,7 @@ export function ReturnMaterialSearchPanel({
           <div className="flex flex-col items-center justify-center py-10 px-4 text-center">
             <Search className="w-8 h-8 text-slate-200 mb-2" />
             <p className="text-xs text-slate-400 font-semibold">
-              {search ? "لا توجد نتائج مطابقة" : "ابدأ بكتابة النص للبحث"}
+              {search ? t("returnMaterial.noMatchingResults", { namespace: "invoicing", fallback: "لا توجد نتائج مطابقة" }) : t("returnMaterial.startTyping", { namespace: "invoicing", fallback: "ابدأ بكتابة النص للبحث" })}
             </p>
           </div>
         ) : (
@@ -108,14 +111,14 @@ export function ReturnMaterialSearchPanel({
                   </span>
                 </div>
                 <div className="flex items-center gap-3 mt-2 pt-1.5 border-t border-slate-50 flex-wrap">
-                  <span className="flex items-center gap-1 text-[10px] tabular-nums text-amber-600 font-bold" title="العدد">
+                  <span className="flex items-center gap-1 text-[10px] tabular-nums text-amber-600 font-bold" title={t("returnMaterial.titleCount", { namespace: "invoicing", fallback: "العدد" })}>
                     <FileText className="w-2.5 h-2.5 opacity-60" />
-                    العدد: {occ.original_quantity}
+                    {t("returnMaterial.countPrefix", { namespace: "invoicing", fallback: "العدد: " })}{occ.original_quantity}
                   </span>
-                  <span className="flex items-center gap-1 text-[10px] tabular-nums text-blue-600 font-bold" title="السعر">
+                  <span className="flex items-center gap-1 text-[10px] tabular-nums text-blue-600 font-bold" title={t("returnMaterial.titlePrice", { namespace: "invoicing", fallback: "السعر" })}>
                     {occ.original_price} ر.س
                   </span>
-                  <span className="flex items-center gap-1 text-[10px] tabular-nums text-slate-500 font-bold" title="التاريخ">
+                  <span className="flex items-center gap-1 text-[10px] tabular-nums text-slate-500 font-bold" title={t("returnMaterial.titleDate", { namespace: "invoicing", fallback: "التاريخ" })}>
                     <Calendar className="w-2.5 h-2.5 opacity-60" />
                     {formatDate(occ.invoice_date)}
                   </span>

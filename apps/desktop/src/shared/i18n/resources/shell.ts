@@ -4,7 +4,6 @@ export const shell: Record<AppLanguage, TranslationTree> = {
   ar: {
     globalSearch: "البحث الشامل",
     dashboard: "لوحة التحكم",
-    globalSearch: "البحث الشامل",
     newTab: "تبويب جديد",
     voice: "المساعد الصوتي",
     windows: "النوافذ",
