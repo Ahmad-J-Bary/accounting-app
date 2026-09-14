@@ -11,6 +11,7 @@ import type { ExcelExportColumn } from "@shared/lib/excel";
 import { getMovementType } from '../constants/movementTypes';
 import { Download } from "lucide-react";
 import { Button } from "@shared/ui/button";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 const getCleanNotes = (m: StockMovement): string => {
   const type = m.movement_type.replace('MovementType::', '');
@@ -74,15 +75,16 @@ export function InventoryMovementsTable({
   filterBar,
   selectedId, onRowClick, onRowDoubleClick, transferRefs, className,
 }: InventoryMovementsTableProps) {
+  const { t } = useLocalization();
   const { isBaseCurrency, currencySuffix: cs, hasSecondaryCurrencies } = useBaseCurrencyColumns();
   const { exportData, rateMap, formatAmount, baseCode, currencies, ratesSheet, currencyMode } = useExportSetup();
   const defaultWh = useMemo(() => warehouses.find(wh => wh.is_default), [warehouses]);
 
   const warehouseName = useMemo(() => (m: StockMovement) => {
-    if (!m.warehouse_id) return defaultWh?.name || 'بدون مستودع';
+    if (!m.warehouse_id) return defaultWh?.name || t("movements.noWarehouse", { namespace: "inventory" });
     const w = warehouses.find(wh => wh.id === m.warehouse_id);
-    return w?.name || defaultWh?.name || 'بدون مستودع';
-  }, [warehouses, defaultWh]);
+    return w?.name || defaultWh?.name || t("movements.noWarehouse", { namespace: "inventory" });
+  }, [warehouses, defaultWh, t]);
 
   const warehouseClass = useMemo(() => (m: StockMovement) => {
     const w = warehouses.find(wh => wh.id === m.warehouse_id);
@@ -202,8 +204,8 @@ export function InventoryMovementsTable({
     const cols: UnifiedColumn<StockMovement>[] = [
       {
         id: 'reference',
-        header: 'رقم',
-        label: 'رقم',
+        header: t("movements.columns.reference", { namespace: "inventory" }),
+        label: t("movements.columns.reference", { namespace: "inventory" }),
         accessor: (m) => m.reference ? (
           <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold font-mono bg-blue-50 text-blue-700 border border-blue-100">
             {formatNumber(parseInt(m.reference) || 0)}
@@ -212,23 +214,23 @@ export function InventoryMovementsTable({
       },
       {
         id: 'product_name',
-        header: 'المادة',
-        label: 'المادة',
+        header: t("movements.columns.material", { namespace: "inventory" }),
+        label: t("movements.columns.material", { namespace: "inventory" }),
         accessor: (m) => m.material_name || '—',
         className: 'font-bold text-slate-900'
       },
       {
         id: 'type',
-        header: 'النوع',
-        label: 'النوع',
+        header: t("movements.columns.type", { namespace: "inventory" }),
+        label: t("movements.columns.type", { namespace: "inventory" }),
         accessor: (m) => {
           const clean = m.movement_type.replace('MovementType::', '');
           const isTransfer = m.reference ? transferRefs.has(m.reference) : false;
           let cfg = getMovementType(m.movement_type);
           if (isTransfer && (clean === 'In' || clean === 'Out')) {
             cfg = clean === 'Out'
-              ? { label: 'تحويل من', inflow: false, group: 'outflow' }
-              : { label: 'تحويل إلى', inflow: true, group: 'inflow' };
+              ? { label: t("movementTypes.TransferFrom", { namespace: "inventory" }), inflow: false, group: 'outflow' }
+              : { label: t("movementTypes.TransferTo", { namespace: "inventory" }), inflow: true, group: 'inflow' };
           }
           return (
             <span className={cn(
@@ -244,13 +246,13 @@ export function InventoryMovementsTable({
       },
       {
         id: 'warehouse',
-        header: 'المستودع',
-        label: 'المستودع',
+        header: t("movements.columns.warehouse", { namespace: "inventory" }),
+        label: t("movements.columns.warehouse", { namespace: "inventory" }),
         accessor: (m) => {
           const isTransfer = m.reference ? transferRefs.has(m.reference) : false;
           const clean = m.movement_type.replace('MovementType::', '');
-          const prefix = isTransfer && clean === 'In' ? 'إلى ' :
-                         isTransfer && clean === 'Out' ? 'من ' : '';
+          const prefix = isTransfer && clean === 'In' ? t("movements.toPrefix", { namespace: "inventory" }) :
+                         isTransfer && clean === 'Out' ? t("movements.fromPrefix", { namespace: "inventory" }) : '';
           return (
             <span className={cn(
               "inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium border",
@@ -263,8 +265,8 @@ export function InventoryMovementsTable({
       },
       {
         id: 'quantity',
-        header: 'الكمية',
-        label: 'الكمية',
+        header: t("movements.columns.quantity", { namespace: "inventory" }),
+        label: t("movements.columns.quantity", { namespace: "inventory" }),
         accessor: (m) => {
           if (m.signed_quantity != null) {
             const sq = parseFloat(m.signed_quantity);
@@ -289,8 +291,8 @@ export function InventoryMovementsTable({
       const isBase = isBaseCurrency(curr.code);
       cols.push({
         id: `total_cost_${curr.code}`,
-        header: `التكلفة${cs(sym)}`,
-        label: `التكلفة${cs(sym)}`,
+        header: `${t("movements.columns.cost", { namespace: "inventory" })}${cs(sym)}`,
+        label: `${t("movements.columns.cost", { namespace: "inventory" })}${cs(sym)}`,
         accessor: (m) => {
           const base = baseCost(m);
           if (base === 0) return '—';
@@ -318,8 +320,8 @@ export function InventoryMovementsTable({
     cols.push(
       {
         id: 'notes',
-        header: 'ملاحظة / التوصيف / السبب',
-        label: 'ملاحظة / التوصيف / السبب',
+        header: t("movements.columns.notes", { namespace: "inventory" }),
+        label: t("movements.columns.notes", { namespace: "inventory" }),
         accessor: (m) => (
           <span className="w-full text-center truncate">
             {getCleanNotes(m)}
@@ -330,14 +332,14 @@ export function InventoryMovementsTable({
       },
       {
         id: 'date',
-        header: 'التاريخ',
-        label: 'التاريخ',
+        header: t("movements.columns.date", { namespace: "inventory" }),
+        label: t("movements.columns.date", { namespace: "inventory" }),
         accessor: (m) => formatDateTime(m.movement_date),
         className: 'tabular-nums text-slate-500 font-medium'
       },
     );
     return cols;
-  }, [warehouseName, warehouseClass, currencies, formatAmount, isBaseCurrency, baseCost, transferRefs, costInfo, cs]);
+  }, [warehouseName, warehouseClass, currencies, formatAmount, isBaseCurrency, baseCost, transferRefs, costInfo, cs, t]);
 
   const defaultVisible = useMemo(() => {
     const ids: string[] = ["product_name", "type", "warehouse", "quantity"];
@@ -359,7 +361,7 @@ export function InventoryMovementsTable({
   const handleExport = useCallback(async () => {
     const summary: Record<string, string | null> = { quantity: 'subtotal' };
 
-    const costColumns = currencyAmountCols("total_cost", "التكلفة", (row) => baseCost(row as unknown as StockMovement), currencies, formatAmount, "", true, hasSecondaryCurrencies, currencyMode, baseCode, rateMap);
+    const costColumns = currencyAmountCols("total_cost", t("movements.columns.cost", { namespace: "inventory" }), (row) => baseCost(row as unknown as StockMovement), currencies, formatAmount, "", true, hasSecondaryCurrencies, currencyMode, baseCode, rateMap);
     const costColMap = new Map(costColumns.map(c => [c.id, c]));
 
     const exportColumns: ExcelExportColumn[] = enrichedColumns.map((col) => {
@@ -398,14 +400,14 @@ export function InventoryMovementsTable({
           if (col.id === "type") {
             const isTransfer = m.reference ? transferRefs.has(m.reference) : false;
             const clean = m.movement_type.replace('MovementType::', '');
-            if (isTransfer && clean === 'Out') return "تحويل من";
-            if (isTransfer && clean === 'In') return "تحويل إلى";
+            if (isTransfer && clean === 'Out') return t("movementTypes.TransferFrom", { namespace: "inventory" });
+            if (isTransfer && clean === 'In') return t("movementTypes.TransferTo", { namespace: "inventory" });
             return getMovementType(m.movement_type).label;
           }
           if (col.id === "warehouse") {
             const isTransfer = m.reference ? transferRefs.has(m.reference) : false;
             const clean = m.movement_type.replace('MovementType::', '');
-            const prefix = isTransfer && clean === 'In' ? 'إلى ' : isTransfer && clean === 'Out' ? 'من ' : '';
+            const prefix = isTransfer && clean === 'In' ? t("movements.toPrefix", { namespace: "inventory" }) : isTransfer && clean === 'Out' ? t("movements.fromPrefix", { namespace: "inventory" }) : '';
             return prefix + warehouseName(m);
           }
           if (col.id === "quantity") {
@@ -422,21 +424,21 @@ export function InventoryMovementsTable({
     });
 
     await executeExport(exportData, {
-      sheetName: "حركات المخزون",
-      filename: "حركات المخزون",
+      sheetName: t("movements.sheetName", { namespace: "inventory" }),
+      filename: t("movements.sheetName", { namespace: "inventory" }),
       data: sortedData as unknown as Record<string, unknown>[],
       columns: exportColumns,
       summary,
-      summaryLabel: "المجموع",
+      summaryLabel: t("labels.summary", { namespace: "inventory" }),
       currencyRatesSheet: ratesSheet,
     });
-  }, [enrichedColumns, sortedData, warehouseName, baseCost, transferRefs, exportData, baseCode, rateMap, ratesSheet, currencies, formatAmount, hasSecondaryCurrencies, currencyMode]);
+  }, [enrichedColumns, sortedData, warehouseName, baseCost, transferRefs, exportData, baseCode, rateMap, ratesSheet, currencies, formatAmount, hasSecondaryCurrencies, currencyMode, t]);
 
   const summaryColumns = useMemo<SummaryColumn[]>(() => {
     return enrichedColumns.map(col => {
       const id = col.id;
       if (id === "product_name") {
-        return { id: "count", columnId: id, label: "", value: `${sortedData.length} حركة`, className: "text-slate-500 font-medium" };
+        return { id: "count", columnId: id, label: "", value: `${sortedData.length} ${t("labels.movement", { namespace: "inventory", count: sortedData.length })}`, className: "text-slate-500 font-medium" };
       }
       if (id === "quantity") {
         return { id: "qty_spacer", columnId: id, label: "", value: "" };
@@ -459,20 +461,20 @@ export function InventoryMovementsTable({
         }, 0);
         const isBase = isBaseCurrency(currCode);
         return {
-          id: `${id}_summary`, columnId: id, label: "الإجمالي",
+          id: `${id}_summary`, columnId: id, label: t("labels.total", { namespace: "inventory" }),
           value: totalCost !== 0 ? formatAmount(totalCost, { currencyCode: currCode }) : "—",
           className: isBase ? "text-slate-900 font-black" : "text-slate-500 font-extrabold"
         };
       }
       return { id: `${id}_spacer`, columnId: id, label: "", value: "" };
     });
-  }, [sortedData, enrichedColumns, formatAmount, isBaseCurrency, baseCost]);
+  }, [sortedData, enrichedColumns, formatAmount, isBaseCurrency, baseCost, t]);
 
   return (
     <TableShell
       search={search}
       onSearchChange={onSearchChange}
-      searchPlaceholder="بحث بالصنف أو المرجع..."
+      searchPlaceholder={t("movements.searchPlaceholder", { namespace: "inventory" })}
       filterBar={filterBar}
       columns={toolbarColumns}
       onColumnToggle={toggleColumn}
@@ -488,7 +490,7 @@ export function InventoryMovementsTable({
           onClick={handleExport}
         >
           <Download className="w-3.5 h-3.5 ml-1.5 text-slate-500" />
-          تصدير إكسل
+          {t("movements.columns.exportToExcel", { namespace: "inventory" })}
         </Button>
       }
     >
@@ -508,7 +510,7 @@ export function InventoryMovementsTable({
         selectedId={selectedId}
         onRowClick={onRowClick}
         onRowDoubleClick={onRowDoubleClick}
-        emptyMessage={search ? "لا توجد نتائج تطابق معايير البحث" : "لا توجد حركات مخزنية مسجلة"}
+        emptyMessage={search ? t("movements.emptySearch", { namespace: "inventory" }) : t("movements.empty", { namespace: "inventory" })}
         summary={summaryColumns}
       />
     </TableShell>

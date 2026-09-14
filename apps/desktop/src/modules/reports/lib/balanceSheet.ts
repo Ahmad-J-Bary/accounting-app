@@ -335,11 +335,11 @@ export function computeBalanceSheet(
     const consumed = new Set<string>();
 
     const bucketLabel = (leaf: AccountBalance): string => {
-      if (leaf.purpose === "partner_capital") return "رأس مال الشركاء";
-      if (leaf.purpose === "retained_earnings") return "الأرباح المبقاة";
-      if (leaf.purpose === "partner_drawings") return "إجمالي المسحوبات";
-      if (leaf.purpose === "partner_current") return "حسابات جارية الشركاء";
-      return "حقوق ملكية أخرى";
+      if (leaf.purpose === "partner_capital") return "reports.balanceSheet.sections.partnerCapital";
+      if (leaf.purpose === "retained_earnings") return "reports.balanceSheet.sections.retainedEarnings";
+      if (leaf.purpose === "partner_drawings") return "reports.balanceSheet.sections.totalDrawings";
+      if (leaf.purpose === "partner_current") return "reports.balanceSheet.sections.partnerCurrent";
+      return "reports.balanceSheet.sections.otherEquity";
     };
 
     const groupedChildren = (leaves: AccountBalance[], depth: number): BalanceSheetRow[] => {
@@ -360,7 +360,7 @@ export function computeBalanceSheet(
       }
       return Array.from(buckets.entries()).map(([key, bucketLeaves]) => {
         const row: BalanceSheetRow = {
-          label: key === "other" ? "حقوق ملكية أخرى" : bucketLabel(bucketLeaves[0]),
+          label: key === "other" ? "reports.balanceSheet.sections.otherEquity" : bucketLabel(bucketLeaves[0]),
           value: bucketLeaves.reduce((s, l) => s + l.balance, 0),
           depth,
         };
@@ -412,40 +412,40 @@ export function computeBalanceSheet(
   const sections: BalanceSheetSection[] = [
     {
       id: "fixed-assets",
-      title: "الأصول الثابتة",
-      totalLabel: "إجمالي الأصول الثابتة",
+      title: "reports.balanceSheet.sections.fixedAssets",
+      totalLabel: "reports.balanceSheet.sections.fixedAssetsTotal",
       totalValue: totalFixedAssets,
       rows: buildSectionRows(assets.fixed),
     },
     {
       id: "current-assets",
-      title: "الأصول المتداولة",
-      totalLabel: "إجمالي الأصول المتداولة",
+      title: "reports.balanceSheet.sections.currentAssets",
+      totalLabel: "reports.balanceSheet.sections.currentAssetsTotal",
       totalValue: totalCurrentAssets,
       rows: buildSectionRows(assets.current),
     },
     {
       id: "fixed-liabilities",
-      title: "الخصوم الثابتة",
-      totalLabel: "إجمالي الخصوم الثابتة",
+      title: "reports.balanceSheet.sections.fixedLiabilities",
+      totalLabel: "reports.balanceSheet.sections.fixedLiabilitiesTotal",
       totalValue: totalFixedLiabilities,
       rows: buildSectionRows(liabilities.fixed),
     },
     {
       id: "current-liabilities",
-      title: "الخصوم المتداولة",
-      totalLabel: "إجمالي الخصوم المتداولة",
+      title: "reports.balanceSheet.sections.currentLiabilities",
+      totalLabel: "reports.balanceSheet.sections.currentLiabilitiesTotal",
       totalValue: totalCurrentLiabilities,
       rows: buildSectionRows(liabilities.current),
     },
     {
       id: "equity",
-      title: "حقوق الملكية",
-      totalLabel: "إجمالي حقوق الملكية",
+      title: "reports.balanceSheet.sections.equity",
+      totalLabel: "reports.balanceSheet.sections.equityTotal",
       totalValue: totalEquity,
       rows: [
         ...buildGroupedEquityRows(allEquity),
-        { label: "صافي الأرباح", value: profitLoss.netProfit, depth: 0 },
+        { label: "reports.balanceSheet.sections.netProfit", value: profitLoss.netProfit, depth: 0 },
       ],
     },
   ];

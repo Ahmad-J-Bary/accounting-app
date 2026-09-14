@@ -3,6 +3,7 @@ import { Plus, Shuffle, Image } from "lucide-react";
 import { cn } from '@shared/lib/utils';
 import type { MaterialDto, CategoryDto } from "@erp/shared-types";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 import { Badge } from "@shared/ui/badge";
 import { Button } from "@shared/ui/button";
 import { UnifiedTable, type UnifiedColumn } from '@widgets/table-shell/UnifiedTable';
@@ -45,6 +46,7 @@ export function MaterialTable({
 }: MaterialTableProps) {
   const { formatAmount, currencies } = useCurrencyContext();
   const { isBaseCurrency, currencySuffix: cs } = useBaseCurrencyColumns();
+  const { t } = useLocalization();
 
   const { sortedData: sortedMaterials, sortField, sortDirection, handleSort } = useSortable({
     data: materials,
@@ -98,8 +100,8 @@ export function MaterialTable({
     const cols: UnifiedColumn<MaterialDto>[] = [
       {
         id: "image",
-        header: "صورة",
-        label: "صورة",
+        header: t("columns.image", { namespace: "inventory" }),
+        label: t("columns.image", { namespace: "inventory" }),
         accessor: (m) => m.image_path ? (
           <div className="w-9 h-9 rounded-md border bg-slate-50 overflow-hidden flex-shrink-0">
             <img src={m.image_path} alt={m.name} className="w-full h-full object-contain" />
@@ -112,36 +114,36 @@ export function MaterialTable({
       },
       {
         id: "code",
-        header: "الكود",
-        label: "الكود",
+        header: t("columns.code", { namespace: "inventory" }),
+        label: t("columns.code", { namespace: "inventory" }),
         accessor: (m) => m.code || "",
         className: "font-black text-slate-900 text-center"
       },
       {
         id: "barcode",
-        header: "الباركود",
-        label: "الباركود",
+        header: t("columns.barcode", { namespace: "inventory" }),
+        label: t("columns.barcode", { namespace: "inventory" }),
         accessor: (m) => m.barcode || "",
         className: "font-mono font-medium text-slate-500"
       },
       {
         id: "name",
-        header: "اسم المادة",
-        label: "اسم المادة",
+        header: t("columns.materialName", { namespace: "inventory" }),
+        label: t("columns.materialName", { namespace: "inventory" }),
         accessor: (m) => m.name,
         className: "font-bold text-slate-800"
       },
       {
         id: "name_en",
-        header: "الاسم (EN)",
-        label: "الاسم (EN)",
+        header: t("columns.nameEn", { namespace: "inventory" }),
+        label: t("columns.nameEn", { namespace: "inventory" }),
         accessor: (m) => m.name_en || "",
         className: "text-slate-500 italic"
       },
       {
         id: "categories",
-        header: "التصنيف",
-        label: "التصنيفات",
+        header: t("columns.category", { namespace: "inventory" }),
+        label: t("columns.category", { namespace: "inventory" }),
         accessor: (m) => (
           <div className="flex flex-wrap gap-1.5">
             {m.category_ids.length > 0 ? (
@@ -160,7 +162,7 @@ export function MaterialTable({
                 );
               })
             ) : (
-              <Badge variant="outline" className="text-[10px] text-slate-400 border-slate-100 font-normal">غير مصنف</Badge>
+              <Badge variant="outline" className="text-[10px] text-slate-400 border-slate-100 font-normal">{t("columns.uncategorized", { namespace: "inventory" })}</Badge>
             )}
           </div>
         )
@@ -172,8 +174,8 @@ export function MaterialTable({
       const isBase = isBaseCurrency(curr.code);
       cols.push({
         id: `unit_price_${curr.code}`,
-        header: `السعر الإفرادي${cs(sym)}`,
-        label: `السعر الإفرادي${cs(sym)}`,
+        header: `${t("columns.unitPrice", { namespace: "inventory" })}${cs(sym)}`,
+        label: `${t("columns.unitPrice", { namespace: "inventory" })}${cs(sym)}`,
         accessor: (m) => {
           const raw = rawPriceBase(m);
           return raw > 0 ? formatAmount(raw, { currencyCode: curr.code }) : "";
@@ -189,8 +191,8 @@ export function MaterialTable({
       const isBase = isBaseCurrency(curr.code);
       cols.push({
         id: `extra_costs_${curr.code}`,
-        header: `تكاليف إضافية${cs(sym)}`,
-        label: `تكاليف إضافية${cs(sym)}`,
+        header: `${t("columns.extraCosts", { namespace: "inventory" })}${cs(sym)}`,
+        label: `${t("columns.extraCosts", { namespace: "inventory" })}${cs(sym)}`,
         accessor: (m) => {
           const extra = extraCostBase(m);
           return extra > 0 ? formatAmount(extra, { currencyCode: curr.code }) : "";
@@ -206,8 +208,8 @@ export function MaterialTable({
       const isBase = isBaseCurrency(curr.code);
       cols.push({
         id: `average_cost_${curr.code}`,
-        header: `تكلفة الوحدة${cs(sym)}`,
-        label: `تكلفة الوحدة${cs(sym)}`,
+        header: `${t("columns.unitCost", { namespace: "inventory" })}${cs(sym)}`,
+        label: `${t("columns.unitCost", { namespace: "inventory" })}${cs(sym)}`,
         accessor: (m) => {
           const val = unitCostBase(m);
           if (val <= 0) return "";
@@ -233,8 +235,8 @@ export function MaterialTable({
       const isBase = isBaseCurrency(curr.code);
       cols.push({
         id: `total_value_${curr.code}`,
-        header: `المجموع${cs(sym)}`,
-        label: `المجموع${cs(sym)}`,
+        header: `${t("labels.total", { namespace: "inventory" })}${cs(sym)}`,
+        label: `${t("labels.total", { namespace: "inventory" })}${cs(sym)}`,
         accessor: (m) => {
           const val = totalReceived(m) * unitCostBase(m);
           return val > 0 ? formatAmount(val, { currencyCode: curr.code }) : "";
@@ -247,32 +249,32 @@ export function MaterialTable({
 
     cols.push({
       id: "total_received",
-      header: "الكمية الكلية",
-      label: "الكمية الكلية",
+      header: t("columns.totalReceived", { namespace: "inventory" }),
+      label: t("columns.totalReceived", { namespace: "inventory" }),
       accessor: (m) => toLocalString(totalReceived(m)),
       className: "tabular-nums text-emerald-600 font-bold"
     });
 
     cols.push({
       id: "total_sold",
-      header: "الكمية المباعة",
-      label: "الكمية المباعة",
+      header: t("columns.totalSold", { namespace: "inventory" }),
+      label: t("columns.totalSold", { namespace: "inventory" }),
       accessor: (m) => toLocalString(parseFloat(m.total_sold || "0")),
       className: "tabular-nums text-blue-600 font-bold"
     });
 
     cols.push({
       id: "total_damaged",
-      header: "الكمية المهدورة",
-      label: "الكمية المهدورة",
+      header: t("columns.totalDamaged", { namespace: "inventory" }),
+      label: t("columns.totalDamaged", { namespace: "inventory" }),
       accessor: (m) => toLocalString(parseFloat(m.total_damaged || "0")),
       className: "tabular-nums text-rose-600 font-bold"
     });
 
     cols.push({
       id: "total_available",
-      header: "الكمية المتوفرة",
-      label: "الكمية المتوفرة",
+      header: t("columns.totalAvailable", { namespace: "inventory" }),
+      label: t("columns.totalAvailable", { namespace: "inventory" }),
       accessor: (m) => toLocalString(parseFloat(m.total_available)),
       className: "tabular-nums font-bold text-slate-700"
     });
@@ -282,8 +284,8 @@ export function MaterialTable({
       const isBase = isBaseCurrency(curr.code);
       cols.push({
         id: `available_value_${curr.code}`,
-        header: `المجموع للمتوفر${cs(sym)}`,
-        label: `المجموع للمتوفر${cs(sym)}`,
+        header: `${t("labels.totalAvailable", { namespace: "inventory" })}${cs(sym)}`,
+        label: `${t("labels.totalAvailable", { namespace: "inventory" })}${cs(sym)}`,
         accessor: (m) => {
           const val = totalAvailable(m) * unitCostBase(m);
           return val > 0 ? formatAmount(val, { currencyCode: curr.code }) : "";
@@ -295,9 +297,9 @@ export function MaterialTable({
     });
 
         const TIERS = [
-      { id: "retail", label: "مفرق" },
-      { id: "semi_wholesale", label: "نصف جملة" },
-      { id: "wholesale", label: "جملة" },
+      { id: "retail", label: t("saleTiers.retail", { namespace: "inventory" }) },
+      { id: "semi_wholesale", label: t("saleTiers.semi_wholesale", { namespace: "inventory" }) },
+      { id: "wholesale", label: t("saleTiers.wholesale", { namespace: "inventory" }) },
     ];
     currencies.forEach(curr => {
       const sym = curr.symbol || curr.code;
@@ -332,8 +334,8 @@ export function MaterialTable({
 
     cols.push({
       id: "units",
-      header: "الوحدات",
-      label: "الوحدات",
+      header: t("columns.units", { namespace: "inventory" }),
+      label: t("columns.units", { namespace: "inventory" }),
       accessor: (m) => (
         <div className="flex flex-wrap items-center gap-1.5 group">
           {m.units?.map((u, i) => (
@@ -358,8 +360,8 @@ export function MaterialTable({
 
     cols.push({
       id: "minimum_stock",
-      header: "حد الطلب",
-      label: "حد الطلب",
+      header: t("columns.minimumStock", { namespace: "inventory" }),
+      label: t("columns.minimumStock", { namespace: "inventory" }),
       accessor: (m) => {
         const min = parseFloat(m.minimum_stock);
         const avail = parseFloat(m.total_available);
@@ -371,8 +373,8 @@ export function MaterialTable({
 
     cols.push({
       id: "costing_method",
-      header: "طريقة التكلفة",
-      label: "طريقة التكلفة",
+      header: t("columns.costingMethod", { namespace: "inventory" }),
+      label: t("columns.costingMethod", { namespace: "inventory" }),
       accessor: (m) => (
         <span className={cn("text-[11px] font-medium px-2 py-0.5 rounded-full border", 
           m.costing_method === "FIFO" 
@@ -387,24 +389,24 @@ export function MaterialTable({
 
     cols.push({
       id: "default_purchase_unit",
-      header: "وحدة الشراء",
-      label: "وحدة الشراء الافتراضية",
+      header: t("columns.purchaseUnit", { namespace: "inventory" }),
+      label: t("columns.purchaseUnit", { namespace: "inventory" }),
       accessor: (m) => m.units?.find(u => u.id === m.default_purchase_unit_id)?.name || "",
       className: "text-slate-500"
     });
 
     cols.push({
       id: "default_sale_unit",
-      header: "وحدة المبيع",
-      label: "وحدة المبيع الافتراضية",
+      header: t("columns.saleUnit", { namespace: "inventory" }),
+      label: t("columns.saleUnit", { namespace: "inventory" }),
       accessor: (m) => m.units?.find(u => u.id === m.default_sale_unit_id)?.name || "",
       className: "text-slate-500"
     });
 
     cols.push({
       id: "default_warehouse",
-      header: "المستودع الافتراضي",
-      label: "المستودع الافتراضي",
+      header: t("columns.defaultWarehouse", { namespace: "inventory" }),
+      label: t("columns.defaultWarehouse", { namespace: "inventory" }),
       accessor: (row) => (
         <span className="text-[11px] text-slate-500">{row.default_warehouse_id || "—"}</span>
       ),
@@ -413,8 +415,8 @@ export function MaterialTable({
 
     cols.push({
       id: "default_purchase_currency",
-      header: "عملة الشراء",
-      label: "عملة الشراء",
+      header: t("columns.purchaseCurrency", { namespace: "inventory" }),
+      label: t("columns.purchaseCurrency", { namespace: "inventory" }),
       accessor: (row) => (
         <span className="text-[11px] text-slate-500">{row.default_purchase_currency || "—"}</span>
       ),
@@ -423,8 +425,8 @@ export function MaterialTable({
 
     cols.push({
       id: "default_sale_currency",
-      header: "عملة البيع",
-      label: "عملة البيع",
+      header: t("columns.saleCurrency", { namespace: "inventory" }),
+      label: t("columns.saleCurrency", { namespace: "inventory" }),
       accessor: (row) => (
         <span className="text-[11px] text-slate-500">{row.default_sale_currency || "—"}</span>
       ),
@@ -433,11 +435,11 @@ export function MaterialTable({
 
     cols.push({
       id: "has_expiry",
-      header: "صلاحية",
-      label: "صلاحية",
+      header: t("columns.expiry", { namespace: "inventory" }),
+      label: t("columns.expiry", { namespace: "inventory" }),
       accessor: (row) => (
         <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${row.has_expiry ? 'bg-amber-50 text-amber-700 border border-amber-200' : 'bg-slate-50 text-slate-400 border border-slate-200'}`}>
-          {row.has_expiry ? "له صلاحية" : "بدون صلاحية"}
+          {row.has_expiry ? t("materials.expiry.has", { namespace: "inventory" }) : t("materials.expiry.none", { namespace: "inventory" })}
         </span>
       ),
       className: "text-center",
@@ -445,8 +447,8 @@ export function MaterialTable({
 
     cols.push({
       id: "expiry_alert_before_days",
-      header: "التنبيه (أيام)",
-      label: "التنبيه قبل الصلاحية (أيام)",
+      header: t("columns.expiryAlert", { namespace: "inventory" }),
+      label: t("columns.expiryAlert", { namespace: "inventory" }),
       accessor: (row) => (
         <span className="text-[11px] text-slate-600">{row.has_expiry ? row.expiry_alert_before_days : "—"}</span>
       ),
@@ -455,16 +457,16 @@ export function MaterialTable({
 
     cols.push({
       id: "notes",
-      header: "ملاحظة",
-      label: "ملاحظات",
+      header: t("columns.notes", { namespace: "inventory" }),
+      label: t("columns.notes", { namespace: "inventory" }),
       accessor: (m) => m.notes || "",
       className: "text-slate-500 italic"
     });
 
     cols.push({
       id: "actions",
-      header: "إجراءات",
-      label: "إجراءات",
+      header: t("columns.actions", { namespace: "inventory" }),
+      label: t("columns.actions", { namespace: "inventory" }),
       accessor: (m) => (
         <TableActions
           onView={() => onRowClick?.(m)}
@@ -475,7 +477,7 @@ export function MaterialTable({
     });
 
     return cols;
-  }, [categories, onManageUnits, formatAmount, currencies, onEdit, onDelete, onRowClick, rawPriceBase, unitCostBase, extraCostBase, totalReceived, totalAvailable, isBaseCurrency, cs]);
+  }, [categories, onManageUnits, formatAmount, currencies, onEdit, onDelete, onRowClick, rawPriceBase, unitCostBase, extraCostBase, totalReceived, totalAvailable, isBaseCurrency, cs, t]);
 
   // Default visible: only base currency's money columns are shown.
   const defaultVisible = useMemo(() => {
@@ -530,14 +532,14 @@ export function MaterialTable({
     const colIds = enrichedColumns.map(c => c.id);
     return colIds.map(id => {
       if (id === "name") {
-        return { id: "count", columnId: "name", label: "", value: `${sortedMaterials.length} مادة`, className: "text-slate-500 font-medium" };
+        return { id: "count", columnId: "name", label: "", value: `${sortedMaterials.length} ${t("labels.materialsCount", { namespace: "inventory" })}`, className: "text-slate-500 font-medium" };
       }
       const totalMatch = id.match(/^total_value_(.+)$/);
       if (totalMatch) {
         const currCode = totalMatch[1];
         const isBase = isBaseCurrency(currCode);
         return {
-          id: `${id}_summary`, columnId: id, label: "المجموع",
+          id: `${id}_summary`, columnId: id, label: t("labels.summary", { namespace: "inventory" }),
           value: totalValueBase > 0 ? formatAmount(totalValueBase, { currencyCode: currCode }) : "—",
           className: isBase
             ? "text-slate-900 font-black"
@@ -549,7 +551,7 @@ export function MaterialTable({
         const currCode = availMatch[1];
         const isBase = isBaseCurrency(currCode);
         return {
-          id: `${id}_summary`, columnId: id, label: "المجموع للمتوفر",
+          id: `${id}_summary`, columnId: id, label: t("labels.totalAvailable", { namespace: "inventory" }),
           value: availableValueBase > 0 ? formatAmount(availableValueBase, { currencyCode: currCode }) : "—",
           className: isBase
             ? "text-indigo-700 font-black"
@@ -558,14 +560,14 @@ export function MaterialTable({
       }
       return { id: `${id}_spacer`, columnId: id, label: "", value: "" };
     });
-  }, [sortedMaterials, enrichedColumns, formatAmount, unitCostBase, totalReceived, totalAvailable, isBaseCurrency]);
+  }, [sortedMaterials, enrichedColumns, formatAmount, unitCostBase, totalReceived, totalAvailable, isBaseCurrency, t]);
 
   return (
     <TableShell
-      title="قائمة المواد"
+      title={t("materials.title", { namespace: "inventory" })}
       search={search}
       onSearchChange={onSearchChange}
-      searchPlaceholder="بحث بالاسم أو الكود أو الباركود..."
+      searchPlaceholder={t("warehouses.searchPlaceholder", { namespace: "inventory" })}
       columns={toolbarColumns}
       onColumnToggle={toggleColumn}
       onColumnsReset={resetToDefault}
@@ -586,7 +588,7 @@ export function MaterialTable({
             handleSort(col.id as SortField);
           }
         }}
-        emptyMessage={search ? "لا توجد مواد تطابق معايير البحث" : "قائمة المواد فارغة"}
+        emptyMessage={search ? t("labels.noResultsMatch", { namespace: "inventory" }) : `${t("materials.title", { namespace: "inventory" })} ${t("labels.empty", { namespace: "inventory" })}`}
         summary={summaryColumns}
         enableResize
         tableId="materials"

@@ -185,7 +185,7 @@ describe("computeBalanceSheet", () => {
     ];
     const result = computeBalanceSheet(accounts, { netProfit: 10000, totalDrawings: 2000 });
     const equitySection = result.sections.find(s => s.id === "equity")!;
-    expect(equitySection.rows.some(r => r.label === "صافي الأرباح" && r.value === 10000)).toBe(true);
+    expect(equitySection.rows.some(r => r.label === "reports.balanceSheet.sections.netProfit" && r.value === 10000)).toBe(true);
     expect(result.totalDrawings).toBe(2000);
     expect(result.totalEquity).toBe(38000);
   });
@@ -431,16 +431,16 @@ describe("computeBalanceSheet", () => {
     const eqSection = result.sections.find(s => s.id === "equity")!;
     const labels = eqSection.rows.map(r => r.label);
 
-    const partnerCapital = eqSection.rows.find(r => r.label === "رأس مال الشركاء");
-    const retained = eqSection.rows.find(r => r.label === "الأرباح المبقاة");
+    const partnerCapital = eqSection.rows.find(r => r.label === "reports.balanceSheet.sections.partnerCapital");
+    const retained = eqSection.rows.find(r => r.label === "reports.balanceSheet.sections.retainedEarnings");
 
     expect(partnerCapital?.value).toBe(300);
     expect(partnerCapital?.children?.map(r => r.label)).toEqual(["رأس المال"]);
     expect(retained?.value).toBe(45);
     expect(retained?.children).toBeUndefined();
-    expect(labels).not.toContain("حقوق ملكية أخرى");
-    expect(labels).not.toContain("رصيد افتتاحي");
-    expect(labels).not.toContain("حقوق الملكية");
+    expect(labels).not.toContain("reports.balanceSheet.sections.otherEquity");
+    expect(labels).not.toContain("reports.balanceSheet.sections.openingBalanceEquity");
+    expect(labels).not.toContain("reports.balanceSheet.sections.equityContainer");
 
     expect(result.totalEquity).toBe(345);
   });
