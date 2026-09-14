@@ -10,9 +10,11 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@shar
 import { RadioGroup, RadioGroupItem } from "@shared/ui/radio-group";
 import { Badge } from "@shared/ui/badge";
 import { CheckCircle2, Search, Loader2, ArrowRight, Building2 } from "lucide-react";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 export default function SetupWizard() {
   const navigate = useNavigate();
+  const { t } = useLocalization();
   const [step, setStep] = useState<"loading" | "welcome" | "pick" | "done">("loading");
   const [companyName, setCompanyName] = useState("");
   const [companyType, setCompanyType] = useState<string>(COMPANY_TYPE_EXISTING);
@@ -144,8 +146,8 @@ export default function SetupWizard() {
         <Card className="w-full max-w-md text-center">
           <CardHeader>
             <CheckCircle2 className="w-16 h-16 text-emerald-500 mx-auto mb-2" />
-            <CardTitle className="text-2xl">تم الإعداد بنجاح</CardTitle>
-            <CardDescription>جاري تحميل التطبيق...</CardDescription>
+            <CardTitle className="text-2xl">{t("done.title", { namespace: "setup" })}</CardTitle>
+            <CardDescription>{t("done.loading", { namespace: "setup" })}</CardDescription>
           </CardHeader>
         </Card>
       </div>
@@ -157,29 +159,29 @@ export default function SetupWizard() {
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 p-4">
         <Card className="w-full max-w-lg text-center">
           <CardHeader>
-            <CardTitle className="text-3xl">مرحباً بك في نظام المحاسبة</CardTitle>
+            <CardTitle className="text-3xl">{t("welcome.title", { namespace: "setup" })}</CardTitle>
             <CardDescription className="text-base mt-2">
               {currenciesReady
-                ? "أدخل اسم المنشأة لإكمال الإعداد."
-                : " لنبدأ بإعداد المنشأة والعملات. أدخل اسم المنشأة ثم اختر العملة الأساسية."}
+                ? t("welcome.descCompanyOnly", { namespace: "setup" })
+                : t("welcome.descCurrencies", { namespace: "setup" })}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="text-right">
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">اسم المنشأة</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">{t("welcome.companyName", { namespace: "setup" })}</label>
               <div className="relative">
                 <Building2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 <Input
                   value={companyName}
                   onChange={(e) => setCompanyName(e.target.value)}
-                  placeholder="أدخل اسم المنشأة"
+                  placeholder={t("welcome.companyNamePlaceholder", { namespace: "setup" })}
                   className="pr-10 h-11 text-base"
                 />
               </div>
             </div>
 
             <div className="text-right space-y-2">
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">نوع الشركة</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">{t("welcome.companyType", { namespace: "setup" })}</label>
               <RadioGroup value={companyType} onValueChange={setCompanyType} className="gap-2">
                 <label
                   htmlFor="company-type-existing"
@@ -189,16 +191,16 @@ export default function SetupWizard() {
                       : "border-slate-200 bg-white hover:border-slate-300"
                   }`}
                 >
-                  <RadioGroupItem value={COMPANY_TYPE_EXISTING} id="company-type-existing" aria-label="شركة قائمة" className="mt-1" />
+                  <RadioGroupItem value={COMPANY_TYPE_EXISTING} id="company-type-existing" aria-label={t("welcome.existingCompany", { namespace: "setup" })} className="mt-1" />
                   <span className="flex-1">
                     <span className="flex items-center justify-between gap-2">
-                      <span className="text-sm font-bold text-slate-800">شركة قائمة</span>
+                      <span className="text-sm font-bold text-slate-800">{t("welcome.existingCompany", { namespace: "setup" })}</span>
                       {companyType === COMPANY_TYPE_EXISTING && (
                         <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />
                       )}
                     </span>
                     <span className="block text-xs text-slate-500 mt-0.5">
-                      لديك بيانات مالية سابقة وتريد نقل الوضع الحالي للشركة إلى التطبيق.
+                      {t("welcome.existingCompanyDesc", { namespace: "setup" })}
                     </span>
                   </span>
                 </label>
@@ -210,16 +212,16 @@ export default function SetupWizard() {
                       : "border-slate-200 bg-white hover:border-slate-300"
                   }`}
                 >
-                  <RadioGroupItem value={COMPANY_TYPE_NEW} id="company-type-new" aria-label="شركة جديدة" className="mt-1" />
+                  <RadioGroupItem value={COMPANY_TYPE_NEW} id="company-type-new" aria-label={t("welcome.newCompany", { namespace: "setup" })} className="mt-1" />
                   <span className="flex-1">
                     <span className="flex items-center justify-between gap-2">
-                      <span className="text-sm font-bold text-slate-800">شركة جديدة</span>
+                      <span className="text-sm font-bold text-slate-800">{t("welcome.newCompany", { namespace: "setup" })}</span>
                       {companyType === COMPANY_TYPE_NEW && (
                         <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />
                       )}
                     </span>
                     <span className="block text-xs text-slate-500 mt-0.5">
-                      ستبدأ المحاسبة من بداية نشاط الشركة داخل التطبيق.
+                      {t("welcome.newCompanyDesc", { namespace: "setup" })}
                     </span>
                   </span>
                 </label>
@@ -227,18 +229,18 @@ export default function SetupWizard() {
             </div>
             {!currenciesReady && (
               <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-right text-sm text-amber-800">
-                <p className="font-bold mb-1">العملة الأساسية</p>
-                <p>هي العملة التي تُسجل بها جميع المعاملات المالية في النظام. يمكنك تحويلها إلى أي عملة أخرى لاحقاً.</p>
+                <p className="font-bold mb-1">{t("welcome.baseCurrencyInfo", { namespace: "setup" })}</p>
+                <p>{t("welcome.baseCurrencyDesc", { namespace: "setup" })}</p>
               </div>
             )}
             {currenciesReady ? (
               <Button size="lg" className="w-full text-lg" onClick={handleSaveCompanyOnly} disabled={!companyName.trim() || saving}>
                 {saving ? <Loader2 className="w-5 h-5 animate-spin ml-2" /> : null}
-                حفظ
+                {t("welcome.save", { namespace: "setup" })}
               </Button>
             ) : (
               <Button size="lg" className="w-full text-lg" onClick={handleStart} disabled={!companyName.trim()}>
-                بدء الإعداد
+                {t("welcome.startSetup", { namespace: "setup" })}
                 <ArrowRight className="w-5 h-5 mr-2" />
               </Button>
             )}
@@ -252,14 +254,14 @@ export default function SetupWizard() {
     <div className="min-h-screen flex items-start justify-center bg-gradient-to-br from-slate-50 to-slate-100 p-4 pt-12">
       <Card className="w-full max-w-2xl">
         <CardHeader>
-          <CardTitle>اختيار العملات</CardTitle>
+          <CardTitle>{t("currency.title", { namespace: "setup" })}</CardTitle>
           <CardDescription>
-            اختر العملة الأساسية (إلزامي) وعملة ثانوية (اختياري)
+            {t("currency.desc", { namespace: "setup" })}
           </CardDescription>
           <div className="relative mt-2">
             <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <Input
-              placeholder="بحث عن عملة..."
+              placeholder={t("currency.searchPlaceholder", { namespace: "setup" })}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pr-9"
@@ -294,14 +296,14 @@ export default function SetupWizard() {
                       className={`cursor-pointer text-xs ${isBase ? "bg-emerald-500" : ""}`}
                       onClick={() => handleToggleBase(wc.code)}
                     >
-                      {isBase ? "✓ أساسية" : "أساسية"}
+                      {isBase ? `✓ ${t("currency.base", { namespace: "setup" })}` : t("currency.base", { namespace: "setup" })}
                     </Badge>
                     <Badge
                       variant={isSecondary ? "default" : "outline"}
                       className={`cursor-pointer text-xs ${isSecondary ? "bg-blue-500" : ""}`}
                       onClick={() => handleToggleSecondary(wc.code)}
                     >
-                      {isSecondary ? "✓ ثانوية" : "ثانوية"}
+                      {isSecondary ? `✓ ${t("currency.secondary", { namespace: "setup" })}` : t("currency.secondary", { namespace: "setup" })}
                     </Badge>
                   </div>
                 </div>
@@ -313,16 +315,16 @@ export default function SetupWizard() {
             <div className="text-sm text-slate-500">
               {baseCode ? (
                 <span className="text-emerald-700 font-medium">
-                  ✓ العملة الأساسية: {baseCode}
-                  {secondaryCode && <span className="text-blue-700"> | الثانوية: {secondaryCode}</span>}
+                  ✓ {t("currency.baseSelected", { namespace: "setup" })} {baseCode}
+                  {secondaryCode && <span className="text-blue-700"> | {t("currency.secondarySelected", { namespace: "setup" })} {secondaryCode}</span>}
                 </span>
               ) : (
-                "الرجاء اختيار العملة الأساسية"
+                t("currency.selectBase", { namespace: "setup" })
               )}
             </div>
             <Button onClick={handleFinish} disabled={!baseCode || saving}>
               {saving ? <Loader2 className="w-4 h-4 animate-spin ml-1" /> : null}
-              تأكيد الإعداد
+              {t("currency.confirm", { namespace: "setup" })}
             </Button>
           </div>
         </CardContent>

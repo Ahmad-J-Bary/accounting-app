@@ -6,6 +6,7 @@ import SetupWizard from "@modules/core/setup/pages/setupWizard";
 import { currencyService } from "@modules/core/api/currencyService";
 import { settingsService } from "@modules/core/api/settingsService";
 import { COMPANY_TYPE_EXISTING, COMPANY_TYPE_NEW } from "@modules/opening-balance/lib/wizard-types";
+import { LocalizationProvider } from "@app/providers/LocalizationProvider";
 
 vi.mock("@modules/core/api/currencyService", () => ({
   currencyService: {
@@ -25,7 +26,9 @@ vi.mock("@modules/core/api/settingsService", () => ({
 function renderSetup() {
   return render(
     <MemoryRouter initialEntries={["/setup"]}>
-      <SetupWizard />
+      <LocalizationProvider>
+        <SetupWizard />
+      </LocalizationProvider>
     </MemoryRouter>,
   );
 }
@@ -35,7 +38,7 @@ describe("SetupWizard company type", () => {
     vi.clearAllMocks();
   });
 
-  it("defaults to شركة قائمة (EXISTING) and shows both descriptions", async () => {
+  it("defaults to EXISTING and shows both descriptions", async () => {
     vi.mocked(currencyService.isSetupComplete).mockResolvedValue(true);
     vi.mocked(settingsService.getSettings).mockResolvedValue({
       company_name: "شركتي",
@@ -74,7 +77,7 @@ describe("SetupWizard company type", () => {
     expect(newCard?.className).not.toContain("ring-emerald-200");
   });
 
-  it("moves the clear selected state when شركة جديدة is picked", async () => {
+  it("moves the clear selected state when NEW is picked", async () => {
     const user = userEvent.setup();
     vi.mocked(currencyService.isSetupComplete).mockResolvedValue(true);
     vi.mocked(settingsService.getSettings).mockResolvedValue({
@@ -112,7 +115,7 @@ describe("SetupWizard company type", () => {
     });
   });
 
-  it("sends NEW when شركة جديدة is selected", async () => {
+  it("sends NEW when NEW company is selected", async () => {
     const user = userEvent.setup();
     vi.mocked(currencyService.isSetupComplete).mockResolvedValue(true);
     vi.mocked(settingsService.getSettings).mockResolvedValue({
