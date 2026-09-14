@@ -30,7 +30,7 @@ export default function UsersPage() {
     queryKey: ["users"],
     fetchData: () => userService.listUsers(),
     searchFields: ["username", "full_name"],
-    errorLabel: t("users.errors.loadUsersFailed", { namespace: "users",  }),
+    errorLabel: t("errors.loadUsersFailed", { namespace: "users",  }),
   });
 
   const [roles, setRoles] = useState<Role[]>([]);
@@ -46,7 +46,7 @@ export default function UsersPage() {
       const rArgs = await userService.listRoles();
       setRoles(rArgs);
     } catch (_e) {
-      toast.error(t("users.toasts.rolesLoadFailed", { namespace: "users",  }));
+      toast.error(t("toasts.rolesLoadFailed", { namespace: "users",  }));
     } finally {
       setLoadingRoles(false);
     }
@@ -62,9 +62,9 @@ export default function UsersPage() {
       await userService.createUser(payload);
       setShowUserDialog(false);
       refreshUsers(true);
-      toast.success(t("users.toasts.userAdded", { namespace: "users",  }));
+      toast.success(t("toasts.userAdded", { namespace: "users",  }));
     } catch (e) {
-      toast.error(t("users.toasts.saveFailed", { namespace: "users",  }) + e);
+      toast.error(t("toasts.saveFailed", { namespace: "users",  }) + e);
     } finally {
       setSaving(false);
     }
@@ -75,37 +75,37 @@ export default function UsersPage() {
     try {
       if (payload.id) {
         await userService.updateRole(payload as Role);
-        toast.success(t("users.toasts.roleUpdated", { namespace: "users",  }));
+        toast.success(t("toasts.roleUpdated", { namespace: "users",  }));
       } else {
         await userService.createRole(payload);
-        toast.success(t("users.toasts.roleAdded", { namespace: "users",  }));
+        toast.success(t("toasts.roleAdded", { namespace: "users",  }));
       }
       setShowRoleDialog(false);
       loadRoles();
     } catch (e) {
-      toast.error(t("users.toasts.roleSaveFailed", { namespace: "users",  }) + e);
+      toast.error(t("toasts.roleSaveFailed", { namespace: "users",  }) + e);
     } finally {
       setSaving(false);
     }
   };
 
   const handleDeleteRole = async (id: string) => {
-    if (!confirm(t("users.confirmDeleteRole", { namespace: "users",  }))) return;
+    if (!confirm(t("confirmDeleteRole", { namespace: "users",  }))) return;
     try {
       await userService.deleteRole(id);
-      toast.success(t("users.toasts.roleDeleted", { namespace: "users",  }));
+      toast.success(t("toasts.roleDeleted", { namespace: "users",  }));
       loadRoles();
     } catch (e) {
-      toast.error(t("users.toasts.deleteFailed", { namespace: "users",  }) + e);
+      toast.error(t("toasts.deleteFailed", { namespace: "users",  }) + e);
     }
   };
 
   return (
     <div className="flex flex-col gap-6" dir="rtl">
       <PageHeader
-        title={t("users.title", { namespace: "users",  })}
-        subtitle={t("users.subtitle", { namespace: "users",  })}
-        breadcrumbs={[{ label: t("users.breadcrumbHome", { namespace: "users",  }), to: "/dashboard" }, { label: t("users.breadcrumbSettings", { namespace: "users",  }) }, { label: t("users.breadcrumbUsers", { namespace: "users",  }) }]}
+        title={t("title", { namespace: "users",  })}
+        subtitle={t("subtitle", { namespace: "users",  })}
+        breadcrumbs={[{ label: t("breadcrumbHome", { namespace: "users",  }), to: "/dashboard" }, { label: t("breadcrumbSettings", { namespace: "users",  }) }, { label: t("breadcrumbUsers", { namespace: "users",  }) }]}
         actions={
           <Button onClick={() => {
             if (activeTab === "users") {
@@ -116,24 +116,24 @@ export default function UsersPage() {
             }
           }} className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100 font-bold">
             <Plus className="w-4 h-4 ml-2" />
-            {activeTab === "users" ? t("users.actions.newUser", { namespace: "users",  }) : t("users.actions.newRole", { namespace: "users",  })}
+            {activeTab === "users" ? t("actions.newUser", { namespace: "users",  }) : t("actions.newRole", { namespace: "users",  })}
           </Button>
         }
       />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <StatSummary label={t("users.stats.totalUsers", { namespace: "users",  })} value={users.length} icon={<UsersIcon />} />
-        <StatSummary label={t("users.stats.activeUsers", { namespace: "users",  })} value={activeCount} icon={<ShieldCheck />} color="text-emerald-600" />
-        <StatSummary label={t("users.stats.systemRoles", { namespace: "users",  })} value={roles.length} icon={<Shield />} color="text-blue-600" />
+        <StatSummary label={t("stats.totalUsers", { namespace: "users",  })} value={users.length} icon={<UsersIcon />} />
+        <StatSummary label={t("stats.activeUsers", { namespace: "users",  })} value={activeCount} icon={<ShieldCheck />} color="text-emerald-600" />
+        <StatSummary label={t("stats.systemRoles", { namespace: "users",  })} value={roles.length} icon={<Shield />} color="text-blue-600" />
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList className="bg-white border border-slate-200 p-1 h-12 rounded-xl shadow-sm">
           <TabsTrigger value="users" className="rounded-lg px-6 gap-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white transition-all">
-            <UsersIcon className="w-4 h-4" /> {t("users.tabs.users", { namespace: "users",  })}
+            <UsersIcon className="w-4 h-4" /> {t("tabs.users", { namespace: "users",  })}
           </TabsTrigger>
           <TabsTrigger value="roles" className="rounded-lg px-6 gap-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white transition-all">
-            <Shield className="w-4 h-4" /> {t("users.tabs.roles", { namespace: "users",  })}
+            <Shield className="w-4 h-4" /> {t("tabs.roles", { namespace: "users",  })}
           </TabsTrigger>
         </TabsList>
 

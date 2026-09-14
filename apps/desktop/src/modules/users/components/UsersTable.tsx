@@ -22,52 +22,52 @@ export function UsersTable({ data, loading, search, onSearchChange, roles }: Use
   const columns = useMemo<UnifiedColumn<User>[]>(() => [
     {
       id: "full_name",
-      header: t("users.columns.fullName", { namespace: "users",  }),
-      label: t("users.columns.fullName", { namespace: "users",  }),
+      header: t("columns.fullName", { namespace: "users",  }),
+      label: t("columns.fullName", { namespace: "users",  }),
       accessor: "full_name",
       className: "font-bold text-slate-800"
     },
     {
       id: "username",
-      header: t("users.columns.username", { namespace: "users",  }),
-      label: t("users.columns.username", { namespace: "users",  }),
+      header: t("columns.username", { namespace: "users",  }),
+      label: t("columns.username", { namespace: "users",  }),
       accessor: "username",
       className: "font-mono font-medium text-slate-500"
     },
     {
       id: "role",
-      header: t("users.columns.role", { namespace: "users",  }),
-      label: t("users.columns.roleLabel", { namespace: "users",  }),
+      header: t("columns.role", { namespace: "users",  }),
+      label: t("columns.roleLabel", { namespace: "users",  }),
       accessor: (u) => {
         const role = roles.find(r => r.id === u.role_id);
         return (
           <span className="bg-blue-50 text-blue-700 border border-blue-100 px-2.5 py-0.5 rounded-full text-[11px] font-bold">
-            {role?.name ?? u.role_name ?? t("users.columns.unspecified", { namespace: "users",  })}
+            {role?.name ?? u.role_name ?? t("columns.unspecified", { namespace: "users",  })}
           </span>
         );
       },
     },
     {
       id: "last_login",
-      header: t("users.columns.lastSeen", { namespace: "users",  }),
-      label: t("users.columns.lastSeenLabel", { namespace: "users",  }),
+      header: t("columns.lastSeen", { namespace: "users",  }),
+      label: t("columns.lastSeenLabel", { namespace: "users",  }),
       accessor: (u) => u.last_login ? formatDateTime(u.last_login) : "",
       className: "text-slate-500 tabular-nums"
     },
     {
       id: "status",
-      header: t("users.columns.status", { namespace: "users",  }),
-      label: t("users.columns.statusLabel", { namespace: "users",  }),
+      header: t("columns.status", { namespace: "users",  }),
+      label: t("columns.statusLabel", { namespace: "users",  }),
       accessor: (u) => <StatusBadge status={u.is_active ? "active" : "inactive"} />,
     },
     {
       id: "actions",
-      header: t("users.columns.actions", { namespace: "users",  }),
-      label: t("users.columns.actions", { namespace: "users",  }),
+      header: t("columns.actions", { namespace: "users",  }),
+      label: t("columns.actions", { namespace: "users",  }),
       accessor: () => (
         <TableActions
-          onEdit={() => toast.info(t("users.toasts.editDevelopment", { namespace: "users",  }))}
-          onDelete={() => toast.warning(t("users.toasts.deleteDevelopment", { namespace: "users",  }))}
+          onEdit={() => toast.info(t("toasts.editDevelopment", { namespace: "users",  }))}
+          onDelete={() => toast.warning(t("toasts.deleteDevelopment", { namespace: "users",  }))}
         />
       ),
     }
@@ -117,7 +117,7 @@ export function UsersTable({ data, loading, search, onSearchChange, roles }: Use
     <TableShell
       search={search}
       onSearchChange={onSearchChange}
-      searchPlaceholder={t("users.searchPlaceholder", { namespace: "users",  })}
+      searchPlaceholder={t("searchPlaceholder", { namespace: "users",  })}
       columns={toolbarColumns}
       onColumnToggle={toggleColumn}
       onColumnsReset={resetToDefault}
@@ -138,7 +138,7 @@ export function UsersTable({ data, loading, search, onSearchChange, roles }: Use
             handleSort(col.id as SortField);
           }
         }}
-        emptyMessage={search ? t("users.empty.searchResults", { namespace: "users",  }) : t("users.empty.noUsers", { namespace: "users",  })}
+        emptyMessage={search ? t("empty.searchResults", { namespace: "users",  }) : t("empty.noUsers", { namespace: "users",  })}
       />
     </TableShell>
   );

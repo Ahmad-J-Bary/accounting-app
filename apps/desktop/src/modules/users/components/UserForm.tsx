@@ -40,26 +40,26 @@ export function UserForm({ open, onOpenChange, roles, onSave, saving }: UserForm
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-md" dir="rtl">
         <DialogHeader>
-          <DialogTitle>{t("users.form.titleAdd", { namespace: "users",  })}</DialogTitle>
-          <DialogDescription>{t("users.form.description", { namespace: "users",  })}</DialogDescription>
+          <DialogTitle>{t("form.titleAdd", { namespace: "users",  })}</DialogTitle>
+          <DialogDescription>{t("form.description", { namespace: "users",  })}</DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-2">
           <div className="space-y-1">
-            <Label>{t("users.form.fullNameLabel", { namespace: "users",  })}</Label>
-            <Input value={form.full_name ?? ""} onChange={e => setForm(p => ({ ...p, full_name: e.target.value }))} placeholder={t("users.form.fullNamePlaceholder", { namespace: "users",  })} />
+            <Label>{t("form.fullNameLabel", { namespace: "users",  })}</Label>
+            <Input value={form.full_name ?? ""} onChange={e => setForm(p => ({ ...p, full_name: e.target.value }))} placeholder={t("form.fullNamePlaceholder", { namespace: "users",  })} />
           </div>
           <div className="space-y-1">
-            <Label>{t("users.form.usernameLabel", { namespace: "users",  })}</Label>
-            <Input value={form.username ?? ""} onChange={e => setForm(p => ({ ...p, username: e.target.value }))} placeholder={t("users.form.usernamePlaceholder", { namespace: "users",  })} />
+            <Label>{t("form.usernameLabel", { namespace: "users",  })}</Label>
+            <Input value={form.username ?? ""} onChange={e => setForm(p => ({ ...p, username: e.target.value }))} placeholder={t("form.usernamePlaceholder", { namespace: "users",  })} />
           </div>
           <div className="space-y-1">
-            <Label>{t("users.form.passwordLabel", { namespace: "users",  })}</Label>
+            <Label>{t("form.passwordLabel", { namespace: "users",  })}</Label>
             <Input type="password" value={form.password ?? ""} onChange={e => setForm(p => ({ ...p, password: e.target.value }))} />
           </div>
           <div className="space-y-1">
-            <Label>{t("users.form.roleLabel", { namespace: "users",  })}</Label>
+            <Label>{t("form.roleLabel", { namespace: "users",  })}</Label>
             <Select value={form.role_id} onValueChange={v => setForm(p => ({ ...p, role_id: v }))}>
-              <SelectTrigger><SelectValue placeholder={t("users.form.rolePlaceholder", { namespace: "users",  })} /></SelectTrigger>
+              <SelectTrigger><SelectValue placeholder={t("form.rolePlaceholder", { namespace: "users",  })} /></SelectTrigger>
               <SelectContent>
                 {roles.map(r => (
                   <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
@@ -69,9 +69,9 @@ export function UserForm({ open, onOpenChange, roles, onSave, saving }: UserForm
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>{t("users.form.cancel", { namespace: "users",  })}</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>{t("form.cancel", { namespace: "users",  })}</Button>
           <Button onClick={handleSave} disabled={saving || !form.username || !form.full_name || !form.password || !form.role_id}>
-            {saving ? t("users.form.saving", { namespace: "users",  }) : t("users.form.save", { namespace: "users",  })}
+            {saving ? t("form.saving", { namespace: "users",  }) : t("form.save", { namespace: "users",  })}
           </Button>
         </DialogFooter>
       </DialogContent>

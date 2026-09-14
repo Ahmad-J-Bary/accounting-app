@@ -62,30 +62,30 @@ export function RoleForm({ open, onOpenChange, role, onSave, saving }: RoleFormP
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-md" dir="rtl">
         <DialogHeader>
-          <DialogTitle>{role ? t("users.form.titleEdit", { namespace: "users",  }) : t("users.form.titleAddRole", { namespace: "users",  })}</DialogTitle>
-          <DialogDescription>{t("users.form.descriptionRole", { namespace: "users",  })}</DialogDescription>
+          <DialogTitle>{role ? t("form.titleEdit", { namespace: "users",  }) : t("form.titleAddRole", { namespace: "users",  })}</DialogTitle>
+          <DialogDescription>{t("form.descriptionRole", { namespace: "users",  })}</DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-2">
           <div className="space-y-1">
-            <Label>{t("users.form.nameLabel", { namespace: "users",  })}</Label>
+            <Label>{t("form.nameLabel", { namespace: "users",  })}</Label>
             <Input 
               value={form.name} 
               onChange={e => setForm(p => ({ ...p, name: e.target.value }))} 
-              placeholder={t("users.form.namePlaceholder", { namespace: "users",  })} 
+              placeholder={t("form.namePlaceholder", { namespace: "users",  })} 
               disabled={role?.is_system_role}
             />
           </div>
           <div className="space-y-1">
-            <Label>{t("users.form.descriptionLabel", { namespace: "users",  })}</Label>
+            <Label>{t("form.descriptionLabel", { namespace: "users",  })}</Label>
             <Input 
               value={form.description} 
               onChange={e => setForm(p => ({ ...p, description: e.target.value }))} 
-              placeholder={t("users.form.descriptionPlaceholder", { namespace: "users",  })} 
+              placeholder={t("form.descriptionPlaceholder", { namespace: "users",  })} 
             />
           </div>
           
           <div className="space-y-3 pt-2">
-            <Label className="text-sm font-bold">{t("users.form.permissionsLabel", { namespace: "users",  })}</Label>
+            <Label className="text-sm font-bold">{t("form.permissionsLabel", { namespace: "users",  })}</Label>
             <div className="grid grid-cols-2 gap-3 bg-slate-50 p-3 rounded-lg border border-slate-100">
               {AVAILABLE_PERMISSIONS.map(p => (
                 <div key={p.id} className="flex items-center space-x-2 space-x-reverse">
@@ -101,9 +101,9 @@ export function RoleForm({ open, onOpenChange, role, onSave, saving }: RoleFormP
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>{t("users.form.cancel", { namespace: "users",  })}</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>{t("form.cancel", { namespace: "users",  })}</Button>
           <Button onClick={handleSave} disabled={saving || !form.name || form.permissions.length === 0}>
-            {saving ? t("users.form.saving", { namespace: "users",  }) : t("users.form.saveRole", { namespace: "users",  })}
+            {saving ? t("form.saving", { namespace: "users",  }) : t("form.saveRole", { namespace: "users",  })}
           </Button>
         </DialogFooter>
       </DialogContent>
