@@ -15,6 +15,7 @@ import { returnService } from "@modules/invoicing/api/returnService";
 import { materialService } from "@modules/inventory/api/materialService";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@shared/lib/utils";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 // ── Helpers ──
 
@@ -117,6 +118,7 @@ export function ReturnFromMaterialPanel({
   materials: materialsProp
 }: ReturnFromMaterialPanelProps) {
   const [form, setForm] = useState<ReturnFormState>(() => getInitialFormState(initialReturnType, initialPartyId));
+  const { t } = useLocalization();
 
   const [customers, setCustomers] = useState<CustomerDto[]>([]);
   const [suppliers, setSuppliers] = useState<SupplierDto[]>([]);
@@ -157,9 +159,9 @@ export function ReturnFromMaterialPanel({
     setLoadingParties(true);
     Promise.all([customerService.list(), supplierService.list()])
       .then(([custs, supps]) => { setCustomers(custs); setSuppliers(supps); })
-      .catch(() => toast.error("فشل تحميل العملاء والموردين"))
+      .catch(() => toast.error(t("returns.failedLoadParties", { namespace: "inventory" })))
       .finally(() => setLoadingParties(false));
-  }, []);
+  }, [t]);
 
   // Load invoices & returns
   useEffect(() => {
@@ -175,9 +177,9 @@ export function ReturnFromMaterialPanel({
           .filter(r => getReturnPartyId(r, isSales) === form.partyId)
       );
     })
-      .catch(() => toast.error("فشل تحميل البيانات"))
+      .catch(() => toast.error(t("returns.failedLoadData", { namespace: "inventory" })))
       .finally(() => setLoadingInvoices(false));
-  }, [form.partyId, isSales]);
+  }, [form.partyId, isSales, t]);
 
   // Returned quantities map (in base units, matching ReturnsEditor)
   const returnedQtyMap = useMemo(() => {
@@ -275,7 +277,7 @@ export function ReturnFromMaterialPanel({
 
   const handleAddInstance = useCallback((inst: InvoiceLineInstance) => {
     const occKey = `${inst.invoiceId}_${inst.line.material_id}_${inst.line.quantity}_${inst.line.unit_price}`;
-    if (selectedOccurrenceKeys.has(occKey)) { toast.error("هذه المادة مضافة مسبقاً"); return; }
+    if (selectedOccurrenceKeys.has(occKey)) { toast.error(t("returns.alreadyAdded", { namespace: "inventory" })); return; }
 
     const key = `${occKey}_${Date.now()}`;
     const conv = parseConv(inst.conversionFactor);
@@ -308,7 +310,7 @@ export function ReturnFromMaterialPanel({
       notes: "",
     }]);
     setSelectedOccurrenceKeys(prev => new Set(prev).add(occKey));
-  }, [returnedQtyMap, sessionReturnedMap, selectedOccurrenceKeys]);
+  }, [returnedQtyMap, sessionReturnedMap, selectedOccurrenceKeys, t]);
 
   const updateSelectedLine = useCallback((key: string, fields: Partial<SelectedReturnLine>) => {
     setSelectedLines(prev => prev.map(l => l.key === key ? { ...l, ...fields } : l));
@@ -367,8 +369,8 @@ export function ReturnFromMaterialPanel({
   // ── Save ──
 
   const handleSave = async () => {
-    if (!form.partyId) { toast.error("الرجاء اختيار الطرف"); return; }
-    if (!selectedLines.length) { toast.error("الرجاء إضافة مادة واحدة على الأقل"); return; }
+    if (!form.partyId) { toast.error(t("returns.selectParty", { namespace: "inventory" })); return; }
+    if (!selectedLines.length) { toast.error(t("returns.addAtLeastOne", { namespace: "inventory" })); return; }
     setSaving(true);
     try {
       const partyName = isSales
@@ -409,11 +411,11 @@ export function ReturnFromMaterialPanel({
         });
       }
 
-      toast.success("تم تسجيل المرتجع بنجاح");
+      toast.success(t("returns.created", { namespace: "inventory" }));
       onSaved();
       onClose();
     } catch (e) {
-      toast.error("فشل تسجيل المرتجع: " + e);
+      toast.error(t("returns.createFailed", { namespace: "inventory", vars: { error: String(e) } }));
     } finally {
       setSaving(false);
     }
@@ -438,21 +440,21 @@ export function ReturnFromMaterialPanel({
 
   return (
     <FormPanel
-      title={`مرتجع ${isSales ? "مبيعات" : "مشتريات"} (${isSales ? "إرجاع من زبون" : "إرجاع لمورد"})`}
+      title={t("returns.title", { namespace: "inventory", vars: { type: isSales ? t("return.salesSheetTitle", { namespace: "invoicing" }) : t("return.purchaseSheetTitle", { namespace: "invoicing" }), sub: isSales ? t("returns.fromCustomer", { namespace: "inventory" }) : t("returns.toSupplier", { namespace: "inventory" }) }})}
       icon={<Undo2 className={`w-5 h-5 ${isSales ? "text-blue-600" : "text-amber-600"}`} />}
       onClose={onClose}
       onSave={handleSave}
       isSaving={saving}
       saveDisabled={isSaveDisabled}
-      saveLabel="تسجيل المرتجع"
+      saveLabel={t("returns.save", { namespace: "inventory" })}
       width="lg"
     >
       {/* ── بيانات المرتجع ── */}
-      <SidebarSection icon={<Undo2 className="w-3.5 h-3.5" />} title="بيانات المرتجع" defaultOpen={true}>
+      <SidebarSection icon={<Undo2 className="w-3.5 h-3.5" />} title={t("returns.section", { namespace: "inventory" })} defaultOpen={true}>
         <div className="space-y-4 text-right">
           <div className="space-y-1.5">
             <FieldLabel className="flex items-center gap-1.5">
-              <Undo2 className="w-3.5 h-3.5 text-slate-400" /> نوع المرتجع
+              <Undo2 className="w-3.5 h-3.5 text-slate-400" /> {t("returns.type", { namespace: "inventory" })}
             </FieldLabel>
             
             {/* Premium Segmented Control */}
@@ -468,7 +470,7 @@ export function ReturnFromMaterialPanel({
                 )}
               >
                 <ShoppingBag className={cn("w-3.5 h-3.5", !isSales ? "text-amber-600" : "text-slate-400")} />
-                إرجاع لمورد (مشتريات)
+                {t("returns.toSupplier", { namespace: "inventory" })}
               </button>
               <button
                 type="button"
@@ -481,18 +483,18 @@ export function ReturnFromMaterialPanel({
                 )}
               >
                 <ShoppingCart className={cn("w-3.5 h-3.5", isSales ? "text-blue-600" : "text-slate-400")} />
-                إرجاع من زبون (مبيعات)
+                {t("returns.fromCustomer", { namespace: "inventory" })}
               </button>
             </div>
           </div>
 
           <div className="space-y-1.5">
             <FieldLabel className="flex items-center gap-1.5" required>
-              <Building2 className="w-3.5 h-3.5 text-slate-400" /> {isSales ? "الزبون" : "المورد"}
+              <Building2 className="w-3.5 h-3.5 text-slate-400" /> {isSales ? t("returns.customer", { namespace: "inventory" }) : t("returns.supplier", { namespace: "inventory" })}
             </FieldLabel>
             <Select value={form.partyId} onValueChange={val => setForm(p => ({ ...p, partyId: val }))}>
               <SelectTrigger className="w-full bg-white border-slate-200 h-9 rounded-lg">
-                <SelectValue placeholder={loadingParties ? "جار التحميل..." : `اختر ${isSales ? "الزبون" : "المورد"}...`} />
+                <SelectValue placeholder={loadingParties ? t("labels.loading", { namespace: "inventory" }) : t("returns.partyPlaceholder", { namespace: "inventory", vars: { party: isSales ? t("returns.customer", { namespace: "inventory" }) : t("returns.supplier", { namespace: "inventory" }) } })} />
               </SelectTrigger>
               <SelectContent>
                 {(isSales ? customers : suppliers).map(p => (
@@ -504,7 +506,7 @@ export function ReturnFromMaterialPanel({
 
           <div className="space-y-1.5">
             <FieldLabel className="flex items-center gap-1.5">
-              <Calendar className="w-3.5 h-3.5 text-slate-400" /> تاريخ المرتجع
+              <Calendar className="w-3.5 h-3.5 text-slate-400" /> {t("returns.date", { namespace: "inventory" })}
             </FieldLabel>
             <Input type="date" value={form.returnDate}
               onChange={e => setForm(p => ({ ...p, returnDate: e.target.value }))}
@@ -515,14 +517,14 @@ export function ReturnFromMaterialPanel({
 
       {/* ── اختيار المواد من الفواتير ── */}
       {form.partyId && (
-        <SidebarSection icon={<Package className="w-3.5 h-3.5" />} title="اختيار المواد من الفواتير" defaultOpen={true}>
+        <SidebarSection icon={<Package className="w-3.5 h-3.5" />} title={t("returns.pickMaterials", { namespace: "inventory" })} defaultOpen={true}>
           <div className="space-y-3">
             {!initialMaterialId && (
               <div className="relative">
                 <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 <Input value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
-                  placeholder="ابحث عن مادة..."
+                  placeholder={t("returns.searchPlaceholder", { namespace: "inventory" })}
                   className="bg-white border-slate-200 h-9 pr-9 transition-all duration-200 focus:border-blue-300 rounded-lg" />
               </div>
             )}
@@ -536,7 +538,7 @@ export function ReturnFromMaterialPanel({
                 <div className="flex flex-col items-center gap-1.5 py-8 text-slate-400">
                   <Package className="w-9 h-9 opacity-30" />
                   <p className="text-xs font-semibold">
-                    {searchQuery ? "لا توجد نتائج للبحث" : invoices.length === 0 ? "لا توجد فواتير سابقة لهذا الطرف" : "جميع بنود الفواتير مسترجعة بالكامل"}
+                    {searchQuery ? t("labels.noResults", { namespace: "inventory" }) : invoices.length === 0 ? t("returns.noInvoices", { namespace: "inventory" }) : t("returns.allReturned", { namespace: "inventory" })}
                   </p>
                 </div>
               ) : (
@@ -567,7 +569,7 @@ export function ReturnFromMaterialPanel({
                         <div className="flex-1 min-w-0 text-right">
                           <span className="font-bold block truncate text-slate-800">{name}</span>
                           <span className="text-[10px] text-slate-400 mt-0.5 block">
-                            فاتورة رقم: {inst.invoiceNumber} • {new Date(inst.invoiceDate).toLocaleDateString("ar-SA")}
+                             {t("returns.invoiceNumber", { namespace: "inventory", vars: { number: inst.invoiceNumber } })} • {new Date(inst.invoiceDate).toLocaleDateString("ar-SA")}
                           </span>
                         </div>
                         <div className="flex flex-col items-end gap-0.5 shrink-0 pl-1">
@@ -587,11 +589,11 @@ export function ReturnFromMaterialPanel({
               <div className="flex items-center justify-between px-2 text-[10px] text-slate-400 font-semibold">
                 <div className="flex items-center gap-2">
                   <Package className="w-3 h-3" />
-                  <span>المواد المتوفرة بالفواتير: {searchResults.length}</span>
+                  <span>{t("returns.availableMaterials", { namespace: "inventory", vars: { count: searchResults.length } })}</span>
                   <span className="text-slate-300">•</span>
-                  <span>عدد الفواتير: {invoices.length}</span>
+                  <span>{t("returns.invoicesCount", { namespace: "inventory", vars: { count: invoices.length } })}</span>
                 </div>
-                <span>المختارة: {selectedLines.length}</span>
+                <span>{t("returns.selectedCount", { namespace: "inventory", vars: { count: selectedLines.length } })}</span>
               </div>
             )}
           </div>
@@ -600,7 +602,7 @@ export function ReturnFromMaterialPanel({
 
       {/* ── المواد المحددة للمرتجع ── */}
       {selectedLines.length > 0 && (
-        <SidebarSection icon={<ShoppingBag className="w-3.5 h-3.5" />} title="المواد المحددة للمرتجع" defaultOpen={true}>
+        <SidebarSection icon={<ShoppingBag className="w-3.5 h-3.5" />} title={t("returns.selectedSection", { namespace: "inventory" })} defaultOpen={true}>
           <div className="space-y-4">
             {/* Selected lines - Scroll removed from here, grows naturally with sidebar */}
             <div className="space-y-3.5">
@@ -621,20 +623,20 @@ export function ReturnFromMaterialPanel({
                       <Button size="sm" variant="ghost"
                         className="text-rose-500 hover:text-rose-700 hover:bg-rose-50 h-7 px-2.5 rounded-lg text-[11px] font-bold"
                         onClick={() => removeSelectedLine(line.key)}>
-                        <X className="w-3 h-3 ml-1" /> حذف البند
+                        <X className="w-3 h-3 ml-1" /> {t("returns.removeLine", { namespace: "inventory" })}
                       </Button>
                     </div>
 
                     {/* Original stats grid */}
                     <div className="grid grid-cols-2 gap-3 bg-slate-50/60 p-3 rounded-lg border border-slate-100/70 text-xs">
                       <div className="space-y-1">
-                        <span className="text-slate-400 text-[10px] font-bold">الكمية الأصلية المتاحة</span>
+                        <span className="text-slate-400 text-[10px] font-bold">{t("returns.originalAvailable", { namespace: "inventory" })}</span>
                         <div className="font-mono font-bold text-slate-800" dir="ltr">
                           {parseFloat(line.originalQuantity).toFixed(2)} {line.unitName || ""}
                         </div>
                       </div>
                       <div className="space-y-1">
-                        <span className="text-slate-400 text-[10px] font-bold">السعر الأصلي للفاتورة</span>
+                        <span className="text-slate-400 text-[10px] font-bold">{t("returns.originalPrice", { namespace: "inventory" })}</span>
                         <div className="font-mono font-bold text-slate-800" dir="ltr">
                           {parseFloat(line.originalPrice).toFixed(2)}
                         </div>
@@ -646,12 +648,12 @@ export function ReturnFromMaterialPanel({
                       {/* Unit select */}
                       <div className="space-y-1.5 col-span-2">
                         <FieldLabel className="flex items-center gap-1.5 text-[11px]">
-                          <Ruler className="w-3.5 h-3.5 text-slate-400" /> الوحدة المرتجعة
+                          <Ruler className="w-3.5 h-3.5 text-slate-400" /> {t("returns.returnUnit", { namespace: "inventory" })}
                         </FieldLabel>
                         {units.length > 0 ? (
                           <Select value={line.unitId} onValueChange={val => handleUnitChange(line.key, val)}>
                             <SelectTrigger className="bg-white border-slate-200 h-9 text-xs w-full rounded-lg">
-                              <SelectValue placeholder="اختر الوحدة" />
+                              <SelectValue placeholder={t("returns.chooseUnit", { namespace: "inventory" })} />
                             </SelectTrigger>
                             <SelectContent>
                               {units.map(u => (
@@ -670,19 +672,19 @@ export function ReturnFromMaterialPanel({
 
                       {/* Return Qty */}
                       <div className="space-y-1.5">
-                        <FieldLabel className="text-[11px] font-bold text-slate-600">كمية المرتجع</FieldLabel>
+                        <FieldLabel className="text-[11px] font-bold text-slate-600">{t("returns.returnQty", { namespace: "inventory" })}</FieldLabel>
                         <Input type="number" min="0" step="any"
                           value={line.returnQuantity}
                           onChange={e => handleReturnQuantityChange(line.key, e.target.value)}
                           className="bg-white border-slate-200 h-9 text-xs text-left font-mono" dir="ltr" />
                         <div className="text-[9px] text-slate-400 px-0.5 mt-0.5">
-                          الحد الأقصى: {parseFloat(line.originalQuantity).toFixed(2)} {line.unitName}
+                          {t("returns.maxQty", { namespace: "inventory", vars: { max: parseFloat(line.originalQuantity).toFixed(2), unit: line.unitName } })}
                         </div>
                       </div>
 
                       {/* Return Price */}
                       <div className="space-y-1.5">
-                        <FieldLabel className="text-[11px] font-bold text-slate-600">سعر المرتجع</FieldLabel>
+                        <FieldLabel className="text-[11px] font-bold text-slate-600">{t("returns.returnPrice", { namespace: "inventory" })}</FieldLabel>
                         <Input type="number" min="0" step="0.01"
                           value={line.returnPrice}
                           onChange={e => updateSelectedLine(line.key, { returnPrice: e.target.value })}
@@ -692,10 +694,10 @@ export function ReturnFromMaterialPanel({
 
                     {/* Notes */}
                     <div className="space-y-1.5">
-                      <FieldLabel className="text-[11px] font-bold text-slate-600">ملاحظات البند</FieldLabel>
+                      <FieldLabel className="text-[11px] font-bold text-slate-600">{t("returns.lineNotes", { namespace: "inventory" })}</FieldLabel>
                       <Input value={line.notes}
                         onChange={e => updateSelectedLine(line.key, { notes: e.target.value })}
-                        placeholder="سبب الإرجاع..." className="bg-white border-slate-200 h-8.5 text-xs rounded-lg" />
+                        placeholder={t("returns.lineNotesPlaceholder", { namespace: "inventory" })} className="bg-white border-slate-200 h-8.5 text-xs rounded-lg" />
                     </div>
                   </div>
                 );
@@ -705,22 +707,22 @@ export function ReturnFromMaterialPanel({
             {/* General notes */}
             <div className="space-y-1.5 text-right">
               <FieldLabel className="flex items-center gap-1.5">
-                <FileText className="w-3.5 h-3.5 text-slate-400" /> ملاحظات عامة
+                <FileText className="w-3.5 h-3.5 text-slate-400" /> {t("returns.generalNotes", { namespace: "inventory" })}
               </FieldLabel>
               <Input value={form.generalNotes}
                 onChange={e => setForm(p => ({ ...p, generalNotes: e.target.value }))}
-                placeholder="تفاصيل إضافية عن المرتجع الكلي..." className="bg-white border-slate-200 h-9.5 rounded-lg" />
+                placeholder={t("returns.generalNotesPlaceholder", { namespace: "inventory" })} className="bg-white border-slate-200 h-9.5 rounded-lg" />
             </div>
 
             {/* Premium Summary bar */}
             <div className="rounded-xl border border-slate-150 bg-gradient-to-l from-slate-50 to-white p-4 space-y-3 text-right">
-              <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-wider">ملخص المرتجع</h4>
+              <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-wider">{t("returns.summaryTitle", { namespace: "inventory" })}</h4>
               <div className="flex items-center justify-between text-xs pt-1 border-t border-slate-200/50">
-                <span className="text-slate-500 font-semibold">عدد المواد المختارة</span>
-                <span className="font-bold text-slate-800">{selectedLines.length} صنف</span>
+                <span className="text-slate-500 font-semibold">{t("returns.selectedMaterials", { namespace: "inventory" })}</span>
+                <span className="font-bold text-slate-800">{t("returns.itemsCount", { namespace: "inventory", vars: { count: selectedLines.length } })}</span>
               </div>
               <div className="flex items-center justify-between text-xs pt-1">
-                <span className="text-slate-500 font-semibold">إجمالي المرتجع</span>
+                <span className="text-slate-500 font-semibold">{t("returns.total", { namespace: "inventory" })}</span>
                 <span className={cn(
                   "text-sm font-black tabular-nums",
                   isSales ? "text-blue-700" : "text-amber-700"

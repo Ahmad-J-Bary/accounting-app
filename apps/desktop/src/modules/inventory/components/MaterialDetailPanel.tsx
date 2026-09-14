@@ -10,6 +10,7 @@ import type { MaterialDto, StockMovementDetailDto, InventoryLotDto } from "@erp/
 import { materialService } from '@modules/inventory/api/materialService';
 import { lotService } from '@modules/inventory/api/lotService';
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 import { buildStockByWarehouse } from '@modules/inventory/lib/stockUtils';
 import {
   SidebarShell,
@@ -92,6 +93,7 @@ export function MaterialDetailPanel({
   initialTab = "units",
 }: MaterialDetailPanelProps) {
   const { baseCurrency, currencies } = useCurrencyContext();
+  const { t } = useLocalization();
   const foreignCurrency = currencies.find(c => c.code !== baseCurrency?.code);
   const foreignSym = foreignCurrency?.symbol || foreignCurrency?.code || "";
   const baseSym = baseCurrency?.symbol || baseCurrency?.code || "";
@@ -130,11 +132,11 @@ export function MaterialDetailPanel({
       await lotService.updateCostingMethod(material.id, newMethod);
       material.costing_method = newMethod;
       setCostingMethod(newMethod);
-      toast.success(`تم تغيير طريقة التكلفة إلى ${newMethod === "FIFO" ? "FIFO" : "المتوسط"}`);
+      toast.success(t("materials.detail.costingMethodChanged", { namespace: "inventory", vars: { method: newMethod === "FIFO" ? "FIFO" : t("materials.costingMethods.average", { namespace: "inventory" }) } }));
     } catch (e) {
-      toast.error("فشل تغيير طريقة التكلفة: " + e);
+      toast.error(t("materials.detail.costingMethodFailed", { namespace: "inventory" }) + e);
     }
-  }, [material, costingMethod]);
+  }, [material, costingMethod, t]);
 
   const displayMovements = useMemo(() => {
     const groups = new Map<string, StockMovementDetailDto>();
@@ -180,7 +182,7 @@ export function MaterialDetailPanel({
     ...(onEdit
       ? [
           {
-            label: "تعديل",
+            label: t("labels.edit", { namespace: "inventory" }),
             icon: <Pencil className="w-4 h-4" />,
             variant: "warning" as const,
             onClick: () => onEdit(material),
@@ -190,11 +192,11 @@ export function MaterialDetailPanel({
     ...(onDelete
       ? [
           {
-            label: "حذف",
+            label: t("labels.delete", { namespace: "inventory" }),
             icon: <Trash2 className="w-4 h-4" />,
             variant: "danger" as const,
             onClick: () => {
-              if (confirm(`هل أنت متأكد من حذف "${material.name}"؟`)) {
+              if (confirm(t("materials.detail.deleteConfirm", { namespace: "inventory", vars: { name: material.name } }))) {
                 onDelete(material.id, material.name);
               }
             },
@@ -219,13 +221,13 @@ export function MaterialDetailPanel({
           {/* Quick Stats */}
           <div className="grid grid-cols-2 gap-3">
             <div className={statCard}>
-              <div className={statLabel}>الكمية المتوفرة</div>
+              <div className={statLabel}>{t("materials.detail.availableQty", { namespace: "inventory" })}</div>
               <div className={statValue + " text-emerald-600"}>
                 {toLocalString(parseFloat(material.total_available))}
               </div>
             </div>
             <div className={statCard}>
-              <div className={statLabel}>متوسط التكلفة</div>
+              <div className={statLabel}>{t("materials.detail.averageCost", { namespace: "inventory" })}</div>
               <div className={statValue + " text-blue-600"}>
                 {formatCurrency(
                   parseFloat(material.average_cost),
@@ -240,7 +242,7 @@ export function MaterialDetailPanel({
             <SidebarDetailGrid
               fields={[
                 {
-                  label: "الكود",
+                  label: t("labels.code", { namespace: "inventory" }),
                   value: (
                     <span className="flex items-center gap-1">
                       <Hash className="w-3 h-3 text-slate-400" />
@@ -249,10 +251,10 @@ export function MaterialDetailPanel({
                   ),
                 },
                 ...(material.name_en
-                  ? [{ label: "الاسم (إنجليزي)" as const, value: material.name_en }]
+                  ? [{ label: t("materials.detail.nameEn", { namespace: "inventory" }), value: material.name_en }]
                   : []),
                 {
-                  label: "الباركود العام",
+                  label: t("materials.form.generalBarcode", { namespace: "inventory" }),
                   value: (
                     <span className="flex items-center gap-1">
                       <Barcode className="w-3 h-3 text-slate-400" />
@@ -261,7 +263,7 @@ export function MaterialDetailPanel({
                   ),
                 },
                 {
-                  label: "طريقة التكلفة",
+                  label: t("materials.detail.costingMethod", { namespace: "inventory" }),
                   value: (
                     <div className="flex items-center gap-2">
                       <span className={cn("text-[11px] font-medium px-2 py-0.5 rounded-full border cursor-pointer hover:opacity-80",
@@ -269,29 +271,29 @@ export function MaterialDetailPanel({
                           ? "bg-purple-50 text-purple-700 border-purple-200"
                           : "bg-slate-50 text-slate-600 border-slate-200"
                       )} onClick={toggleCostingMethod}>
-                        {costingMethod === "FIFO" ? "FIFO" : "متوسط"}
+                        {costingMethod === "FIFO" ? "FIFO" : t("materials.detail.average", { namespace: "inventory" })}
                       </span>
-                      <span className="text-[9px] text-slate-400">(اضغط للتغيير)</span>
+                      <span className="text-[9px] text-slate-400">{t("materials.detail.clickToChange", { namespace: "inventory" })}</span>
                     </div>
                   ),
                 },
                 {
-                  label: "حد الطلب",
+                  label: t("materials.columns.minimumStock", { namespace: "inventory" }),
                   value: material.minimum_stock || "0",
                 },
                 {
-                  label: "وحدة الشراء الافتراضية",
+                  label: t("materials.form.defaultPurchaseUnit", { namespace: "inventory" }),
                   value: defaultPurchaseUnit?.name || "—",
                 },
                 {
-                  label: "وحدة البيع الافتراضية",
+                  label: t("materials.form.defaultSaleUnit", { namespace: "inventory" }),
                   value: defaultSaleUnit?.name || "—",
                 },
               ]}
             />
             {material.notes && (
               <div className="mt-4 pt-3 border-t border-slate-50">
-                <SidebarDetailField label="ملاحظات" value={material.notes} />
+                <SidebarDetailField label={t("labels.notes", { namespace: "inventory" })} value={material.notes} />
               </div>
             )}
           </div>
@@ -303,31 +305,31 @@ export function MaterialDetailPanel({
                 value="units"
                 className="flex items-center gap-2 text-xs rounded-md"
               >
-                <Package className="w-3.5 h-3.5" /> الوحدات
+                <Package className="w-3.5 h-3.5" /> {t("materials.detail.tabUnits", { namespace: "inventory" })}
               </TabsTrigger>
               <TabsTrigger
                 value="prices"
                 className="flex items-center gap-2 text-xs rounded-md"
               >
-                <TrendingUp className="w-3.5 h-3.5" /> قائمة الأسعار
+                <TrendingUp className="w-3.5 h-3.5" /> {t("materials.detail.tabPrices", { namespace: "inventory" })}
               </TabsTrigger>
               <TabsTrigger
                 value="movement"
                 className="flex items-center gap-2 text-xs rounded-md"
               >
-                <RefreshCw className="w-3.5 h-3.5" /> حركة المادة
+                <RefreshCw className="w-3.5 h-3.5" /> {t("materials.detail.tabMovement", { namespace: "inventory" })}
               </TabsTrigger>
               <TabsTrigger
                 value="warehouses"
                 className="flex items-center gap-2 text-xs rounded-md"
               >
-                <WarehouseIcon className="w-3.5 h-3.5" /> المستودعات
+                <WarehouseIcon className="w-3.5 h-3.5" /> {t("materials.detail.tabWarehouses", { namespace: "inventory" })}
               </TabsTrigger>
               <TabsTrigger
                 value="lots"
                 className="flex items-center gap-2 text-xs rounded-md"
               >
-                <Layers className="w-3.5 h-3.5" /> الدفعات
+                <Layers className="w-3.5 h-3.5" /> {t("materials.detail.tabLots", { namespace: "inventory" })}
               </TabsTrigger>
             </TabsList>
 
@@ -336,11 +338,11 @@ export function MaterialDetailPanel({
                 <table className="w-full text-xs text-right">
                   <thead className="bg-slate-50 border-b">
                     <tr>
-                      <th className="p-3 font-bold text-slate-500">الوحدة</th>
+                      <th className="p-3 font-bold text-slate-500">{t("labels.unit", { namespace: "inventory" })}</th>
                       <th className="p-3 font-bold text-slate-500 text-center">
-                        التعادل
+                        {t("materials.detail.conversion", { namespace: "inventory" })}
                       </th>
-                      <th className="p-3 font-bold text-slate-500">الباركود</th>
+                      <th className="p-3 font-bold text-slate-500">{t("labels.barcode", { namespace: "inventory" })}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y">
@@ -353,7 +355,7 @@ export function MaterialDetailPanel({
                           {u.name}{" "}
                           {u.is_base && (
                             <span className="text-[9px] text-blue-500 bg-blue-50 px-1 rounded mr-1">
-                              أساسية
+                              {t("materials.detail.base", { namespace: "inventory" })}
                             </span>
                           )}
                         </td>
@@ -371,7 +373,7 @@ export function MaterialDetailPanel({
                           colSpan={3}
                           className="p-6 text-center text-slate-400"
                         >
-                          لا توجد وحدات
+                          {t("materials.detail.noUnits", { namespace: "inventory" })}
                         </td>
                       </tr>
                     )}
@@ -439,12 +441,12 @@ export function MaterialDetailPanel({
               <div className="space-y-2 max-h-[400px] overflow-y-auto">
                 {movementsLoading ? (
                   <div className="text-center py-8 text-muted-foreground text-xs">
-                    جاري التحميل...
+                    {t("labels.loading", { namespace: "inventory" })}
                   </div>
                 ) : displayMovements.length === 0 ? (
                   <div className="text-center py-10 border-2 border-dashed rounded-xl text-muted-foreground bg-slate-50/50">
                     <RefreshCw className="w-8 h-8 mx-auto mb-2 opacity-20" />
-                    <span className="text-xs">لا توجد حركات</span>
+                    <span className="text-xs">{t("materials.detail.noMovements", { namespace: "inventory" })}</span>
                   </div>
                 ) : (
                   displayMovements.map((m, idx) => (
@@ -467,7 +469,7 @@ export function MaterialDetailPanel({
                       </div>
                       <div className="flex items-center justify-between text-slate-500">
                         <span>
-                          الكمية: <span className="font-bold text-slate-700">{toLocalString(parseFloat(m.quantity))}</span>
+                          {t("labels.quantity", { namespace: "inventory" })}: <span className="font-bold text-slate-700">{toLocalString(parseFloat(m.quantity))}</span>
                         </span>
                         <span>
                           {formatCurrency(parseFloat(m.is_inflow ? m.unit_cost : m.total_cost), baseSym || undefined)}
@@ -485,11 +487,11 @@ export function MaterialDetailPanel({
             <TabsContent value="warehouses" className="mt-4 focus-visible:outline-none">
               <div className="space-y-2 max-h-[400px] overflow-y-auto">
                 {movementsLoading ? (
-                  <div className="text-center py-8 text-muted-foreground text-xs">جاري التحميل...</div>
+                  <div className="text-center py-8 text-muted-foreground text-xs">{t("labels.loading", { namespace: "inventory" })}</div>
                 ) : warehouseStock.length === 0 ? (
                   <div className="text-center py-10 border-2 border-dashed rounded-xl text-muted-foreground bg-slate-50/50">
                     <WarehouseIcon className="w-8 h-8 mx-auto mb-2 opacity-20" />
-                    <span className="text-xs">لا توجد كميات في المستودعات</span>
+                    <span className="text-xs">{t("materials.detail.noWarehouseStock", { namespace: "inventory" })}</span>
                   </div>
                 ) : (
                   warehouseStock.map((ws) => (
@@ -506,7 +508,7 @@ export function MaterialDetailPanel({
                           {onOpenTransfer && (
                             <Button variant="outline" size="sm" className="h-7 text-[10px] border-slate-200"
                               onClick={() => onOpenTransfer({ sourceWarehouseId: ws.warehouseId })}>
-                              <ArrowRightLeft className="w-3 h-3 ml-1" /> تحويل
+                              <ArrowRightLeft className="w-3 h-3 ml-1" /> {t("materials.detail.transfer", { namespace: "inventory" })}
                             </Button>
                           )}
                         </div>
@@ -521,26 +523,26 @@ export function MaterialDetailPanel({
               <div className="space-y-2 max-h-[400px] overflow-y-auto">
                 {lotsLoading ? (
                   <div className="text-center py-8 text-muted-foreground text-xs">
-                    جاري التحميل...
+                    {t("labels.loading", { namespace: "inventory" })}
                   </div>
                 ) : lots.length === 0 ? (
                   <div className="text-center py-10 border-2 border-dashed rounded-xl text-muted-foreground bg-slate-50/50">
                     <Layers className="w-8 h-8 mx-auto mb-2 opacity-20" />
-                    <span className="text-xs">لا توجد دفعات</span>
+                    <span className="text-xs">{t("materials.detail.noLots", { namespace: "inventory" })}</span>
                   </div>
                 ) : (
                   <div className="border rounded-xl overflow-hidden shadow-sm bg-white">
                     <table className="w-full text-[11px] text-right">
                       <thead className="bg-slate-50 border-b">
                         <tr>
-                          <th className="p-2 font-bold text-slate-500">تاريخ الشراء</th>
-                          <th className="p-2 font-bold text-slate-500 text-center">الأصلية</th>
-                          <th className="p-2 font-bold text-slate-500 text-center">المتبقي</th>
-                          <th className="p-2 font-bold text-slate-500 text-left">تكلفة الشراء</th>
-                          <th className="p-2 font-bold text-slate-500 text-left">صافي التكلفة</th>
-                          <th className="p-2 font-bold text-slate-500 text-center">مفرق</th>
-                          <th className="p-2 font-bold text-slate-500 text-center">نصف جملة</th>
-                          <th className="p-2 font-bold text-slate-500 text-center">جملة</th>
+                          <th className="p-2 font-bold text-slate-500">{t("materials.detail.purchaseDate", { namespace: "inventory" })}</th>
+                          <th className="p-2 font-bold text-slate-500 text-center">{t("materials.detail.original", { namespace: "inventory" })}</th>
+                          <th className="p-2 font-bold text-slate-500 text-center">{t("materials.detail.remaining", { namespace: "inventory" })}</th>
+                          <th className="p-2 font-bold text-slate-500 text-left">{t("materials.detail.purchaseCost", { namespace: "inventory" })}</th>
+                          <th className="p-2 font-bold text-slate-500 text-left">{t("materials.detail.netCost", { namespace: "inventory" })}</th>
+                          <th className="p-2 font-bold text-slate-500 text-center">{t("saleTiers.retail", { namespace: "inventory" })}</th>
+                          <th className="p-2 font-bold text-slate-500 text-center">{t("saleTiers.semi_wholesale", { namespace: "inventory" })}</th>
+                          <th className="p-2 font-bold text-slate-500 text-center">{t("saleTiers.wholesale", { namespace: "inventory" })}</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y">
@@ -550,7 +552,7 @@ export function MaterialDetailPanel({
                               await lotService.updateLotSalePrices(lotId, retail, semi, wholesale);
                               setLots(prev => prev.map(l => l.id === lotId ? { ...l, retail_price_base: retail, semi_wholesale_price_base: semi, wholesale_price_base: wholesale } : l));
                             } catch (e) {
-                              toast.error("فشل تحديث سعر البيع: " + e);
+                              toast.error(t("materials.detail.salePriceUpdateFailed", { namespace: "inventory" }) + e);
                             }
                           }} />
                         ))}

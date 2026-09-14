@@ -66,7 +66,7 @@ export default function Categories() {
   const [materialSaving, setMaterialSaving] = useState(false);
 
   const hasLoadedOnceRef = useRef(false);
-  const { filteredTree } = useCategoryTree(categories, materials, search);
+  const { filteredTree } = useCategoryTree(categories, materials, search, t("categories.title", { namespace: "inventory" }));
 
   // Expand all root categories on first successful load
   useEffect(() => {

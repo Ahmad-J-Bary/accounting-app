@@ -1,5 +1,6 @@
 import { useMemo, useCallback, useState, useEffect } from "react";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 import { GridLine } from "@modules/invoicing/lib/invoiceUtils";
 import { DocumentColumn } from "@widgets/document-shell/GenericDocumentGrid";
@@ -21,7 +22,6 @@ interface UseDocumentFinancialsProps<T extends BaseFinancialState> {
   setHeaderState: (s: T | ((prev: T) => T)) => void;
   currencies: Currency[];
   invoiceType: "Sales" | "Purchase" | "OpeningBalance";
-  priceLabel?: string;
   extraColumns?: DocumentColumn[];
   /** Columns injected before the unit_price columns */
   prePriceExtraColumns?: DocumentColumn[];
@@ -34,12 +34,12 @@ export function useDocumentFinancials<T extends BaseFinancialState>({
   setHeaderState,
   currencies,
   invoiceType,
-  priceLabel = "السعر",
   extraColumns = [],
   prePriceExtraColumns = [],
   materials = [],
 }: UseDocumentFinancialsProps<T>) {
   const { convertBetween, rateMap, baseCurrency } = useCurrencyContext();
+  const { t } = useLocalization();
 
   // 1. Pre-calculate conversion factors and symbols once per render
   const financials = useMemo(() => {
@@ -230,7 +230,7 @@ export function useDocumentFinancials<T extends BaseFinancialState>({
     const baseCols: DocumentColumn[] = [
       {
         key: "material_image",
-        header: "صورة",
+        header: t("invoice.colImage", { namespace: "invoicing" }),
         width: "w-[40px]",
         align: "center",
         type: "image",
@@ -238,14 +238,14 @@ export function useDocumentFinancials<T extends BaseFinancialState>({
       },
       {
         key: "material_code",
-        header: "الكود",
+        header: t("invoice.colCode", { namespace: "invoicing" }),
         width: "w-[100px]",
         align: "center",
         type: "material_code",
       },
       {
         key: "unit_barcode",
-        header: "الباركود",
+        header: t("invoice.colBarcode", { namespace: "invoicing" }),
         width: "w-[120px]",
         align: "center",
         type: "material_barcode",
@@ -253,14 +253,14 @@ export function useDocumentFinancials<T extends BaseFinancialState>({
       },
       {
         key: "material_name",
-        header: "الصنف (عربي)",
+        header: t("invoice.colMaterialAr", { namespace: "invoicing" }),
         width: "flex-[2]",
         align: "right",
         type: "material",
       },
       {
         key: "name_en",
-        header: "الصنف (EN)",
+        header: t("invoice.colMaterialEn", { namespace: "invoicing" }),
         width: "flex-[1.5]",
         align: "left",
         type: "readonly",
@@ -268,28 +268,28 @@ export function useDocumentFinancials<T extends BaseFinancialState>({
       },
       {
         key: "warehouse_qty",
-        header: "المتوفر",
+        header: t("invoice.colAvailable", { namespace: "invoicing" }),
         width: "w-[70px]",
         align: "center",
         type: "readonly",
       },
       {
         key: "quantity",
-        header: "الكمية",
+        header: t("invoice.colQuantity", { namespace: "invoicing" }),
         width: "w-[80px]",
         align: "center",
         type: "number",
       },
       {
         key: "unit_name",
-        header: "الوحدة",
+        header: t("invoice.colUnit", { namespace: "invoicing" }),
         width: "w-[70px]",
         align: "center",
         type: "unit_select",
       },
       {
         key: "warehouse_id",
-        header: "المستودع",
+        header: t("invoice.colWarehouse", { namespace: "invoicing" }),
         width: "w-[90px]",
         align: "center",
         type: "warehouse_select",
@@ -299,6 +299,7 @@ export function useDocumentFinancials<T extends BaseFinancialState>({
 
     const baseCode = baseCurrency?.code;
     const priceCols: DocumentColumn[] = [];
+    const priceLabel = invoiceType === "Sales" ? t("invoice.priceLabel", { namespace: "invoicing" }) : t("invoice.colCost", { namespace: "invoicing" });
     currencies.forEach((curr) => {
       const s = curr.symbol || curr.code;
       const isBase = curr.code === baseCode;
@@ -318,7 +319,7 @@ export function useDocumentFinancials<T extends BaseFinancialState>({
       const isBase = curr.code === baseCode;
       totalCols.push({
         key: `line_total_${curr.code}`,
-        header: `الإجمالي (${s})`,
+        header: `${t("invoice.colTotal", { namespace: "invoicing" })} (${s})`,
         width: "w-[110px]",
         align: "left",
         type: "number",
@@ -330,7 +331,7 @@ export function useDocumentFinancials<T extends BaseFinancialState>({
       invoiceType === "Purchase" || invoiceType === "OpeningBalance"
         ? [{
             key: "sale_prices",
-            header: "المبيع",
+            header: t("invoice.colSale", { namespace: "invoicing" }),
             width: "w-[110px]",
             align: "center",
             type: "sale_tier_prices",
@@ -345,7 +346,7 @@ export function useDocumentFinancials<T extends BaseFinancialState>({
         const isBase = curr.code === baseCode;
         discountValueCols.push({
           key: isBase ? "discount_value" : `discount_value_${curr.code}`,
-          header: `خصم (${s})`,
+          header: `${t("invoice.colDiscountValue", { namespace: "invoicing" })} (${s})`,
           width: "w-[80px]",
           align: "center",
           type: "number",
@@ -362,7 +363,7 @@ export function useDocumentFinancials<T extends BaseFinancialState>({
       ...(invoiceType === "OpeningBalance" ? [] : [
         {
           key: "discount",
-          header: "خصم %",
+          header: t("invoice.colDiscountPercent", { namespace: "invoicing" }),
           width: "w-[70px]",
           align: "center",
           type: "number",
@@ -375,7 +376,7 @@ export function useDocumentFinancials<T extends BaseFinancialState>({
   }, [
     currencies,
     baseCurrency?.code,
-    priceLabel,
+    t,
     prePriceExtraColumns,
     extraColumns,
     invoiceType,

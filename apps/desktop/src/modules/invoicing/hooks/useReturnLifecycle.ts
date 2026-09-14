@@ -17,6 +17,7 @@ import type {
 } from "@erp/shared-types";
 import { toast } from "sonner";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 interface UseReturnLifecycleProps {
   returnType: "SalesReturn" | "PurchaseReturn";
@@ -31,6 +32,8 @@ export function useReturnLifecycle({
   const { openTab, closeTab, activeTabId } = useTabs();
   const { formatMonetaryAmount } = useCurrencyContext();
   const tabLocation = useTabLocation();
+
+  const { t } = useLocalization();
 
   const isSales = returnType === "SalesReturn";
   const isNew = tabLocation.includes("/new");
@@ -77,13 +80,13 @@ export function useReturnLifecycle({
         setMaterials(matData);
         setWarehouses(whData);
       } catch {
-        toast.error("فشل تحميل البيانات");
+        toast.error(t("returns.failedLoadData", { namespace: "inventory" }));
       } finally {
         setLoading(false);
         setRefreshing(false);
       }
     },
-    [returnType, partyType],
+    [returnType, partyType, t],
   );
 
   // Route-based view switching
@@ -100,7 +103,7 @@ export function useReturnLifecycle({
           setEditingReturn(ret);
           setView("editor");
         } catch {
-          toast.error("فشل تحميل بيانات المرتجع");
+          toast.error(t("return.loadReturnError", { namespace: "invoicing" }));
           setView("list");
         }
       };
@@ -109,7 +112,7 @@ export function useReturnLifecycle({
       setEditingReturn(null);
       setView("list");
     }
-  }, [isNew, id, isSales]);
+  }, [isNew, id, isSales, t]);
 
   const prevActiveTab = useRef(activeTabId);
   useEffect(() => {

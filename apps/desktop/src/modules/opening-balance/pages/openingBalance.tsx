@@ -329,7 +329,6 @@ export default function OpeningBalance() {
     setHeaderState: setHeader,
     currencies,
     invoiceType: "OpeningBalance",
-        priceLabel: t("openingBalance.priceLabel", { namespace: "accounting",  }),
     extraColumns: extraCols,
     materials,
   });

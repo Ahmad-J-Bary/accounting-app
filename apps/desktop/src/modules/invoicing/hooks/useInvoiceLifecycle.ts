@@ -412,7 +412,6 @@ export function useInvoiceLifecycle({
     setHeaderState,
     currencies,
     invoiceType,
-    priceLabel: invoiceType === "Sales" ? t("invoice.priceLabel", { namespace: "invoicing" }) : t("invoice.costColumn", { namespace: "invoicing" }),
     extraColumns: extraCols,
     prePriceExtraColumns: prePriceExtraCols,
     materials,

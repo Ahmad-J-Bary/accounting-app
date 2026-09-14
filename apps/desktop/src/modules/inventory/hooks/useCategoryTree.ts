@@ -10,7 +10,7 @@ export interface CategoryTreeNode extends CategoryDto {
   materialData?: MaterialDto;
 }
 
-function buildTree(cats: CategoryDto[], materials: MaterialDto[]): CategoryTreeNode {
+function buildTree(cats: CategoryDto[], materials: MaterialDto[], virtualRootName?: string): CategoryTreeNode {
   const map = new Map<string, CategoryTreeNode>();
   
   // 1. Initialize map with clones
@@ -83,7 +83,7 @@ function buildTree(cats: CategoryDto[], materials: MaterialDto[]): CategoryTreeN
   // 4. Create virtual root
   const virtualRoot: CategoryTreeNode = {
     id: VIRTUAL_ROOT_ID,
-    name: "التصنيفات",
+    name: virtualRootName || "التصنيفات",
     parent_id: null,
     is_active: true,
     is_hybrid: false,
@@ -102,8 +102,8 @@ function buildTree(cats: CategoryDto[], materials: MaterialDto[]): CategoryTreeN
   return virtualRoot;
 }
 
-export function useCategoryTree(categories: CategoryDto[], materials: MaterialDto[], search: string) {
-  const tree = useMemo(() => buildTree(categories, materials), [categories, materials]);
+export function useCategoryTree(categories: CategoryDto[], materials: MaterialDto[], search: string, virtualRootName?: string) {
+  const tree = useMemo(() => buildTree(categories, materials, virtualRootName), [categories, materials, virtualRootName]);
   
   const filteredTree = useMemo(() => {
     if (!search) return tree;
