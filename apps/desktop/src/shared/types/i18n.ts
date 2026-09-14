@@ -22,7 +22,8 @@ export type I18nNamespace =
   | "auth"
   | "validation"
   | "errors"
-  | "widgets";
+  | "widgets"
+  | "openingBalance";
 
 export interface TranslationTree {
   [key: string]: string | TranslationTree;

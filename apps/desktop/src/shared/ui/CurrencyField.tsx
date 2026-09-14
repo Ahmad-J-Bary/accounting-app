@@ -8,6 +8,7 @@ import {
 } from "@shared/ui/select";
 import { FieldLabel } from "@widgets/sidebar-shell/FieldLabel";
 import type { Currency } from "@erp/shared-types";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 export interface CurrencyFieldProps {
   label: string;
@@ -33,7 +34,6 @@ export function CurrencyField({
   onCurrencyChange,
   amount,
   onAmountChange,
-  symbol,
   showCurrency = false,
   currencies = [],
   placeholder = "0.00",
@@ -42,6 +42,7 @@ export function CurrencyField({
   min = "0",
   inputClassName = "",
 }: CurrencyFieldProps) {
+  const { t } = useLocalization();
   const amountInput = (
     <Input
       type="number"
@@ -67,10 +68,10 @@ export function CurrencyField({
   return (
     <div className="grid grid-cols-2 gap-3">
       <div className="space-y-1.5">
-        <FieldLabel>العملة</FieldLabel>
+        <FieldLabel>{t("currencies.currencyField", { namespace: "settings" })}</FieldLabel>
         <Select dir="rtl" value={currency} onValueChange={onCurrencyChange} disabled={disabled}>
           <SelectTrigger className="bg-white border-slate-200 h-9 w-full text-right text-xs">
-            <SelectValue placeholder="اختر العملة" />
+            <SelectValue placeholder={t("currencies.selectCurrency", { namespace: "settings" })} />
           </SelectTrigger>
           <SelectContent>
             {currencies

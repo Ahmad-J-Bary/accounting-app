@@ -22,6 +22,7 @@ import type {
 } from "@erp/shared-types";
 import { toast } from "sonner";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 import { useDocumentEditor } from "./useDocumentEditor";
 import {
   toBackendLines,
@@ -54,6 +55,7 @@ export interface InvoiceHeaderState {
 
 const DEFAULT_HEADER = (
   invoiceType: "Sales" | "Purchase",
+  t: (key: string, options?: Record<string, unknown>) => string,
 ): InvoiceHeaderState => ({
   invoice_number: "...",
   issued_at: new Date().toISOString().split("T")[0],
@@ -68,8 +70,8 @@ const DEFAULT_HEADER = (
   exchange_rate: "1",
   paid_amount: "0",
   ...(invoiceType === "Sales"
-    ? { customer_id: "", customer_name: "زبون نقدي" }
-    : { supplier_id: "", supplier_name: "مورد نقدي", extra_paid_amount: "0" }),
+    ? { customer_id: "", customer_name: t("invoice.cashCustomerName", { namespace: "invoicing" }) }
+    : { supplier_id: "", supplier_name: t("invoice.cashSupplierName", { namespace: "invoicing" }), extra_paid_amount: "0" }),
 });
 
 interface UseInvoiceLifecycleProps {
@@ -92,6 +94,7 @@ export function useInvoiceLifecycle({
     rateMap,
     currencies,
   } = useCurrencyContext();
+  const { t } = useLocalization();
 
   const [view, setView] = useState<"list" | "editor">("list");
   const [invoices, setInvoices] = useState<InvoiceDto[]>([]);
@@ -106,7 +109,7 @@ export function useInvoiceLifecycle({
   const [search, setSearch] = useState("");
 
   const [headerState, setHeaderState] = useState<InvoiceHeaderState>(
-    DEFAULT_HEADER(invoiceType),
+    DEFAULT_HEADER(invoiceType, t),
   );
 
   const defaultWarehouseId = appSettings
@@ -191,13 +194,13 @@ export function useInvoiceLifecycle({
         setWarehouses(whData);
         setAppSettings(settingsData);
       } catch (e) {
-        toast.error("فشل تحميل البيانات: " + e);
+        toast.error(t("invoice.loadDataFailed", { namespace: "invoicing" }) + e);
       } finally {
         setLoading(false);
         setRefreshing(false);
       }
     },
-    [invoiceType, partyType],
+    [invoiceType, partyType, t],
   );
 
   const onPartyCreated = useCallback((party: CustomerDto | SupplierDto) => {
@@ -228,7 +231,7 @@ export function useInvoiceLifecycle({
   // Synchronise state based on route parameter modifications (e.g. going from edit/view to list)
   useEffect(() => {
     if (isNew) {
-      setHeaderState(DEFAULT_HEADER(invoiceType));
+      setHeaderState(DEFAULT_HEADER(invoiceType, t));
 
       invoiceService.getNextInvoiceNumber(invoiceType).then((num) => {
         setHeaderState((s) => ({ ...s, invoice_number: num, status: "Draft" }));
@@ -258,11 +261,11 @@ export function useInvoiceLifecycle({
             ...(invoiceType === "Sales"
               ? {
                   customer_id: inv.customer_id ?? "",
-                  customer_name: inv.customer_name ?? "زبون نقدي",
+                  customer_name: inv.customer_name ?? t("invoice.cashCustomerName", { namespace: "invoicing" }),
                 }
               : {
                   supplier_id: inv.supplier_id ?? "",
-                  supplier_name: inv.supplier_name ?? "مورد نقدي",
+                  supplier_name: inv.supplier_name ?? t("invoice.cashSupplierName", { namespace: "invoicing" }),
                 }),
           });
           const loadedLines: GridLine[] = (inv.lines ?? []).map((l) => {
@@ -301,7 +304,7 @@ export function useInvoiceLifecycle({
           setLines(loadedLines);
           setView("editor");
         } catch {
-          toast.error("فشل تحميل الفاتورة");
+          toast.error(t("invoice.loadInvoiceFailed", { namespace: "invoicing" }));
         }
       };
       loadInvoice();
@@ -319,6 +322,7 @@ export function useInvoiceLifecycle({
     currencies,
     defaultWarehouseId,
     materials,
+    t,
   ]);
 
   // Financial document calculations and grid columns adaptation
@@ -333,7 +337,7 @@ export function useInvoiceLifecycle({
       return [
         ...sortedCurrencies.map((curr) => ({
           key: `profit_amount_${curr.code}`,
-          header: `المربح (${curr.symbol || curr.code})`,
+          header: t("invoice.profitColumn", { namespace: "invoicing", vars: { currency: curr.symbol || curr.code } }),
           width: "w-[90px]",
           align: "left" as const,
           type: "readonly" as const,
@@ -341,7 +345,7 @@ export function useInvoiceLifecycle({
         })),
         {
           key: "expiry_date",
-          header: "تاريخ الانتهاء",
+          header: t("invoice.expiryDate", { namespace: "invoicing" }),
           width: "w-[110px]",
           align: "center",
           type: "date",
@@ -349,7 +353,7 @@ export function useInvoiceLifecycle({
         },
         {
           key: "notes",
-          header: "ملاحظات",
+          header: t("invoice.notes", { namespace: "invoicing" }),
           width: "flex-[1]",
           align: "right",
           type: "text",
@@ -360,7 +364,7 @@ export function useInvoiceLifecycle({
     const baseCols: DocumentColumn[] = [
       {
         key: "expiry_date",
-        header: "تاريخ الانتهاء",
+        header: t("invoice.expiryDate", { namespace: "invoicing" }),
         width: "w-[110px]",
         align: "center",
         type: "date",
@@ -368,7 +372,7 @@ export function useInvoiceLifecycle({
       },
       {
         key: "notes",
-        header: "ملاحظات",
+        header: t("invoice.notes", { namespace: "invoicing" }),
         width: "flex-[1]",
         align: "right",
         type: "text",
@@ -376,7 +380,7 @@ export function useInvoiceLifecycle({
       },
     ];
     return baseCols;
-  }, [invoiceType, currencies, baseCurrency]);
+  }, [invoiceType, currencies, baseCurrency, t]);
 
   const prePriceExtraCols = useMemo<DocumentColumn[]>(() => {
     if (invoiceType !== "Sales") return [];
@@ -385,13 +389,13 @@ export function useInvoiceLifecycle({
       : currencies;
     return sortedCurrencies.map((curr) => ({
       key: `cost_price_${curr.code}`,
-      header: `التكلفة (${curr.symbol || curr.code})`,
+      header: t("invoice.costColumn", { namespace: "invoicing", vars: { currency: curr.symbol || curr.code } }),
       width: "w-[90px]",
       align: "left" as const,
       type: "readonly" as const,
       defaultVisible: curr.code === baseCurrency?.code,
     }));
-  }, [invoiceType, currencies, baseCurrency]);
+  }, [invoiceType, currencies, baseCurrency, t]);
 
   const {
     enrichedLines,
@@ -408,7 +412,7 @@ export function useInvoiceLifecycle({
     setHeaderState,
     currencies,
     invoiceType,
-    priceLabel: invoiceType === "Sales" ? "السعر" : "التكلفة",
+    priceLabel: invoiceType === "Sales" ? t("invoice.priceLabel", { namespace: "invoicing" }) : t("invoice.costColumn", { namespace: "invoicing" }),
     extraColumns: extraCols,
     prePriceExtraColumns: prePriceExtraCols,
     materials,
@@ -459,7 +463,7 @@ export function useInvoiceLifecycle({
   // Action handlers
   const handleSave = async (andPost = false) => {
     if (!headerState.currency_code) {
-      toast.error("الرجاء اختيار العملات أولاً من إعدادات العملات");
+      toast.error(t("invoice.selectCurrencyFirst", { namespace: "invoicing" }));
       return;
     }
 
@@ -467,7 +471,7 @@ export function useInvoiceLifecycle({
       lines.length === 0 ||
       (invoiceType === "Purchase" && !lines[0].material_id)
     ) {
-      toast.error("يجب إضافة صنف واحد على الأقل");
+      toast.error(t("invoice.addAtLeastOneItem", { namespace: "invoicing" }));
       return;
     }
 
@@ -477,7 +481,7 @@ export function useInvoiceLifecycle({
       !headerState.customer_id
     ) {
       toast.error(
-        "المبيعات الآجلة أو الجزئية تتطلب اختيار عميل محدد. 'زبون نقدي' مخصص للبيع النقدي فقط.",
+        t("invoice.creditSalesRequiresCustomer", { namespace: "invoicing" }),
       );
       return;
     }
@@ -488,7 +492,7 @@ export function useInvoiceLifecycle({
       !headerState.supplier_id
     ) {
       toast.error(
-        "المشتريات الآجلة أو الجزئية تتطلب اختيار مورد محدد. 'مورد نقدي' مخصص للشراء النقدي فقط.",
+        t("invoice.creditPurchaseRequiresSupplier", { namespace: "invoicing" }),
       );
       return;
     }
@@ -567,9 +571,9 @@ export function useInvoiceLifecycle({
       if (andPost) {
         await invoiceService.postInvoice(result.id);
         await invalidateKeys(queryClient, invoiceType === "Sales" ? SALE_KEYS : PURCHASE_KEYS);
-        toast.success("تم الحفظ والترحيل بنجاح");
+        toast.success(t("invoice.saveAndPostSuccess", { namespace: "invoicing" }));
       } else {
-        toast.success("تم حفظ المسودة");
+        toast.success(t("invoice.saveDraftSuccess", { namespace: "invoicing" }));
         await invalidateKeys(queryClient, invoiceType === "Sales" ? SALE_KEYS : PURCHASE_KEYS);
       }
 
@@ -578,12 +582,12 @@ export function useInvoiceLifecycle({
       closeTab(activeTabId);
       openTab({
         id: listTabId,
-        title: invoiceType === "Sales" ? "فواتير المبيعات" : "فواتير المشتريات",
+        title: invoiceType === "Sales" ? t("invoice.salesListTitle", { namespace: "invoicing" }) : t("invoice.purchaseListTitle", { namespace: "invoicing" }),
         path: `/${listTabId}`,
         closable: true,
       });
     } catch (e) {
-      toast.error("فشل العملية: " + e);
+      toast.error(t("invoice.operationFailed", { namespace: "invoicing" }) + e);
     } finally {
       setSaving(false);
     }
@@ -595,7 +599,7 @@ export function useInvoiceLifecycle({
     try {
       await invoiceService.reopenInvoice(headerState.id);
       await invalidateKeys(queryClient, invoiceType === "Sales" ? SALE_KEYS : PURCHASE_KEYS);
-      toast.success("تم إلغاء الترحيل بنجاح. الفاتورة الآن مسودة.");
+      toast.success(t("invoice.reopenSuccess", { namespace: "invoicing" }));
       setHeaderState((s) => ({ ...s, status: "Draft" }));
       const invoicePath = invoiceType === "Sales"
         ? `/sales-invoices/${headerState.id}`
@@ -608,7 +612,7 @@ export function useInvoiceLifecycle({
         closable: true,
       });
     } catch (e) {
-      toast.error("فشل إلغاء الترحيل: " + e);
+      toast.error(t("invoice.reopenError", { namespace: "invoicing", vars: { error: String(e) } }));
     } finally {
       setSaving(false);
     }

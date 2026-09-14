@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 import { SYSTEM_ACCOUNT_IDS, type AccountDto } from "@erp/shared-types";
 import { resolveAccountNode, inferFixedAssetType } from "./entityResolver";
 import { resolveAccountNodeActions } from "./actionsResolver";
-import { CREATE_LABELS } from "./actionsResolver";
+import { CREATE_LABEL_KEYS } from "./actionsResolver";
+
+const mockT = (key: string) => key;
 
 const ROOT_ID = "__chart_of_accounts_root__";
 
@@ -38,7 +40,7 @@ describe("resolveAccountNode — root", () => {
     expect(resolved.capabilities.canCreate).toBe(false);
     expect(resolved.capabilities.canEdit).toBe(false);
     expect(resolved.capabilities.canViewLedger).toBe(false);
-    expect(resolveAccountNodeActions({ resolved }).length).toBe(0);
+    expect(resolveAccountNodeActions({ resolved, t: mockT }).length).toBe(0);
   });
 });
 
@@ -68,9 +70,9 @@ describe("resolveAccountNode — general branch", () => {
     });
 
     expect(resolved.capabilities.canViewLedger).toBe(true);
-    const actions = resolveAccountNodeActions({ resolved });
+    const actions = resolveAccountNodeActions({ resolved, t: mockT });
     expect(actions.map((a) => a.key)).toEqual(["new", "edit", "ledger", "delete"]);
-    expect(actions[0].label).toBe(CREATE_LABELS.account);
+    expect(actions[0].label).toBe(CREATE_LABEL_KEYS.account);
   });
 });
 
@@ -112,9 +114,9 @@ describe("resolveAccountNode — operational branches", () => {
 
       expect(resolved.branch).toBe(branch.name);
       expect(resolved.capabilities.createPanelKind).toBe(branch.createKind);
-      const actions = resolveAccountNodeActions({ resolved });
+      const actions = resolveAccountNodeActions({ resolved, t: (key: string) => key });
       const newAction = actions.find((a) => a.key === "new");
-      expect(newAction?.label).toBe(CREATE_LABELS[branch.createKind]);
+      expect(newAction?.label).toBe(CREATE_LABEL_KEYS[branch.createKind]);
     });
   }
 

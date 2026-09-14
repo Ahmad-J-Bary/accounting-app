@@ -1,4 +1,5 @@
 import { Plus, Edit, BookOpen, Trash2 } from "lucide-react";
+import type { TranslateOptions } from "@shared/types/i18n";
 import type {
   ResolvedTreeNode,
   TreeNodeAction,
@@ -12,14 +13,14 @@ import type {
  * descriptors onto buttons; the policy lives here, once.
  */
 
-/** Arabic labels for the per-branch "new" button. */
-export const CREATE_LABELS: Record<TreeNodeCreatePanelKind, string> = {
-  account: "حساب جديد",
-  customer: "إضافة عميل جديد",
-  supplier: "مورد جديد",
-  "expense-item": "إضافة بند مصروف",
-  "fixed-asset": "أصل جديد",
-  partner: "إضافة شريك جديد",
+/** Translation key map for the per-branch "new" button. */
+export const CREATE_LABEL_KEYS: Record<TreeNodeCreatePanelKind, string> = {
+  account: "chartOfAccounts.actions.newAccount",
+  customer: "chartOfAccounts.actions.newCustomer",
+  supplier: "chartOfAccounts.actions.newSupplier",
+  "expense-item": "chartOfAccounts.actions.newExpenseItem",
+  "fixed-asset": "chartOfAccounts.actions.newFixedAsset",
+  partner: "chartOfAccounts.actions.newPartner",
 };
 
 /** Arabic branch names used in the detail panel badge. */
@@ -32,8 +33,11 @@ export const BRANCH_LABELS: Record<TreeNodeBranch, string> = {
   partners: "شركاء",
 };
 
+type TranslateFn = (key: string, options?: TranslateOptions) => string;
+
 export interface AccountNodeActionContext {
   resolved: ResolvedTreeNode;
+  t: TranslateFn;
   onNew?: () => void;
   onEdit?: () => void;
   onLedger?: () => void;
@@ -43,7 +47,7 @@ export interface AccountNodeActionContext {
 export function resolveAccountNodeActions(
   ctx: AccountNodeActionContext,
 ): TreeNodeAction[] {
-  const { resolved, onNew, onEdit, onLedger, onDelete } = ctx;
+  const { resolved, t, onNew, onEdit, onLedger, onDelete } = ctx;
   const { capabilities, entityType } = resolved;
   const onlyRoot = entityType === "root";
 
@@ -52,7 +56,7 @@ export function resolveAccountNodeActions(
   if (capabilities.canCreate && !onlyRoot) {
     actions.push({
       key: "new",
-      label: CREATE_LABELS[capabilities.createPanelKind ?? "account"],
+      label: t(CREATE_LABEL_KEYS[capabilities.createPanelKind ?? "account"], { namespace: "accounting" }),
       icon: Plus,
       tone: "primary",
       disabled: false,
@@ -60,12 +64,12 @@ export function resolveAccountNodeActions(
     });
   }
   if (capabilities.canEdit) {
-    actions.push({ key: "edit", label: "تعديل", icon: Edit, disabled: false, onClick: onEdit });
+    actions.push({ key: "edit", label: t("chartOfAccounts.actions.edit", { namespace: "accounting" }), icon: Edit, disabled: false, onClick: onEdit });
   }
   if (capabilities.canViewLedger) {
     actions.push({
       key: "ledger",
-      label: "حركة اليومية",
+      label: t("chartOfAccounts.actions.ledger", { namespace: "accounting" }),
       icon: BookOpen,
       disabled: false,
       onClick: onLedger,
@@ -74,7 +78,7 @@ export function resolveAccountNodeActions(
   if (capabilities.canDelete) {
     actions.push({
       key: "delete",
-      label: "حذف",
+      label: t("chartOfAccounts.actions.delete", { namespace: "accounting" }),
       icon: Trash2,
       tone: "danger",
       disabled: false,

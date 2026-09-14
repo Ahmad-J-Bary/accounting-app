@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useTabs } from '@app/providers/TabContext';
-import { useNavSidebarSettings, useCompanyTypeSettings, useCompanyInitState, useSidebarLayout } from '@shared/hooks';
+import { useNavSidebarSettings, useCompanyTypeSettings, useCompanyInitState, useSidebarLayout, useNavLabels } from '@shared/hooks';
 import { useAppearance } from '@shared/hooks/useAppearance';
 import {
   companyTypeOf,
@@ -26,6 +26,7 @@ export function Sidebar({ collapsed: _collapsed, onClose }: SidebarProps) {
   const companySettings = useCompanyTypeSettings();
   const { initState, isReady } = useCompanyInitState();
   const { openTab, updateMainTab, activeTabId } = useTabs();
+  const { itemLabel, groupTitle } = useNavLabels();
   const location = useLocation();
 
   const {
@@ -148,9 +149,9 @@ export function Sidebar({ collapsed: _collapsed, onClose }: SidebarProps) {
                       const item = visibleItems[0];
                       if (item.to) {
                         if (e.ctrlKey) {
-                          openTab({ id: `${item.to}-${Date.now()}`, title: item.customLabel ?? item.defaultLabel, path: item.to, closable: true });
+                          openTab({ id: `${item.to}-${Date.now()}`, title: itemLabel(item), path: item.to, closable: true });
                         } else {
-                          updateMainTab({ title: item.customLabel ?? item.defaultLabel, path: item.to });
+                          updateMainTab({ title: itemLabel(item), path: item.to });
                         }
                       }
                     } else {
@@ -161,7 +162,7 @@ export function Sidebar({ collapsed: _collapsed, onClose }: SidebarProps) {
                     "w-8 h-8 rounded-lg flex items-center justify-center transition-all relative group/rail-btn",
                     isSelected ? railIconActive : railIconBase + ' ' + railIconHover,
                   )}
-                  title={group.customTitle ?? group.defaultTitle}
+                  title={groupTitle(group)}
                 >
                   <GroupIcon className="w-3.5 h-3.5" />
                   {isSelected && (

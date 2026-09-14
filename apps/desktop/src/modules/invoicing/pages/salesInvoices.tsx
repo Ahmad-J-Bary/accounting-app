@@ -107,6 +107,7 @@ export default function SalesInvoices() {
       materials: materialList,
       warehouses,
       currencyMode,
+      t,
     });
 
     const summary: Record<string, string> = {};
@@ -186,6 +187,7 @@ export default function SalesInvoices() {
       materials: materialList,
       warehouses,
       currencyMode,
+      t,
     });
 
     const summary: Record<string, string> = {};

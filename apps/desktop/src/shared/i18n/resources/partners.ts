@@ -246,6 +246,13 @@ export const partners: Record<AppLanguage, TranslationTree> = {
         drawings: "مسحوبات شريك: ",
       },
     },
+    quickCreate: {
+      addPartner: "إضافة شريك",
+      partnerNamePlaceholder: "اسم الشريك",
+      capitalPlaceholder: "رأس المال",
+      credit: "دائن",
+      save: "حفظ",
+    },
     partyPage: {
       titleCustomer: "إدارة العملاء",
       titleSupplier: "إدارة الموردين",
@@ -560,6 +567,13 @@ export const partners: Record<AppLanguage, TranslationTree> = {
         supplierPayment: "Cash payment to supplier: ",
         drawings: "Partner drawings: ",
       },
+    },
+    quickCreate: {
+      addPartner: "Add Partner",
+      partnerNamePlaceholder: "Partner name",
+      capitalPlaceholder: "Capital",
+      credit: "Credit",
+      save: "Save",
     },
     partyPage: {
       titleCustomer: "Customer Management",

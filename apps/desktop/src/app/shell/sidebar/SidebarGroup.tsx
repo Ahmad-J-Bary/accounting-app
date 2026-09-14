@@ -30,7 +30,7 @@ export function SidebarGroup({
   verticalAppearance,
 }: SidebarGroupProps) {
   const { settings } = useNavSidebarSettings();
-  void useNavLabels();
+  const { groupTitle } = useNavLabels();
   const { t } = useLocalization();
 
   const {
@@ -45,7 +45,7 @@ export function SidebarGroup({
   const borderClass = isBgLight ? 'border-slate-200' : 'border-white/5';
 
   const GroupIcon = ICON_MAP[group.icon || ''] ?? FolderPlus;
-  const displayTitle = group.customTitle ?? group.defaultTitle;
+  const displayTitle = groupTitle(group);
   const visibleItems = group.items.filter(i => i.visible);
 
   const showHeader = settings.navShowSectionHeaders && !collapsed && !iconOnly;

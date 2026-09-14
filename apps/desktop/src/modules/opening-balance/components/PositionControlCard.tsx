@@ -6,6 +6,7 @@ import { Eye } from "lucide-react";
 import type { PositionAccountLine, OpeningPositionControlDto } from "@erp/shared-types";
 import type { OpeningBalanceMigrationDto } from "../../accounting/api/openingBalanceService";
 import { MigrationPicker } from "./MigrationPicker";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 interface PositionControlCardProps {
   candidates: OpeningBalanceMigrationDto[];
@@ -24,16 +25,17 @@ export function PositionControlCard({
   position,
   onShow,
 }: PositionControlCardProps) {
+  const { t } = useLocalization();
 return (
     <SectionCard
-      title="المركز الافتتاحي (قراءة فقط)"
+      title={t("positionControl.title", { namespace: "openingBalance" })}
       icon={<Eye className="w-4 h-4 text-blue-600" />}
-      description="يعرض المركز المالي الافتتاحي المشتق من بنود الترحيل نفسها (A = L + E) دون إنشاء أي قيد اليومية، ويسلط الضوء على الفرق غير المصنف إن وُجد للرجوع إلى سير عمل تصنيف الرصيد المتبقي."
+      description={t("positionControl.description", { namespace: "openingBalance" })}
     >
       <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3 items-end">
-        <MigrationPicker id="pos-migration" label="الترحيل" candidates={candidates} value={positionId} onChange={onPositionIdChange} />
+        <MigrationPicker id="pos-migration" label={t("positionControl.migrationLabel", { namespace: "openingBalance" })} candidates={candidates} value={positionId} onChange={onPositionIdChange} />
         <Button size="sm" onClick={onShow} disabled={loading} className="bg-blue-600 hover:bg-blue-700 text-white font-bold">
-          {loading ? "جارٍ العرض..." : "عرض المركز"}
+          {loading ? t("positionControl.loading", { namespace: "openingBalance" }) : t("positionControl.showPosition", { namespace: "openingBalance" })}
         </Button>
       </div>
 
@@ -42,9 +44,9 @@ return (
           if (!selected) return null;
           return (
             <div className="flex flex-wrap items-center gap-3 px-3 py-2 rounded-lg bg-slate-50 border border-slate-200 text-xs">
-              <span className="font-semibold text-slate-700">حالة الافتتاح:</span>
+              <span className="font-semibold text-slate-700">{t("positionControl.openingStatus", { namespace: "openingBalance" })}</span>
               <StatusBadge status={selected.status} />
-              <span className="font-semibold text-slate-700">تاريخ القطع:</span>
+              <span className="font-semibold text-slate-700">{t("positionControl.cutoverDate", { namespace: "openingBalance" })}</span>
               <span className="tabular-nums font-bold text-slate-700">{toLocalDateStr(selected.cutover_date)}</span>
               {selected.notes && <span className="text-slate-500 truncate">· {selected.notes}</span>}
             </div>
@@ -54,9 +56,9 @@ return (
         {position && (
           <div className="border border-slate-200 rounded-lg space-y-3 p-3">
             <div className={"flex items-center justify-between px-3 py-2 rounded-lg text-sm font-bold " + (position.is_balanced ? "bg-green-50 text-green-700" : "bg-red-50 text-red-600")}>
-              <span>{position.is_balanced ? "المركز متوازن ✓" : "يوجد فرق في المركز"}</span>
+              <span>{position.is_balanced ? t("positionControl.balanced", { namespace: "openingBalance" }) : t("positionControl.hasDifference", { namespace: "openingBalance" })}</span>
               <span className="tabular-nums">
-                الفرق: {fmtMoney(position.equity_difference)}
+                {t("positionControl.difference", { namespace: "openingBalance" })} {fmtMoney(position.equity_difference)}
               </span>
             </div>
 
@@ -68,13 +70,13 @@ return (
 
             {position.unreconciled_items.length > 0 && (
               <div className="space-y-1">
-                <div className="text-xs font-bold text-amber-700">بنود غير مطابقة (السجل المساعد)</div>
+                <div className="text-xs font-bold text-amber-700">{t("positionControl.unreconciledTitle", { namespace: "openingBalance" })}</div>
                 <div className="border border-amber-200 rounded-lg divide-y divide-amber-100">
                   {position.unreconciled_items.map((r) => (
                     <div key={r.key} className="flex items-center justify-between gap-2 px-3 py-1.5 text-xs">
                       <span className="font-semibold text-slate-700">{r.label}</span>
                       <span className="tabular-nums text-slate-600">
-                        السجل المساعد: {fmtMoney(r.subledger)} ← الأستاذ: {fmtMoney(r.general_ledger)}
+                        {t("positionControl.subledger", { namespace: "openingBalance" })} {fmtMoney(r.subledger)} ← {t("positionControl.generalLedger", { namespace: "openingBalance" })} {fmtMoney(r.general_ledger)}
                       </span>
                     </div>
                   ))}
@@ -84,7 +86,7 @@ return (
 
             {position.validation_errors.length > 0 && (
               <div className="px-3 py-2 rounded-lg bg-red-50 text-red-700 text-xs space-y-1">
-                <div className="font-bold">أخطاء الجاهزية للترحيل</div>
+                <div className="font-bold">{t("positionControl.validationErrorsTitle", { namespace: "openingBalance" })}</div>
                 {position.validation_errors.map((e, i) => (
                   <div key={i} className="ps-1">• {e}</div>
                 ))}
@@ -93,10 +95,10 @@ return (
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
               {[
-                { label: "الأصول", value: position.total_assets, color: "text-blue-700" },
-                { label: "الخصوم", value: position.total_liabilities, color: "text-emerald-700" },
-                { label: "صافي الأصول", value: position.net_assets, color: "text-slate-800 font-black" },
-                { label: "حقوق الملكية", value: position.total_equity, color: "text-indigo-700" },
+                { label: t("positionControl.totalAssets", { namespace: "openingBalance" }), value: position.total_assets, color: "text-blue-700" },
+                { label: t("positionControl.totalLiabilities", { namespace: "openingBalance" }), value: position.total_liabilities, color: "text-emerald-700" },
+                { label: t("positionControl.netAssets", { namespace: "openingBalance" }), value: position.net_assets, color: "text-slate-800 font-black" },
+                { label: t("positionControl.totalEquity", { namespace: "openingBalance" }), value: position.total_equity, color: "text-indigo-700" },
               ].map((row) => (
                 <div key={row.label} className="border border-slate-100 rounded-lg p-2 space-y-0.5 bg-white">
                   <div className="text-slate-500 font-semibold">{row.label}</div>
@@ -107,34 +109,34 @@ return (
 
             <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-xs">
               <div className="border border-slate-100 rounded-lg p-2 space-y-1">
-                <div className="text-slate-500 font-semibold">رأس مال الشركاء</div>
+                <div className="text-slate-500 font-semibold">{t("positionControl.partnerCapital", { namespace: "openingBalance" })}</div>
                 <div className="font-bold tabular-nums">{fmtMoney(position.partner_capital)}</div>
               </div>
               <div className="border border-slate-100 rounded-lg p-2 space-y-1">
-                <div className="text-slate-500 font-semibold">الحسابات الجارية</div>
+                <div className="text-slate-500 font-semibold">{t("positionControl.partnerCurrentAccounts", { namespace: "openingBalance" })}</div>
                 <div className="font-bold tabular-nums">{fmtMoney(position.partner_current_accounts)}</div>
               </div>
               <div className="border border-slate-100 rounded-lg p-2 space-y-1">
-                <div className="text-slate-500 font-semibold">الأرباح المبقاة</div>
+                <div className="text-slate-500 font-semibold">{t("positionControl.retainedEarnings", { namespace: "openingBalance" })}</div>
                 <div className="font-bold tabular-nums">{fmtMoney(position.retained_earnings)}</div>
               </div>
               <div className="border border-slate-100 rounded-lg p-2 space-y-1">
-                <div className="text-slate-500 font-semibold">تسوية رصيد الافتتاح (53)</div>
+                <div className="text-slate-500 font-semibold">{t("positionControl.openingEquityAdjustment", { namespace: "openingBalance" })}</div>
                 <div className="font-bold tabular-nums">{fmtMoney(position.opening_equity_adjustment)}</div>
               </div>
               <div className="border border-slate-100 rounded-lg p-2 space-y-1">
-                <div className="text-slate-500 font-semibold">حقوق ملكية أخرى</div>
+                <div className="text-slate-500 font-semibold">{t("positionControl.otherEquity", { namespace: "openingBalance" })}</div>
                 <div className="font-bold tabular-nums">{fmtMoney(position.other_equity)}</div>
               </div>
               <div className="border border-slate-100 rounded-lg p-2 space-y-1">
-                <div className="text-slate-500 font-semibold">مسحوبات (−)</div>
+                <div className="text-slate-500 font-semibold">{t("positionControl.drawings", { namespace: "openingBalance" })}</div>
                 <div className="font-bold tabular-nums text-red-600">{fmtMoney(position.drawings)}</div>
               </div>
             </div>
 
             <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 bg-slate-50 rounded-lg text-xs">
               <span className="font-semibold text-slate-700">
-                النتيجة التاريخية الافتتاحية (صافي الأصول − رأس المال − حقوق صريحة أخرى):
+                {t("positionControl.historicalResult", { namespace: "openingBalance" })}
               </span>
               <span className="font-black tabular-nums text-indigo-700">
                 {fmtMoney(position.opening_historical_result)}
@@ -142,26 +144,26 @@ return (
             </div>
 
             {position.asset_detail.length > 0 && (
-              <PositionDetailTable title="تفاصيل الأصول" lines={position.asset_detail} />
+              <PositionDetailTable title={t("positionControl.assetDetails", { namespace: "openingBalance" })} lines={position.asset_detail} />
             )}
             {position.liability_detail.length > 0 && (
-              <PositionDetailTable title="تفاصيل الخصوم" lines={position.liability_detail} />
+              <PositionDetailTable title={t("positionControl.liabilityDetails", { namespace: "openingBalance" })} lines={position.liability_detail} />
             )}
             {position.equity_detail.length > 0 && (
-              <PositionDetailTable title="تفاصيل حقوق الملكية" lines={position.equity_detail} />
+              <PositionDetailTable title={t("positionControl.equityDetails", { namespace: "openingBalance" })} lines={position.equity_detail} />
             )}
 
             {position.partner_rows.length > 0 && (
               <div className="space-y-1">
-                <div className="text-xs font-bold text-slate-700">تفصيل الشركاء</div>
+                <div className="text-xs font-bold text-slate-700">{t("positionControl.partnerDetails", { namespace: "openingBalance" })}</div>
                 <div className="border border-slate-100 rounded-lg divide-y divide-slate-100">
                   {position.partner_rows.map((p) => (
                     <div key={p.partner_id} className="grid grid-cols-2 md:grid-cols-5 gap-2 px-3 py-2 text-xs items-center">
                       <span className="font-semibold text-slate-700">{p.partner_name}</span>
-                      <span className="tabular-nums text-slate-600">رأس المال: {fmtMoney(p.capital)}</span>
-                      <span className="tabular-nums text-slate-600">النسبة: {fmtMoney(p.ownership_percent)}%</span>
-                      <span className="tabular-nums text-slate-600">جاري: {fmtMoney(p.current)}</span>
-                      <span className="tabular-nums text-slate-600">مسحوبات: {fmtMoney(p.drawings)}</span>
+                      <span className="tabular-nums text-slate-600">{t("positionControl.capital", { namespace: "openingBalance" })} {fmtMoney(p.capital)}</span>
+                      <span className="tabular-nums text-slate-600">{t("positionControl.ownershipPercent", { namespace: "openingBalance" })} {fmtMoney(p.ownership_percent)}%</span>
+                      <span className="tabular-nums text-slate-600">{t("positionControl.current", { namespace: "openingBalance" })} {fmtMoney(p.current)}</span>
+                      <span className="tabular-nums text-slate-600">{t("positionControl.drawingsLabel", { namespace: "openingBalance" })} {fmtMoney(p.drawings)}</span>
                     </div>
                   ))}
                 </div>

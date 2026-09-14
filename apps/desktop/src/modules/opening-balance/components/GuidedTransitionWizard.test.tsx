@@ -151,19 +151,19 @@ describe("GuidedTransitionWizard", () => {
   it("NewCompany mode renders only the two-step flow with first-period fields", async () => {
     renderWizard();
     expect(await screen.findByText("بدء محاسبة شركة جديدة")).toBeInTheDocument();
-    expect(screen.getByText("بدء الحسابات")).toBeInTheDocument();
-    expect(screen.getByText("اكتمال")).toBeInTheDocument();
-    expect(screen.queryByText("الشركاء ورأس المال")).not.toBeInTheDocument();
+    expect(screen.getByText("steps.companyStart")).toBeInTheDocument();
+    expect(screen.getByText("steps.done")).toBeInTheDocument();
+    expect(screen.queryByText("steps.partnersEquity")).not.toBeInTheDocument();
     expect(screen.getByLabelText(/بداية الفترة/)).toBeInTheDocument();
     expect(screen.getByLabelText(/نهاية الفترة/)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "إنشاء الفترة الأولى والبدء" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "nextLabel.createFirstPeriod" })).toBeEnabled();
   });
 
   it("creates the first financial period and finishes for a new company", async () => {
     const user = userEvent.setup();
     renderWizard();
     await screen.findByText("بدء محاسبة شركة جديدة");
-    await user.click(screen.getByRole("button", { name: "إنشاء الفترة الأولى والبدء" }));
+    await user.click(screen.getByRole("button", { name: "nextLabel.createFirstPeriod" }));
     await waitFor(() => {
       expect(fiscalPeriodService.createFiscalPeriod).toHaveBeenCalledWith({
         start_date: expect.any(String),
@@ -178,16 +178,16 @@ describe("GuidedTransitionWizard", () => {
     renderWizard();
     expect(await screen.findByText("معالج التحويل الموجه (شركة قائمة)")).toBeInTheDocument();
     for (const label of [
-      "بدء الحسابات",
-      "النقد والبنوك",
-      "الذمم المدينة",
-      "المخزون",
-      "الأصول الثابتة",
-      "الموردون والالتزامات",
-      "حقوق الشركاء",
-      "المراجعة والحفظ",
-      "إتمام الترحيل",
-      "اكتمال",
+      "steps.companyStart",
+      "steps.cashBanks",
+      "steps.customers",
+      "steps.inventory",
+      "steps.fixedAssets",
+      "steps.suppliersLoans",
+      "steps.partnersEquity",
+      "steps.review",
+      "steps.action",
+      "steps.done",
     ]) {
       expect(screen.getAllByText(label).length).toBeGreaterThan(0);
     }

@@ -183,7 +183,7 @@ export const TabProvider = ({ children }: { children: ReactNode }) => {
     const tabToClose = current.find(t => t.id === id);
     if (!tabToClose || !tabToClose.closable) return;
 
-    if (tabToClose.dirty && !window.confirm(`لديك تغييرات غير محفوظة في «${tabToClose.title}». هل تريد الإغلاق؟`)) {
+    if (tabToClose.dirty && !window.confirm(`Unsaved changes in "${tabToClose.title}". Close anyway?`)) {
       return;
     }
 

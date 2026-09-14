@@ -135,6 +135,7 @@ export default function PurchaseInvoices() {
       materials: materialList,
       warehouses,
       currencyMode,
+      t,
     });
 
     const summary: Record<string, string> = {};
@@ -212,6 +213,7 @@ export default function PurchaseInvoices() {
       materials: materialList,
       warehouses,
       currencyMode,
+      t,
     });
 
     const summary: Record<string, string> = {};

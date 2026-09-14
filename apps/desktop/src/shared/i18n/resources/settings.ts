@@ -619,6 +619,8 @@ export const settings: Record<AppLanguage, TranslationTree> = {
       rateUpdateSuccess: "تم التحديث",
       rateUpdateSuccessDesc: "تم تحديث سعر صرف {{code}}",
       error: "خطأ",
+      currencyField: "العملة",
+      selectCurrency: "اختر العملة",
     },
     floatingWidget: {
       title: "سعر الصرف العائم",
@@ -1247,6 +1249,8 @@ export const settings: Record<AppLanguage, TranslationTree> = {
       rateUpdateSuccess: "Updated",
       rateUpdateSuccessDesc: "{{code}} exchange rate updated",
       error: "Error",
+      currencyField: "Currency",
+      selectCurrency: "Select currency",
     },
     floatingWidget: {
       title: "Floating Exchange Rate",

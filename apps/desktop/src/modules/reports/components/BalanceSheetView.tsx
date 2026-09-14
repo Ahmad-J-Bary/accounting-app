@@ -36,10 +36,11 @@ function SummaryCards({ computed, formatValue }: { computed: BalanceSheetCompute
   );
 }
 
-function TreeRow({ row, formatValue }: { row: BalanceSheetRow; formatValue: (value: number) => string }) {
+function TreeRow({ row, formatValue, t }: { row: BalanceSheetRow; formatValue: (value: number) => string; t: (key: string, opts?: Record<string, unknown>) => string }) {
   const [expanded, setExpanded] = useState(true);
   const hasChildren = row.children && row.children.length > 0;
   const isNested = row.depth > 0;
+  const displayLabel = row.label.startsWith("reports.") ? t(row.label.replace(/^reports\./, ""), { namespace: "reports" }) : row.label;
 
   return (
     <div className="relative">
@@ -64,7 +65,7 @@ function TreeRow({ row, formatValue }: { row: BalanceSheetRow; formatValue: (val
           </span>
         )}
         <span className={cn("text-sm", hasChildren ? "font-bold text-slate-800" : "font-medium text-slate-700")}>
-          {row.label}
+          {displayLabel}
         </span>
         <span className="me-auto text-sm font-bold tabular-nums text-slate-900">
           {formatValue(row.value)}
@@ -74,7 +75,7 @@ function TreeRow({ row, formatValue }: { row: BalanceSheetRow; formatValue: (val
       {hasChildren && expanded && (
         <div className="relative ms-5 border-s-2 border-slate-200/80">
           {row.children!.map((child, i) => (
-            <TreeRow key={`${child.label}-${i}`} row={child} formatValue={formatValue} />
+            <TreeRow key={`${child.label}-${i}`} row={child} formatValue={formatValue} t={t} />
           ))}
         </div>
       )}
@@ -82,20 +83,23 @@ function TreeRow({ row, formatValue }: { row: BalanceSheetRow; formatValue: (val
   );
 }
 
-function SectionCard({ section, formatValue }: {
+function SectionCard({ section, formatValue, t }: {
   section: BalanceSheetSection;
   formatValue: (value: number) => string;
+  t: (key: string, opts?: Record<string, unknown>) => string;
 }) {
+  const sectionTitle = section.title.startsWith("reports.") ? t(section.title.replace(/^reports\./, ""), { namespace: "reports" }) : section.title;
+  const totalLabel = section.totalLabel.startsWith("reports.") ? t(section.totalLabel.replace(/^reports\./, ""), { namespace: "reports" }) : section.totalLabel;
   return (
     <section className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
-      <SectionHeader title={section.title} />
+      <SectionHeader title={sectionTitle} />
       <div className="mt-2 space-y-0.5">
         {section.rows.map((row, i) => (
-          <TreeRow key={`${row.label}-${i}`} row={row} formatValue={formatValue} />
+          <TreeRow key={`${row.label}-${i}`} row={row} formatValue={formatValue} t={t} />
         ))}
       </div>
       <div className="mt-2 pt-2 border-t border-slate-100 flex items-center justify-between px-2">
-        <span className="text-xs font-black text-slate-500">{section.totalLabel}</span>
+        <span className="text-xs font-black text-slate-500">{totalLabel}</span>
         <span className="text-base font-black tabular-nums text-slate-900">
           {formatValue(section.totalValue)}
         </span>
@@ -140,10 +144,10 @@ export function BalanceSheetView(props: BalanceSheetViewProps) {
         <div className="flex flex-col gap-2 h-full">
           <div className="flex-1 space-y-2">
             {computed.sections.slice(0, 1).map(s => (
-              <SectionCard key={s.id} section={s} formatValue={formatValue} />
+              <SectionCard key={s.id} section={s} formatValue={formatValue} t={t} />
             ))}
             {computed.sections.slice(1, 2).map(s => (
-              <SectionCard key={s.id} section={s} formatValue={formatValue} />
+              <SectionCard key={s.id} section={s} formatValue={formatValue} t={t} />
             ))}
           </div>
           <TotalRow label={t("balanceSheet.statTotalAssets", { namespace: "reports",  })} value={computed.totalAssets} formatValue={formatValue} highlight />
@@ -152,13 +156,13 @@ export function BalanceSheetView(props: BalanceSheetViewProps) {
         <div className="flex flex-col gap-2 h-full">
           <div className="flex-1 space-y-2">
             {computed.sections.slice(2, 3).map(s => (
-              <SectionCard key={s.id} section={s} formatValue={formatValue} />
+              <SectionCard key={s.id} section={s} formatValue={formatValue} t={t} />
             ))}
             {computed.sections.slice(3, 4).map(s => (
-              <SectionCard key={s.id} section={s} formatValue={formatValue} />
+              <SectionCard key={s.id} section={s} formatValue={formatValue} t={t} />
             ))}
             {computed.sections.slice(4, 5).map(s => (
-              <SectionCard key={s.id} section={s} formatValue={formatValue} />
+              <SectionCard key={s.id} section={s} formatValue={formatValue} t={t} />
             ))}
           </div>
           <TotalRow label={t("balanceSheet.totalLiabilitiesEquity", { namespace: "reports",  })} value={computed.totalLiabilitiesEquity} formatValue={formatValue} highlight />

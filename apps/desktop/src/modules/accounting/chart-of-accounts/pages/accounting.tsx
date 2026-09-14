@@ -473,6 +473,7 @@ export default function Accounting() {
 
   const actionDescriptors = resolveAccountNodeActions({
     resolved,
+    t,
     onNew: handleOpenNew,
     onEdit: handleOpenEdit,
     onLedger: handleOpenLedger,

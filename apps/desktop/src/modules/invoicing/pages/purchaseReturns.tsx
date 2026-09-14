@@ -116,6 +116,7 @@ export default function PurchaseReturns() {
       materials,
       warehouses,
       currencyMode,
+      t,
     });
 
     const summary: Record<string, 'sum' | 'subtotal' | 'average' | null> = {};

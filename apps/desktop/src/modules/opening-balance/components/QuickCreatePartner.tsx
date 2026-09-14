@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Plus, Loader2, X, Check } from "lucide-react";
 import { Input } from "@shared/ui/input";
 import { Button } from "@shared/ui/button";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 interface QuickCreatePartnerProps {
   onCreate: (data: {
@@ -12,6 +13,7 @@ interface QuickCreatePartnerProps {
 }
 
 export function QuickCreatePartner({ onCreate, navLink }: QuickCreatePartnerProps) {
+  const { t } = useLocalization();
   const [expanded, setExpanded] = useState(false);
   const [name, setName] = useState("");
   const [amount, setAmount] = useState("");
@@ -49,7 +51,7 @@ export function QuickCreatePartner({ onCreate, navLink }: QuickCreatePartnerProp
           className="h-8 shrink-0 rounded-full border-emerald-300 bg-emerald-50 px-3 text-xs font-bold text-emerald-700 hover:bg-emerald-100 hover:border-emerald-400 transition-all"
         >
           <Plus className="w-3.5 h-3.5 ms-1" />
-          إضافة شريك
+          {t("quickCreate.addPartner", { namespace: "partners" })}
         </Button>
         {navLink}
       </div>
@@ -62,7 +64,7 @@ export function QuickCreatePartner({ onCreate, navLink }: QuickCreatePartnerProp
         <Input
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder="اسم الشريك"
+          placeholder={t("quickCreate.partnerNamePlaceholder", { namespace: "partners" })}
           className="h-8 flex-1 border-slate-200 text-xs bg-white"
           disabled={creating}
           autoFocus
@@ -80,7 +82,7 @@ export function QuickCreatePartner({ onCreate, navLink }: QuickCreatePartnerProp
           step="0.01"
           value={amount}
           onChange={(e) => setAmount(e.target.value)}
-          placeholder="رأس المال"
+          placeholder={t("quickCreate.capitalPlaceholder", { namespace: "partners" })}
           className="h-8 w-32 border-slate-200 text-xs text-end tabular-nums bg-white"
           disabled={creating}
           onKeyDown={(e) => {
@@ -90,7 +92,7 @@ export function QuickCreatePartner({ onCreate, navLink }: QuickCreatePartnerProp
             }
           }}
         />
-        <span className="text-2xs font-semibold text-slate-400 shrink-0">دائن</span>
+        <span className="text-2xs font-semibold text-slate-400 shrink-0">{t("quickCreate.credit", { namespace: "partners" })}</span>
         <Button
           type="button"
           size="sm"
@@ -99,7 +101,7 @@ export function QuickCreatePartner({ onCreate, navLink }: QuickCreatePartnerProp
           className="h-8 px-2 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shrink-0"
         >
           {creating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
-          حفظ
+          {t("quickCreate.save", { namespace: "partners" })}
         </Button>
         <Button
           type="button"

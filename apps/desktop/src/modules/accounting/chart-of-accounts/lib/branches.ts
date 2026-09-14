@@ -3,7 +3,7 @@ import {
   inferFixedAssetType,
   type ResolveAccountNodeContext,
 } from "@shared/tree/entityResolver";
-import { BRANCH_LABELS, CREATE_LABELS } from "@shared/tree/actionsResolver";
+import { BRANCH_LABELS, CREATE_LABEL_KEYS } from "@shared/tree/actionsResolver";
 import type {
   ResolvedTreeNode,
   TreeNodeCreatePanelKind,
@@ -22,9 +22,9 @@ export const resolveChartNode = (ctx: ResolveAccountNodeContext): ResolvedTreeNo
 export const chartBranchLabel = (branch: ResolvedTreeNode["branch"]): string =>
   BRANCH_LABELS[branch];
 
-export const chartCreateLabel = (
+export const chartCreateLabelKey = (
   kind: TreeNodeCreatePanelKind | null,
-): string => (kind ? CREATE_LABELS[kind] : "جديد");
+): string | null => (kind ? CREATE_LABEL_KEYS[kind] : null);
 
 export { inferFixedAssetType };
 

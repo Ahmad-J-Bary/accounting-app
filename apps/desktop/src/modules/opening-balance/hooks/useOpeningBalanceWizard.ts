@@ -2,6 +2,7 @@ import { useMemo, useState, useCallback, useEffect, useRef, type Dispatch, type 
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import type { AccountDto, FiscalPeriodDto, CustomerDto, SupplierDto, ResidualClassificationSpecDto, AssetCategoryDto } from "@erp/shared-types";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 import type { WizardStepDef } from "@modules/opening-balance/components/WizardShell";
 
 type AssetType = "buildings_land" | "automotive" | "equipment" | "furniture";
@@ -191,6 +192,7 @@ interface WizardDraft {
 }
 
 export function useOpeningBalanceWizard() {
+  const { t } = useLocalization();
   const [step, setStep] = useState(0);
   const [startMode, setStartMode] = useState<string>(START_MODE_EXISTING);
   const [cutoverDate, setCutoverDate] = useState(() => toLocalDatePart(new Date()));
@@ -342,13 +344,13 @@ export function useOpeningBalanceWizard() {
       await openingBalanceService.saveOpeningDraft(json);
       setHasDraft(true);
       queryClient.setQueryData<string | null>(QUERY_KEYS.openingDraft, json);
-      toast.success("تم حفظ المسودة — يمكنك إكمال الرصيد الافتتاحي لاحقاً");
+      toast.success(t("draft.savedSuccess", { namespace: "openingBalance" }));
       return true;
     } catch (e) {
-      toast.error("فشل حفظ المسودة: " + e);
+      toast.error(t("draft.savedError", { namespace: "openingBalance", vars: { error: String(e) } }));
       return false;
     }
-  }, [step, cutoverDate, sourceSystem, sourceReference, notes, residualClassification, residualAccountId, cashBanks, loans, liabilitiesManual, equityManual, partnerCurrentManual, arManualLines, faManualLines, faOverrides, inventoryInputs, inventoryAccountId, inventoryPosted, userCompletedSteps, stepOrder, migration]);
+  }, [step, cutoverDate, sourceSystem, sourceReference, notes, residualClassification, residualAccountId, cashBanks, loans, liabilitiesManual, equityManual, partnerCurrentManual, arManualLines, faManualLines, faOverrides, inventoryInputs, inventoryAccountId, inventoryPosted, userCompletedSteps, stepOrder, migration, t]);
 
   // Silent auto-save: persists the draft without toasts or user feedback.
   const autoSaveDraft = useCallback(async () => {
@@ -385,6 +387,11 @@ export function useOpeningBalanceWizard() {
   // A NewCompany only needs its first financial period (no opening migration);
   // an Existing company runs the full 15-step transition incl. the first period.
   const steps = startMode === START_MODE_NEW ? STEPS_NEW : STEPS_EXISTING;
+
+  const stepsTranslated = useMemo(
+    () => steps.map((s) => ({ ...s, label: t(s.label, { namespace: "openingBalance" }) })),
+    [steps, t],
+  );
 
   // NewCompany never touches these modules, so only fetch them when the
   // Existing-company migration path is active (avoids wasted queries on mount).
@@ -704,14 +711,14 @@ export function useOpeningBalanceWizard() {
         queryClient.setQueryData<CustomerDto[]>(QUERY_KEYS.customers, (old) =>
           old?.map((x) => (x.id === c.id ? updated : x)) ?? [],
         );
-        toast.success("تم تحديث رصيد العميل");
+        toast.success(t("customer.updateSuccess", { namespace: "openingBalance" }));
         return true;
       } catch (e) {
-        toast.error("فشل تحديث رصيد العميل: " + e);
+        toast.error(t("customer.updateError", { namespace: "openingBalance", vars: { error: String(e) } }));
         return false;
       }
     },
-    [customers],
+    [customers, t],
   );
 
   const saveSupplierOpening = useCallback(
@@ -739,14 +746,14 @@ export function useOpeningBalanceWizard() {
         queryClient.setQueryData<SupplierDto[]>(QUERY_KEYS.suppliers, (old) =>
           old?.map((x) => (x.id === s.id ? updated : x)) ?? [],
         );
-        toast.success("تم تحديث رصيد المورد");
+        toast.success(t("supplier.updateSuccess", { namespace: "openingBalance" }));
         return true;
       } catch (e) {
-        toast.error("فشل تحديث رصيد المورد: " + e);
+        toast.error(t("supplier.updateError", { namespace: "openingBalance", vars: { error: String(e) } }));
         return false;
       }
     },
-    [suppliers],
+    [suppliers, t],
   );
 
   const savePartnerCapital = useCallback(
@@ -766,14 +773,14 @@ export function useOpeningBalanceWizard() {
           manualRatio: p.profit_sharing_ratio,
         });
         await queryClient.invalidateQueries({ queryKey: QUERY_KEYS.partners });
-        toast.success("تم تحديث رأس مال الشريك");
+        toast.success(t("partner.updateCapitalSuccess", { namespace: "openingBalance" }));
         return true;
       } catch (e) {
-        toast.error("فشل تحديث رأس مال الشريك: " + e);
+        toast.error(t("partner.updateCapitalError", { namespace: "openingBalance", vars: { error: String(e) } }));
         return false;
       }
     },
-    [partners],
+    [partners, t],
   );
 
   const savePartnerCurrentAccount = useCallback(
@@ -787,10 +794,10 @@ export function useOpeningBalanceWizard() {
         }
         return [...prev, { key: row.key, account_id: row.account_id, amount: value || "0", kind: "manual" as const }];
       });
-      toast.success("تم تحديث الحساب الجاري للشريك");
+      toast.success(t("partner.updateCurrentSuccess", { namespace: "openingBalance" }));
       return true;
     },
-    [],
+    [t],
   );
 
   const deletePartner = useCallback(async (row: DerivedRow): Promise<boolean> => {
@@ -798,13 +805,13 @@ export function useOpeningBalanceWizard() {
       await partnerService.deletePartner(row.entity_id);
       await queryClient.invalidateQueries({ queryKey: QUERY_KEYS.partners });
       await queryClient.invalidateQueries({ queryKey: QUERY_KEYS.chartOfAccounts });
-      toast.success("تم حذف الشريك");
+      toast.success(t("partner.deleteSuccess", { namespace: "openingBalance" }));
       return true;
     } catch (e) {
-      toast.error("فشل حذف الشريك: " + e);
+      toast.error(t("partner.deleteError", { namespace: "openingBalance", vars: { error: String(e) } }));
       return false;
     }
-  }, []);
+  }, [t]);
 
   const partnerCurrentManualRows: DerivedRow[] = useMemo(() => {
     const byKey = new Map(partnerCurrentManual.map((l) => [l.key, l]));
@@ -818,9 +825,9 @@ export function useOpeningBalanceWizard() {
   // inline edit only adjusts the migration's opening valuation per asset.
   const saveFixedAssetOverride = useCallback(async (row: DerivedRow, value: string): Promise<boolean> => {
     setFaOverrides((prev) => ({ ...prev, [row.entity_id]: value || "" }));
-    toast.success("تم تحديث قيمة الأصل الافتتاحية في المعالج");
+    toast.success(t("fixedAsset.overrideSuccess", { namespace: "openingBalance" }));
     return true;
-  }, []);
+  }, [t]);
 
   const deleteFixedAsset = useCallback(async (row: DerivedRow): Promise<boolean> => {
     try {
@@ -832,13 +839,13 @@ export function useOpeningBalanceWizard() {
       });
       await queryClient.invalidateQueries({ queryKey: QUERY_KEYS.fixedAssets });
       await queryClient.invalidateQueries({ queryKey: QUERY_KEYS.chartOfAccounts });
-      toast.success("تم حذف الأصل من صفحة الأصول الثابتة");
+      toast.success(t("fixedAsset.deleteSuccess", { namespace: "openingBalance" }));
       return true;
     } catch (e) {
-      toast.error("فشل حذف الأصل: " + e);
+      toast.error(t("fixedAsset.deleteError", { namespace: "openingBalance", vars: { error: String(e) } }));
       return false;
     }
-  }, []);
+  }, [t]);
 
   // ── Quick-create entities from the wizard ──────────────────────────────────
 
@@ -852,13 +859,13 @@ export function useOpeningBalanceWizard() {
       });
       queryClient.setQueryData<CustomerDto[]>(QUERY_KEYS.customers, (old) => [...(old ?? []), created]);
       await queryClient.invalidateQueries({ queryKey: QUERY_KEYS.chartOfAccounts });
-      toast.success(`تم إنشاء العميل "${name}" بنجاح`);
+      toast.success(t("customer.createSuccess", { namespace: "openingBalance", vars: { name } }));
       return true;
     } catch (e) {
-      toast.error("فشل إنشاء العميل: " + e);
+      toast.error(t("customer.createError", { namespace: "openingBalance", vars: { error: String(e) } }));
       return false;
     }
-  }, []);
+  }, [t]);
 
   const createSupplier = useCallback(async (name: string, amount: string): Promise<boolean> => {
     try {
@@ -870,13 +877,13 @@ export function useOpeningBalanceWizard() {
       });
       queryClient.setQueryData<SupplierDto[]>(QUERY_KEYS.suppliers, (old) => [...(old ?? []), created]);
       await queryClient.invalidateQueries({ queryKey: QUERY_KEYS.chartOfAccounts });
-      toast.success(`تم إنشاء المورد "${name}" بنجاح`);
+      toast.success(t("supplier.createSuccess", { namespace: "openingBalance", vars: { name } }));
       return true;
     } catch (e) {
-      toast.error("فشل إنشاء المورد: " + e);
+      toast.error(t("supplier.createError", { namespace: "openingBalance", vars: { error: String(e) } }));
       return false;
     }
-  }, []);
+  }, [t]);
 
   const createFixedAssetQuick = useCallback(async (data: { name: string; cost: string; assetType: AssetType; purchaseDate: string; warehouseId: string | undefined }): Promise<boolean> => {
     try {
@@ -941,13 +948,13 @@ export function useOpeningBalanceWizard() {
       }
 
       if (!assetAcc || !depAcc || !accDepAcc) {
-        toast.error("لم يتم العثور على حسابات الأصول الثابتة في دليل الحسابات");
+        toast.error(t("fixedAsset.accountsNotFound", { namespace: "openingBalance" }));
         return false;
       }
 
       const categoryId = matchedCategory?.id || assetCategories[0]?.id || "";
       if (!categoryId) {
-        toast.error("لم يتم العثور على فئة أصول ثابتة");
+        toast.error(t("fixedAsset.categoryNotFound", { namespace: "openingBalance" }));
         return false;
       }
 
@@ -971,13 +978,13 @@ export function useOpeningBalanceWizard() {
       await queryClient.invalidateQueries({ queryKey: QUERY_KEYS.fixedAssets });
       await queryClient.invalidateQueries({ queryKey: QUERY_KEYS.chartOfAccounts });
       await queryClient.invalidateQueries({ queryKey: ["asset-categories"] });
-      toast.success(`تم إنشاء الأصل "${data.name}" بنجاح`);
+      toast.success(t("fixedAsset.createSuccess", { namespace: "openingBalance", vars: { name: data.name } }));
       return true;
     } catch (e) {
-      toast.error("فشل إنشاء الأصل الثابت: " + e);
+      toast.error(t("fixedAsset.createError", { namespace: "openingBalance", vars: { error: String(e) } }));
       return false;
     }
-  }, [accounts, appSettings, assetCategories]);
+  }, [accounts, appSettings, assetCategories, t]);
 
   const createPartnerQuick = useCallback(async (data: { name: string; amount: string }): Promise<boolean> => {
     try {
@@ -995,13 +1002,13 @@ export function useOpeningBalanceWizard() {
 
       await queryClient.invalidateQueries({ queryKey: QUERY_KEYS.partners });
       await queryClient.invalidateQueries({ queryKey: QUERY_KEYS.chartOfAccounts });
-      toast.success(`تم إنشاء الشريك "${data.name}" بنجاح`);
+      toast.success(t("partner.createSuccess", { namespace: "openingBalance", vars: { name: data.name } }));
       return true;
     } catch (e) {
-      toast.error("فشل إنشاء الشريك: " + e);
+      toast.error(t("partner.createError", { namespace: "openingBalance", vars: { error: String(e) } }));
       return false;
     }
-  }, [appSettings]);
+  }, [appSettings, t]);
 
   const setInventoryRow = useCallback((materialId: string, patch: { qty?: string; cost?: string }) => {
     setInventoryInputs((prev) => {
@@ -1019,12 +1026,12 @@ export function useOpeningBalanceWizard() {
   const _handlePostInventoryInvoice = useCallback(async (): Promise<boolean> => {
     const rows = effectiveInventory.filter((r) => toNum(r.qty) > 0 && toNum(r.cost) > 0);
     if (rows.length === 0) {
-      toast.error("أدخل كميات وتكاليف للمواد قبل ترحيل رصيد البضاعة");
+      toast.error(t("inventory.enterQuantities", { namespace: "openingBalance" }));
       return false;
     }
     if (inventoryPosted) return true;
     if (!appSettings?.currency) {
-      toast.error("حدّد العملة الأساسية من الإعدادات أولاً");
+      toast.error(t("inventory.selectCurrency", { namespace: "openingBalance" }));
       return false;
     }
     setInventoryPosting(true);
@@ -1052,20 +1059,20 @@ export function useOpeningBalanceWizard() {
         issued_at: new Date().toISOString(),
         currency_code: appSettings.currency,
         exchange_rate: "1",
-        notes: "مواد أول المدة- رصيد افتتاحي للمواد",
+        notes: t("inventory.invoiceNotes", { namespace: "openingBalance" }),
       });
       await invoiceService.postInvoice(created.id);
       setInventoryPosted(true);
       await queryClient.invalidateQueries({ queryKey: QUERY_KEYS.materials });
-      toast.success("تم ترحيل رصيد البضاعة إلى المخزون");
+      toast.success(t("inventory.postSuccess", { namespace: "openingBalance" }));
       return true;
     } catch (e) {
-      toast.error("فشل ترحيل رصيد البضاعة: " + e);
+      toast.error(t("inventory.postError", { namespace: "openingBalance", vars: { error: String(e) } }));
       return false;
     } finally {
       setInventoryPosting(false);
     }
-  }, [effectiveInventory, inventoryPosted, appSettings, defaultWarehouseId]);
+  }, [effectiveInventory, inventoryPosted, appSettings, defaultWarehouseId, t]);
 
   const collectLines = useCallback((): OpeningLineInput[] => {
     const lines: OpeningLineInput[] = [];
@@ -1076,33 +1083,33 @@ export function useOpeningBalanceWizard() {
     }
     for (const l of partnerCurrentManual) {
       if (l.account_id && toNum(l.amount) > 0) {
-        lines.push({ account_id: l.account_id, amount: l.amount, description: "حساب جاري شريك — رصيد افتتاحي" });
+        lines.push({ account_id: l.account_id, amount: l.amount, description: t("lineDescriptions.partnerCurrent", { namespace: "openingBalance" }) });
       }
     }
     for (const l of cashBanks) {
       if (l.account_id && toNum(l.amount) > 0) {
-        lines.push({ account_id: l.account_id, amount: l.amount, description: "نقد وبنوك — رصيد افتتاحي" });
+        lines.push({ account_id: l.account_id, amount: l.amount, description: t("lineDescriptions.cashBanks", { namespace: "openingBalance" }) });
       }
     }
     for (const l of loans) {
       if (l.account_id && toNum(l.amount) > 0) {
-        lines.push({ account_id: l.account_id, amount: l.amount, description: "قروض — رصيد افتتاحي" });
+        lines.push({ account_id: l.account_id, amount: l.amount, description: t("lineDescriptions.loans", { namespace: "openingBalance" }) });
       }
     }
     for (const l of [...liabilitiesManual, ...equityManual]) {
       if (l.account_id && toNum(l.amount) > 0) {
-        lines.push({ account_id: l.account_id, amount: l.amount, description: "بند يدوي" });
+        lines.push({ account_id: l.account_id, amount: l.amount, description: t("lineDescriptions.manualLine", { namespace: "openingBalance" }) });
       }
     }
     if (inventoryTotal > 0 && effectiveInventoryAccountId) {
       lines.push({
         account_id: effectiveInventoryAccountId,
         amount: String(inventoryTotal),
-        description: "مخزون أول المدة",
+        description: t("lineDescriptions.inventory", { namespace: "openingBalance" }),
       });
     }
     if (hasResidualPlug && totals.plugAmount > 0) {
-      lines.push({ account_id: obeAccountId, amount: String(totals.plugAmount), description: "بند تسوية الرصيد المتبقي" });
+      lines.push({ account_id: obeAccountId, amount: String(totals.plugAmount), description: t("lineDescriptions.residualPlug", { namespace: "openingBalance" }) });
     }
     return lines;
   }, [
@@ -1120,6 +1127,7 @@ export function useOpeningBalanceWizard() {
     hasResidualPlug,
     obeAccountId,
     totals,
+    t,
   ]);
 
   const collectItems = useCallback((): OpeningItemInput[] => {
@@ -1185,36 +1193,36 @@ export function useOpeningBalanceWizard() {
     const hints: { section: string; amount: number }[] = [];
     for (const l of cashBanks) {
       if (toNum(l.amount) > 0 && !l.account_id) {
-        hints.push({ section: l.kind === "bank" ? "البنوك" : "النقد", amount: toNum(l.amount) });
+        hints.push({ section: l.kind === "bank" ? t("missingAccounts.banks", { namespace: "openingBalance" }) : t("missingAccounts.cash", { namespace: "openingBalance" }), amount: toNum(l.amount) });
       }
     }
     for (const l of loans) {
       if (toNum(l.amount) > 0 && !l.account_id) {
-        hints.push({ section: "القروض", amount: toNum(l.amount) });
+        hints.push({ section: t("missingAccounts.loans", { namespace: "openingBalance" }), amount: toNum(l.amount) });
       }
     }
     for (const l of [...assetsManual, ...liabilitiesManual, ...equityManual]) {
       if (toNum(l.amount) > 0 && !l.account_id) {
-        hints.push({ section: "بند يدوي", amount: toNum(l.amount) });
+        hints.push({ section: t("missingAccounts.manualLine", { namespace: "openingBalance" }), amount: toNum(l.amount) });
       }
     }
     for (const l of partnerCurrentManual) {
       if (toNum(l.amount) > 0 && !l.account_id) {
-        hints.push({ section: "حساب جاري شريك", amount: toNum(l.amount) });
+        hints.push({ section: t("missingAccounts.partnerCurrent", { namespace: "openingBalance" }), amount: toNum(l.amount) });
       }
     }
     if (inventoryTotal > 0 && !effectiveInventoryAccountId) {
-      hints.push({ section: "المخزون", amount: inventoryTotal });
+      hints.push({ section: t("missingAccounts.inventory", { namespace: "openingBalance" }), amount: inventoryTotal });
     }
     return hints;
-  }, [cashBanks, loans, assetsManual, liabilitiesManual, equityManual, partnerCurrentManual, inventoryTotal, effectiveInventoryAccountId]);
+  }, [cashBanks, loans, assetsManual, liabilitiesManual, equityManual, partnerCurrentManual, inventoryTotal, effectiveInventoryAccountId, t]);
 
   const missingAccountHints = useMemo(
     () =>
       missingAccounts.map(
-        (h) => `${h.section}: ${h.amount.toLocaleString(undefined, { maximumFractionDigits: 2 })} بدون حساب`,
+        (h) => `${h.section}: ${h.amount.toLocaleString(undefined, { maximumFractionDigits: 2 })} ${t("missingAccounts.withoutAccount", { namespace: "openingBalance" })}`,
       ),
-    [missingAccounts],
+    [missingAccounts, t],
   );
 
   const invalidateMigrations = useCallback(() => {
@@ -1226,7 +1234,7 @@ export function useOpeningBalanceWizard() {
   // and forth does not duplicate the period.
   const createFirstPeriod = useCallback(async (): Promise<boolean> => {
     if (!firstPeriodStart || !firstPeriodEnd || new Date(firstPeriodStart) >= new Date(firstPeriodEnd)) {
-      toast.error("تاريخ بداية الفترة المالية يجب أن يسبق تاريخ النهاية");
+      toast.error(t("firstPeriod.dateError", { namespace: "openingBalance" }));
       return false;
     }
     const window = periodWindowFromDateInput(firstPeriodStart, firstPeriodEnd);
@@ -1239,15 +1247,15 @@ export function useOpeningBalanceWizard() {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.fiscalPeriods });
       toast.success(
         startMode === START_MODE_NEW
-          ? "تم إنشاء أول فترة مالية — يمكنك بدء العمل"
-          : "تم إنشاء أول فترة تشغيلية بعد إقفال الرصيد الافتتاحي",
+          ? t("firstPeriod.createSuccessNew", { namespace: "openingBalance" })
+          : t("firstPeriod.createSuccessExisting", { namespace: "openingBalance" }),
       );
       return true;
     } catch (e) {
-      toast.error("فشل إنشاء الفترة المالية: " + e);
+      toast.error(t("firstPeriod.createError", { namespace: "openingBalance", vars: { error: String(e) } }));
       return false;
     }
-  }, [firstPeriodStart, firstPeriodEnd, firstPeriod, startMode]);
+  }, [firstPeriodStart, firstPeriodEnd, firstPeriod, startMode, t]);
 
   const canNext = useMemo(() => {
     const datesValid = !!firstPeriodStart && !!firstPeriodEnd && firstPeriodStart < firstPeriodEnd;
@@ -1283,18 +1291,18 @@ export function useOpeningBalanceWizard() {
 
   const nextLabel = useMemo(() => {
     if (startMode === START_MODE_NEW) {
-      return step === 0 ? "إنشاء الفترة الأولى والبدء" : undefined;
+      return step === 0 ? t("nextLabel.createFirstPeriod", { namespace: "openingBalance" }) : undefined;
     }
     // Data-entry steps (0-6): show "إكمال" if not yet explicitly completed
     if (step >= 0 && step < STEP_REVIEW) {
-      return userCompletedSteps.has(step) ? undefined : "إكمال";
+      return userCompletedSteps.has(step) ? undefined : t("nextLabel.complete", { namespace: "openingBalance" });
     }
     switch (step) {
-      case STEP_REVIEW: return "حفظ وفحص التسوية";
-      case STEP_ACTION: return "تنفيذ (تحقق + ترحيل + قفل)";
+      case STEP_REVIEW: return t("nextLabel.review", { namespace: "openingBalance" });
+      case STEP_ACTION: return t("nextLabel.execute", { namespace: "openingBalance" });
       default: return undefined;
     }
-  }, [step, startMode, userCompletedSteps]);
+  }, [step, startMode, userCompletedSteps, t]);
 
   // Human-readable reason when the next button is disabled, so the «تأكيد
   // التحقق» step never looks silently stuck (an unclassified residual, an
@@ -1302,17 +1310,17 @@ export function useOpeningBalanceWizard() {
   const nextDisabledReason = useMemo(() => {
     if (startMode === START_MODE_NEW) return undefined;
     if (step !== STEP_ACTION) return undefined;
-    if (!migration) return "احفظ الأرصدة وفحص التسوية أولاً (خطوة المراجعة)";
-    if (["Posted", "Locked", "Cancelled"].includes(migration.status)) return "التحويل مقفول بالفعل";
+    if (!migration) return t("nextDisabledReason.saveFirst", { namespace: "openingBalance" });
+    if (["Posted", "Locked", "Cancelled"].includes(migration.status)) return t("nextDisabledReason.alreadyLocked", { namespace: "openingBalance" });
     const readiness = reconciliation ? reconciliationReadiness(reconciliation) : null;
     if (readiness && !readiness.readyToPost) {
       const reasons = readiness.blockers.filter((b) => !b.includes("لم يُصفَّر بعد"));
       if (reasons.length) return reasons.join(" · ");
-      return "المعادلة غير متوازنة أو توجد واجهات فرعية غير مطابقة";
+      return t("nextDisabledReason.notBalanced", { namespace: "openingBalance" });
     }
-    if (!residualResolved) return "الفرق غير محلول: صنّف الرصيد المتبقي قبل التنفيذ";
+    if (!residualResolved) return t("nextDisabledReason.unresolvedResidual", { namespace: "openingBalance" });
     return undefined;
-  }, [startMode, step, migration, reconciliation, residualResolved]);
+  }, [startMode, step, migration, reconciliation, residualResolved, t]);
 
   const runStep = async () => {
     try {
@@ -1361,7 +1369,7 @@ export function useOpeningBalanceWizard() {
         setReconciliation(recon);
         invalidateMigrations();
         await clearDraft();
-        toast.success(editableMigration ? "تم تحديث المسودة وإعادة فحص التسوية" : "تم حفظ المسودة وفحص التسوية");
+        toast.success(editableMigration ? t("review.draftUpdated", { namespace: "openingBalance" }) : t("review.draftSaved", { namespace: "openingBalance" }));
         setBusy(false);
         return true;
       }
@@ -1397,20 +1405,20 @@ export function useOpeningBalanceWizard() {
             invalidateMigrations();
             await clearDraft();
           }
-          toast.success("تم إتمام الترحيل بنجاح");
+          toast.success(t("action.completedSuccess", { namespace: "openingBalance" }));
           await invalidateAccountingMutationQueries(queryClient);
           setBusy(false);
           return true;
         } catch (e) {
           setBusy(false);
-          toast.error("فشلت العملية: " + e);
+          toast.error(t("action.failedError", { namespace: "openingBalance", vars: { error: String(e) } }));
           return false;
         }
       }
       return true;
     } catch (e) {
       setBusy(false);
-      toast.error("فشلت العملية: " + e);
+      toast.error(t("action.failedError", { namespace: "openingBalance", vars: { error: String(e) } }));
       return false;
     }
   };
@@ -1594,7 +1602,7 @@ export function useOpeningBalanceWizard() {
     markStepComplete,
     completedSteps,
     stepOrder,
-    steps,
+    steps: stepsTranslated,
     hasDraft,
     saveDraft,
     clearDraft,
@@ -1621,22 +1629,22 @@ export function useOpeningBalanceWizard() {
 
 // ExistingCompany: full 10-step guided transition.
 export const STEPS_EXISTING: WizardStepDef[] = [
-  { id: "company-start",      label: "بدء الحسابات" },
-  { id: "cash-banks",         label: "النقد والبنوك" },
-  { id: "customers",          label: "الذمم المدينة" },
-  { id: "inventory",          label: "المخزون" },
-  { id: "fixed-assets",       label: "الأصول الثابتة" },
-  { id: "suppliers-loans",    label: "الموردون والالتزامات" },
-  { id: "partners-equity",    label: "حقوق الشركاء" },
-  { id: "review",             label: "المراجعة والحفظ" },
-  { id: "action",             label: "إتمام الترحيل" },
-  { id: "done",               label: "اكتمال" },
+  { id: "company-start",      label: "steps.companyStart" },
+  { id: "cash-banks",         label: "steps.cashBanks" },
+  { id: "customers",          label: "steps.customers" },
+  { id: "inventory",          label: "steps.inventory" },
+  { id: "fixed-assets",       label: "steps.fixedAssets" },
+  { id: "suppliers-loans",    label: "steps.suppliersLoans" },
+  { id: "partners-equity",    label: "steps.partnersEquity" },
+  { id: "review",             label: "steps.review" },
+  { id: "action",             label: "steps.action" },
+  { id: "done",               label: "steps.done" },
 ];
 
 // NewCompany: the wizard only creates the first financial period, then finishes.
 export const STEPS_NEW: WizardStepDef[] = [
-  { id: "company-start", label: "بدء الحسابات" },
-  { id: "done", label: "اكتمال" },
+  { id: "company-start", label: "steps.companyStart" },
+  { id: "done", label: "steps.done" },
 ];
 
 export const STEPS = STEPS_EXISTING;

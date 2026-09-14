@@ -19,14 +19,9 @@ import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { UnitCard } from './UnitCard';
 import { AddUnitForm } from './AddUnitForm';
 import { useBarcodeScanner } from "@app/providers/BarcodeScannerProvider";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 const DEFAULT_CATEGORY_NAME = "غير مصنف";
-
-const SALE_TIERS = [
-  { id: 'retail', label: 'مفرق' },
-  { id: 'semi_wholesale', label: 'نصف جملة' },
-  { id: 'wholesale', label: 'جملة' },
-];
 
 interface MaterialFormProps {
   open: boolean;
@@ -86,9 +81,16 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
   const [editingUnitIdx, setEditingUnitIdx] = useState<number | null>(null);
   const [editingUnitData, setEditingUnitData] = useState<{ name: string; conversion_factor: string; barcode: string } | null>(null);
 
+  const { t } = useLocalization();
   const { currencies, baseCurrency, rateMap } = useCurrencyContext();
   const { beginScan } = useBarcodeScanner();
   const activeCurrencies = useMemo(() => currencies.filter(c => c.is_active), [currencies]);
+
+  const saleTiers = useMemo(() => [
+    { id: 'retail', label: t("saleTiers.retail", { namespace: "inventory" }) },
+    { id: 'semi_wholesale', label: t("saleTiers.semi_wholesale", { namespace: "inventory" }) },
+    { id: 'wholesale', label: t("saleTiers.wholesale", { namespace: "inventory" }) },
+  ], [t]);
   const uncategorizedCat = useMemo(() => categories.find(c => c.name === DEFAULT_CATEGORY_NAME && !c.parent_id), [categories]);
   const mainCategories = useMemo(() => categories.filter(c => !c.parent_id && c.name !== DEFAULT_CATEGORY_NAME && !c.is_hybrid), [categories]);
 
@@ -135,10 +137,10 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
   }, []);
 
   const handleCreateMain = useCallback(async () => {
-    if (!newCatName.trim()) { toast.error("اسم التصنيف مطلوب"); return; }
+    if (!newCatName.trim()) { toast.error(t("categories.form.categoryNameRequired", { namespace: "inventory" })); return; }
     const trimmed = newCatName.trim();
     if (categories.some(c => !c.parent_id && c.name === trimmed && c.name !== DEFAULT_CATEGORY_NAME)) {
-      toast.error(`يوجد تصنيف أساسي بنفس الاسم «${trimmed}»`);
+      toast.error(t("categories.form.duplicateRoot", { namespace: "inventory", vars: { name: trimmed } }));
       return;
     }
     setCreatingSaving(true);
@@ -165,20 +167,20 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
         }));
       }
 
-      toast.success("تم إضافة التصنيف الرئيسي");
+      toast.success(t("categories.form.mainCategoryCreated", { namespace: "inventory" }));
       cancelInlineCreate();
     } catch (e) {
-      toast.error("فشل إنشاء التصنيف: " + e);
+      toast.error(t("categories.form.createFailed", { namespace: "inventory", vars: { error: String(e) } }));
     } finally {
       setCreatingSaving(false);
     }
-  }, [newCatName, newCatPrefix, suggestPrefix, onCategoryCreated, cancelInlineCreate, categories]);
+  }, [newCatName, newCatPrefix, suggestPrefix, onCategoryCreated, cancelInlineCreate, categories, t]);
 
   const handleCreateSub = useCallback(async (parentId: string) => {
-    if (!newCatName.trim()) { toast.error("اسم التصنيف مطلوب"); return; }
+    if (!newCatName.trim()) { toast.error(t("categories.form.categoryNameRequired", { namespace: "inventory" })); return; }
     const trimmed = newCatName.trim();
     if (categories.some(c => c.parent_id === parentId && c.name === trimmed)) {
-      toast.error(`يوجد تصنيف فرعي بنفس الاسم «${trimmed}» ضمن نفس التصنيف الأساسي`);
+      toast.error(t("categories.form.duplicateSub", { namespace: "inventory", vars: { name: trimmed } }));
       return;
     }
     setCreatingSaving(true);
@@ -199,14 +201,14 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
         return { ...prev, selectedCategoryIds: [...next, sub.id] };
       });
 
-      toast.success("تم إضافة التصنيف الفرعي");
+      toast.success(t("categories.form.subCategoryCreated", { namespace: "inventory" }));
       cancelInlineCreate();
     } catch (e) {
-      toast.error("فشل إنشاء التصنيف: " + e);
+      toast.error(t("categories.form.createFailed", { namespace: "inventory", vars: { error: String(e) } }));
     } finally {
       setCreatingSaving(false);
     }
-  }, [newCatName, newCatPrefix, categories, onCategoryCreated, cancelInlineCreate]);
+  }, [newCatName, newCatPrefix, categories, onCategoryCreated, cancelInlineCreate, t]);
 
   const submitInlineCreate = useCallback(() => {
     if (!inlineCreate) return;
@@ -364,7 +366,7 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
   }, [formData.selectedCategoryIds, material, categories]);
 
   const handleSave = async () => {
-    if (!formData.name.trim()) { toast.error("اسم المادة مطلوب"); return; }
+    if (!formData.name.trim()) { toast.error(t("materials.form.nameRequired", { namespace: "inventory" })); return; }
 
     let finalCode = formData.code;
 
@@ -601,39 +603,39 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
 
   return (
     <FormPanel 
-      title={material ? "تعديل بطاقة المادة" : "إضافة مادة جديدة"}
+      title={material ? t("materials.form.editTitle", { namespace: "inventory" }) : t("materials.form.createTitle", { namespace: "inventory" })}
       icon={material ? <Edit className="w-5 h-5 text-blue-600" /> : <Package2 className="w-5 h-5 text-emerald-600" />}
       onClose={onClose}
       onSave={handleSave}
       isSaving={saving}
       saveDisabled={!formData.name.trim() || formData.selectedCategoryIds.length === 0}
-      saveLabel={material ? "حفظ التعديلات" : "إضافة المادة"}
+      saveLabel={material ? t("materials.form.saveEdit", { namespace: "inventory" }) : t("materials.form.saveCreate", { namespace: "inventory" })}
     >
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full animate-in fade-in duration-200" dir="rtl">
         <TabsList className="grid w-full grid-cols-4 mb-5 p-1 bg-slate-100/80 rounded-xl">
-          <TabsTrigger value="basic" className="gap-1.5 text-xs font-bold"><Package className="w-4 h-4" /> الأساسيات</TabsTrigger>
-          <TabsTrigger value="units" className="gap-1.5 text-xs font-bold"><Scale className="w-4 h-4" /> الوحدات</TabsTrigger>
-          <TabsTrigger value="prices" className="gap-1.5 text-xs font-bold"><DollarSign className="w-4 h-4" /> الأسعار</TabsTrigger>
-          <TabsTrigger value="extra" className="gap-1.5 text-xs font-bold"><FileText className="w-4 h-4" /> إضافي</TabsTrigger>
+          <TabsTrigger value="basic" className="gap-1.5 text-xs font-bold"><Package className="w-4 h-4" /> {t("materials.form.tabs.basic", { namespace: "inventory" })}</TabsTrigger>
+          <TabsTrigger value="units" className="gap-1.5 text-xs font-bold"><Scale className="w-4 h-4" /> {t("materials.form.tabs.units", { namespace: "inventory" })}</TabsTrigger>
+          <TabsTrigger value="prices" className="gap-1.5 text-xs font-bold"><DollarSign className="w-4 h-4" /> {t("materials.form.tabs.prices", { namespace: "inventory" })}</TabsTrigger>
+          <TabsTrigger value="extra" className="gap-1.5 text-xs font-bold"><FileText className="w-4 h-4" /> {t("materials.form.tabs.extra", { namespace: "inventory" })}</TabsTrigger>
         </TabsList>
 
         {/* Tab 1: الأساسيات */}
         <TabsContent value="basic" className="space-y-3">
-          <SidebarSection icon={<Package className="w-3.5 h-3.5" />} title="البيانات الأساسية" defaultOpen={true}>
+          <SidebarSection icon={<Package className="w-3.5 h-3.5" />} title={t("materials.form.basicDataSection", { namespace: "inventory" })} defaultOpen={true}>
             <div className="space-y-2.5 text-right">
               {/* اسم المادة عربي + إنجليزي */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <FieldLabel className="flex items-center gap-1.5" required><Tag className="w-3.5 h-3.5 text-slate-400" /> اسم المادة (عربي)</FieldLabel>
+                  <FieldLabel className="flex items-center gap-1.5" required><Tag className="w-3.5 h-3.5 text-slate-400" /> {t("materials.form.nameAr", { namespace: "inventory" })}</FieldLabel>
                   <Input 
                     value={formData.name} 
                     onChange={e => setFormData({ ...formData, name: e.target.value })} 
-                    placeholder="مثال: سكر ناعم" 
+                    placeholder={t("materials.form.nameArPlaceholder", { namespace: "inventory" })} 
                     className="bg-white border-slate-200 h-9" 
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <FieldLabel className="flex items-center gap-1.5"><Globe className="w-3.5 h-3.5 text-slate-400" /> الاسم (English)</FieldLabel>
+                  <FieldLabel className="flex items-center gap-1.5"><Globe className="w-3.5 h-3.5 text-slate-400" /> {t("materials.form.nameEn", { namespace: "inventory" })}</FieldLabel>
                   <Input 
                     value={formData.name_en} 
                     onChange={e => setFormData({ ...formData, name_en: e.target.value })} 
@@ -647,23 +649,23 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
               {/* الكود والباركود */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <FieldLabel className="flex items-center gap-1.5"><Hash className="w-3.5 h-3.5 text-slate-400" /> الكود</FieldLabel>
+                  <FieldLabel className="flex items-center gap-1.5"><Hash className="w-3.5 h-3.5 text-slate-400" /> {t("labels.code", { namespace: "inventory" })}</FieldLabel>
                   <Input 
                     value={formData.code} 
                     onChange={e => setFormData({ ...formData, code: e.target.value.toUpperCase() })} 
                     className="font-mono text-xs bg-white border-slate-200 h-9" 
-                    placeholder="الكود" 
+                    placeholder={t("labels.code", { namespace: "inventory" })} 
                     dir="ltr" 
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <FieldLabel className="flex items-center gap-1.5"><Barcode className="w-3.5 h-3.5 text-slate-400" /> الباركود العام</FieldLabel>
+                  <FieldLabel className="flex items-center gap-1.5"><Barcode className="w-3.5 h-3.5 text-slate-400" /> {t("materials.form.generalBarcode", { namespace: "inventory" })}</FieldLabel>
                   <div className="flex gap-2">
                     <Input
                       value={formData.barcode}
                       onChange={e => setFormData({ ...formData, barcode: e.target.value })}
                       className="font-mono text-xs bg-white border-slate-200 h-9"
-                      placeholder="الباركود"
+                      placeholder={t("labels.barcode", { namespace: "inventory" })}
                       dir="ltr"
                     />
                     <Button
@@ -673,14 +675,14 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
                       onClick={() =>
                         beginScan({
                           targetId: "material-barcode",
-                          label: "الباركود العام",
+                          label: t("materials.form.generalBarcode", { namespace: "inventory" }),
                           source: "manual",
                           onDetected: (value) => setFormData((prev) => ({ ...prev, barcode: value })),
                         })
                       }
                     >
                       <ScanLine className="h-3.5 w-3.5" />
-                      مسح
+                      {t("materials.form.scan", { namespace: "inventory" })}
                     </Button>
                   </div>
                 </div>
@@ -689,7 +691,7 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
               {/* حد الطلب + ملاحظات */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <FieldLabel className="flex items-center gap-1.5"><Package className="w-3.5 h-3.5 text-slate-400" /> حد الطلب</FieldLabel>
+                  <FieldLabel className="flex items-center gap-1.5"><Package className="w-3.5 h-3.5 text-slate-400" /> {t("materials.columns.minimumStock", { namespace: "inventory" })}</FieldLabel>
                   <Input 
                     type="number" 
                     value={formData.minimum_stock} 
@@ -698,11 +700,11 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <FieldLabel className="flex items-center gap-1.5"><FileText className="w-3.5 h-3.5 text-slate-400" /> ملاحظات</FieldLabel>
+                  <FieldLabel className="flex items-center gap-1.5"><FileText className="w-3.5 h-3.5 text-slate-400" /> {t("labels.notes", { namespace: "inventory" })}</FieldLabel>
                   <Textarea 
                     value={formData.notes} 
                     onChange={e => setFormData({ ...formData, notes: e.target.value })} 
-                    placeholder="أي تفاصيل أو مواصفات أخرى..." 
+                    placeholder={t("materials.form.notesPlaceholder", { namespace: "inventory" })} 
                     className="min-h-[72px] resize-none bg-white border-slate-200 text-xs" 
                   />
                 </div>
@@ -711,13 +713,13 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
           </SidebarSection>
 
           {/* تصنيف المادة */}
-          <SidebarSection icon={<Layers className="w-3.5 h-3.5" />} title="تصنيف المادة" defaultOpen={true}>
+          <SidebarSection icon={<Layers className="w-3.5 h-3.5" />} title={t("materials.form.categorySection", { namespace: "inventory" })} defaultOpen={true}>
             <div className="space-y-2">
               {/* Search */}
               <div className="relative">
                 <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
                 <Input
-                  placeholder="بحث عن تصنيف..."
+                  placeholder={t("materials.form.categorySearchPlaceholder", { namespace: "inventory" })}
                   value={categorySearch}
                   onChange={e => setCategorySearch(e.target.value)}
                   className="pr-9 h-8 text-xs bg-white border-slate-200"
@@ -727,8 +729,8 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
               <div className="border border-slate-200/70 rounded-xl overflow-hidden bg-white shadow-sm">
                 {/* Header */}
                 <div className="bg-slate-50 px-3 py-2 border-b text-[10px] font-black text-slate-400 grid grid-cols-[1fr_1fr_28px] gap-2 items-center">
-                  <div>التصنيف الرئيسي</div>
-                  <div>التصنيفات الفرعية</div>
+                  <div>{t("categories.form.mainCategory", { namespace: "inventory" })}</div>
+                  <div>{t("categories.form.subCategories", { namespace: "inventory" })}</div>
                   <div></div>
                 </div>
 
@@ -736,7 +738,7 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
                 <div className="divide-y divide-slate-100 text-right">
                   {uncategorizedCat && (!categorySearch.trim() || uncategorizedCat.name.includes(categorySearch.trim())) && (
                     <div className="grid grid-cols-[1fr_1fr_28px] items-center min-h-[36px] hover:bg-slate-50/50">
-                      <div className="px-3 py-1.5 font-black text-blue-600 text-xs italic">غير مصنف</div>
+                      <div className="px-3 py-1.5 font-black text-blue-600 text-xs italic">{t("materials.uncategorized", { namespace: "inventory" })}</div>
                       <div className="px-3 py-1.5">
                         <div
                           onClick={() => handleCategoryToggle(uncategorizedCat.id, true)}
@@ -746,7 +748,7 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
                               : "bg-white border-slate-200 text-slate-500 hover:bg-slate-50"
                           )}
                         >
-                          افتراضي
+                          {t("labels.default", { namespace: "inventory" })}
                         </div>
                       </div>
                       <div></div>
@@ -794,13 +796,13 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
                                   </div>
                                 ))}
                                 {visibleSubs.length === 0 && (
-                                  <span className="text-[9px] text-slate-400 italic">لا توجد تصنيفات فرعية</span>
+                                  <span className="text-[9px] text-slate-400 italic">{t("categories.form.noSubCategories", { namespace: "inventory" })}</span>
                                 )}
                               </div>
                             ) : (
                               <div className="text-[9px] text-slate-400 italic flex items-center gap-1">
                                 <span>{subs.length}</span>
-                                {subs.length === 1 ? 'تصنيف فرعي' : 'تصنيفات فرعية'}
+                                {subs.length === 1 ? t("categories.form.subCategory", { namespace: "inventory" }) : t("categories.form.subCategories", { namespace: "inventory" })}
                               </div>
                             )}
                           </div>
@@ -808,7 +810,7 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
                             <button
                               type="button"
                               onClick={(e) => { e.stopPropagation(); openInlineCreate({ type: "sub", parentId: main.id, parentName: main.name }); }}
-                              title={`إضافة تصنيف فرعي لـ ${main.name}`}
+                              title={t("materials.form.addSubFor", { namespace: "inventory", vars: { name: main.name } })}
                               className="opacity-0 group-hover:opacity-100 w-6 h-6 rounded-lg border border-dashed border-slate-300 text-slate-400 hover:border-blue-500 hover:text-blue-600 hover:bg-blue-50 flex items-center justify-center transition-all"
                             >
                               <Plus className="w-3 h-3" />
@@ -828,7 +830,7 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
                       onClick={() => openInlineCreate({ type: "main" })}
                       className="w-full h-7 text-[10px] font-bold gap-1 border-dashed border-slate-300 hover:border-blue-500 hover:bg-blue-50 hover:text-blue-700"
                     >
-                      <Plus className="w-3 h-3" /> إضافة تصنيف رئيسي
+                      <Plus className="w-3 h-3" /> {t("materials.form.addMainCategory", { namespace: "inventory" })}
                     </Button>
                   </div>
                 </div>
@@ -839,31 +841,31 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
                     <div className="flex items-center justify-between">
                       <div className="text-[11px] font-black text-blue-800 flex items-center gap-1.5">
                         {inlineCreate.type === "main" ? (
-                          <><Plus className="w-3.5 h-3.5" /> تصنيف رئيسي جديد</>
+                          <><Plus className="w-3.5 h-3.5" /> {t("materials.form.newMainCategory", { namespace: "inventory" })}</>
                         ) : (
-                          <><Plus className="w-3.5 h-3.5" /> تصنيف فرعي جديد تحت: <span className="text-blue-600">{inlineCreate.parentName}</span></>
+                          <><Plus className="w-3.5 h-3.5" /> {t("materials.form.newSubUnder", { namespace: "inventory" })} <span className="text-blue-600">{inlineCreate.parentName}</span></>
                         )}
                       </div>
                     </div>
                     <div className="grid grid-cols-[1fr_60px] gap-2">
-                      <Input autoFocus placeholder="اسم التصنيف" value={newCatName}
+                      <Input autoFocus placeholder={t("materials.form.categoryName", { namespace: "inventory" })} value={newCatName}
                         onChange={e => setNewCatName(e.target.value)}
                         onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); submitInlineCreate(); } }}
                         className="h-8 text-xs bg-white border-slate-200" />
                       <Input placeholder="A" value={newCatPrefix}
                         onChange={e => setNewCatPrefix(e.target.value.slice(0, 1).toUpperCase())}
                         onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); submitInlineCreate(); } }}
-                        className="h-8 text-xs font-mono text-center bg-white border-slate-200" maxLength={1} dir="ltr" title="بادئة الكود (حرف واحد)" />
+                        className="h-8 text-xs font-mono text-center bg-white border-slate-200" maxLength={1} dir="ltr" title={t("materials.form.prefixTitle", { namespace: "inventory" })} />
                     </div>
                     <p className="text-[9px] text-slate-500 leading-relaxed">
                       {inlineCreate.type === "main"
-                        ? "سيُنشأ أيضاً تصنيف فرعي افتراضي «عام» ويُحدَّد تلقائياً."
-                        : "سيتم تحديد التصنيف الفرعي الجديد تلقائياً للمادة."}
+                        ? t("materials.form.willCreateGeneralSub", { namespace: "inventory" })
+                        : t("materials.form.autoSelectSub", { namespace: "inventory" })}
                     </p>
                     <div className="flex items-center gap-2 justify-end">
-                      <Button type="button" size="sm" variant="ghost" onClick={cancelInlineCreate} disabled={creatingSaving} className="h-7 text-[10px] font-bold">إلغاء</Button>
+                      <Button type="button" size="sm" variant="ghost" onClick={cancelInlineCreate} disabled={creatingSaving} className="h-7 text-[10px] font-bold">{t("labels.cancel", { namespace: "inventory" })}</Button>
                       <Button type="button" size="sm" onClick={submitInlineCreate} disabled={creatingSaving || !newCatName.trim()} className="h-7 text-[10px] font-bold bg-blue-600 hover:bg-blue-700">
-                        {creatingSaving ? "جاري الحفظ..." : "حفظ التصنيف"}
+                        {creatingSaving ? t("categories.form.saving", { namespace: "inventory" }) : t("categories.form.saveCategory", { namespace: "inventory" })}
                       </Button>
                     </div>
                   </div>
@@ -876,15 +878,15 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
         {/* Tab 2: الوحدات */}
         <TabsContent value="units" className="space-y-4">
           {/* الوحدات الافتراضية */}
-          <SidebarSection title="البيانات الافتراضية للوحدات" defaultOpen={true}>
+          <SidebarSection title={t("materials.form.unitsDefaultSection", { namespace: "inventory" })} defaultOpen={true}>
             <div className="grid grid-cols-2 gap-4 text-right">
               <div className="space-y-2">
-                <FieldLabel>وحدة الشراء الافتراضية</FieldLabel>
+                <FieldLabel>{t("materials.form.defaultPurchaseUnit", { namespace: "inventory" })}</FieldLabel>
                 <Select value={formData.default_purchase_unit_id} onValueChange={v => setFormData({ ...formData, default_purchase_unit_id: v })}>
-                  <SelectTrigger className="w-full bg-white border-slate-200"><SelectValue placeholder="اختر وحدة" /></SelectTrigger>
+                  <SelectTrigger className="w-full bg-white border-slate-200"><SelectValue placeholder={t("materials.form.chooseUnit", { namespace: "inventory" })} /></SelectTrigger>
                   <SelectContent>
                     {formData.units.map((u, i) => {
-                      const unitLabel = u.name || `وحدة ${i + 1}`;
+                      const unitLabel = u.name || t("materials.form.unitName", { namespace: "inventory", vars: { count: i + 1 } });
                       return (
                         <SelectItem key={unitLabel} value={material ? (material.units[i]?.id || unitLabel) : unitLabel}>{unitLabel}</SelectItem>
                       );
@@ -893,12 +895,12 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
                 </Select>
               </div>
               <div className="space-y-2">
-                <FieldLabel>وحدة البيع الافتراضية</FieldLabel>
+                <FieldLabel>{t("materials.form.defaultSaleUnit", { namespace: "inventory" })}</FieldLabel>
                 <Select value={formData.default_sale_unit_id} onValueChange={v => setFormData({ ...formData, default_sale_unit_id: v })}>
-                  <SelectTrigger className="w-full bg-white border-slate-200"><SelectValue placeholder="اختر وحدة" /></SelectTrigger>
+                  <SelectTrigger className="w-full bg-white border-slate-200"><SelectValue placeholder={t("materials.form.chooseUnit", { namespace: "inventory" })} /></SelectTrigger>
                   <SelectContent>
                     {formData.units.map((u, i) => {
-                      const unitLabel = u.name || `وحدة ${i + 1}`;
+                      const unitLabel = u.name || t("materials.form.unitName", { namespace: "inventory", vars: { count: i + 1 } });
                       return (
                         <SelectItem key={unitLabel} value={material ? (material.units[i]?.id || unitLabel) : unitLabel}>{unitLabel}</SelectItem>
                       );
@@ -912,10 +914,10 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
           {/* إدارة الوحدات */}
           <div className="flex items-center justify-between border-b pb-2 pt-2">
             <div className="space-y-0.5 text-right">
-              <h3 className="text-sm font-bold text-slate-800">إدارة الوحدات</h3>
-              <p className="text-[10px] text-slate-400 italic">عرّف وحدات البيع والشراء لهذه المادة.</p>
+              <h3 className="text-sm font-bold text-slate-800">{t("materials.form.manageUnits", { namespace: "inventory" })}</h3>
+              <p className="text-[10px] text-slate-400 italic">{t("materials.form.manageUnitsHint", { namespace: "inventory" })}</p>
             </div>
-            <Button type="button" size="sm" onClick={() => setShowUnitForm(true)} className="bg-blue-600 hover:bg-blue-700 gap-1.5 h-8 text-xs font-bold rounded-lg shadow-sm"><Plus className="w-3.5 h-3.5" /> إضافة وحدة</Button>
+            <Button type="button" size="sm" onClick={() => setShowUnitForm(true)} className="bg-blue-600 hover:bg-blue-700 gap-1.5 h-8 text-xs font-bold rounded-lg shadow-sm"><Plus className="w-3.5 h-3.5" /> {t("materials.form.addUnit", { namespace: "inventory" })}</Button>
           </div>
 
           <div className="space-y-3">
@@ -939,7 +941,7 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
 
             {showUnitForm && (
               <AddUnitForm
-                baseUnitName={formData.units[0]?.name || "قطعة"}
+                baseUnitName={formData.units[0]?.name || t("materials.form.defaultUnit", { namespace: "inventory" })}
                 materialName={formData.name || "..."}
                 existingNames={formData.units.map(u => u.name)}
                 onAdd={async (unit) => { addUnit(unit); }}
@@ -951,7 +953,7 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
           <div className="bg-amber-50/55 border border-amber-100 p-3.5 rounded-2xl flex gap-3 text-right">
             <Shuffle className="w-4.5 h-4.5 text-amber-600 flex-shrink-0 mt-0.5" />
             <p className="text-[10px] text-amber-800 leading-relaxed font-semibold">
-              <strong>تنبيه:</strong> الوحدة الأولى تعتبر <strong>الوحدة الأساسية</strong> للمستودعات. الوحدات الإضافية تُحسب كمعادلات تعادل كمية من الوحدة الأساسية (مثلاً: دزينة = 12 قطعة).
+              <strong>{t("labels.warning", { namespace: "inventory" })}</strong> {t("materials.form.unitsNotice", { namespace: "inventory" })} <strong>{t("materials.form.baseUnitWord", { namespace: "inventory" })}</strong> {t("materials.form.unitsNoticeTail", { namespace: "inventory" })}
             </p>
           </div>
         </TabsContent>
@@ -959,12 +961,12 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
         {/* Tab 3: الأسعار */}
         <TabsContent value="prices" className="space-y-4">
           {/* أسعار الشراء */}
-          <SidebarSection title="أسعار الشراء" defaultOpen={true}>
+          <SidebarSection title={t("materials.form.purchasePrices", { namespace: "inventory" })} defaultOpen={true}>
             <div className="space-y-3">
               {formData.units.map((unit, uIdx) => (
                 <div key={uIdx} className="p-3 border border-slate-200/80 rounded-2xl bg-white shadow-sm space-y-2 text-right">
                   <div className="border-b pb-1.5 flex justify-between items-center">
-                    <span className="font-bold text-[11px] text-slate-700">شراء: <span className="text-blue-600">{unit.name || `وحدة ${uIdx+1}`}</span></span>
+                    <span className="font-bold text-[11px] text-slate-700">{t("materials.form.purchasingUnit", { namespace: "inventory", vars: { name: unit.name || t("materials.form.unitName", { namespace: "inventory", vars: { count: uIdx + 1 } }) } })}</span>
                   </div>
                   <div className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${activeCurrencies.length}, 1fr)` }}>
                     {activeCurrencies.map(c => {
@@ -983,7 +985,7 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
                     })}
                   </div>
                   <p className="text-[9px] text-slate-500 leading-relaxed">
-                    يُحفظ لكل وحدة سعر شراء بكل عملة مع التحديث التلقائي لبقية العملات عند تغيير أي سعر.
+                    {t("materials.form.purchasePriceHint", { namespace: "inventory" })}
                   </p>
                 </div>
               ))}
@@ -993,14 +995,14 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
           {/* أسعار المبيع */}
           <div className="flex items-center gap-2 pt-2 border-b pb-1.5 text-right">
             <TrendingUp className="w-4 h-4 text-emerald-600" />
-            <h3 className="font-bold text-xs text-slate-800">أسعار المبيع ومستويات التسعير</h3>
+            <h3 className="font-bold text-xs text-slate-800">{t("materials.form.salePricesTitle", { namespace: "inventory" })}</h3>
           </div>
 
           {/* الحد الأعلى للكمية لكل مستوى (على مستوى المادة) */}
           <div className="bg-purple-50/40 border border-purple-100/70 rounded-xl p-3 space-y-2">
-            <span className="text-[8px] font-black text-purple-600 block uppercase">الحد الأعلى للكمية</span>
+            <span className="text-[8px] font-black text-purple-600 block uppercase">{t("materials.form.maxQuantity", { namespace: "inventory" })}</span>
             <div className="flex items-center gap-4 flex-wrap">
-              {SALE_TIERS.filter(t => t.id !== 'wholesale').map(tier => (
+              {saleTiers.filter(tier => tier.id !== 'wholesale').map(tier => (
                 <div key={tier.id} className="flex items-center gap-1.5">
                   <span className="text-[10px] font-bold text-slate-600 whitespace-nowrap">{tier.label}:</span>
                   <Input
@@ -1011,7 +1013,7 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
                     className="h-7 w-16 text-xs font-bold text-center bg-white border-slate-200"
                   />
                   <Select
-                    value={tierMaxQtyUnit[tier.id] || formData.units[0]?.name || 'قطعة'}
+                    value={tierMaxQtyUnit[tier.id] || formData.units[0]?.name || t("materials.form.defaultUnit", { namespace: "inventory" })}
                     onValueChange={v => handleTierQtyUnitChange(tier.id, v)}
                   >
                     <SelectTrigger className="h-7 w-20 text-[9px] font-bold border-slate-200 px-1.5 gap-0">
@@ -1019,8 +1021,8 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
                     </SelectTrigger>
                     <SelectContent>
                       {formData.units.map((u, i) => (
-                        <SelectItem key={i} value={u.name || `وحدة ${i + 1}`}>
-                          {u.name || `وحدة ${i + 1}`}
+                        <SelectItem key={i} value={u.name || t("materials.form.unitName", { namespace: "inventory", vars: { count: i + 1 } })}>
+                          {u.name || t("materials.form.unitName", { namespace: "inventory", vars: { count: i + 1 } })}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -1028,17 +1030,17 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
                 </div>
               ))}
               <div className="flex items-center gap-1.5">
-                <span className="text-[10px] font-bold text-slate-600 whitespace-nowrap">جملة:</span>
-                <span className="text-[9px] text-slate-400 italic font-medium">غير محدود</span>
+                <span className="text-[10px] font-bold text-slate-600 whitespace-nowrap">{t("saleTiers.wholesale", { namespace: "inventory" })}:</span>
+                <span className="text-[9px] text-slate-400 italic font-medium">{t("materials.form.unlimited", { namespace: "inventory" })}</span>
               </div>
             </div>
           </div>
 
           <div className="space-y-3">
             {formData.units.map((unit, uIdx) => (
-              <SidebarSection key={uIdx} title={`تسعير المبيع: ${unit.name || `وحدة ${uIdx+1}`}`} defaultOpen={uIdx === 0}>
+              <SidebarSection key={uIdx} title={t("materials.form.salePricingUnit", { namespace: "inventory", vars: { name: unit.name || t("materials.form.unitName", { namespace: "inventory", vars: { count: uIdx + 1 } }) } })} defaultOpen={uIdx === 0}>
                 <div className="space-y-3">
-                  {SALE_TIERS.map(tier => (
+                  {saleTiers.map(tier => (
                     <div key={tier.id} className="p-3 border border-slate-100/60 rounded-xl bg-slate-50/50 space-y-2 text-right">
                       <div className="flex justify-between items-center border-b border-slate-200/40 pb-1">
                         <span className="font-black text-[10px] text-slate-700 bg-slate-200/50 px-2 py-0.5 rounded-md">{tier.label}</span>
@@ -1046,7 +1048,7 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
                       <div className="grid grid-cols-2 gap-3">
                         {/* سعر المبيع */}
                         <div className="space-y-1">
-                          <span className="text-[8px] font-black text-slate-400 block uppercase">سعر المبيع</span>
+                          <span className="text-[8px] font-black text-slate-400 block uppercase">{t("materials.form.salePrice", { namespace: "inventory" })}</span>
                           <div className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${activeCurrencies.length}, 1fr)` }}>
                             {activeCurrencies.map(c => {
                               const sym = c.symbol || c.code;
@@ -1066,7 +1068,7 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
                         </div>
                         {/* الحد الأدنى */}
                         <div className="space-y-1">
-                          <span className="text-[8px] font-black text-amber-500 block uppercase">الحد الأدنى</span>
+                          <span className="text-[8px] font-black text-amber-500 block uppercase">{t("materials.form.minPrice", { namespace: "inventory" })}</span>
                           <div className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${activeCurrencies.length}, 1fr)` }}>
                             {activeCurrencies.map(c => {
                               const sym = c.symbol || c.code;
@@ -1095,11 +1097,11 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
 
         {/* Tab 4: إضافي */}
         <TabsContent value="extra" className="space-y-3">
-          <SidebarSection icon={<ImageIcon className="w-3.5 h-3.5" />} title="صورة المادة" defaultOpen={true}>
+          <SidebarSection icon={<ImageIcon className="w-3.5 h-3.5" />} title={t("materials.form.imageSection", { namespace: "inventory" })} defaultOpen={true}>
             <div className="space-y-3 text-right">
               {/* الصورة */}
               <div className="space-y-2">
-                <FieldLabel className="flex items-center gap-1.5"><ImageIcon className="w-3.5 h-3.5 text-slate-400" /> صورة المادة التعريفية</FieldLabel>
+                <FieldLabel className="flex items-center gap-1.5"><ImageIcon className="w-3.5 h-3.5 text-slate-400" /> {t("materials.form.imageField", { namespace: "inventory" })}</FieldLabel>
                 <div className="flex gap-2">
                   <Button 
                     type="button" 
@@ -1108,7 +1110,7 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
                     onClick={() => document.getElementById('material-image-upload')?.click()}
                   >
                     <ImageIcon className="w-3.5 h-3.5 text-blue-500" />
-                    تحميل من الجهاز
+                    {t("materials.form.uploadFromDevice", { namespace: "inventory" })}
                   </Button>
                   {formData.image_path && (
                     <Button 
@@ -1138,7 +1140,7 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
                     reader.readAsDataURL(file);
                   }}
                 />
-                <p className="text-[9px] text-slate-400 italic">رفع صورة يساعد الموظفين في تمييز الصنف بالعين أثناء عمليات البيع أو الجرد.</p>
+                <p className="text-[9px] text-slate-400 italic">{t("materials.form.imageHint", { namespace: "inventory" })}</p>
               </div>
 
               {/* معاينة الصورة */}
@@ -1151,16 +1153,16 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
                   )}
                 </div>
                 <div className="space-y-0.5">
-                  <p className="text-[10px] font-bold text-slate-500">معاينة الصورة المرفقة</p>
+                  <p className="text-[10px] font-bold text-slate-500">{t("materials.form.imagePreview", { namespace: "inventory" })}</p>
                 </div>
               </div>
 
               <div className="border-t border-slate-100 pt-3 mt-3" />
 
               <div className="space-y-1.5">
-                <FieldLabel className="flex items-center gap-1.5"><Warehouse className="w-3.5 h-3.5 text-slate-400" /> المستودع الافتراضي</FieldLabel>
+                <FieldLabel className="flex items-center gap-1.5"><Warehouse className="w-3.5 h-3.5 text-slate-400" /> {t("materials.form.defaultWarehouse", { namespace: "inventory" })}</FieldLabel>
                 <Select value={formData.default_warehouse_id} onValueChange={v => setFormData({ ...formData, default_warehouse_id: v })}>
-                  <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="بدون مستودع افتراضي" /></SelectTrigger>
+                  <SelectTrigger className="h-8 text-xs"><SelectValue placeholder={t("materials.form.noDefaultWarehouse", { namespace: "inventory" })} /></SelectTrigger>
                   <SelectContent>
                     {warehouses?.map(w => (
                       <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
@@ -1178,13 +1180,13 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
                     >
                       {formData.has_expiry && <Check className="w-3 h-3 text-white" />}
                     </div>
-                    <span className="text-xs font-medium text-slate-700">له صلاحية (تاريخ انتهاء)</span>
+                    <span className="text-xs font-medium text-slate-700">{t("materials.form.hasExpiry", { namespace: "inventory" })}</span>
                   </label>
                 </div>
 
                 {formData.has_expiry && (
                   <div className="space-y-1.5 pr-6">
-                    <FieldLabel className="flex items-center gap-1.5 text-[11px]"><span className="text-slate-400">التنبيه قبل انتهاء الصلاحية بـ (أيام)</span></FieldLabel>
+                    <FieldLabel className="flex items-center gap-1.5 text-[11px]"><span className="text-slate-400">{t("materials.form.expiryAlertDays", { namespace: "inventory" })}</span></FieldLabel>
                     <Input
                       type="number"
                       min="0"
@@ -1200,9 +1202,9 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
               <div className="grid grid-cols-2 gap-3">
               {activeCurrencies && activeCurrencies.length > 1 && (
               <div className="space-y-1.5">
-                <FieldLabel className="flex items-center gap-1.5"><DollarSign className="w-3.5 h-3.5 text-slate-400" /> عملة الشراء الافتراضية</FieldLabel>
+                <FieldLabel className="flex items-center gap-1.5"><DollarSign className="w-3.5 h-3.5 text-slate-400" /> {t("materials.form.defaultPurchaseCurrency", { namespace: "inventory" })}</FieldLabel>
                 <Select value={formData.default_purchase_currency} onValueChange={v => setFormData({ ...formData, default_purchase_currency: v })}>
-                  <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="تلقائي" /></SelectTrigger>
+                  <SelectTrigger className="h-8 text-xs"><SelectValue placeholder={t("materials.form.auto", { namespace: "inventory" })} /></SelectTrigger>
                   <SelectContent>
                     {activeCurrencies?.map(c => (
                       <SelectItem key={c.code} value={c.code}>{c.symbol || c.code}</SelectItem>
@@ -1213,9 +1215,9 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
               )}
               {activeCurrencies && activeCurrencies.length > 1 && (
               <div className="space-y-1.5">
-                <FieldLabel className="flex items-center gap-1.5"><DollarSign className="w-3.5 h-3.5 text-slate-400" /> عملة البيع الافتراضية</FieldLabel>
+                <FieldLabel className="flex items-center gap-1.5"><DollarSign className="w-3.5 h-3.5 text-slate-400" /> {t("materials.form.defaultSaleCurrency", { namespace: "inventory" })}</FieldLabel>
                 <Select value={formData.default_sale_currency} onValueChange={v => setFormData({ ...formData, default_sale_currency: v })}>
-                  <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="تلقائي" /></SelectTrigger>
+                  <SelectTrigger className="h-8 text-xs"><SelectValue placeholder={t("materials.form.auto", { namespace: "inventory" })} /></SelectTrigger>
                   <SelectContent>
                     {activeCurrencies?.map(c => (
                       <SelectItem key={c.code} value={c.code}>{c.symbol || c.code}</SelectItem>

@@ -28,6 +28,8 @@ interface BuildColumnsOptions {
   warehouses?: WarehouseDto[];
   /** When "variable", non-base currency columns are hidden in the export. */
   currencyMode?: "fixed" | "variable";
+  /** Translation function for localizing column labels */
+  t?: (key: string, options?: Record<string, unknown>) => string;
 }
 
 /**
@@ -44,10 +46,19 @@ export function buildInvoiceLineExportColumns({
   materials: _materials = [],
   warehouses = [],
   currencyMode = "fixed",
+  t,
 }: BuildColumnsOptions): ExcelExportColumn[] {
   const warehouseMap = new Map(warehouses.map(w => [w.id, w]));
   const cs = (sym: string) => hasMultipleCurrencies ? ` (${sym})` : '';
   const baseCode = currencies[0]?.code || '';
+  
+  // Helper function for translations with fallback
+  const tr = (key: string, fallback: string, options?: Record<string, unknown>) => {
+    if (t) {
+      return t(key, { namespace: "invoicing", ...options });
+    }
+    return fallback;
+  };
 
   const result: ExcelExportColumn[] = [];
   const nonBaseCurrencies = currencies.filter(c => c.code !== baseCode);
@@ -72,7 +83,7 @@ export function buildInvoiceLineExportColumns({
       case "material_image":
         result.push({
           id: "material_image",
-          label: "صورة",
+          label: tr("invoice.colImage", "صورة"),
           hidden,
           width: 8,
           accessor: () => '',
@@ -85,7 +96,7 @@ export function buildInvoiceLineExportColumns({
       case "material_code":
         result.push({
           id: "material_code",
-          label: "الكود",
+          label: tr("invoice.colCode", "الكود"),
           hidden,
           width: 14,
           accessor: (row) => String((row as EnrichedExportLine).material_code ?? ''),
@@ -95,7 +106,7 @@ export function buildInvoiceLineExportColumns({
       case "unit_barcode":
         result.push({
           id: "unit_barcode",
-          label: "الباركود",
+          label: tr("invoice.colBarcode", "الباركود"),
           hidden,
           width: 15,
           accessor: (row) => String((row as EnrichedExportLine).unit_barcode ?? ''),
@@ -105,7 +116,7 @@ export function buildInvoiceLineExportColumns({
       case "material_name":
         result.push({
           id: "material_name",
-          label: "الصنف (عربي)",
+          label: tr("invoice.colMaterialAr", "الصنف (عربي)"),
           hidden,
           width: 25,
           accessor: (row) => String((row as EnrichedExportLine).material_name ?? ''),
@@ -115,7 +126,7 @@ export function buildInvoiceLineExportColumns({
       case "name_en":
         result.push({
           id: "name_en",
-          label: "الصنف (EN)",
+          label: tr("invoice.colMaterialEn", "الصنف (EN)"),
           hidden,
           width: 20,
           accessor: (row) => String((row as EnrichedExportLine).name_en ?? ''),
@@ -125,7 +136,7 @@ export function buildInvoiceLineExportColumns({
       case "warehouse_qty":
         result.push({
           id: "warehouse_qty",
-          label: "المتوفر",
+          label: tr("invoice.colAvailable", "المتوفر"),
           hidden,
           width: 14,
           numeric: true,
@@ -139,7 +150,7 @@ export function buildInvoiceLineExportColumns({
       case "quantity":
         result.push({
           id: "quantity",
-          label: "الكمية",
+          label: tr("invoice.colQuantity", "الكمية"),
           hidden,
           width: 12,
           numeric: true,
@@ -151,7 +162,7 @@ export function buildInvoiceLineExportColumns({
       case "unit_name":
         result.push({
           id: "unit_name",
-          label: "الوحدة",
+          label: tr("invoice.colUnit", "الوحدة"),
           hidden,
           width: 12,
           accessor: (row) => String((row as EnrichedExportLine).unit_name ?? ''),
@@ -161,7 +172,7 @@ export function buildInvoiceLineExportColumns({
       case "warehouse_id":
         result.push({
           id: "warehouse_id",
-          label: "المستودع",
+          label: tr("invoice.colWarehouse", "المستودع"),
           hidden,
           width: 15,
           accessor: (row) => {
@@ -174,7 +185,7 @@ export function buildInvoiceLineExportColumns({
       case "sale_prices":
         result.push({
           id: "sale_prices",
-          label: "المبيع",
+          label: tr("invoice.colSale", "المبيع"),
           hidden,
           width: 20,
           accessor: (row) => {
@@ -204,11 +215,11 @@ export function buildInvoiceLineExportColumns({
           const baseCurr = currencies.find(c => c.code === baseCode);
           const sym = baseCurr?.symbol || baseCode;
           const labelMap: Record<string, string> = {
-            unit_price: "سعر الوحدة",
-            line_total: "الإجمالي",
-            discount_value: "قيمة الخصم",
-            cost_price: "التكلفة",
-            profit_amount: "الربح",
+            unit_price: tr("invoice.colUnitPrice", "سعر الوحدة"),
+            line_total: tr("invoice.colTotal", "الإجمالي"),
+            discount_value: tr("invoice.colDiscountValue", "قيمة الخصم"),
+            cost_price: tr("invoice.colCost", "التكلفة"),
+            profit_amount: tr("invoice.colProfit", "الربح"),
           };
           const headerText = typeof col.header === "string" && col.header ? col.header : `${labelMap[field]}${cs(sym)}`;
           result.push({
@@ -230,11 +241,11 @@ export function buildInvoiceLineExportColumns({
           const curr = currencies.find(c => c.code === code);
           const sym = curr?.symbol || code;
           const labelMap: Record<string, string> = {
-            unit_price: "سعر الوحدة",
-            line_total: "الإجمالي",
-            discount_value: "قيمة الخصم",
-            cost_price: "التكلفة",
-            profit_amount: "الربح",
+            unit_price: tr("invoice.colUnitPrice", "سعر الوحدة"),
+            line_total: tr("invoice.colTotal", "الإجمالي"),
+            discount_value: tr("invoice.colDiscountValue", "قيمة الخصم"),
+            cost_price: tr("invoice.colCost", "التكلفة"),
+            profit_amount: tr("invoice.colProfit", "الربح"),
           };
           const headerText = typeof col.header === "string" && col.header ? col.header : `${labelMap[field]}${cs(sym)}`;
 
@@ -268,7 +279,7 @@ export function buildInvoiceLineExportColumns({
         } else if (col.key === "discount") {
           result.push({
             id: "discount",
-            label: "خصم %",
+            label: tr("invoice.colDiscountPercent", "خصم %"),
             hidden,
             width: 12,
             numeric: true,
@@ -277,13 +288,13 @@ export function buildInvoiceLineExportColumns({
           });
         } else if (col.key === "expiry_date") {
           result.push({
-            ...dateCol("expiry_date", "تاريخ الانتهاء", (row) => (row as EnrichedExportLine).expiry_date ?? ''),
+            ...dateCol("expiry_date", tr("invoice.colExpiry", "تاريخ الانتهاء"), (row) => (row as EnrichedExportLine).expiry_date ?? ''),
             hidden,
           });
         } else if (col.key === "notes") {
           result.push({
             id: "notes",
-            label: "ملاحظات",
+            label: tr("invoice.colNotes", "ملاحظات"),
             hidden,
             width: 20,
             accessor: (row) => String((row as EnrichedExportLine).notes ?? ''),
@@ -306,7 +317,7 @@ export function buildInvoiceLineExportColumns({
         } else if (col.key === "original_quantity") {
           result.push({
             id: "original_quantity",
-            label: "الكمية الأصلية",
+            label: tr("invoice.colOriginalQty", "الكمية الأصلية"),
             hidden,
             width: 15,
             accessor: (row) => String((row as EnrichedExportLine).original_quantity ?? ''),
@@ -314,7 +325,7 @@ export function buildInvoiceLineExportColumns({
         } else if (col.key === "original_price") {
           result.push({
             id: "original_price",
-            label: "السعر الأصلي",
+            label: tr("invoice.colOriginalPrice", "السعر الأصلي"),
             hidden,
             width: 14,
             numeric: true,

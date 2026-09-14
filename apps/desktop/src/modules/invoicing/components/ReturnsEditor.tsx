@@ -150,6 +150,7 @@ export function ReturnsEditor({ returnType, partyType, parties, materials, wareh
       materials,
       warehouses,
       currencyMode,
+      t,
     });
 
     const summary: Record<string, 'sum' | 'subtotal' | 'average' | null> = {};

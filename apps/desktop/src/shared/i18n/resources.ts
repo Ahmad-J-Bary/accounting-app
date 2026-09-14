@@ -18,6 +18,7 @@ import { auth } from "./resources/auth";
 import { validation } from "./resources/validation";
 import { errors } from "./resources/errors";
 import { widgets } from "./resources/widgets";
+import { openingBalance } from "./resources/openingBalance";
 
 type NamespaceBundle = Record<I18nNamespace, TranslationTree>;
 
@@ -52,6 +53,7 @@ export const NAMESPACE_BUNDLES: Record<I18nNamespace, Record<AppLanguage, Transl
   validation,
   errors,
   widgets,
+  openingBalance,
 };
 
 export const I18N_RESOURCES: Record<AppLanguage, NamespaceBundle> = {

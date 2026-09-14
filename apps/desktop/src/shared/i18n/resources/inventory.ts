@@ -178,6 +178,8 @@ export const inventory: Record<AppLanguage, TranslationTree> = {
         mainCategory: "التصنيف الرئيسي",
         subCategories: "التصنيفات الفرعية",
         noSubCategories: "لا توجد تصنيفات فرعية",
+        categoryNameRequired: "اسم التصنيف مطلوب",
+        subCategory: "تصنيف فرعي",
       },
     },
     materials: {
@@ -290,6 +292,7 @@ export const inventory: Record<AppLanguage, TranslationTree> = {
         imageHint: "رفع صورة يساعد الموظفين في تمييز الصنف بالعين أثناء عمليات البيع أو الجرد.",
         imagePreview: "معاينة الصورة المرفقة",
         noDefaultWarehouse: "بدون مستودع افتراضي",
+        defaultWarehouse: "المستودع الافتراضي",
         hasExpiry: "له صلاحية (تاريخ انتهاء)",
         expiryAlertDays: "التنبيه قبل انتهاء الصلاحية بـ (أيام)",
         defaultPurchaseCurrency: "عملة الشراء الافتراضية",
@@ -786,6 +789,8 @@ export const inventory: Record<AppLanguage, TranslationTree> = {
         mainCategory: "Main Category",
         subCategories: "Sub-Categories",
         noSubCategories: "No sub-categories",
+        categoryNameRequired: "Category name is required",
+        subCategory: "sub-category",
       },
     },
     materials: {
@@ -898,6 +903,7 @@ export const inventory: Record<AppLanguage, TranslationTree> = {
         imageHint: "Uploading an image helps staff identify the item by sight during sales or stocktaking.",
         imagePreview: "Attached Image Preview",
         noDefaultWarehouse: "No default warehouse",
+        defaultWarehouse: "Default Warehouse",
         hasExpiry: "Has expiry (expiration date)",
         expiryAlertDays: "Alert before expiry (days)",
         defaultPurchaseCurrency: "Default Purchase Currency",
