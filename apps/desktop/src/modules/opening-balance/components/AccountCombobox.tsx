@@ -17,6 +17,7 @@ import {
   PopoverTrigger,
 } from "@shared/ui/popover";
 import { TYPE_LABEL, findAccount, isDebitNature } from "../lib/migration-labels";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 interface AccountComboboxProps {
   accounts: readonly AccountDto[];
@@ -35,14 +36,19 @@ export function AccountCombobox({
   options = accounts as AccountDto[],
   value,
   onValueChange,
-  placeholder = "ابحث واختر حساباً...",
-  searchPlaceholder = "ابحث برمز الحساب أو الاسم...",
-  emptyText = "لا توجد حسابات مطابقة",
+  placeholder,
+  searchPlaceholder,
+  emptyText,
   disabled = false,
   className,
 }: AccountComboboxProps) {
+  const { t } = useLocalization();
   const [open, setOpen] = useState(false);
   const selected = findAccount(accounts, value);
+
+  const resolvedPlaceholder = placeholder ?? t("accountCombobox.placeholder", { namespace: "openingBalance" });
+  const resolvedSearchPlaceholder = searchPlaceholder ?? t("accountCombobox.searchPlaceholder", { namespace: "openingBalance" });
+  const resolvedEmptyText = emptyText ?? t("accountCombobox.emptyText", { namespace: "openingBalance" });
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -65,7 +71,7 @@ export function AccountCombobox({
                   {selected.code}
                 </span>
                 <span className="truncate font-semibold text-slate-800">{selected.name_ar}</span>
-                <span className="shrink-0 text-[11px] text-slate-400">({TYPE_LABEL[selected.account_type]})</span>
+                <span className="shrink-0 text-[11px] text-slate-400">({TYPE_LABEL[selected.account_type]?.(t)})</span>
                 <span
                   className={cn(
                     "shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold",
@@ -74,11 +80,11 @@ export function AccountCombobox({
                       : "bg-emerald-50 text-emerald-600",
                   )}
                 >
-                  {isDebitNature(selected.account_type) ? "مدين" : "دائن"}
+                  {isDebitNature(selected.account_type) ? t("accountCombobox.debit", { namespace: "openingBalance" }) : t("accountCombobox.credit", { namespace: "openingBalance" })}
                 </span>
               </span>
             ) : (
-              <span className="text-slate-400">{placeholder}</span>
+              <span className="text-slate-400">{resolvedPlaceholder}</span>
             )}
           </span>
           <ChevronDown className="h-4 w-4 shrink-0 text-slate-400" />
@@ -86,16 +92,16 @@ export function AccountCombobox({
       </PopoverTrigger>
       <PopoverContent className="w-full min-w-[320px] p-0" align="start">
         <Command>
-          <CommandInput placeholder={searchPlaceholder} />
+          <CommandInput placeholder={resolvedSearchPlaceholder} />
           <CommandList>
-            <CommandEmpty>{emptyText}</CommandEmpty>
+            <CommandEmpty>{resolvedEmptyText}</CommandEmpty>
             <CommandGroup>
               {options.map((a) => {
                 const debit = isDebitNature(a.account_type);
                 return (
                   <CommandItem
                     key={a.id}
-                    value={`${a.code} ${a.name_ar} ${TYPE_LABEL[a.account_type]}`}
+                    value={`${a.code} ${a.name_ar} ${TYPE_LABEL[a.account_type]?.(t)}`}
                     onSelect={() => {
                       onValueChange(a.id);
                       setOpen(false);
@@ -107,14 +113,14 @@ export function AccountCombobox({
                         {a.code}
                       </span>
                       <span className="truncate text-slate-700">{a.name_ar}</span>
-                      <span className="text-[11px] text-slate-400">({TYPE_LABEL[a.account_type]})</span>
+                      <span className="text-[11px] text-slate-400">({TYPE_LABEL[a.account_type]?.(t)})</span>
                       <span
                         className={cn(
                           "rounded-full px-2 py-0.5 text-[10px] font-bold",
                           debit ? "bg-blue-50 text-blue-600" : "bg-emerald-50 text-emerald-600",
                         )}
                       >
-                        {debit ? "مدين" : "دائن"}
+                        {debit ? t("accountCombobox.debit", { namespace: "openingBalance" }) : t("accountCombobox.credit", { namespace: "openingBalance" })}
                       </span>
                     </span>
                     <Check

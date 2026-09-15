@@ -4,6 +4,7 @@ import type { AuditLog } from "@erp/shared-types";
 import { UnifiedTable, type UnifiedColumn } from "@widgets/table-shell/UnifiedTable";
 import { TableShell } from "@widgets/table-shell/TableShell";
 import { useUnifiedColumns, useSortable } from "@shared/hooks";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 interface AuditTableProps {
   data: AuditLog[];
@@ -13,26 +14,27 @@ interface AuditTableProps {
 }
 
 export function AuditTable({ data, loading, search, onSearchChange }: AuditTableProps) {
+  const { t } = useLocalization();
   const allColumns = useMemo<UnifiedColumn<AuditLog>[]>(() => [
     {
       id: "created_at",
-      header: "التاريخ والوقت",
-      label: "تاريخ ووقت العملية",
+      header: t("columns.datetime", { namespace: "audit" }),
+      label: t("columns.datetimeLabel", { namespace: "audit" }),
       accessor: (l) => formatDateTime(l.created_at),
       className: "tabular-nums text-slate-500"
     },
     {
       id: "username",
-      header: "المستخدم",
-      label: "اسم المستخدم",
+      header: t("columns.user", { namespace: "audit" }),
+      label: t("columns.userLabel", { namespace: "audit" }),
       accessor: (l) => (
         <span className="font-bold text-slate-700">{l.username}</span>
       ),
     },
     {
       id: "action",
-      header: "العملية",
-      label: "نوع العملية",
+      header: t("columns.action", { namespace: "audit" }),
+      label: t("columns.actionLabel", { namespace: "audit" }),
       accessor: (l) => (
         <span className="px-2 py-1 rounded bg-blue-50 text-blue-700 font-bold text-[10px] uppercase">
           {l.action}
@@ -41,26 +43,26 @@ export function AuditTable({ data, loading, search, onSearchChange }: AuditTable
     },
     {
       id: "entity_type",
-      header: "نوع الكيان",
-      label: "نوع الكيان المتأثر",
+      header: t("columns.entityType", { namespace: "audit" }),
+      label: t("columns.entityTypeLabel", { namespace: "audit" }),
       accessor: "entity_type",
       className: "text-slate-600"
     },
     {
       id: "entity_id",
-      header: "معرف الكيان",
-      label: "المعرف الفريد للكيان",
+      header: t("columns.entityId", { namespace: "audit" }),
+      label: t("columns.entityIdLabel", { namespace: "audit" }),
       accessor: (l) => l.entity_id || "",
       className: "font-mono text-slate-500"
     },
     {
       id: "ip_address",
-      header: "IP Address",
-      label: "عنوان IP",
+      header: t("columns.ipAddress", { namespace: "audit" }),
+      label: t("columns.ipAddressLabel", { namespace: "audit" }),
       accessor: (l) => l.ip_address || "",
       className: "font-mono text-slate-500"
     }
-  ], []);
+  ], [t]);
 
   type SortField = "created_at" | "username" | "action" | "entity_type" | "entity_id" | "ip_address";
 
@@ -114,7 +116,7 @@ export function AuditTable({ data, loading, search, onSearchChange }: AuditTable
     <TableShell
       search={search}
       onSearchChange={onSearchChange}
-      searchPlaceholder="بحث بالمستخدم، العملية، الكيان..."
+      searchPlaceholder={t("searchPlaceholder", { namespace: "audit" })}
       columns={toolbarColumns}
       onColumnToggle={toggleColumn}
       onColumnsReset={resetToDefault}
@@ -135,7 +137,7 @@ export function AuditTable({ data, loading, search, onSearchChange }: AuditTable
             handleSort(col.id as SortField);
           }
         }}
-        emptyMessage="لا توجد سجلات مراقبة حالياً"
+        emptyMessage={t("emptyMessage", { namespace: "audit" })}
       />
     </TableShell>
   );

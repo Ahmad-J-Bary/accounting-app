@@ -4,6 +4,7 @@ import { Trash2 } from "lucide-react";
 import { cn } from "@shared/lib/utils";
 import type { AccountDto } from "@erp/shared-types";
 import { AccountCombobox } from "./AccountCombobox";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 interface AccountLineRowProps {
   accountId: string;
@@ -27,11 +28,15 @@ export function AccountLineRow({
   onRemove,
   accounts,
   options,
-  placeholder = "ابحث واختر حساباً...",
+  placeholder,
   showErrorMessage = false,
-  errorMessage = "أدخل مبلغاً صحيحاً أكبر من صفر لهذا البند.",
+  errorMessage,
   className,
 }: AccountLineRowProps) {
+  const { t } = useLocalization();
+
+  const resolvedPlaceholder = placeholder ?? t("accountLineRow.placeholder", { namespace: "openingBalance" });
+  const resolvedErrorMessage = errorMessage ?? t("accountLineRow.invalidAmount", { namespace: "openingBalance" });
   return (
     <div className={cn("space-y-1", className)}>
       <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white p-2 transition-shadow focus-within:border-blue-300 focus-within:ring-1 focus-within:ring-blue-200">
@@ -40,7 +45,7 @@ export function AccountLineRow({
           options={options}
           value={accountId}
           onValueChange={onAccountChange}
-          placeholder={placeholder}
+          placeholder={resolvedPlaceholder}
           className="flex-1"
         />
         <Input
@@ -61,14 +66,14 @@ export function AccountLineRow({
           size="sm"
           variant="ghost"
           onClick={onRemove}
-          aria-label="حذف هذا البند"
+          aria-label={t("accountLineRow.deleteLine", { namespace: "openingBalance" })}
           className="h-9 w-9 shrink-0 p-0 text-red-500 hover:bg-red-50"
         >
           <Trash2 className="h-3.5 w-3.5" />
         </Button>
       </div>
       {showErrorMessage && (
-        <p className="px-1 text-2xs text-red-600">{errorMessage}</p>
+        <p className="px-1 text-2xs text-red-600">{resolvedErrorMessage}</p>
       )}
     </div>
   );

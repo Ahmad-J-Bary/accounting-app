@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Plus, Loader2, X, Check } from "lucide-react";
 import { Input } from "@shared/ui/input";
 import { Button } from "@shared/ui/button";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 interface QuickCreateInlineProps {
   label: string;
@@ -13,6 +14,7 @@ interface QuickCreateInlineProps {
 }
 
 export function QuickCreateInline({ label, placeholder, amountLabel, direction, onCreate, navLink }: QuickCreateInlineProps) {
+  const { t } = useLocalization();
   const [expanded, setExpanded] = useState(false);
   const [name, setName] = useState("");
   const [amount, setAmount] = useState("");
@@ -50,7 +52,7 @@ export function QuickCreateInline({ label, placeholder, amountLabel, direction, 
           className="h-8 shrink-0 rounded-full border-emerald-300 bg-emerald-50 px-3 text-xs font-bold text-emerald-700 hover:bg-emerald-100 hover:border-emerald-400 transition-all"
         >
           <Plus className="w-3.5 h-3.5 ms-1" />
-          إضافة {label}
+          {t("quickCreate.addLabel", { namespace: "openingBalance", vars: { label } })}
         </Button>
         {navLink}
       </div>
@@ -93,7 +95,7 @@ export function QuickCreateInline({ label, placeholder, amountLabel, direction, 
         />
         {direction && (
           <span className="text-2xs font-semibold text-slate-400 shrink-0">
-            {direction === "debit" ? "مدين" : "دائن"}
+            {direction === "debit" ? t("quickCreate.debit", { namespace: "openingBalance" }) : t("quickCreate.credit", { namespace: "openingBalance" })}
           </span>
         )}
         <div className="flex items-center gap-1.5 shrink-0">
@@ -105,7 +107,7 @@ export function QuickCreateInline({ label, placeholder, amountLabel, direction, 
             className="h-8 px-2 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shrink-0"
           >
             {creating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
-            حفظ
+            {t("quickCreate.save", { namespace: "openingBalance" })}
           </Button>
           <Button
             type="button"

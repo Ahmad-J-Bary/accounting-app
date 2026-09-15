@@ -5,6 +5,7 @@
 
 import type { OpeningPositionControlDto, PositionAccountLine } from "@erp/shared-types";
 import type { OpeningMigrationStatus } from "../../accounting/api/openingBalanceService";
+import type { TranslateFn } from "./migration-labels";
 
 export interface OpeningSectionLine {
   code: string;
@@ -36,21 +37,25 @@ export interface OpeningSnapshot {
 
 interface SectionDef {
   key: string;
-  label: string;
+  labelKey: string;
   bucket: "assets" | "liabilities" | "equity";
   groups: readonly string[];
 }
 
-export const OPENING_SECTION_DEFS: readonly SectionDef[] = [
-  { key: "cash-banks", label: "النقد والبنوك", bucket: "assets", groups: ["Other"] },
-  { key: "receivables", label: "الذمم المدينة (العملاء)", bucket: "assets", groups: ["Receivable"] },
-  { key: "inventory", label: "المخزون", bucket: "assets", groups: ["Inventory"] },
-  { key: "fixed-assets", label: "الأصول الثابتة", bucket: "assets", groups: ["FixedAsset"] },
-  { key: "payables", label: "الذمم الدائنة (الموردون)", bucket: "liabilities", groups: ["Payable"] },
-  { key: "other-liabilities", label: "الالتزامات الأخرى", bucket: "liabilities", groups: ["Other"] },
-  { key: "partner-equity", label: "رؤوس أموال الشركاء", bucket: "equity", groups: ["PartnerCapital", "PartnerCurrent"] },
-  { key: "other-equity", label: "حقوق الملكية الأخرى", bucket: "equity", groups: ["RetainedEarnings", "OpeningBalanceEquity", "PartnerDrawings", "Other"] },
+const SECTION_DEFS: readonly SectionDef[] = [
+  { key: "cash-banks", labelKey: "wizard.sectionCashBanks", bucket: "assets", groups: ["Other"] },
+  { key: "receivables", labelKey: "wizard.sectionReceivables", bucket: "assets", groups: ["Receivable"] },
+  { key: "inventory", labelKey: "wizard.sectionInventory", bucket: "assets", groups: ["Inventory"] },
+  { key: "fixed-assets", labelKey: "wizard.sectionFixedAssets", bucket: "assets", groups: ["FixedAsset"] },
+  { key: "payables", labelKey: "wizard.sectionPayables", bucket: "liabilities", groups: ["Payable"] },
+  { key: "other-liabilities", labelKey: "wizard.sectionOtherLiabilities", bucket: "liabilities", groups: ["Other"] },
+  { key: "partner-equity", labelKey: "wizard.sectionPartnerEquity", bucket: "equity", groups: ["PartnerCapital", "PartnerCurrent"] },
+  { key: "other-equity", labelKey: "wizard.sectionOtherEquity", bucket: "equity", groups: ["RetainedEarnings", "OpeningBalanceEquity", "PartnerDrawings", "Other"] },
 ];
+
+export function getOpeningSectionDefs(t: TranslateFn): readonly (SectionDef & { label: string })[] {
+  return SECTION_DEFS.map((d) => ({ ...d, label: t(d.labelKey, { namespace: "openingBalance" }) }));
+}
 
 const toNum = (v: string | number): number => {
   if (typeof v === "number") return v;
@@ -60,8 +65,9 @@ const toNum = (v: string | number): number => {
 export function deriveOpeningSnapshot(input: {
   status: OpeningMigrationStatus | null;
   position: OpeningPositionControlDto | null;
+  t: TranslateFn;
 }): OpeningSnapshot {
-  const { status, position } = input;
+  const { status, position, t } = input;
 
   if (!position) {
     return {
@@ -74,18 +80,19 @@ export function deriveOpeningSnapshot(input: {
       balanced: false,
       residualApplied: false,
       hasData: false,
-      blockers: ["لم تُرصد أي أرصدة بعد"],
+      blockers: [t("wizard.noOpenBalancesYet", { namespace: "openingBalance" })],
       readyToLock: false,
     };
   }
 
+  const sectionDefs = getOpeningSectionDefs(t);
   const bucketOf = (key: SectionDef["bucket"]): PositionAccountLine[] => {
     if (key === "assets") return position.asset_detail;
     if (key === "liabilities") return position.liability_detail;
     return position.equity_detail;
   };
 
-  const sections: OpeningSection[] = OPENING_SECTION_DEFS.map((def) => {
+  const sections: OpeningSection[] = sectionDefs.map((def) => {
     const lines = bucketOf(def.bucket).filter((l) => def.groups.includes(l.group_key));
     const amount = lines.reduce((s, l) => s + toNum(l.amount), 0);
     return {
@@ -99,9 +106,9 @@ export function deriveOpeningSnapshot(input: {
 
   const hasData = sections.some((s) => s.done);
   const blockers: string[] = [];
-  if (!position.is_balanced) blockers.push("المعادلة غير متوازنة (الأصول ≠ الخصوم + حقوق الملكية)");
+  if (!position.is_balanced) blockers.push(t("wizard.blockerUnbalancedEquation", { namespace: "openingBalance" }));
   for (const row of position.unreconciled_items) {
-    blockers.push(`رقم مطابقة غير محلول: ${row.label}`);
+    blockers.push(t("wizard.blockerUnresolvedReconItem", { namespace: "openingBalance", vars: { label: row.label } }));
   }
   // Verification gate: a residual that was explicitly classified is valid even
   // before the plug is moved into the ledger. Only an unclassified residual
@@ -109,7 +116,7 @@ export function deriveOpeningSnapshot(input: {
   const residualAmount = toNum(position.opening_equity_adjustment);
   const residualUnclassified = residualAmount > 0 && !position.classification;
   if (residualUnclassified) {
-    blockers.push("الرصيد المتبقي (53) غير مصنّف بعد");
+    blockers.push(t("wizard.blockerResidualUnclassified", { namespace: "openingBalance" }));
   }
 
   // Lock gate: the classified residual must additionally have been moved into

@@ -2,6 +2,8 @@ import { describe, it, expect } from "vitest";
 import { deriveOpeningSnapshot } from "@modules/opening-balance/lib/derive-opening-snapshot";
 import type { OpeningPositionControlDto } from "@erp/shared-types";
 
+const t = (key: string) => key;
+
 const line = (code: string, name_ar: string, group_key: string, amount: string) => ({
   account_id: "id-" + code,
   code,
@@ -56,14 +58,14 @@ function samplePosition(): OpeningPositionControlDto {
 
 describe("deriveOpeningSnapshot", () => {
   it("returns an empty no-data snapshot when there is no position", () => {
-    const s = deriveOpeningSnapshot({ status: null, position: null });
+    const s = deriveOpeningSnapshot({ status: null, position: null, t });
     expect(s.hasData).toBe(false);
     expect(s.sections).toEqual([]);
     expect(s.blockers.length).toBeGreaterThan(0);
   });
 
   it("maps the 8 sections from the bucketed detail lines", () => {
-    const s = deriveOpeningSnapshot({ status: "Posted", position: samplePosition() });
+    const s = deriveOpeningSnapshot({ status: "Posted", position: samplePosition(), t });
     expect(s.sections.map((x) => x.key)).toEqual([
       "cash-banks",
       "receivables",
@@ -82,7 +84,7 @@ describe("deriveOpeningSnapshot", () => {
   });
 
   it("flags sections with only zeros/absent data as not done", () => {
-    const s = deriveOpeningSnapshot({ status: "Posted", position: samplePosition() });
+    const s = deriveOpeningSnapshot({ status: "Posted", position: samplePosition(), t });
     expect(s.sections.find((x) => x.key === "cash-banks")?.done).toBe(true);
     const emptyOther = s.sections.find((x) => x.key === "other-liabilities");
     expect(emptyOther?.done).toBe(true); // 200 booked on the loan line
@@ -94,15 +96,15 @@ describe("deriveOpeningSnapshot", () => {
     pos.unreconciled_items = [
       { key: "AR", label: "الذمم المدينة (العملاء)", subledger: "1100", general_ledger: "1200" },
     ];
-    const s = deriveOpeningSnapshot({ status: "Draft", position: pos });
+    const s = deriveOpeningSnapshot({ status: "Draft", position: pos, t });
     expect(s.balanced).toBe(false);
     expect(s.readyToLock).toBe(false);
-    expect(s.blockers.some((b) => b.includes("غير متوازن"))).toBe(true);
-    expect(s.blockers.some((b) => b.includes("رقم مطابقة"))).toBe(true);
+    expect(s.blockers.some((b) => b.includes("wizard.blockerUnbalancedEquation"))).toBe(true);
+    expect(s.blockers.some((b) => b.includes("wizard.blockerUnresolvedReconItem"))).toBe(true);
   });
 
   it("is ready to lock only when balanced, reconciled and residual applied", () => {
-    const ok = deriveOpeningSnapshot({ status: "Approved", position: samplePosition() });
+    const ok = deriveOpeningSnapshot({ status: "Approved", position: samplePosition(), t });
     expect(ok.balanced).toBe(true);
     expect(ok.hasData).toBe(true);
     expect(ok.readyToLock).toBe(true);
@@ -120,10 +122,10 @@ describe("deriveOpeningSnapshot", () => {
       classification: "RetainedEarnings",
       residual_applied: false,
     };
-    const s = deriveOpeningSnapshot({ status: "Validated", position: pos });
+    const s = deriveOpeningSnapshot({ status: "Validated", position: pos, t });
     expect(s.balanced).toBe(true);
     expect(s.blockers.length).toBe(0);
-    expect(s.blockers.some((b) => b.includes("تصنيف الرصيد المتبقي"))).toBe(false);
+    expect(s.blockers.some((b) => b.includes("wizard.blockerResidualUnclassified"))).toBe(false);
     // verification-ready, but not lock-ready until the plug is moved into the ledger
     expect(s.readyToLock).toBe(false);
   });
@@ -136,9 +138,9 @@ describe("deriveOpeningSnapshot", () => {
       classification: null,
       residual_applied: false,
     };
-    const s = deriveOpeningSnapshot({ status: "Draft", position: pos });
+    const s = deriveOpeningSnapshot({ status: "Draft", position: pos, t });
     expect(s.balanced).toBe(true);
-    expect(s.blockers.some((b) => b.includes("غير مصنّف"))).toBe(true);
+    expect(s.blockers.some((b) => b.includes("wizard.blockerResidualUnclassified"))).toBe(true);
     expect(s.readyToLock).toBe(false);
   });
 
@@ -150,7 +152,7 @@ describe("deriveOpeningSnapshot", () => {
       classification: "PartnerDrawings",
       residual_applied: true,
     };
-    const s = deriveOpeningSnapshot({ status: "Approved", position: pos });
+    const s = deriveOpeningSnapshot({ status: "Approved", position: pos, t });
     expect(s.blockers.length).toBe(0);
     expect(s.readyToLock).toBe(true);
   });

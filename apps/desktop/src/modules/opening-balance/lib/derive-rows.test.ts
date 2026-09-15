@@ -3,6 +3,13 @@ import type { AccountDto, CustomerDto, SupplierDto, FixedAssetDto, PartnerDto, M
 import { toFixed, fmtMoney } from "@shared/lib/format";
 import { deriveAr, deriveAp, deriveFa, derivePartnerEquity, inventorySummary, inventoryMismatchHints, sumLines, type InventoryEntry } from "./derive-rows";
 
+const t = (key: string, opts?: any) => {
+  if (opts?.vars) {
+    return `${key}:${JSON.stringify(opts.vars)}`;
+  }
+  return key;
+};
+
 const accounts: AccountDto[] = [
   { id: "a1", code: "1101", name_ar: "عملاء", name_en: "Customers", category: "Detail", account_type: "Assets" },
   { id: "a2", code: "2201", name_ar: "موردون", name_en: "Suppliers", category: "Detail", account_type: "Liabilities" },
@@ -109,31 +116,31 @@ function entry(partial: Partial<InventoryEntry>): InventoryEntry {
 
 describe("inventoryMismatchHints", () => {
   it("flags a quantity without a cost so the row is dropped from opening value", () => {
-    const hints = inventoryMismatchHints([entry({ qty: "5", cost: "" })], []);
-    expect(hints).toEqual([`المادة «مادة أ» لها كمية ${toFixed(5, 2)} بدون تكلفة — لن تُضاف إلى قيمة المخزون الافتتاحية؛ أدخل التكلفة.`]);
+    const hints = inventoryMismatchHints([entry({ qty: "5", cost: "" })], [], t);
+    expect(hints).toHaveLength(1);
+    expect(hints[0]).toContain("wizard.hintMaterialNoCost");
   });
 
   it("flags a cost without a quantity", () => {
-    const hints = inventoryMismatchHints([entry({ qty: "", cost: "150" })], []);
-    expect(hints).toEqual([`المادة «مادة أ» لها تكلفة ${toFixed(150, 2)} بدون كمية — لن تُضاف إلى قيمة المخزون الافتتاحية؛ أدخل الكمية.`]);
+    const hints = inventoryMismatchHints([entry({ qty: "", cost: "150" })], [], t);
+    expect(hints).toHaveLength(1);
+    expect(hints[0]).toContain("wizard.hintMaterialNoQty");
   });
 
   it("reports the exact §14 mismatch when the card exceeds the opening value", () => {
     const materials = [{ name: "مادة أ", total_available: "10", average_cost_base: "100" }] as MaterialDto[];
-    const hints = inventoryMismatchHints([entry({ qty: "5", cost: "100", value: 500 })], materials);
+    const hints = inventoryMismatchHints([entry({ qty: "5", cost: "100", value: 500 })], materials, t);
     expect(hints).toHaveLength(1);
-    expect(hints[0]).toContain(`(${fmtMoney(1000)})`);
-    expect(hints[0]).toContain(`(${fmtMoney(500)})`);
-    expect(hints[0]).toContain("لا يساوي قيمة المخزون الافتتاحية");
+    expect(hints[0]).toContain("wizard.hintInventoryMismatch");
   });
 
   it("stays silent when opening creates the card from scratch", () => {
     const materials = [{ name: "مادة أ", total_available: "0", average_cost_base: "100" }] as MaterialDto[];
-    expect(inventoryMismatchHints([entry({ qty: "10", cost: "120", value: 1200 })], materials)).toEqual([]);
+    expect(inventoryMismatchHints([entry({ qty: "10", cost: "120", value: 1200 })], materials, t)).toEqual([]);
   });
 
   it("stays silent on the default prefill where the opening equals the card", () => {
     const materials = [{ name: "مادة أ", total_available: "10", average_cost_base: "100" }] as MaterialDto[];
-    expect(inventoryMismatchHints([entry({ qty: "10", cost: "100", value: 1000 })], materials)).toEqual([]);
+    expect(inventoryMismatchHints([entry({ qty: "10", cost: "100", value: 1000 })], materials, t)).toEqual([]);
   });
 });

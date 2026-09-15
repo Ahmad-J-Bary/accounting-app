@@ -24,7 +24,8 @@ export type I18nNamespace =
   | "errors"
   | "widgets"
   | "openingBalance"
-  | "setup";
+  | "setup"
+  | "audit";
 
 export interface TranslationTree {
   [key: string]: string | TranslationTree;

@@ -15,7 +15,7 @@ import { QUERY_KEYS } from "@shared/hooks/queryClient";
 import { COMPANY_TYPE_EXISTING, COMPANY_TYPE_NEW } from "@modules/opening-balance/lib/wizard-types";
 import {
   deriveCompanyInitState,
-  INIT_STATE_LABELS,
+  initStateLabel,
 } from "@modules/opening-balance/lib/company-lifecycle";
 import { useLocalization } from "@app/providers/LocalizationProvider";
 
@@ -130,7 +130,7 @@ export function CompanySettings({ settings, onChange }: CompanySettingsProps) {
           <p className="text-xs text-slate-400" data-testid="company-type-hint">
             {canChangeType
               ? t("company.typeHintChangeable", { namespace: "settings",  })
-              : t("company.typeLocked", { namespace: "settings", vars: { state: INIT_STATE_LABELS[initState] } })}
+              : t("company.typeLocked", { namespace: "settings", vars: { state: initStateLabel(initState, t) } })}
           </p>
         </div>
       </div>

@@ -4,6 +4,7 @@
 // status and the existence of a first fiscal period.
 
 import { START_MODE_EXISTING, START_MODE_NEW } from "@modules/opening-balance/lib/wizard-types";
+import type { TranslateFn } from "./migration-labels";
 
 export { COMPANY_TYPE_EXISTING, COMPANY_TYPE_NEW } from "@modules/opening-balance/lib/wizard-types";
 
@@ -195,11 +196,13 @@ export function isTransactionalAllowed(
   return companyCapabilities(type, initState).isNormalAccountingEnabled;
 }
 
-export const INIT_STATE_LABELS: Record<CompanyInitState, string> = {
-  NOT_STARTED: "لم يبدأ بعد",
-  OPENING_IN_PROGRESS: "رصيد الافتتاح قيد الإعداد",
-  OPENING_VALIDATED: "رصيد الافتتاح مُتحقق منه",
-  OPENING_POSTED: "رصيد الافتتاح مُرّحل",
-  OPENING_LOCKED: "أُقفل الرصيد — بانتظار أول فترة مالية",
-  ACTIVE: "العمليات جارية",
-};
+export function initStateLabel(state: CompanyInitState, t: TranslateFn): string {
+  switch (state) {
+    case "NOT_STARTED": return t("wizard.lifecycleNotStarted", { namespace: "openingBalance" });
+    case "OPENING_IN_PROGRESS": return t("wizard.lifecycleInProgress", { namespace: "openingBalance" });
+    case "OPENING_VALIDATED": return t("wizard.lifecycleValidated", { namespace: "openingBalance" });
+    case "OPENING_POSTED": return t("wizard.lifecyclePosted", { namespace: "openingBalance" });
+    case "OPENING_LOCKED": return t("wizard.lifecycleLocked", { namespace: "openingBalance" });
+    case "ACTIVE": return t("wizard.lifecycleActive", { namespace: "openingBalance" });
+  }
+}

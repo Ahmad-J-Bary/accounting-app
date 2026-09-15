@@ -20,7 +20,7 @@ import {
 } from "@modules/accounting/api/openingBalanceService";
 import { invalidateAccountingMutationQueries, queryClient, QUERY_KEYS } from "@shared/hooks/queryClient";
 import {
-  INIT_STATE_LABELS,
+  initStateLabel,
   companyCapabilities,
   companyTypeOf,
   deriveCompanyInitState,
@@ -81,8 +81,8 @@ export default function OpeningBalanceMigration() {
     [migrations],
   );
   const snapshot = useMemo(
-    () => deriveOpeningSnapshot({ status: latestMigration?.status ?? null, position }),
-    [latestMigration, position],
+    () => deriveOpeningSnapshot({ status: latestMigration?.status ?? null, position, t }),
+    [latestMigration, position, t],
   );
 
   const handleLock = async (id: string) => {
@@ -209,7 +209,7 @@ export default function OpeningBalanceMigration() {
     <ErrorBoundary>
     <OperationalTableTemplate
       title={openingClosed ? t("openingBalance.migrationPageTitle.closed", { namespace: "accounting",  }) : t("openingBalance.migrationPageTitle.open", { namespace: "accounting",  })}
-      badge={<Badge className="bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-50">{INIT_STATE_LABELS[initState]}</Badge>}
+      badge={<Badge className="bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-50">{initStateLabel(initState, t)}</Badge>}
       toolbar={
         openingClosed ? undefined : (
           <div className="flex items-center gap-2">

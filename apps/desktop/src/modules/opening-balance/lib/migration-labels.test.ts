@@ -2,13 +2,20 @@ import { describe, it, expect } from "vitest";
 import type { OpeningReconciliationDto } from "@modules/accounting/api/openingBalanceService";
 import { reconciliationReadiness, readinessLabel, canValidateOpening, selectLatestOpenMigration } from "./migration-labels";
 
+const t = (key: string, opts?: any) => {
+  if (opts?.vars) {
+    return `${key}:${JSON.stringify(opts.vars)}`;
+  }
+  return key;
+};
+
 function res(partial: Partial<OpeningReconciliationDto>): OpeningReconciliationDto {
   return { rows: [], debit_total: "0", credit_total: "0", all_reconciled: true, debit_equals_credit: true, opening_control_balance: "0", ...partial };
 }
 
 describe("reconciliationReadiness", () => {
   it("is fully ready when balanced, reconciled and control is zero", () => {
-    const r = reconciliationReadiness(res({}));
+    const r = reconciliationReadiness(res({}), t);
     expect(r.controlZero).toBe(true);
     expect(r.readyToPost).toBe(true);
     expect(r.readyToLock).toBe(true);
@@ -16,25 +23,26 @@ describe("reconciliationReadiness", () => {
   });
 
   it("blocks when debit ≠ credit", () => {
-    const r = reconciliationReadiness({ ...res({}), debit_equals_credit: false });
+    const r = reconciliationReadiness({ ...res({}), debit_equals_credit: false }, t);
     expect(r.readyToPost).toBe(false);
-    expect(r.blockers).toContain("القيد غير متوازن (مدين ≠ دائن)");
+    expect(r.blockers).toContain("wizard.blockerUnbalanced");
   });
 
   it("blocks when sub-ledgers do not match", () => {
-    const r = reconciliationReadiness(res({ all_reconciled: false }));
+    const r = reconciliationReadiness(res({ all_reconciled: false }), t);
     expect(r.readyToPost).toBe(false);
-    expect(r.blockers).toContain("الواجهات الفرعية غير مطابقة");
+    expect(r.blockers).toContain("wizard.blockerSubledgerMismatch");
   });
 
   it("blocks lock when the 53 control is not zero", () => {
     const r = reconciliationReadiness(
       res({ opening_control_balance: "12.5" }),
+      t,
     );
     expect(r.controlZero).toBe(false);
     expect(r.readyToPost).toBe(true);
     expect(r.readyToLock).toBe(false);
-    expect(r.blockers).toContain("رصيد الافتتاح (53) لم يُصفَّر بعد");
+    expect(r.nonZeroedBlockers).toContain("wizard.blockerNotZeroed");
   });
 });
 
@@ -82,12 +90,12 @@ describe("selectLatestOpenMigration", () => {
 
 describe("readinessLabel", () => {
   it("labels a lock-ready state", () => {
-    const r = reconciliationReadiness(res({}));
-    expect(readinessLabel(r)).toContain("جاهز للترحيل والقفل");
+    const r = reconciliationReadiness(res({}), t);
+    expect(readinessLabel(r, t)).toContain("wizard.readyToPostAndLock");
   });
 
   it("labels a post-ready but not control-zero state", () => {
-    const r = reconciliationReadiness(res({ opening_control_balance: "1" }));
-    expect(readinessLabel(r)).toContain("جاهز للترحيل");
+    const r = reconciliationReadiness(res({ opening_control_balance: "1" }), t);
+    expect(readinessLabel(r, t)).toContain("wizard.readyToPostOnly");
   });
 });

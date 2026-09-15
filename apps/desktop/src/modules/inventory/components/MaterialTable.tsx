@@ -100,8 +100,8 @@ export function MaterialTable({
     const cols: UnifiedColumn<MaterialDto>[] = [
       {
         id: "image",
-        header: t("columns.image", { namespace: "inventory" }),
-        label: t("columns.image", { namespace: "inventory" }),
+        header: t("materials.columns.image", { namespace: "inventory" }),
+        label: t("materials.columns.image", { namespace: "inventory" }),
         accessor: (m) => m.image_path ? (
           <div className="w-9 h-9 rounded-md border bg-slate-50 overflow-hidden flex-shrink-0">
             <img src={m.image_path} alt={m.name} className="w-full h-full object-contain" />
@@ -114,36 +114,36 @@ export function MaterialTable({
       },
       {
         id: "code",
-        header: t("columns.code", { namespace: "inventory" }),
-        label: t("columns.code", { namespace: "inventory" }),
+        header: t("materials.columns.code", { namespace: "inventory" }),
+        label: t("materials.columns.code", { namespace: "inventory" }),
         accessor: (m) => m.code || "",
         className: "font-black text-slate-900 text-center"
       },
       {
         id: "barcode",
-        header: t("columns.barcode", { namespace: "inventory" }),
-        label: t("columns.barcode", { namespace: "inventory" }),
+        header: t("materials.columns.barcode", { namespace: "inventory" }),
+        label: t("materials.columns.barcode", { namespace: "inventory" }),
         accessor: (m) => m.barcode || "",
         className: "font-mono font-medium text-slate-500"
       },
       {
         id: "name",
-        header: t("columns.materialName", { namespace: "inventory" }),
-        label: t("columns.materialName", { namespace: "inventory" }),
+        header: t("materials.columns.materialName", { namespace: "inventory" }),
+        label: t("materials.columns.materialName", { namespace: "inventory" }),
         accessor: (m) => m.name,
         className: "font-bold text-slate-800"
       },
       {
         id: "name_en",
-        header: t("columns.nameEn", { namespace: "inventory" }),
-        label: t("columns.nameEn", { namespace: "inventory" }),
+        header: t("materials.columns.nameEn", { namespace: "inventory" }),
+        label: t("materials.columns.nameEn", { namespace: "inventory" }),
         accessor: (m) => m.name_en || "",
         className: "text-slate-500 italic"
       },
       {
         id: "categories",
-        header: t("columns.category", { namespace: "inventory" }),
-        label: t("columns.category", { namespace: "inventory" }),
+        header: t("materials.columns.category", { namespace: "inventory" }),
+        label: t("materials.columns.category", { namespace: "inventory" }),
         accessor: (m) => (
           <div className="flex flex-wrap gap-1.5">
             {m.category_ids.length > 0 ? (
@@ -162,7 +162,7 @@ export function MaterialTable({
                 );
               })
             ) : (
-              <Badge variant="outline" className="text-[10px] text-slate-400 border-slate-100 font-normal">{t("columns.uncategorized", { namespace: "inventory" })}</Badge>
+              <Badge variant="outline" className="text-[10px] text-slate-400 border-slate-100 font-normal">{t("materials.columns.uncategorized", { namespace: "inventory" })}</Badge>
             )}
           </div>
         )
@@ -174,8 +174,8 @@ export function MaterialTable({
       const isBase = isBaseCurrency(curr.code);
       cols.push({
         id: `unit_price_${curr.code}`,
-        header: `${t("columns.unitPrice", { namespace: "inventory" })}${cs(sym)}`,
-        label: `${t("columns.unitPrice", { namespace: "inventory" })}${cs(sym)}`,
+        header: `${t("materials.columns.unitPrice", { namespace: "inventory" })}${cs(sym)}`,
+        label: `${t("materials.columns.unitPrice", { namespace: "inventory" })}${cs(sym)}`,
         accessor: (m) => {
           const raw = rawPriceBase(m);
           return raw > 0 ? formatAmount(raw, { currencyCode: curr.code }) : "";
@@ -191,8 +191,8 @@ export function MaterialTable({
       const isBase = isBaseCurrency(curr.code);
       cols.push({
         id: `extra_costs_${curr.code}`,
-        header: `${t("columns.extraCosts", { namespace: "inventory" })}${cs(sym)}`,
-        label: `${t("columns.extraCosts", { namespace: "inventory" })}${cs(sym)}`,
+        header: `${t("materials.columns.extraCosts", { namespace: "inventory" })}${cs(sym)}`,
+        label: `${t("materials.columns.extraCosts", { namespace: "inventory" })}${cs(sym)}`,
         accessor: (m) => {
           const extra = extraCostBase(m);
           return extra > 0 ? formatAmount(extra, { currencyCode: curr.code }) : "";
@@ -208,8 +208,8 @@ export function MaterialTable({
       const isBase = isBaseCurrency(curr.code);
       cols.push({
         id: `average_cost_${curr.code}`,
-        header: `${t("columns.unitCost", { namespace: "inventory" })}${cs(sym)}`,
-        label: `${t("columns.unitCost", { namespace: "inventory" })}${cs(sym)}`,
+        header: `${t("materials.columns.unitCost", { namespace: "inventory" })}${cs(sym)}`,
+        label: `${t("materials.columns.unitCost", { namespace: "inventory" })}${cs(sym)}`,
         accessor: (m) => {
           const val = unitCostBase(m);
           if (val <= 0) return "";
@@ -249,32 +249,32 @@ export function MaterialTable({
 
     cols.push({
       id: "total_received",
-      header: t("columns.totalReceived", { namespace: "inventory" }),
-      label: t("columns.totalReceived", { namespace: "inventory" }),
+      header: t("materials.columns.totalReceived", { namespace: "inventory" }),
+      label: t("materials.columns.totalReceived", { namespace: "inventory" }),
       accessor: (m) => toLocalString(totalReceived(m)),
       className: "tabular-nums text-emerald-600 font-bold"
     });
 
     cols.push({
       id: "total_sold",
-      header: t("columns.totalSold", { namespace: "inventory" }),
-      label: t("columns.totalSold", { namespace: "inventory" }),
+      header: t("materials.columns.totalSold", { namespace: "inventory" }),
+      label: t("materials.columns.totalSold", { namespace: "inventory" }),
       accessor: (m) => toLocalString(parseFloat(m.total_sold || "0")),
       className: "tabular-nums text-blue-600 font-bold"
     });
 
     cols.push({
       id: "total_damaged",
-      header: t("columns.totalDamaged", { namespace: "inventory" }),
-      label: t("columns.totalDamaged", { namespace: "inventory" }),
+      header: t("materials.columns.totalDamaged", { namespace: "inventory" }),
+      label: t("materials.columns.totalDamaged", { namespace: "inventory" }),
       accessor: (m) => toLocalString(parseFloat(m.total_damaged || "0")),
       className: "tabular-nums text-rose-600 font-bold"
     });
 
     cols.push({
       id: "total_available",
-      header: t("columns.totalAvailable", { namespace: "inventory" }),
-      label: t("columns.totalAvailable", { namespace: "inventory" }),
+      header: t("materials.columns.totalAvailable", { namespace: "inventory" }),
+      label: t("materials.columns.totalAvailable", { namespace: "inventory" }),
       accessor: (m) => toLocalString(parseFloat(m.total_available)),
       className: "tabular-nums font-bold text-slate-700"
     });
@@ -284,8 +284,8 @@ export function MaterialTable({
       const isBase = isBaseCurrency(curr.code);
       cols.push({
         id: `available_value_${curr.code}`,
-        header: `${t("labels.totalAvailable", { namespace: "inventory" })}${cs(sym)}`,
-        label: `${t("labels.totalAvailable", { namespace: "inventory" })}${cs(sym)}`,
+        header: `${t("materials.columns.totalAvailable", { namespace: "inventory" })}${cs(sym)}`,
+        label: `${t("materials.columns.totalAvailable", { namespace: "inventory" })}${cs(sym)}`,
         accessor: (m) => {
           const val = totalAvailable(m) * unitCostBase(m);
           return val > 0 ? formatAmount(val, { currencyCode: curr.code }) : "";
@@ -334,8 +334,8 @@ export function MaterialTable({
 
     cols.push({
       id: "units",
-      header: t("columns.units", { namespace: "inventory" }),
-      label: t("columns.units", { namespace: "inventory" }),
+      header: t("materials.columns.units", { namespace: "inventory" }),
+      label: t("materials.columns.units", { namespace: "inventory" }),
       accessor: (m) => (
         <div className="flex flex-wrap items-center gap-1.5 group">
           {m.units?.map((u, i) => (
@@ -360,8 +360,8 @@ export function MaterialTable({
 
     cols.push({
       id: "minimum_stock",
-      header: t("columns.minimumStock", { namespace: "inventory" }),
-      label: t("columns.minimumStock", { namespace: "inventory" }),
+      header: t("materials.columns.minimumStock", { namespace: "inventory" }),
+      label: t("materials.columns.minimumStock", { namespace: "inventory" }),
       accessor: (m) => {
         const min = parseFloat(m.minimum_stock);
         const avail = parseFloat(m.total_available);
@@ -373,8 +373,8 @@ export function MaterialTable({
 
     cols.push({
       id: "costing_method",
-      header: t("columns.costingMethod", { namespace: "inventory" }),
-      label: t("columns.costingMethod", { namespace: "inventory" }),
+      header: t("materials.columns.costingMethod", { namespace: "inventory" }),
+      label: t("materials.columns.costingMethod", { namespace: "inventory" }),
       accessor: (m) => (
         <span className={cn("text-[11px] font-medium px-2 py-0.5 rounded-full border", 
           m.costing_method === "FIFO" 
@@ -389,24 +389,24 @@ export function MaterialTable({
 
     cols.push({
       id: "default_purchase_unit",
-      header: t("columns.purchaseUnit", { namespace: "inventory" }),
-      label: t("columns.purchaseUnit", { namespace: "inventory" }),
+      header: t("materials.columns.purchaseUnit", { namespace: "inventory" }),
+      label: t("materials.columns.purchaseUnit", { namespace: "inventory" }),
       accessor: (m) => m.units?.find(u => u.id === m.default_purchase_unit_id)?.name || "",
       className: "text-slate-500"
     });
 
     cols.push({
       id: "default_sale_unit",
-      header: t("columns.saleUnit", { namespace: "inventory" }),
-      label: t("columns.saleUnit", { namespace: "inventory" }),
+      header: t("materials.columns.saleUnit", { namespace: "inventory" }),
+      label: t("materials.columns.saleUnit", { namespace: "inventory" }),
       accessor: (m) => m.units?.find(u => u.id === m.default_sale_unit_id)?.name || "",
       className: "text-slate-500"
     });
 
     cols.push({
       id: "default_warehouse",
-      header: t("columns.defaultWarehouse", { namespace: "inventory" }),
-      label: t("columns.defaultWarehouse", { namespace: "inventory" }),
+      header: t("materials.columns.defaultWarehouse", { namespace: "inventory" }),
+      label: t("materials.columns.defaultWarehouse", { namespace: "inventory" }),
       accessor: (row) => (
         <span className="text-[11px] text-slate-500">{row.default_warehouse_id || "—"}</span>
       ),
@@ -415,8 +415,8 @@ export function MaterialTable({
 
     cols.push({
       id: "default_purchase_currency",
-      header: t("columns.purchaseCurrency", { namespace: "inventory" }),
-      label: t("columns.purchaseCurrency", { namespace: "inventory" }),
+      header: t("materials.columns.purchaseCurrency", { namespace: "inventory" }),
+      label: t("materials.columns.purchaseCurrency", { namespace: "inventory" }),
       accessor: (row) => (
         <span className="text-[11px] text-slate-500">{row.default_purchase_currency || "—"}</span>
       ),
@@ -425,8 +425,8 @@ export function MaterialTable({
 
     cols.push({
       id: "default_sale_currency",
-      header: t("columns.saleCurrency", { namespace: "inventory" }),
-      label: t("columns.saleCurrency", { namespace: "inventory" }),
+      header: t("materials.columns.saleCurrency", { namespace: "inventory" }),
+      label: t("materials.columns.saleCurrency", { namespace: "inventory" }),
       accessor: (row) => (
         <span className="text-[11px] text-slate-500">{row.default_sale_currency || "—"}</span>
       ),
@@ -435,8 +435,8 @@ export function MaterialTable({
 
     cols.push({
       id: "has_expiry",
-      header: t("columns.expiry", { namespace: "inventory" }),
-      label: t("columns.expiry", { namespace: "inventory" }),
+      header: t("materials.columns.expiry", { namespace: "inventory" }),
+      label: t("materials.columns.expiry", { namespace: "inventory" }),
       accessor: (row) => (
         <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${row.has_expiry ? 'bg-amber-50 text-amber-700 border border-amber-200' : 'bg-slate-50 text-slate-400 border border-slate-200'}`}>
           {row.has_expiry ? t("materials.expiry.has", { namespace: "inventory" }) : t("materials.expiry.none", { namespace: "inventory" })}
@@ -447,8 +447,8 @@ export function MaterialTable({
 
     cols.push({
       id: "expiry_alert_before_days",
-      header: t("columns.expiryAlert", { namespace: "inventory" }),
-      label: t("columns.expiryAlert", { namespace: "inventory" }),
+      header: t("materials.columns.expiryAlert", { namespace: "inventory" }),
+      label: t("materials.columns.expiryAlert", { namespace: "inventory" }),
       accessor: (row) => (
         <span className="text-[11px] text-slate-600">{row.has_expiry ? row.expiry_alert_before_days : "—"}</span>
       ),
@@ -457,16 +457,16 @@ export function MaterialTable({
 
     cols.push({
       id: "notes",
-      header: t("columns.notes", { namespace: "inventory" }),
-      label: t("columns.notes", { namespace: "inventory" }),
+      header: t("materials.columns.notes", { namespace: "inventory" }),
+      label: t("materials.columns.notes", { namespace: "inventory" }),
       accessor: (m) => m.notes || "",
       className: "text-slate-500 italic"
     });
 
     cols.push({
       id: "actions",
-      header: t("columns.actions", { namespace: "inventory" }),
-      label: t("columns.actions", { namespace: "inventory" }),
+      header: t("materials.columns.actions", { namespace: "inventory" }),
+      label: t("materials.columns.actions", { namespace: "inventory" }),
       accessor: (m) => (
         <TableActions
           onView={() => onRowClick?.(m)}
@@ -551,7 +551,7 @@ export function MaterialTable({
         const currCode = availMatch[1];
         const isBase = isBaseCurrency(currCode);
         return {
-          id: `${id}_summary`, columnId: id, label: t("labels.totalAvailable", { namespace: "inventory" }),
+          id: `${id}_summary`, columnId: id, label: t("materials.columns.totalAvailable", { namespace: "inventory" }),
           value: availableValueBase > 0 ? formatAmount(availableValueBase, { currencyCode: currCode }) : "—",
           className: isBase
             ? "text-indigo-700 font-black"

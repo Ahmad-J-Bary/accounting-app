@@ -30,8 +30,10 @@ import { AccountCombobox } from "@modules/opening-balance/components/AccountComb
 import { AccountLineRow } from "@modules/opening-balance/components/AccountLineRow";
 import { OpeningPositionSummary } from "@modules/opening-balance/components/OpeningPositionSummary";
 import { OpeningProgressChecklist, type ChecklistItem } from "@modules/opening-balance/components/OpeningProgressChecklist";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 export function GuidedTransitionWizard() {
+  const { t } = useLocalization();
   const w = useOpeningBalanceWizard();
   const isNew = w.startMode === START_MODE_NEW;
   const navigate = useNavigate();
@@ -45,7 +47,7 @@ export function GuidedTransitionWizard() {
   const goDashboard = () => {
     if (tabs) {
       tabs.closeTab(tabs.activeTabId);
-      tabs.openTab({ id: "/dashboard", title: "لوحة التحكم", path: "/dashboard" });
+      tabs.openTab({ id: "/dashboard", title: t("wizard.dashboardTab", { namespace: "openingBalance" }), path: "/dashboard" });
       return;
     }
     navigate("/dashboard");
@@ -92,13 +94,13 @@ export function GuidedTransitionWizard() {
       <div className="space-y-3">
         <div className={"rounded-lg p-4 text-center " + (isNew || locked ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-700")}>
           <p className="text-base font-black">
-            {isNew ? "تم بدء المحاسبة بنجاح ✓" : locked ? "اكتمل إعداد الشركة ✓" : "اكتمل المعالج"}
+            {isNew ? t("wizard.doneNewTitle", { namespace: "openingBalance" }) : locked ? t("wizard.doneLockedTitle", { namespace: "openingBalance" }) : t("wizard.doneFallbackTitle", { namespace: "openingBalance" })}
           </p>
           <p className="text-xs mt-1">
             {isNew ? (
-              "أول فترة مالية جاهزة — الشركة الآن في وضع المحاسبة العادي ويمكن تسجيل الحركات اليومية."
+              t("wizard.doneNewDesc", { namespace: "openingBalance" })
             ) : locked ? (
-              "التحويل مكتمل: الرصيد الافتتاحي مقفول نهائياً — الشركة الآن في وضع المحاسبة العادي."
+              t("wizard.doneLockedDesc", { namespace: "openingBalance" })
             ) : (
               <>حالة الترحيل النهائية: <StatusBadge status={w.migration?.status || ""} /> — تاريخ القطع: {toLocalDateStr(w.migration?.cutover_date || "")}</>
             )}
@@ -106,12 +108,12 @@ export function GuidedTransitionWizard() {
         </div>
         {w.firstPeriod && (
           <div className="rounded-lg p-3 text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">
-            أول فترة مالية: {toLocalDateStr(w.firstPeriod.start_date)} ← {toLocalDateStr(w.firstPeriod.end_date)}
+            {t("wizard.firstPeriodLabel", { namespace: "openingBalance" })}{toLocalDateStr(w.firstPeriod.start_date)} ← {toLocalDateStr(w.firstPeriod.end_date)}
           </div>
         )}
         <div className="flex justify-center pt-1">
           <Button size="sm" onClick={goDashboard} className="bg-green-600 hover:bg-green-700 text-white font-bold">
-            الانتقال إلى لوحة التحكم
+            {t("wizard.goToDashboard", { namespace: "openingBalance" })}
           </Button>
         </div>
       </div>
@@ -121,19 +123,19 @@ export function GuidedTransitionWizard() {
   const renderTotalsSummary = () => (
     <div className="space-y-3">
       <p className="text-xs text-slate-500">
-        معادلة الميزانية: الأصول (A) = الخصوم (L) + حقوق الملكية (E). يجب أن يتوازن الجانبان قبل الحفظ.
+        {t("wizard.balanceEquation", { namespace: "openingBalance" })}
       </p>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div className="border border-slate-100 rounded-lg p-3 space-y-1 bg-white">
-          <div className="text-xs font-semibold text-blue-700">الأصول (مدين)</div>
+          <div className="text-xs font-semibold text-blue-700">{t("wizard.assetsDebit", { namespace: "openingBalance" })}</div>
           <div className="text-xl font-black tabular-nums text-blue-700">{toFixed(w.totals.debit, 2)}</div>
         </div>
         <div className="border border-slate-100 rounded-lg p-3 space-y-1 bg-white">
-          <div className="text-xs font-semibold text-emerald-700">الخصوم (دائن)</div>
+          <div className="text-xs font-semibold text-emerald-700">{t("wizard.liabilitiesCredit", { namespace: "openingBalance" })}</div>
           <div className="text-xl font-black tabular-nums text-emerald-700">{toFixed(w.totals.liabilities, 2)}</div>
         </div>
         <div className="border border-slate-100 rounded-lg p-3 space-y-1 bg-white">
-          <div className="text-xs font-semibold text-indigo-700">حقوق الملكية (دائن)</div>
+          <div className="text-xs font-semibold text-indigo-700">{t("wizard.equityCredit", { namespace: "openingBalance" })}</div>
           <div className="text-xl font-black tabular-nums text-indigo-700">
             {toFixed(w.totals.equity + w.totals.plugAmount, 2)}
           </div>
@@ -168,15 +170,14 @@ export function GuidedTransitionWizard() {
 
       {w.totals.plugAmount !== 0 && (
         <div className="rounded-lg p-3 text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
-          بند موازنة تلقائي على حساب الرصيد الافتتاحي (53): {toFixed(w.totals.plugAmount, 2)} — سيعاد
-          تصنيفه بعد الترحيل إلى الحساب المحدد.
+          {t("wizard.autoPlugLine", { namespace: "openingBalance", vars: { amount: toFixed(w.totals.plugAmount, 2) } })}
         </div>
       )}
 
       <div className={"rounded-lg p-3 text-sm font-bold " + (w.totals.balanced ? "bg-green-50 text-green-700" : "bg-red-50 text-red-600")}>
         {w.totals.balanced
-          ? `متوازن ✓ — مدين ${toFixed(w.totals.debit, 2)} = دائن ${toFixed(w.totals.credit, 2)}`
-          : `غير متوازن — فرق ${toFixed(w.totals.debit - w.totals.credit, 2)}`}
+          ? t("wizard.balancedStatus", { namespace: "openingBalance", vars: { debit: toFixed(w.totals.debit, 2), credit: toFixed(w.totals.credit, 2) } })
+          : t("wizard.unbalancedStatus", { namespace: "openingBalance", vars: { diff: toFixed(w.totals.debit - w.totals.credit, 2) } })}
       </div>
     </div>
   );
@@ -189,10 +190,9 @@ export function GuidedTransitionWizard() {
             {isNew && (
               <>
                 <div className="rounded-lg border border-blue-200 bg-blue-50/60 p-3 space-y-1.5">
-                  <p className="text-xs font-semibold text-blue-700">الشركة تعمل بوضع «شركة جديدة»</p>
+                  <p className="text-xs font-semibold text-blue-700">{t("wizard.newCompanyMode", { namespace: "openingBalance" })}</p>
                   <p className="text-xs text-blue-600">
-                    لا يُنشأ رصيد افتتاحي في هذا الوضع — تبدأ السجلات من الصفر. حدّد نافذة أول فترة
-                    مالية ثم اضغط «إنشاء الفترة الأولى والبدء».
+                    {t("wizard.newCompanyDesc", { namespace: "openingBalance" })}
                   </p>
                 </div>
                 <FirstPeriodFields
@@ -208,30 +208,29 @@ export function GuidedTransitionWizard() {
             {!isNew && (
               <>
                 <div className="rounded-lg border border-amber-200 bg-amber-50/60 p-3 space-y-1.5">
-                  <p className="text-xs font-semibold text-amber-700">شركة قائمة تبدأ استخدام التطبيق الآن:</p>
+                  <p className="text-xs font-semibold text-amber-700">{t("wizard.existingCompanyLabel", { namespace: "openingBalance" })}</p>
                   <p className="text-xs text-amber-600">
-                    سيُدخل الحالة المالية الفعلية للشركة في تاريخ بدء الاستخدام (تاريخ القطع). لن يُنشأ
-                    أي حركة نقدية تلقائية — رأس مال الشركاء رصيد سابق، وليس مساهمة نقدية جديدة.
+                    {t("wizard.existingCompanyDesc", { namespace: "openingBalance" })}
                   </p>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div className="space-y-1.5">
-                    <FieldLabel htmlFor="wiz-cutover-date" required>تاريخ القطع (Cutover)</FieldLabel>
+                    <FieldLabel htmlFor="wiz-cutover-date" required>{t("wizard.cutoverDate", { namespace: "openingBalance" })}</FieldLabel>
                     <Input id="wiz-cutover-date" type="date" value={w.cutoverDate} onChange={(e) => w.setCutoverDate(e.target.value)} className="h-9" />
-                    <p className="text-2xs text-slate-500">تاريخ بدء استخدام التطبيق الذي تُرصد بناءً عليه أرصدة الميزانية القديمة.</p>
+                    <p className="text-2xs text-slate-500">{t("wizard.cutoverHint", { namespace: "openingBalance" })}</p>
                   </div>
                   <div className="space-y-1.5">
-                    <FieldLabel htmlFor="wiz-source-system">النظام السابق (Source System)</FieldLabel>
-                    <Input id="wiz-source-system" value={w.sourceSystem} onChange={(e) => w.setSourceSystem(e.target.value)} placeholder="مثال: نظام محاسبة قديم" className="h-9" />
+                    <FieldLabel htmlFor="wiz-source-system">{t("wizard.sourceSystem", { namespace: "openingBalance" })}</FieldLabel>
+                    <Input id="wiz-source-system" value={w.sourceSystem} onChange={(e) => w.setSourceSystem(e.target.value)} placeholder={t("wizard.sourceSystemPlaceholder", { namespace: "openingBalance" })} className="h-9" />
                   </div>
                   <div className="space-y-1.5">
-                    <FieldLabel htmlFor="wiz-source-reference">المرجع (Source Reference)</FieldLabel>
-                    <Input id="wiz-source-reference" value={w.sourceReference} onChange={(e) => w.setSourceReference(e.target.value)} placeholder="رقم الميزانية / المرجع" className="h-9" />
+                    <FieldLabel htmlFor="wiz-source-reference">{t("wizard.sourceReference", { namespace: "openingBalance" })}</FieldLabel>
+                    <Input id="wiz-source-reference" value={w.sourceReference} onChange={(e) => w.setSourceReference(e.target.value)} placeholder={t("wizard.sourceReferencePlaceholder", { namespace: "openingBalance" })} className="h-9" />
                   </div>
                   <div className="space-y-1.5">
-                    <FieldLabel htmlFor="wiz-notes">ملاحظات</FieldLabel>
-                    <Input id="wiz-notes" value={w.notes} onChange={(e) => w.setNotes(e.target.value)} placeholder="اختياري" className="h-9" />
+                    <FieldLabel htmlFor="wiz-notes">{t("wizard.notes", { namespace: "openingBalance" })}</FieldLabel>
+                    <Input id="wiz-notes" value={w.notes} onChange={(e) => w.setNotes(e.target.value)} placeholder={t("wizard.notesPlaceholder", { namespace: "openingBalance" })} className="h-9" />
                   </div>
                 </div>
               </>
@@ -243,7 +242,7 @@ export function GuidedTransitionWizard() {
         return (
           <div className="space-y-4">
             <AutoAmountSection
-              title="الصندوق والنقد"
+              title={t("wizard.cashTitle", { namespace: "openingBalance" })}
               rows={w.cashBanks.filter((l) => l.kind === "cash")}
               onPatch={(key, patch) => w.updateLine(w.setCashBanks, key, patch)}
               onDelete={(key) => w.updateLine(w.setCashBanks, key, { amount: "" })}
@@ -251,7 +250,7 @@ export function GuidedTransitionWizard() {
               nativeHint="debit"
             />
             <AutoAmountSection
-              title="البنوك"
+              title={t("wizard.banksTitle", { namespace: "openingBalance" })}
               rows={w.cashBanks.filter((l) => l.kind === "bank")}
               onPatch={(key, patch) => w.updateLine(w.setCashBanks, key, patch)}
               onDelete={(key) => w.updateLine(w.setCashBanks, key, { amount: "" })}
@@ -264,22 +263,22 @@ export function GuidedTransitionWizard() {
         return (
           <div className="space-y-3">
             <InlineRows
-              title="الذمم المدينة — العملاء"
+              title={t("wizard.arTitle", { namespace: "openingBalance" })}
               rows={w.derivedAr}
               onSave={w.saveCustomerOpening}
               onDelete={(row) => w.saveCustomerOpening(row, "0")}
-              label="رصيد العميل"
+              label={t("wizard.customerBalance", { namespace: "openingBalance" })}
               nativeHint="debit"
               addForm={
                 <QuickCreateInline
-                  label="عميل"
-                  placeholder="اسم العميل"
-                  amountLabel="الرصيد الافتتاحي"
+                  label={t("wizard.customerLabel", { namespace: "openingBalance" })}
+                  placeholder={t("wizard.customerPlaceholder", { namespace: "openingBalance" })}
+                  amountLabel={t("wizard.openingBalanceLabel", { namespace: "openingBalance" })}
                   direction="debit"
                   onCreate={(name, amount) => w.createCustomer(name, amount)}
                   navLink={
-                    <Button size="sm" variant="outline" onClick={() => goTo("/customers", "العملاء")} className="h-8 shrink-0 rounded-full border-blue-300 bg-blue-50 px-3 text-xs font-bold text-blue-700 hover:bg-blue-100 hover:border-blue-400 transition-all">
-                      صفحة العملاء
+                    <Button size="sm" variant="outline" onClick={() => goTo("/customers", t("wizard.customersPage", { namespace: "openingBalance" }))} className="h-8 shrink-0 rounded-full border-blue-300 bg-blue-50 px-3 text-xs font-bold text-blue-700 hover:bg-blue-100 hover:border-blue-400 transition-all">
+                      {t("wizard.customersPageButton", { namespace: "openingBalance" })}
                       <ArrowLeft className="w-3.5 h-3.5 me-1" />
                     </Button>
                   }
@@ -294,26 +293,26 @@ export function GuidedTransitionWizard() {
             rows={w.effectiveInventory}
             onRowChange={w.setInventoryRow}
             total={w.inventoryTotal}
-            onNavigateToInvoice={() => goTo("/opening-balance", "فاتورة أول المدة")}
+            onNavigateToInvoice={() => goTo("/opening-balance", t("wizard.openingInvoiceTab", { namespace: "openingBalance" }))}
           />
         );
       case 4:
         return (
           <div className="space-y-3">
             <InlineRows
-              title="الأصول الثابتة"
+              title={t("wizard.fixedAssetsTitle", { namespace: "openingBalance" })}
               rows={w.faRows}
               onSave={w.saveFixedAssetOverride}
               onDelete={w.deleteFixedAsset}
-              label="القيمة الافتتاحية"
+              label={t("wizard.openingValue", { namespace: "openingBalance" })}
               nativeHint="debit"
               addForm={
                 <QuickCreateFixedAsset
                   warehouses={warehouses}
                   onCreate={(data) => w.createFixedAssetQuick(data)}
                   navLink={
-                    <Button size="sm" variant="outline" onClick={() => goTo("/fixed-assets", "الأصول الثابتة")} className="h-8 shrink-0 rounded-full border-blue-300 bg-blue-50 px-3 text-xs font-bold text-blue-700 hover:bg-blue-100 hover:border-blue-400 transition-all">
-                      صفحة الأصول الثابتة
+                    <Button size="sm" variant="outline" onClick={() => goTo("/fixed-assets", t("wizard.fixedAssetsTitle", { namespace: "openingBalance" }))} className="h-8 shrink-0 rounded-full border-blue-300 bg-blue-50 px-3 text-xs font-bold text-blue-700 hover:bg-blue-100 hover:border-blue-400 transition-all">
+                      {t("wizard.fixedAssetsPageButton", { namespace: "openingBalance" })}
                       <ArrowLeft className="w-3.5 h-3.5 me-1" />
                     </Button>
                   }
@@ -326,22 +325,22 @@ export function GuidedTransitionWizard() {
         return (
           <div className="space-y-4">
             <InlineRows
-              title="الذمم الدائنة — الموردون"
+              title={t("wizard.apTitle", { namespace: "openingBalance" })}
               rows={w.derivedAp}
               onSave={w.saveSupplierOpening}
               onDelete={(row) => w.saveSupplierOpening(row, "0")}
-              label="رصيد المورد"
+              label={t("wizard.supplierBalance", { namespace: "openingBalance" })}
               nativeHint="credit"
               addForm={
                 <QuickCreateInline
-                  label="مورد"
-                  placeholder="اسم المورد"
-                  amountLabel="الرصيد الافتتاحي"
+                  label={t("wizard.supplierLabel", { namespace: "openingBalance" })}
+                  placeholder={t("wizard.supplierPlaceholder", { namespace: "openingBalance" })}
+                  amountLabel={t("wizard.openingBalanceLabel", { namespace: "openingBalance" })}
                   direction="credit"
                   onCreate={(name, amount) => w.createSupplier(name, amount)}
                   navLink={
-                    <Button size="sm" variant="outline" onClick={() => goTo("/suppliers", "الموردون")} className="h-8 shrink-0 rounded-full border-blue-300 bg-blue-50 px-3 text-xs font-bold text-blue-700 hover:bg-blue-100 hover:border-blue-400 transition-all">
-                      صفحة الموردين
+                    <Button size="sm" variant="outline" onClick={() => goTo("/suppliers", t("wizard.suppliersPage", { namespace: "openingBalance" }))} className="h-8 shrink-0 rounded-full border-blue-300 bg-blue-50 px-3 text-xs font-bold text-blue-700 hover:bg-blue-100 hover:border-blue-400 transition-all">
+                      {t("wizard.suppliersPageButton", { namespace: "openingBalance" })}
                       <ArrowLeft className="w-3.5 h-3.5 me-1" />
                     </Button>
                   }
@@ -349,7 +348,7 @@ export function GuidedTransitionWizard() {
               }
             />
             <AutoAmountSection
-              title="القروض"
+              title={t("wizard.loansTitle", { namespace: "openingBalance" })}
               rows={w.loans}
               onPatch={(key, patch) => w.updateLine(w.setLoans, key, patch)}
               onDelete={(key) => w.updateLine(w.setLoans, key, { amount: "" })}
@@ -358,7 +357,7 @@ export function GuidedTransitionWizard() {
             />
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-700">التزامات أخرى</span>
+                <span className="text-xs font-bold text-slate-700">{t("wizard.otherLiabilities", { namespace: "openingBalance" })}</span>
                 {w.liabilitiesManual.some((l) => parseFloat(l.amount) > 0) && (
                   <span className="rounded-full bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-xs font-bold text-emerald-700 tabular-nums">
                     {toFixed(w.liabilitiesManual.reduce((s, l) => s + (parseFloat(l.amount) || 0), 0), 2)}
@@ -373,18 +372,18 @@ export function GuidedTransitionWizard() {
         return (
           <div className="space-y-3">
             <InlineRows
-              title="الشركاء ورأس المال"
+              title={t("wizard.partnersTitle", { namespace: "openingBalance" })}
               rows={w.partnerEquity}
               onSave={w.savePartnerCapital}
               onDelete={w.deletePartner}
-              label="رأس المال"
+              label={t("wizard.capitalLabel", { namespace: "openingBalance" })}
               nativeHint="credit"
               addForm={
                 <QuickCreatePartner
                   onCreate={(data) => w.createPartnerQuick(data)}
                   navLink={
-                    <Button size="sm" variant="outline" onClick={() => goTo("/partners", "الشركاء")} className="h-8 shrink-0 rounded-full border-blue-300 bg-blue-50 px-3 text-xs font-bold text-blue-700 hover:bg-blue-100 hover:border-blue-400 transition-all">
-                      صفحة الشركاء
+                    <Button size="sm" variant="outline" onClick={() => goTo("/partners", t("wizard.partnersPage", { namespace: "openingBalance" }))} className="h-8 shrink-0 rounded-full border-blue-300 bg-blue-50 px-3 text-xs font-bold text-blue-700 hover:bg-blue-100 hover:border-blue-400 transition-all">
+                      {t("wizard.partnersPageButton", { namespace: "openingBalance" })}
                       <ArrowLeft className="w-3.5 h-3.5 me-1" />
                     </Button>
                   }
@@ -393,17 +392,17 @@ export function GuidedTransitionWizard() {
             />
             {w.partnerCurrentManualRows.length > 0 && (
               <InlineRows
-                title="الحسابات الجارية للشركاء"
+                title={t("wizard.partnerCurrentTitle", { namespace: "openingBalance" })}
                 rows={w.partnerCurrentManualRows}
                 onSave={w.savePartnerCurrentAccount}
                 onDelete={(row) => w.setPartnerCurrentManual((prev) => prev.filter((l) => l.key !== row.key))}
-                label="الحساب الجاري"
+                label={t("wizard.currentAccountLabel", { namespace: "openingBalance" })}
                 nativeHint="credit"
               />
             )}
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-700">حقوق ملكية أخرى</span>
+                <span className="text-xs font-bold text-slate-700">{t("wizard.otherEquity", { namespace: "openingBalance" })}</span>
                 {w.equityManual.some((l) => parseFloat(l.amount) > 0) && (
                   <span className="rounded-full bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-xs font-bold text-emerald-700 tabular-nums">
                     {toFixed(w.equityManual.reduce((s, l) => s + (parseFloat(l.amount) || 0), 0), 2)}
@@ -419,9 +418,9 @@ export function GuidedTransitionWizard() {
           <div className="space-y-4">
             {renderTotalsSummary()}
             <div className="rounded-lg border border-slate-200 bg-slate-50/60 p-3 space-y-2">
-              <p className="text-xs font-semibold text-slate-600">سيتم عند «حفظ وفحص التسوية»:</p>
+              <p className="text-xs font-semibold text-slate-600">{t("wizard.reviewHint", { namespace: "openingBalance" })}</p>
               <p className="text-xs text-slate-500">
-                حفظ المسودة (بنود الميزانية) وتفاصيل السجل المساعد ثم فحص تسوية الأرصدة مع دفتر الأستاذ.
+                {t("wizard.reviewDesc", { namespace: "openingBalance" })}
                 عدد البنود: {w.collectLines().length} ·
                 العملاء: {w.derivedAr.length} · الموردون: {w.derivedAp.length} ·
                 الأصول الثابتة: {w.faRows.length} · حقوق الشركاء: {w.partnerEquity.length + w.partnerCurrentManual.length}
@@ -436,29 +435,26 @@ export function GuidedTransitionWizard() {
                   debitTotal={w.reconciliation.debit_total}
                   creditTotal={w.reconciliation.credit_total}
                 />
-                <ReconciliationStatusBanner readiness={reconciliationReadiness(w.reconciliation)} />
+                <ReconciliationStatusBanner readiness={reconciliationReadiness(w.reconciliation, t)} />
               </div>
             )}
             {w.residualClassification === "RetainedEarnings" && (
               <div className="rounded-lg border border-indigo-200 bg-indigo-50/60 p-3 space-y-2">
                 <p className="text-xs font-bold text-indigo-700">
-                  التصنيف المعتمد: الأرباح المبقاة — تُرحَّل إلى حسابها وتظهر في الميزانية العمومية ضمن بند
-                  «الأرباح المبقاة» منفصلةً عن رأس مال الشركاء.
+                  {t("wizard.retainedEarningsNote", { namespace: "openingBalance" })}
                 </p>
                 <p className="text-xs text-indigo-600">
-                  بعد ترحيل الرصيد الافتتاحي وقفله يصير صافي الأرباح متاحاً للتوزيع على الشركاء عبر
-                  آلية التوزيع الموحّدة (تصنّف الحصص بحسب نسب التقاسم المسجّلة وتُقيَّد على الحسابات الجارية
-                  دون المساس برأس المال).
+                  {t("wizard.retainedEarningsDesc", { namespace: "openingBalance" })}
                 </p>
                 <Button
                   size="sm"
                   onClick={() => goTo(
                     `/partners?profit-distribution=open&migration=${w.migration?.id ?? ""}`,
-                    "الشركاء ورأس المال",
+                    t("wizard.partnersTitle", { namespace: "openingBalance" }),
                   )}
                   className="bg-blue-600 hover:bg-blue-700 text-white font-bold"
                 >
-                  توزيع الأرباح
+                  {t("wizard.profitDistribution", { namespace: "openingBalance" })}
                 </Button>
               </div>
             )}
@@ -467,12 +463,12 @@ export function GuidedTransitionWizard() {
       case STEP_ACTION: {
         return (
           <div className="space-y-3">
-            <p className="text-sm font-bold text-slate-700">إتمام الترحيل</p>
+            <p className="text-sm font-bold text-slate-700">{t("wizard.actionTitle", { namespace: "openingBalance" })}</p>
             <p className="text-xs text-slate-500">
-              تأكيد صحة البيانات وتسجيل قيد الرصيد الافتتاحي في دفتر الأستاذ ثم تثبيته نهائياً ومنع أي تعديل مستقبلي.
+              {t("wizard.actionDesc", { namespace: "openingBalance" })}
             </p>
             <div className="text-xs font-semibold text-slate-600 flex items-center">
-              الحالة الحالية:
+              {t("wizard.currentStatus", { namespace: "openingBalance" })}
               {w.migration ? (
                 <StatusBadge status={w.migration.status} className="me-1.5" />
               ) : (
@@ -482,9 +478,9 @@ export function GuidedTransitionWizard() {
             </div>
             <div className="rounded-lg border border-slate-200 bg-slate-50/60 p-3 space-y-1.5">
               {[
-                { label: "التحقق من صحة البيانات", done: ["Validated", "Posted", "Locked"].includes(w.migration?.status || "") },
-                { label: "ترحيل قيد الرصيد الافتتاحي", done: ["Posted", "Locked"].includes(w.migration?.status || "") },
-                { label: "القفل النهائي", done: w.migration?.status === "Locked" },
+                { label: t("wizard.validationCheck", { namespace: "openingBalance" }), done: ["Validated", "Posted", "Locked"].includes(w.migration?.status || "") },
+                { label: t("wizard.postingCheck", { namespace: "openingBalance" }), done: ["Posted", "Locked"].includes(w.migration?.status || "") },
+                { label: t("wizard.lockCheck", { namespace: "openingBalance" }), done: w.migration?.status === "Locked" },
               ].map((item) => (
                 <div key={item.label} className="flex items-center gap-2 text-xs font-semibold">
                   <span className={cn("rounded-full p-0.5", item.done ? "bg-emerald-600 text-white" : "bg-slate-300 text-white")}>
@@ -494,7 +490,7 @@ export function GuidedTransitionWizard() {
                 </div>
               ))}
             </div>
-            {w.busy && <p className="text-xs text-blue-600 font-semibold">جارٍ التنفيذ...</p>}
+            {w.busy && <p className="text-xs text-blue-600 font-semibold">{t("wizard.executing", { namespace: "openingBalance" })}</p>}
           </div>
         );
       }
@@ -528,35 +524,35 @@ export function GuidedTransitionWizard() {
     // needs fixing and by how much, never "journal line 17 is invalid".
     const hints: string[] = [];
     if (residual > 0.01) {
-      hints.push(`إجمالي الأصول أكبر من الخصوم وحقوق الملكية بمبلغ ${toFixed(residual, 2)} — صُنّف الرصيد المتبقي من قسم «حقوق الشركاء».`);
+      hints.push(t("wizard.hintAssetsExceed", { namespace: "openingBalance", vars: { diff: toFixed(residual, 2) } }));
     } else if (residual < -0.01) {
-      hints.push(`الخصوم وحقوق الملكية تزيد عن الأصول بمبلغ ${toFixed(-residual, 2)} — أضف بنداً مديناً (مثل مسحوبات الشركاء أو تسوية) في أحد أقسام الأصول.`);
+      hints.push(t("wizard.hintLiabilitiesExceed", { namespace: "openingBalance", vars: { diff: toFixed(-residual, 2) } }));
     }
     for (const r of w.derivedAr) {
       if (toNum(r.amount) > 0 && !r.account_id) {
-        hints.push(`يوجد رصيد عميل «${r.label}» بقيمة ${fmtMoney(r.amount)} غير مرتبط بحساب عميل — راجعه في قسم «الذمم المدينة».`);
+        hints.push(t("wizard.hintCustomerMissingAccount", { namespace: "openingBalance", vars: { name: r.label, amount: fmtMoney(r.amount) } }));
       }
     }
     for (const r of w.derivedAp) {
       if (toNum(r.amount) > 0 && !r.account_id) {
-        hints.push(`يوجد رصيد مورد «${r.label}» بقيمة ${fmtMoney(r.amount)} غير مرتبط بحساب مورد — راجعه في قسم «الذمم الدائنة».`);
+        hints.push(t("wizard.hintSupplierMissingAccount", { namespace: "openingBalance", vars: { name: r.label, amount: fmtMoney(r.amount) } }));
       }
     }
     if (w.reconciliation && !w.reconciliation.all_reconciled) {
       for (const row of w.reconciliation.rows) {
         if (toNum(row.subledger) !== toNum(row.general_ledger)) {
           hints.push(
-            `رصيد ${RECON_ROW_LABEL[row.key] || row.key}: السجل المساعد ${fmtMoney(row.subledger)} لا يطابق دفتر الأستاذ ${fmtMoney(row.general_ledger)}.`,
+            t("wizard.hintReconMismatch", { namespace: "openingBalance", vars: { label: RECON_ROW_LABEL[row.key]?.(t) || row.key, subledger: fmtMoney(row.subledger), gl: fmtMoney(row.general_ledger) } }),
           );
         }
       }
     }
-    hints.push(...inventoryMismatchHints(w.effectiveInventory, w.materials));
+    hints.push(...inventoryMismatchHints(w.effectiveInventory, w.materials, t));
     // Amounts entered on rows that resolved no ledger account: they would be
     // silently dropped from the saved lines while still counting in the
     // section totals — the exact source of the GL ≠ wizard mismatch.
     for (const hint of w.missingAccountHints) {
-      hints.push(`${hint} — اختر حساباً من القائمة ليُضمَّن في بنود الميزانية ودفتر الأستاذ.`);
+      hints.push(t("wizard.hintMissingAccount", { namespace: "openingBalance", vars: { hint } }));
     }
 
     return {
@@ -574,7 +570,7 @@ export function GuidedTransitionWizard() {
       residual,
       hints,
     };
-  }, [w.cashBanks, w.derivedAr, w.arManualLines, w.inventoryTotal, w.faRows, w.derivedAp, w.loans, w.liabilitiesManual, w.partnerEquity, w.partnerCurrentManual, w.equityManual, w.reconciliation, w.effectiveInventory, w.materials, w.missingAccountHints]);
+  }, [w.cashBanks, w.derivedAr, w.arManualLines, w.inventoryTotal, w.faRows, w.derivedAp, w.loans, w.liabilitiesManual, w.partnerEquity, w.partnerCurrentManual, w.equityManual, w.reconciliation, w.effectiveInventory, w.materials, w.missingAccountHints, t]);
 
   // ── Progress checklist (§15): a direct mirror of the wizard's own stepper —
   // same labels, same dynamic order (stepOrder), same done-state
@@ -594,10 +590,10 @@ export function GuidedTransitionWizard() {
 
   const wizard = (
     <WizardShell
-      title={isNew ? "بدء محاسبة شركة جديدة" : "معالج التحويل الموجه (شركة قائمة)"}
+      title={isNew ? t("wizard.titleNew", { namespace: "openingBalance" }) : t("wizard.titleExisting", { namespace: "openingBalance" })}
       subtitle={isNew
-        ? "أنشئ أول فترة مالية وابدأ تسجيل الحركات اليومية — لا يوجد رصيد افتتاحي في هذا الوضع."
-        : "جمع الأرصدة قسماً بقسم (نقد وبنوك، عملاء، مخزون، أصول ثابتة، مورden والالتزامات، شركاء) ثم إتمام الترحيل."}
+        ? t("wizard.subtitleNew", { namespace: "openingBalance" })
+        : t("wizard.subtitleExisting", { namespace: "openingBalance" })}
       steps={w.steps}
       stepIndex={w.step}
       stepOrder={stepOrder}
@@ -650,6 +646,7 @@ function InlineRows({
   nativeHint?: "debit" | "credit";
   addForm?: React.ReactNode;
 }) {
+  const { t } = useLocalization();
   return (
     <div className="space-y-1">
       <div className="flex items-center justify-between">
@@ -661,7 +658,7 @@ function InlineRows({
         )}
       </div>
       {rows.length === 0 && !addForm ? (
-        <p className="text-xs text-slate-400 py-1.5">لا توجد بنود مشتقة.</p>
+        <p className="text-xs text-slate-400 py-1.5">{t("wizard.noDerivedLines", { namespace: "openingBalance" })}</p>
       ) : (
         <div className="border border-slate-200 rounded-lg divide-y divide-slate-100 bg-slate-50/40">
           {rows.map((r) => (
@@ -694,28 +691,28 @@ function FirstPeriodFields({
   onEnd: (v: string) => void;
   created: { start_date: string; end_date: string } | null;
 }) {
+  const { t } = useLocalization();
   return (
     <div className="space-y-1.5">
       <div className="rounded-lg border border-indigo-200 bg-indigo-50/60 p-3 space-y-1.5">
-        <p className="text-xs font-semibold text-indigo-700">أول فترة مالية (أساسية للمحاسبة)</p>
+        <p className="text-xs font-semibold text-indigo-700">{t("wizard.firstPeriodHint", { namespace: "openingBalance" })}</p>
         <p className="text-xs text-indigo-600">
-          الفترات المالية هي الأساس الذي تُقيد عليه كل الحركات — دون فترة مفتوحة تغطي تاريخ القيد لا يمكن
-          ترحيل أي حركة محاسبية.
+          {t("wizard.firstPeriodDesc", { namespace: "openingBalance" })}
         </p>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <div className="space-y-1.5">
-          <FieldLabel htmlFor="wiz-period-start" required>بداية الفترة</FieldLabel>
+          <FieldLabel htmlFor="wiz-period-start" required>{t("wizard.periodStart", { namespace: "openingBalance" })}</FieldLabel>
           <Input id="wiz-period-start" type="date" value={start} onChange={(e) => onStart(e.target.value)} className="h-9" />
         </div>
         <div className="space-y-1.5">
-          <FieldLabel htmlFor="wiz-period-end" required>نهاية الفترة</FieldLabel>
+          <FieldLabel htmlFor="wiz-period-end" required>{t("wizard.periodEnd", { namespace: "openingBalance" })}</FieldLabel>
           <Input id="wiz-period-end" type="date" value={end} onChange={(e) => onEnd(e.target.value)} className="h-9" />
         </div>
       </div>
       {created && (
         <div className="rounded-lg p-3 text-xs font-semibold bg-green-50 text-green-700 border border-green-200">
-          تم إنشاء الفترة: {toLocalDateStr(created.start_date)} ← {toLocalDateStr(created.end_date)}
+          {t("wizard.periodCreated", { namespace: "openingBalance" })}{toLocalDateStr(created.start_date)} ← {toLocalDateStr(created.end_date)}
         </div>
       )}
     </div>
@@ -748,6 +745,7 @@ export function ResidualClassificationSection({
   accounts: AccountDto[];
   spec: ResidualClassificationSpecDto | undefined;
 }) {
+  const { t } = useLocalization();
   const [advanced, setAdvanced] = useState(false);
   const [confirmKey, setConfirmKey] = useState<string | null>(null);
   const confirmSpec = specs.find((s) => s.key === confirmKey);
@@ -780,24 +778,21 @@ export function ResidualClassificationSection({
   return (
     <div className="rounded-lg border border-amber-200 bg-amber-50/60 p-3 space-y-3">
       <p className="text-xs font-semibold text-amber-700">
-        الرصيد المتبقي (غير مسجل من النظام السابق): {toFixed(residual, 2)}
+        {t("wizard.residualTitle", { namespace: "openingBalance", vars: { amount: toFixed(residual, 2) } })}
       </p>
       {residual > 0 ? (
         <p className="text-xs text-amber-600">
-          يُحسب الرصيد تلقائياً وطبيعته قرار محاسب صريح — لا تُسوّى قسراً. اختر المعنى المحاسبي وسيختار
-          النظام الحساب المخصص تلقائياً (52 / 521 / 525 / 526) ويضيف بند موازنة على حساب الرصيد الافتتاحي
-          (53) يُعاد تصنيفه بعد الترحيل.
+          {t("wizard.residualPositiveDesc", { namespace: "openingBalance" })}
         </p>
       ) : (
         <p className="text-xs text-amber-600">
-          الرصيد المتبقي سالب (الخصوم/الملكية تزيد عن الأصول). أضف بنداً يدوياً مديناً (مثال: مسحوبات
-          الشركاء أو حساب تسوية) في الخطوات السابقة لموازنة القيد.
+          {t("wizard.residualNegativeDesc", { namespace: "openingBalance" })}
         </p>
       )}
 
       {residual > 0 && (
         <>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2" role="radiogroup" aria-label="تصنيف الفرق المتبقي">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2" role="radiogroup" aria-label={t("wizard.residualClassificationAria", { namespace: "openingBalance" })}>
             {specs.map((s) => {
               const selected = s.key === value;
               return (
@@ -825,28 +820,26 @@ export function ResidualClassificationSection({
           {value === "UnresolvedDifference" && (
             <div className="rounded-lg border border-red-200 bg-red-50/70 p-3 space-y-1">
               <p className="text-xs font-bold text-red-700">
-                فرق غير محلول — لن يُرحَّل ولن يُقفَل حتى يُحل الفرق
+                {t("wizard.unresolvedDiffTitle", { namespace: "openingBalance" })}
               </p>
               <p className="text-xs text-red-600">
-                صحّح الأرصدة في الخطوات السابقة أو اختر تصنيفاً لحقوق الملكية أعلاه. لا يحمل هذا التصنيف
-                حساباً، ولن يُنشأ أي قيد.
+                {t("wizard.unresolvedDiffDesc", { namespace: "openingBalance" })}
               </p>
             </div>
           )}
 
           {value !== "" && value !== "UnresolvedDifference" && (
             <div className="rounded-lg border border-blue-200 bg-white p-3 space-y-1.5">
-              <p className="text-xs font-semibold text-blue-700">معاينة قبل التسجيل:</p>
+              <p className="text-xs font-semibold text-blue-700">{t("wizard.previewBeforeSave", { namespace: "openingBalance" })}</p>
               {plugAmount !== 0 && (
                 <p className="text-xs text-slate-600">
-                  القيمة: <span className="tabular-nums font-bold text-slate-800">{toFixed(plugAmount, 2)}</span>{" "}
-                  — نوع المعالجة: <span className="font-bold text-slate-800">{spec?.label_ar ?? value}</span>
+                  {t("wizard.previewValue", { namespace: "openingBalance", vars: { amount: toFixed(plugAmount, 2), type: spec?.label_ar ?? value } })}
                 </p>
               )}
               <p className="text-xs text-slate-600">{spec?.treatment_ar ?? ""}</p>
               {(spec?.designated_account || effectiveAccount) && (
                 <p className="text-xs text-slate-600">
-                  الحساب المخصص:{" "}
+                  {t("wizard.designatedAccount", { namespace: "openingBalance" })}
                   <span className="inline-flex items-center gap-1.5">
                     <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[11px] font-bold tabular-nums text-slate-600">
                       {(spec?.designated_account ?? effectiveAccount)?.code ?? ""}
@@ -863,11 +856,10 @@ export function ResidualClassificationSection({
           {value === "RetainedEarnings" && plugAmount !== 0 && (
             <div className="rounded-lg border border-green-200 bg-green-50/70 p-3 space-y-1">
               <p className="text-xs font-bold text-green-700">
-                ✓ تم تصنيف الرصيد كأرباح مبقاة — {toFixed(plugAmount, 2)}
+                {t("wizard.classifiedAsRetained", { namespace: "openingBalance", vars: { amount: toFixed(plugAmount, 2) } })}
               </p>
               <p className="text-xs text-green-600">
-                بعد إكمال الترحيل تُرحَّل هذه القيمة إلى حساب الأرباح المبقاة (52) وتظهر في الميزانية
-                العمومية ضمن بند «الأرباح المبقاة» منفصلةً عن رأس مال الشركاء.
+                {t("wizard.classifiedAsRetainedDesc", { namespace: "openingBalance" })}
               </p>
             </div>
           )}
@@ -879,7 +871,7 @@ export function ResidualClassificationSection({
               className="text-[11px] font-semibold text-slate-500 underline decoration-dotted hover:text-slate-700"
               aria-expanded={advanced}
             >
-              {advanced ? "إغلاق الوضع المتقدم" : "اختيار الحساب يدوياً (وضع متقدم)"}
+              {advanced ? t("wizard.advancedModeClose", { namespace: "openingBalance" }) : t("wizard.advancedModeToggle", { namespace: "openingBalance" })}
             </button>
             {advanced && (
               <div className="w-full md:max-w-xs">
@@ -888,8 +880,8 @@ export function ResidualClassificationSection({
                   options={advancedOptions}
                   value={residualAccountId}
                   onValueChange={onResidualAccountChange}
-                  placeholder="حساب حقوق ملكية بالغرض المحدد"
-                  emptyText="لا توجد حسابات بالغرض المحدد لهذا التصنيف"
+                  placeholder={t("wizard.advancedPlaceholder", { namespace: "openingBalance" })}
+                  emptyText={t("wizard.advancedEmpty", { namespace: "openingBalance" })}
                   disabled={value === "" || value === "UnresolvedDifference" || advancedOptions.length === 0}
                 />
               </div>
@@ -903,9 +895,9 @@ export function ResidualClassificationSection({
         onOpenChange={(open) => {
           if (!open) setConfirmKey(null);
         }}
-        title={`تأكيد تصنيف «${confirmSpec?.label_ar ?? ""}»`}
-        description="هذا التصنيف يعالج تصحيح خطأ من سنوات سابقة ولا يصحّح الأرباح المبقاة مباشرة. هل تريد المتابعة؟"
-        confirmLabel="تأكيد التصنيف"
+        title={t("wizard.confirmClassificationTitle", { namespace: "openingBalance", vars: { label: confirmSpec?.label_ar ?? "" } })}
+        description={t("wizard.confirmClassificationDesc", { namespace: "openingBalance" })}
+        confirmLabel={t("wizard.confirmClassificationLabel", { namespace: "openingBalance" })}
         cancelLabel="إلغاء"
         onConfirm={() => {
           if (confirmKey) apply(confirmKey);
@@ -936,16 +928,16 @@ function NegativeResidualSection({
   accounts: AccountDto[];
   detailAccounts: AccountDto[];
 }) {
+  const { t } = useLocalization();
   const total = sumLines(manualLines);
   const balanced = Math.abs(residual + total) < 0.01;
   return (
     <div className="rounded-lg border border-red-200 bg-red-50/60 p-3 space-y-3">
       <p className="text-xs font-semibold text-red-700">
-        الرصيد المتبقي سالب: {toFixed(residual, 2)}
+        {t("wizard.negativeResidualTitle", { namespace: "openingBalance", vars: { amount: toFixed(residual, 2) } })}
       </p>
       <p className="text-xs text-red-600">
-        الخصوم/الملكية تزيد عن الأصول. أضف بنداً مديناً لموازنة القيد
-        (مثال: مسحوبات الشركاء، حساب تسوية، خسارة افتتاحية).
+        {t("wizard.negativeResidualDesc", { namespace: "openingBalance" })}
       </p>
       <NegativeManualLinesEditor
         lines={manualLines}
@@ -958,8 +950,8 @@ function NegativeResidualSection({
       {manualLines.length > 0 && (
         <div className={"rounded-lg p-2 text-xs font-semibold " + (balanced ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-700")}>
           {balanced
-            ? `متوازن بعد الإضافة — الفرق: ${toFixed(residual + total, 2)}`
-            : `الفرق بعد الإضافة: ${toFixed(residual + total, 2)}`}
+            ? t("wizard.balancedAfterAdd", { namespace: "openingBalance", vars: { diff: toFixed(residual + total, 2) } })
+            : t("wizard.unbalancedAfterAdd", { namespace: "openingBalance", vars: { diff: toFixed(residual + total, 2) } })}
         </div>
       )}
     </div>
@@ -982,6 +974,7 @@ function NegativeManualLinesEditor({
   accounts: AccountDto[];
   detailAccounts: AccountDto[];
 }) {
+  const { t } = useLocalization();
   return (
     <div className="space-y-2">
       {lines.map((l) => {
@@ -997,7 +990,7 @@ function NegativeManualLinesEditor({
             onRemove={() => onRemove(l.key)}
             accounts={accounts}
             options={detailAccounts}
-            placeholder="ابحث واختر حساب أصل..."
+            placeholder={t("wizard.assetAccountPlaceholder", { namespace: "openingBalance" })}
             showErrorMessage={amountInvalid}
           />
         );
@@ -1009,7 +1002,7 @@ function NegativeManualLinesEditor({
         onClick={onAdd}
         className="w-full border-dashed border-red-300 text-red-600 hover:bg-red-50 font-bold"
       >
-        + إضافة بند مدين
+        {t("wizard.addDebitLine", { namespace: "openingBalance" })}
       </Button>
     </div>
   );

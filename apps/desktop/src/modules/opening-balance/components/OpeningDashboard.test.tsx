@@ -4,6 +4,8 @@ import { OpeningDashboard } from "@modules/opening-balance/components/OpeningDas
 import { deriveOpeningSnapshot } from "@modules/opening-balance/lib/derive-opening-snapshot";
 import type { OpeningPositionControlDto } from "@erp/shared-types";
 
+const t = (key: string) => key;
+
 const line = (code: string, name_ar: string, group_key: string, amount: string) => ({
   account_id: "id-" + code,
   code,
@@ -54,14 +56,14 @@ function samplePosition(): OpeningPositionControlDto {
 
 describe("OpeningDashboard", () => {
   it("renders the accounting-equation totals and the 8 sections", () => {
-    const snapshot = deriveOpeningSnapshot({ status: "Posted", position: samplePosition() });
+    const snapshot = deriveOpeningSnapshot({ status: "Posted", position: samplePosition(), t });
     render(<OpeningDashboard snapshot={snapshot} />);
     expect(screen.getByText("openingBalance.totalAssets")).toBeInTheDocument();
     expect(screen.getByText("openingBalance.totalLiabilities")).toBeInTheDocument();
     expect(screen.getByText("openingBalance.totalEquity")).toBeInTheDocument();
     expect(screen.getByText("openingBalance.balanced")).toBeInTheDocument();
     expect(screen.getByText("openingBalance.readyToPost")).toBeInTheDocument();
-    for (const label of ["النقد والبنوك", "الذمم المدينة (العملاء)", "المخزون", "الأصول الثابتة", "الذمم الدائنة (الموردون)", "الالتزامات الأخرى", "رؤوس أموال الشركاء", "حقوق الملكية الأخرى"]) {
+    for (const label of ["wizard.sectionCashBanks", "wizard.sectionReceivables", "wizard.sectionInventory", "wizard.sectionFixedAssets", "wizard.sectionPayables", "wizard.sectionOtherLiabilities", "wizard.sectionPartnerEquity", "wizard.sectionOtherEquity"]) {
       expect(screen.getByText(label)).toBeInTheDocument();
     }
   });
@@ -72,24 +74,24 @@ describe("OpeningDashboard", () => {
     pos.unreconciled_items = [
       { key: "AR", label: "الذمم المدينة (العملاء)", subledger: "1100", general_ledger: "1200" },
     ];
-    const snapshot = deriveOpeningSnapshot({ status: "Draft", position: pos });
+    const snapshot = deriveOpeningSnapshot({ status: "Draft", position: pos, t });
     const { container } = render(<OpeningDashboard snapshot={snapshot} />);
     expect(screen.getByText("openingBalance.unbalanced")).toBeInTheDocument();
     expect(screen.queryByText("openingBalance.readyToPost")).not.toBeInTheDocument();
-    expect(container.textContent).toContain("الذمم المدينة (العملاء)");
+    expect(container.textContent).toContain("wizard.blockerUnresolvedReconItem");
   });
 
   it("renders the empty placeholder when no position data exists yet", () => {
-    const snapshot = deriveOpeningSnapshot({ status: null, position: null });
+    const snapshot = deriveOpeningSnapshot({ status: null, position: null, t });
     render(<OpeningDashboard snapshot={snapshot} />);
     expect(screen.getByText("openingBalance.noOpenBalances")).toBeInTheDocument();
   });
 
   it("fires onOpenSection when a section card is clicked", () => {
     const onOpen = vi.fn();
-    const snapshot = deriveOpeningSnapshot({ status: "Posted", position: samplePosition() });
+    const snapshot = deriveOpeningSnapshot({ status: "Posted", position: samplePosition(), t });
     render(<OpeningDashboard snapshot={snapshot} onOpenSection={onOpen} />);
-    fireEvent.click(screen.getByText("المخزون"));
+    fireEvent.click(screen.getByText("wizard.sectionInventory"));
     expect(onOpen).toHaveBeenCalledWith("inventory");
   });
 });

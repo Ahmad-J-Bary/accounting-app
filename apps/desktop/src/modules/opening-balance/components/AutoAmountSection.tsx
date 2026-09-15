@@ -4,6 +4,7 @@ import { Input } from "@shared/ui/input";
 import { Button } from "@shared/ui/button";
 import { toFixed } from "@shared/lib/format";
 import { toNum, type WizLine } from "@modules/opening-balance/lib/wizard-types";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 interface AutoAmountSectionProps {
   title: string;
@@ -23,6 +24,7 @@ interface AutoAmountSectionProps {
  * - Exactly one of: add pill / edit form / saved row is visible at any time
  */
 export function AutoAmountSection({ title, hint, rows, onPatch, onDelete, fixedAccountName, nativeHint }: AutoAmountSectionProps) {
+  const { t } = useLocalization();
   const [editing, setEditing] = useState(false);
   const [localValue, setLocalValue] = useState("");
 
@@ -64,7 +66,7 @@ export function AutoAmountSection({ title, hint, rows, onPatch, onDelete, fixedA
           className="h-8 shrink-0 rounded-full border-emerald-300 bg-emerald-50 px-3 text-xs font-bold text-emerald-700 hover:bg-emerald-100 hover:border-emerald-400 transition-all"
         >
           <Plus className="w-3.5 h-3.5 ms-1" />
-          إضافة {title}
+          {t("autoAmount.addTitle", { namespace: "openingBalance", vars: { title } })}
         </Button>
       )}
 
@@ -80,8 +82,8 @@ export function AutoAmountSection({ title, hint, rows, onPatch, onDelete, fixedA
               step="0.01"
               value={localValue}
               onChange={(e) => setLocalValue(e.target.value)}
-              placeholder="الرصيد الافتتاحي"
-              aria-label="الرصيد الافتتاحي"
+              placeholder={t("autoAmount.openingBalancePlaceholder", { namespace: "openingBalance" })}
+              aria-label={t("autoAmount.openingBalanceAria", { namespace: "openingBalance" })}
               autoFocus
               className={"h-8 text-end tabular-nums text-xs " + (localValue.trim() !== "" && toNum(localValue) <= 0 ? "border-red-400" : "border-slate-200")}
               onKeyDown={(e) => {
@@ -93,7 +95,7 @@ export function AutoAmountSection({ title, hint, rows, onPatch, onDelete, fixedA
             />
           </div>
           {nativeHint && (
-            <span className="text-2xs text-slate-400 shrink-0">{nativeHint === "debit" ? "مدين" : "دائن"}</span>
+            <span className="text-2xs text-slate-400 shrink-0">{nativeHint === "debit" ? t("autoAmount.debit", { namespace: "openingBalance" }) : t("autoAmount.credit", { namespace: "openingBalance" })}</span>
           )}
           <Button
             type="button"
@@ -102,7 +104,7 @@ export function AutoAmountSection({ title, hint, rows, onPatch, onDelete, fixedA
             className="h-8 px-2 text-xs font-bold shrink-0 bg-emerald-600 hover:bg-emerald-700 text-white"
           >
             <Check className="w-3.5 h-3.5 ms-1" />
-            حفظ
+            {t("autoAmount.save", { namespace: "openingBalance" })}
           </Button>
           <Button
             type="button"
@@ -125,7 +127,7 @@ export function AutoAmountSection({ title, hint, rows, onPatch, onDelete, fixedA
             <span className="tabular-nums text-xs font-bold text-slate-700">{toFixed(toNum(existingRow.amount), 2)}</span>
           </div>
           {nativeHint && (
-            <span className="text-2xs text-slate-400 shrink-0">{nativeHint === "debit" ? "مدين" : "دائن"}</span>
+            <span className="text-2xs text-slate-400 shrink-0">{nativeHint === "debit" ? t("autoAmount.debit", { namespace: "openingBalance" }) : t("autoAmount.credit", { namespace: "openingBalance" })}</span>
           )}
           <Button
             type="button"
@@ -135,7 +137,7 @@ export function AutoAmountSection({ title, hint, rows, onPatch, onDelete, fixedA
             className="h-8 px-2 text-xs font-bold shrink-0 border-emerald-300 text-emerald-700 hover:bg-emerald-50"
           >
             <Pencil className="w-3.5 h-3.5" />
-            تعديل
+            {t("autoAmount.edit", { namespace: "openingBalance" })}
           </Button>
           {onDelete && (
             <Button
@@ -144,7 +146,7 @@ export function AutoAmountSection({ title, hint, rows, onPatch, onDelete, fixedA
               variant="ghost"
               onClick={() => onDelete(existingRow.key)}
               className="h-8 w-8 p-0 text-red-400 hover:bg-red-50 hover:text-red-600 shrink-0"
-              aria-label="حذف الرصيد"
+              aria-label={t("autoAmount.deleteBalance", { namespace: "openingBalance" })}
             >
               <Trash2 className="h-3.5 w-3.5" />
             </Button>

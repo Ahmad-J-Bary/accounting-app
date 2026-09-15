@@ -5,6 +5,31 @@ import userEvent from "@testing-library/user-event";
 import { WizardLineEditor } from "@modules/opening-balance/components/WizardLineEditor";
 import type { WizLine } from "@modules/opening-balance/lib/wizard-types";
 import type { AccountDto } from "@erp/shared-types";
+import { openingBalance } from "@shared/i18n/resources/openingBalance";
+
+vi.mock("@app/providers/LocalizationProvider", () => ({
+  useLocalization: () => ({
+    t: (key: string, opts?: any) => {
+      const parts = key.split(".");
+      let val: any = openingBalance.ar;
+      for (const p of parts) val = val?.[p];
+      if (typeof val !== "string") return key;
+      if (opts?.vars) {
+        return Object.entries(opts.vars).reduce((s: string, [k, v]) => s.replace(`{{${k}}}`, String(v)), val);
+      }
+      return val;
+    },
+    language: "ar",
+    direction: "rtl",
+    isRTL: true,
+    locale: "ar-SY",
+    setLanguage: vi.fn(),
+    resolveLabel: (key: string) => key,
+    terminologyOverrides: [],
+    setTerminologyOverride: vi.fn(),
+    removeTerminologyOverride: vi.fn(),
+  }),
+}));
 
 const ACCOUNTS: AccountDto[] = [
   {
@@ -56,13 +81,12 @@ describe("WizardLineEditor", () => {
     expect(screen.getByText("openingBalance.noItemsYet")).toBeInTheDocument();
   });
 
-it("adds a row via the add button", async () => {
+  it("adds a row via the add button", async () => {
     const user = userEvent.setup();
     render(<Harness />);
     await user.click(screen.getByRole("button", { name: /تعديل/ }));
     expect(screen.getAllByRole("combobox")).toHaveLength(1);
     await user.click(screen.getByRole("button", { name: /إضافة بند/ }));
-    // New row starts in edit mode immediately (no "تعديل" click needed)
     expect(screen.getAllByRole("combobox")).toHaveLength(2);
   });
 

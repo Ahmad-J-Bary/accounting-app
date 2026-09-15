@@ -112,58 +112,55 @@ export function updateStepOrder(
 // (`get_opening_balance_residual_classification_spec`); this fallback mirrors
 // it so the wizard still renders a coherent meaning-first UI when the query
 // has not loaded yet (or is unavailable in tests).
-export const RESIDUAL_SPEC_FALLBACK: ResidualClassificationSpecDto[] = [
-  {
-    key: "RetainedEarnings",
-    label_ar: "أرباح مبقاة",
-    allows_posting: true,
-    requires_confirmation: false,
-    allowed_purposes: ["retained_earnings"],
-    designated_account: null,
-    treatment_ar:
-      "سيتم نقل الرصيد من حساب التسوية الافتتاحية (53) إلى الأرباح المبقاة (52) كأرباح محققة غير موزعة من سنوات سابقة.",
-  },
-  {
-    key: "OpeningEquityAdjustment",
-    label_ar: "تعديل حقوق ملكية افتتاحي",
-    allows_posting: true,
-    requires_confirmation: false,
-    allowed_purposes: ["opening_equity_adjustment"],
-    designated_account: null,
-    treatment_ar:
-      "سيتم نقل الرصيد من حساب التسوية الافتتاحية (53) إلى حساب «تعديل حقوق ملكية افتتاحي» (521) — يُستخدم عند إعادة بيان رأس المال إما بزيادة أو نقصان.",
-  },
-  {
-    key: "PriorPeriodAdjustment",
-    label_ar: "تعديل فترة سابقة",
-    allows_posting: true,
-    requires_confirmation: true,
-    allowed_purposes: ["prior_period_adjustment"],
-    designated_account: null,
-    treatment_ar:
-      "سيتم نقل الرصيد من حساب التسوية الافتتاحية (53) إلى حساب «تعديل فترة سابقة» (525) — يعالج تصحيح خطأ من سنوات سابقة ولا يصحّح الأرباح المبقاة مباشرة.",
-  },
-  {
-    key: "OtherEquity",
-    label_ar: "حقوق ملكية أخرى",
-    allows_posting: true,
-    requires_confirmation: false,
-    allowed_purposes: ["other_equity"],
-    designated_account: null,
-    treatment_ar:
-      "سيتم نقل الرصيد من حساب التسوية الافتتاحية (53) إلى حساب «حقوق ملكية أخرى» (526) — يلزم اعتماده في الأرباح المبقاة أو تعديلات حقوق الملكية الأخرى عند التسوية.",
-  },
-  {
-    key: "UnresolvedDifference",
-    label_ar: "فرق غير محلول",
-    allows_posting: false,
-    requires_confirmation: false,
-    allowed_purposes: [],
-    designated_account: null,
-    treatment_ar:
-      "الفرق غير محلول: لن يُرحَّل ولن يُقفَل حتى يُحل الفرق أو يُغيَّر التصنيف.",
-  },
-];
+export function residualSpecFallback(t: (key: string, opts?: Record<string, unknown>) => string): ResidualClassificationSpecDto[] {
+  return [
+    {
+      key: "RetainedEarnings",
+      label_ar: t("wizard.residualRetainedEarnings", { namespace: "openingBalance" }),
+      allows_posting: true,
+      requires_confirmation: false,
+      allowed_purposes: ["retained_earnings"],
+      designated_account: null,
+      treatment_ar: t("wizard.residualRetainedEarningsTreatment", { namespace: "openingBalance" }),
+    },
+    {
+      key: "OpeningEquityAdjustment",
+      label_ar: t("wizard.residualOpeningEquityAdjustment", { namespace: "openingBalance" }),
+      allows_posting: true,
+      requires_confirmation: false,
+      allowed_purposes: ["opening_equity_adjustment"],
+      designated_account: null,
+      treatment_ar: t("wizard.residualOpeningEquityAdjustmentTreatment", { namespace: "openingBalance" }),
+    },
+    {
+      key: "PriorPeriodAdjustment",
+      label_ar: t("wizard.residualPriorPeriodAdjustment", { namespace: "openingBalance" }),
+      allows_posting: true,
+      requires_confirmation: true,
+      allowed_purposes: ["prior_period_adjustment"],
+      designated_account: null,
+      treatment_ar: t("wizard.residualPriorPeriodAdjustmentTreatment", { namespace: "openingBalance" }),
+    },
+    {
+      key: "OtherEquity",
+      label_ar: t("wizard.residualOtherEquity", { namespace: "openingBalance" }),
+      allows_posting: true,
+      requires_confirmation: false,
+      allowed_purposes: ["other_equity"],
+      designated_account: null,
+      treatment_ar: t("wizard.residualOtherEquityTreatment", { namespace: "openingBalance" }),
+    },
+    {
+      key: "UnresolvedDifference",
+      label_ar: t("wizard.residualUnresolvedDifference", { namespace: "openingBalance" }),
+      allows_posting: false,
+      requires_confirmation: false,
+      allowed_purposes: [],
+      designated_account: null,
+      treatment_ar: t("wizard.residualUnresolvedDifferenceTreatment", { namespace: "openingBalance" }),
+    },
+  ];
+}
 
 // JSON scratch the wizard persists so Save → Exit → Continue Later restores the
 // mid-editing inputs. Derived (module) rows are never stored: they re-derive
@@ -472,8 +469,8 @@ export function useOpeningBalanceWizard() {
     enabled: existing,
   });
   const residualSpecsReady = useMemo(
-    () => (residualSpecs.length > 0 ? residualSpecs : RESIDUAL_SPEC_FALLBACK),
-    [residualSpecs],
+    () => (residualSpecs.length > 0 ? residualSpecs : residualSpecFallback(t)),
+    [residualSpecs, t],
   );
   const residualSpec = useMemo(
     () => residualSpecsReady.find((s) => s.key === residualClassification),
@@ -501,7 +498,7 @@ export function useOpeningBalanceWizard() {
   const derivedAp: DerivedRow[] = useMemo(() => deriveAp(suppliers, accounts), [suppliers, accounts]);
   const derivedFa: DerivedRow[] = useMemo(() => deriveFa(fixedAssets, accounts, assetCategories), [fixedAssets, accounts, assetCategories]);
   const partnerEquity: DerivedRow[] = useMemo(() => derivePartnerEquity(partners, accounts), [partners, accounts]);
-  const partnerCurrentDerived: DerivedRow[] = useMemo(() => derivePartnerCurrentAccounts(partners, accounts), [partners, accounts]);
+  const partnerCurrentDerived: DerivedRow[] = useMemo(() => derivePartnerCurrentAccounts(partners, accounts, t), [partners, accounts, t]);
 
   // Fixed assets may carry a wizard-side opening NBV override (migration only).
   const faRows: DerivedRow[] = useMemo(() => {
@@ -1312,9 +1309,9 @@ export function useOpeningBalanceWizard() {
     if (step !== STEP_ACTION) return undefined;
     if (!migration) return t("nextDisabledReason.saveFirst", { namespace: "openingBalance" });
     if (["Posted", "Locked", "Cancelled"].includes(migration.status)) return t("nextDisabledReason.alreadyLocked", { namespace: "openingBalance" });
-    const readiness = reconciliation ? reconciliationReadiness(reconciliation) : null;
+    const readiness = reconciliation ? reconciliationReadiness(reconciliation, t) : null;
     if (readiness && !readiness.readyToPost) {
-      const reasons = readiness.blockers.filter((b) => !b.includes("لم يُصفَّر بعد"));
+      const reasons = readiness.blockers;
       if (reasons.length) return reasons.join(" · ");
       return t("nextDisabledReason.notBalanced", { namespace: "openingBalance" });
     }

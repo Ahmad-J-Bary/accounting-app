@@ -136,7 +136,7 @@ export function WizardLineEditor({
                   )}
                 />
                 {nature && (
-                  <span className="text-2xs text-slate-400 shrink-0">{nature === "debit" ? "مدين" : "دائن"}</span>
+                  <span className="text-2xs text-slate-400 shrink-0">{nature === "debit" ? t("lineEditor.debit", { namespace: "openingBalance" }) : t("lineEditor.credit", { namespace: "openingBalance" })}</span>
                 )}
                 <Button
                   type="button"
@@ -146,7 +146,7 @@ export function WizardLineEditor({
                   className="h-8 px-2 text-xs font-bold shrink-0 bg-emerald-600 hover:bg-emerald-700 text-white"
                 >
                   <Check className="w-3.5 h-3.5 ms-1" />
-                  حفظ
+                  {t("lineEditor.save", { namespace: "openingBalance" })}
                 </Button>
                 <Button
                   type="button"
@@ -154,7 +154,7 @@ export function WizardLineEditor({
                   variant="ghost"
                   onClick={() => cancelEdit(l.key)}
                   className="h-8 w-8 p-0 text-slate-400 hover:text-slate-600 shrink-0"
-                  aria-label={newKeys.has(l.key) ? "إلغاء الإضافة" : "إلغاء التعديل"}
+                  aria-label={newKeys.has(l.key) ? t("lineEditor.cancelAdd", { namespace: "openingBalance" }) : t("lineEditor.cancelEdit", { namespace: "openingBalance" })}
                 >
                   <X className="w-3.5 h-3.5" />
                 </Button>
@@ -171,7 +171,7 @@ export function WizardLineEditor({
                   <span className="tabular-nums text-xs font-bold text-slate-700">{l.amount || "0.00"}</span>
                 </div>
                 {nature && (
-                  <span className="text-2xs text-slate-400 shrink-0">{nature === "debit" ? "مدين" : "دائن"}</span>
+                  <span className="text-2xs text-slate-400 shrink-0">{nature === "debit" ? t("lineEditor.debit", { namespace: "openingBalance" }) : t("lineEditor.credit", { namespace: "openingBalance" })}</span>
                 )}
                 <Button
                   type="button"
@@ -181,7 +181,7 @@ export function WizardLineEditor({
                   className="h-8 px-2 text-xs font-bold shrink-0 border-emerald-300 text-emerald-700 hover:bg-emerald-50"
                 >
                   <Pencil className="w-3.5 h-3.5" />
-                  تعديل
+                  {t("lineEditor.edit", { namespace: "openingBalance" })}
                 </Button>
                 <Button
                   type="button"
@@ -189,14 +189,14 @@ export function WizardLineEditor({
                   variant="ghost"
                   onClick={() => deleteRow(l.key)}
                   className="h-8 w-8 p-0 text-red-400 hover:bg-red-50 hover:text-red-600 shrink-0"
-                  aria-label="حذف هذا البند"
+                  aria-label={t("lineEditor.deleteLine", { namespace: "openingBalance" })}
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                 </Button>
               </div>
             )}
             {amountInvalid && !isEditing && (
-              <p className="px-1 text-2xs text-red-600">أدخل مبلغاً صحيحاً أكبر من صفر لهذا البند.</p>
+              <p className="px-1 text-2xs text-red-600">{t("lineEditor.invalidAmount", { namespace: "openingBalance" })}</p>
             )}
           </div>
         );
@@ -209,11 +209,11 @@ export function WizardLineEditor({
         className="h-8 shrink-0 rounded-full border-emerald-300 bg-emerald-50 px-3 text-xs font-bold text-emerald-700 hover:bg-emerald-100 hover:border-emerald-400 transition-all"
       >
         <Plus className="h-3.5 w-3.5 ms-1" />
-        إضافة بند
+        {t("lineEditor.addLine", { namespace: "openingBalance" })}
       </Button>
       {rows.some((l) => parseFloat(l.amount) > 0) && (
         <div className="flex items-center justify-between border-t border-slate-100 pt-1.5 text-xs font-semibold text-slate-600">
-          <span>الإجمالي</span>
+          <span>{t("lineEditor.total", { namespace: "openingBalance" })}</span>
           <span className="tabular-nums font-bold">
             {toFixed(
               rows.reduce((s, l) => s + (parseFloat(l.amount) || 0), 0),

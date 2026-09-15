@@ -4,6 +4,7 @@ import type { AccountDto, CustomerDto, SupplierDto, PartnerDto, FixedAssetDto, M
 import type { DerivedRow } from "./wizard-types";
 import { toNum } from "./wizard-types";
 import { toFixed, fmtMoney } from "@shared/lib/format";
+import type { TranslateFn } from "./migration-labels";
 
 function codeOf(accounts: readonly AccountDto[], id?: string | null): string {
   return id ? accounts.find((a) => a.id === id)?.code || "" : "";
@@ -70,13 +71,13 @@ export function derivePartnerEquity(partners: readonly PartnerDto[], accounts: r
     }));
 }
 
-export function derivePartnerCurrentAccounts(partners: readonly PartnerDto[], accounts: readonly AccountDto[]): DerivedRow[] {
+export function derivePartnerCurrentAccounts(partners: readonly PartnerDto[], accounts: readonly AccountDto[], t: TranslateFn): DerivedRow[] {
   return partners
     .filter((p) => p.current_account_id)
     .map((p) => ({
       key: `pc_${p.id}`,
       entity_id: p.id,
-      label: `${p.name} (جاري)`,
+      label: `${p.name} ${t("wizard.derivePartnerCurrentSuffix", { namespace: "openingBalance" })}`,
       account_id: p.current_account_id as string,
       account_code: codeOf(accounts, p.current_account_id),
       amount: "0",
@@ -144,18 +145,18 @@ export function sumLines(list: readonly { amount?: string }[]): number {
  * rows or a divergence between the material-card stock value and the opening
  * inventory value, before any reconciliation is run.
  */
-export function inventoryMismatchHints(entries: readonly InventoryEntry[], materials: readonly MaterialDto[]): string[] {
+export function inventoryMismatchHints(entries: readonly InventoryEntry[], materials: readonly MaterialDto[], t: TranslateFn): string[] {
   const hints: string[] = [];
   for (const r of entries) {
     const qty = toNum(r.qty);
     const cost = toNum(r.cost);
     if (qty > 0 && cost <= 0) {
       hints.push(
-        `المادة «${r.name}» لها كمية ${toFixed(qty, 2)} بدون تكلفة — لن تُضاف إلى قيمة المخزون الافتتاحية؛ أدخل التكلفة.`,
+        t("wizard.hintMaterialNoCost", { namespace: "openingBalance", vars: { name: r.name, qty: toFixed(qty, 2) } }),
       );
     } else if (cost > 0 && qty <= 0) {
       hints.push(
-        `المادة «${r.name}» لها تكلفة ${toFixed(cost, 2)} بدون كمية — لن تُضاف إلى قيمة المخزون الافتتاحية؛ أدخل الكمية.`,
+        t("wizard.hintMaterialNoQty", { namespace: "openingBalance", vars: { name: r.name, cost: toFixed(cost, 2) } }),
       );
     }
   }
@@ -163,7 +164,7 @@ export function inventoryMismatchHints(entries: readonly InventoryEntry[], mater
   const openingTotal = entries.reduce((s, r) => s + r.value, 0);
   if (cardTotal > 0 && Math.abs(cardTotal - openingTotal) > 0.01) {
     hints.push(
-      `رصيد المخزون في بطاقة المواد (${fmtMoney(cardTotal)}) لا يساوي قيمة المخزون الافتتاحية (${fmtMoney(openingTotal)}) — راجع قسم «المخزون»؛ سيُضاف الرصيد الافتتاحي فوق الرصيد الحالي.`,
+      t("wizard.hintInventoryMismatch", { namespace: "openingBalance", vars: { cardTotal: fmtMoney(cardTotal), openingTotal: fmtMoney(openingTotal) } }),
     );
   }
   return hints;

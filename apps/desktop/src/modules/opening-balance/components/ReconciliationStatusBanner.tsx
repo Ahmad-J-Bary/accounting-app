@@ -1,5 +1,6 @@
 import { cn } from "@shared/lib/utils";
 import { readinessLabel, type Readiness } from "../lib/migration-labels";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 interface ReconciliationStatusBannerProps {
   readiness: Readiness;
@@ -7,6 +8,7 @@ interface ReconciliationStatusBannerProps {
 
 /** Colored readiness banner shared by the wizard (step 5) and the reconciliation card. */
 export function ReconciliationStatusBanner({ readiness }: ReconciliationStatusBannerProps) {
+  const { t } = useLocalization();
   const { readyToPost, readyToLock } = readiness;
   return (
     <div
@@ -15,7 +17,7 @@ export function ReconciliationStatusBanner({ readiness }: ReconciliationStatusBa
         readyToPost ? (readyToLock ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-700") : "bg-red-50 text-red-600",
       )}
     >
-      {readinessLabel(readiness)}
+      {readinessLabel(readiness, t)}
     </div>
   );
 }

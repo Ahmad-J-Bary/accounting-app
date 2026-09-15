@@ -3,6 +3,31 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { AccountCombobox } from "@modules/opening-balance/components/AccountCombobox";
 import type { AccountDto } from "@erp/shared-types";
+import { openingBalance } from "@shared/i18n/resources/openingBalance";
+
+vi.mock("@app/providers/LocalizationProvider", () => ({
+  useLocalization: () => ({
+    t: (key: string, opts?: any) => {
+      const parts = key.split(".");
+      let val: any = openingBalance.ar;
+      for (const p of parts) val = val?.[p];
+      if (typeof val !== "string") return key;
+      if (opts?.vars) {
+        return Object.entries(opts.vars).reduce((s: string, [k, v]) => s.replace(`{{${k}}}`, String(v)), val);
+      }
+      return val;
+    },
+    language: "ar",
+    direction: "rtl",
+    isRTL: true,
+    locale: "ar-SY",
+    setLanguage: vi.fn(),
+    resolveLabel: (key: string) => key,
+    terminologyOverrides: [],
+    setTerminologyOverride: vi.fn(),
+    removeTerminologyOverride: vi.fn(),
+  }),
+}));
 
 const ACCOUNTS: AccountDto[] = [
   {

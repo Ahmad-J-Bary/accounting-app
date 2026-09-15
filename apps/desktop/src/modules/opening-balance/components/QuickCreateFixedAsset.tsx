@@ -4,15 +4,9 @@ import { Input } from "@shared/ui/input";
 import { Button } from "@shared/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
 import type { WarehouseDto } from "@erp/shared-types";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 type AssetType = "buildings_land" | "automotive" | "equipment" | "furniture";
-
-const ASSET_TYPE_OPTIONS: { value: AssetType; label: string }[] = [
-  { value: "buildings_land", label: "أبنية وأراضي" },
-  { value: "automotive", label: "آليات ومركبات" },
-  { value: "equipment", label: "معدات وتجهيزات" },
-  { value: "furniture", label: "أثاث ومفروشات" },
-];
 
 interface QuickCreateFixedAssetProps {
   warehouses: WarehouseDto[];
@@ -27,7 +21,15 @@ interface QuickCreateFixedAssetProps {
 }
 
 export function QuickCreateFixedAsset({ warehouses, onCreate, navLink }: QuickCreateFixedAssetProps) {
+  const { t } = useLocalization();
   const [expanded, setExpanded] = useState(false);
+
+  const ASSET_TYPE_OPTIONS: { value: AssetType; label: string }[] = [
+    { value: "buildings_land", label: t("fixedAssetLegacy.categoryBuildings", { namespace: "openingBalance" }) },
+    { value: "automotive", label: t("fixedAssetLegacy.categoryVehicles", { namespace: "openingBalance" }) },
+    { value: "equipment", label: t("fixedAssetLegacy.categoryEquipment", { namespace: "openingBalance" }) },
+    { value: "furniture", label: t("fixedAssetLegacy.categoryFurniture", { namespace: "openingBalance" }) },
+  ];
   const [name, setName] = useState("");
   const [cost, setCost] = useState("");
   const [assetType, setAssetType] = useState<AssetType>("equipment");
@@ -76,7 +78,7 @@ export function QuickCreateFixedAsset({ warehouses, onCreate, navLink }: QuickCr
           className="h-8 shrink-0 rounded-full border-emerald-300 bg-emerald-50 px-3 text-xs font-bold text-emerald-700 hover:bg-emerald-100 hover:border-emerald-400 transition-all"
         >
           <Plus className="w-3.5 h-3.5 ms-1" />
-          إضافة أصل ثابت
+          {t("fixedAssetLegacy.addButton", { namespace: "openingBalance" })}
         </Button>
         {navLink}
       </div>
@@ -90,7 +92,7 @@ export function QuickCreateFixedAsset({ warehouses, onCreate, navLink }: QuickCr
           <Input
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="اسم الأصل"
+            placeholder={t("fixedAssetLegacy.namePlaceholder", { namespace: "openingBalance" })}
             className="h-8 flex-1 min-w-[120px] border-slate-200 text-xs bg-white"
             disabled={creating}
             autoFocus
@@ -108,7 +110,7 @@ export function QuickCreateFixedAsset({ warehouses, onCreate, navLink }: QuickCr
             step="0.01"
             value={cost}
             onChange={(e) => setCost(e.target.value)}
-            placeholder="التكلفة"
+            placeholder={t("fixedAssetLegacy.costPlaceholder", { namespace: "openingBalance" })}
             className="h-8 w-24 border-slate-200 text-xs text-end tabular-nums bg-white"
             disabled={creating}
             onKeyDown={(e) => {
@@ -124,7 +126,7 @@ export function QuickCreateFixedAsset({ warehouses, onCreate, navLink }: QuickCr
               type="date"
               value={purchaseDate}
               onChange={(e) => setPurchaseDate(e.target.value)}
-              title="تاريخ الحيازة"
+              title={t("fixedAssetLegacy.purchaseDate", { namespace: "openingBalance" })}
               className="h-8 w-36 ps-6 border-slate-200 text-xs bg-white"
               disabled={creating}
             />
@@ -142,7 +144,7 @@ export function QuickCreateFixedAsset({ warehouses, onCreate, navLink }: QuickCr
         <div className="flex items-center gap-2 px-3 pb-1.5">
           <Select value={assetType} onValueChange={(v) => setAssetType(v as AssetType)} disabled={creating}>
             <SelectTrigger className="h-7 flex-1 border-slate-200 text-xs bg-white">
-              <SelectValue placeholder="نوع الأصل" />
+              <SelectValue placeholder={t("fixedAssetLegacy.typePlaceholder", { namespace: "openingBalance" })} />
             </SelectTrigger>
             <SelectContent>
               {ASSET_TYPE_OPTIONS.map((opt) => (
@@ -155,10 +157,10 @@ export function QuickCreateFixedAsset({ warehouses, onCreate, navLink }: QuickCr
           {showWarehouse && activeWarehouses.length > 0 && (
             <Select value={warehouseId} onValueChange={setWarehouseId} disabled={creating}>
               <SelectTrigger className="h-7 flex-1 border-slate-200 text-xs bg-white">
-                <SelectValue placeholder="المستودع" />
+                <SelectValue placeholder={t("fixedAssetLegacy.warehousePlaceholder", { namespace: "openingBalance" })} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="none" className="text-xs">بدون مستودع</SelectItem>
+                <SelectItem value="none" className="text-xs">{t("fixedAssetLegacy.noWarehouse", { namespace: "openingBalance" })}</SelectItem>
                 {activeWarehouses.map((wh) => (
                   <SelectItem key={wh.id} value={wh.id} className="text-xs">
                     {wh.name}

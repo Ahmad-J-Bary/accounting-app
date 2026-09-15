@@ -2,6 +2,7 @@ import { SectionCard } from "@shared/ui/section-card";
 import { Scale } from "lucide-react";
 import type { OpeningBalanceMigrationDto, OpeningReconciliationDto } from "../../accounting/api/openingBalanceService";
 import { reconciliationReadiness } from "../lib/migration-labels";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 import { MigrationPicker } from "./MigrationPicker";
 import { ReconciliationStatusBanner } from "./ReconciliationStatusBanner";
 import { ReconciliationRowsTable } from "./ReconciliationRowsTable";
@@ -21,6 +22,7 @@ export function ReconciliationCard({
   loading,
   reconciliation,
 }: ReconciliationCardProps) {
+  const { t } = useLocalization();
   return (
     <SectionCard
       title="التحقق من تسوية الرصيد الافتتاحي"
@@ -41,7 +43,7 @@ export function ReconciliationCard({
             debitTotal={reconciliation.debit_total}
             creditTotal={reconciliation.credit_total}
           />
-          <ReconciliationStatusBanner readiness={reconciliationReadiness(reconciliation)} />
+          <ReconciliationStatusBanner readiness={reconciliationReadiness(reconciliation, t)} />
         </div>
       )}
     </SectionCard>

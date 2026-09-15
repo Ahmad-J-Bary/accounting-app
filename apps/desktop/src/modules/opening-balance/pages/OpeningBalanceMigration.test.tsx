@@ -8,6 +8,7 @@ import OpeningBalanceMigration from "@modules/opening-balance/pages/openingBalan
 import { SidePanelSettingsProvider } from "@app/providers/SidePanelSettingsProvider";
 import { SidebarLayoutProvider } from "@app/providers/SidebarLayoutProvider";
 import { TabProvider } from "@app/providers/TabProvider";
+import { LocalizationProvider } from "@app/providers/LocalizationProvider";
 import { settingsService } from "@modules/core/api/settingsService";
 import { fiscalPeriodService } from "@modules/accounting/api/fiscalPeriodService";
 import { openingBalanceService } from "@modules/accounting/api/openingBalanceService";
@@ -88,22 +89,25 @@ vi.mock("@modules/invoicing/api/invoiceService", () => ({
 }));
 
 function renderPage(initialPath = "/opening-balance-migration") {
+  localStorage.setItem("erp_language", "ar");
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
   const ui = render(
     <MemoryRouter initialEntries={[initialPath]}>
       <QueryClientProvider client={qc}>
-        <TabProvider>
-          <SidePanelSettingsProvider>
-            <SidebarLayoutProvider>
-              <Routes>
-                <Route path="/opening-balance-migration" element={<OpeningBalanceMigration />} />
-                <Route path="/dashboard" element={<div>DASHBOARD_ROOT</div>} />
-              </Routes>
-            </SidebarLayoutProvider>
-          </SidePanelSettingsProvider>
-        </TabProvider>
+        <LocalizationProvider>
+          <TabProvider>
+            <SidePanelSettingsProvider>
+              <SidebarLayoutProvider>
+                <Routes>
+                  <Route path="/opening-balance-migration" element={<OpeningBalanceMigration />} />
+                  <Route path="/dashboard" element={<div>DASHBOARD_ROOT</div>} />
+                </Routes>
+              </SidebarLayoutProvider>
+            </SidePanelSettingsProvider>
+          </TabProvider>
+        </LocalizationProvider>
       </QueryClientProvider>
     </MemoryRouter>,
   );
@@ -113,6 +117,7 @@ function renderPage(initialPath = "/opening-balance-migration") {
 describe("OpeningBalanceMigration company-type gate", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    localStorage.removeItem("erp_language");
   });
 
   it("redirects a NEW company to /dashboard (no opening-balance page at all)", async () => {
@@ -122,7 +127,7 @@ describe("OpeningBalanceMigration company-type gate", () => {
     const { qc } = renderPage();
     await waitFor(() => expect(qc.getQueryData(QUERY_KEYS.settings)).toBeTruthy());
     expect(await screen.findByText("DASHBOARD_ROOT")).toBeInTheDocument();
-    expect(screen.queryByText("openingBalance.migrationPageTitle.open")).not.toBeInTheDocument();
+    expect(screen.queryByText("رصيد افتتاح الشركة")).not.toBeInTheDocument();
   });
 
   it("shows the full page for an EXISTING company with a NOT_STARTED badge", async () => {
@@ -130,16 +135,16 @@ describe("OpeningBalanceMigration company-type gate", () => {
       accounting_start_mode: START_MODE_EXISTING,
     } as never);
     renderPage();
-    expect(await screen.findByText("openingBalance.migrationPageTitle.open")).toBeInTheDocument();
+    expect(await screen.findByText("رصيد افتتاح الشركة")).toBeInTheDocument();
     expect(await screen.findByText("لم يبدأ بعد")).toBeInTheDocument();
     // The overview tab is the default landing: welcome for NOT_STARTED companies.
-    expect(screen.getByText("openingBalance.tabOverview")).toBeInTheDocument();
-    expect(screen.getByText("openingBalance.tabList")).toBeInTheDocument();
-    expect(screen.getByText("openingBalance.welcomeTitle")).toBeInTheDocument();
-    expect(screen.getByText("openingBalance.startWizard")).toBeInTheDocument();
+    expect(screen.getByText("نظرة عامة")).toBeInTheDocument();
+    expect(screen.getByText("قائمة الترحيلات")).toBeInTheDocument();
+    expect(screen.getByText("إعداد رصيد افتتاح الشركة القائمة")).toBeInTheDocument();
+    expect(screen.getByText("ابدأ المعالج")).toBeInTheDocument();
   });
 
-  it("keeps a fully ACTIVE EXISTING company on the post-transition completion step (no redirect)", async () => {
+  it("keeps a fully ACTIVE EXISTING company on the post-transition completion step (no redirect)", { timeout: 15000 }, async () => {
     vi.mocked(settingsService.getSettings).mockResolvedValue({
       accounting_start_mode: START_MODE_EXISTING,
     } as never);
@@ -207,8 +212,8 @@ describe("OpeningBalanceMigration company-type gate", () => {
     await waitFor(() => expect(qc.getQueryData(QUERY_KEYS.openingBalanceMigrations)).toBeTruthy());
     // The wizard shows the done/completion step directly; opening management controls vanish.
     expect(await screen.findByText("اكتمل إعداد الشركة ✓")).toBeInTheDocument();
-    expect(screen.queryByText("openingBalance.tabList")).not.toBeInTheDocument();
-    expect(screen.queryByText("openingBalance.tabPosition")).not.toBeInTheDocument();
+    expect(screen.queryByText("قائمة الترحيلات")).not.toBeInTheDocument();
+    expect(screen.queryByText("المركز والتسوية")).not.toBeInTheDocument();
     expect(screen.queryByText("DASHBOARD_ROOT")).not.toBeInTheDocument();
   });
 

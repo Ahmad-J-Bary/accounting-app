@@ -3,6 +3,7 @@ import { Button } from "@shared/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { toFixed } from "@shared/lib/format";
 import type { InventoryEntry } from "@modules/opening-balance/lib/derive-rows";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 interface InventorySectionProps {
   rows: InventoryEntry[];
@@ -17,21 +18,22 @@ interface InventorySectionProps {
  * Posting is done through the opening invoice page.
  */
 export function InventorySection({ rows, onRowChange, total, onNavigateToInvoice }: InventorySectionProps) {
+  const { t } = useLocalization();
   return (
     <div className="space-y-3">
       <p className="text-xs text-slate-500">
-        سجّل كميات وتكاليف بضاعة أول المدة لكل مادة. الحساب محصور تلقائياً على «بضاعة أول المدة».
+        {t("inventoryLegacy.description", { namespace: "openingBalance" })}
       </p>
 
       {rows.length === 0 ? (
-        <p className="text-xs text-slate-400">لا توجد مواد بعد — أضف المواد من صفحة «الأصناف» أولاً.</p>
+        <p className="text-xs text-slate-400">{t("inventoryLegacy.emptyState", { namespace: "openingBalance" })}</p>
       ) : (
         <div className="border border-slate-200 rounded-lg overflow-hidden">
           <div className="grid grid-cols-12 gap-2 bg-slate-100/70 px-3 py-1.5 text-2xs font-bold text-slate-500">
-            <span className="col-span-5">المادة</span>
-            <span className="col-span-2 text-center">الكمية</span>
-            <span className="col-span-2 text-center">التكلفة</span>
-            <span className="col-span-3 text-end">القيمة</span>
+            <span className="col-span-5">{t("inventoryLegacy.columnMaterial", { namespace: "openingBalance" })}</span>
+            <span className="col-span-2 text-center">{t("inventoryLegacy.columnQuantity", { namespace: "openingBalance" })}</span>
+            <span className="col-span-2 text-center">{t("inventoryLegacy.columnCost", { namespace: "openingBalance" })}</span>
+            <span className="col-span-3 text-end">{t("inventoryLegacy.columnValue", { namespace: "openingBalance" })}</span>
           </div>
           <div className="divide-y divide-slate-100 max-h-72 overflow-auto">
             {rows.map((r) => (
@@ -47,7 +49,7 @@ export function InventorySection({ rows, onRowChange, total, onNavigateToInvoice
                     step="any"
                     value={r.qty}
                     onChange={(e) => onRowChange(r.material_id, { qty: e.target.value })}
-                    aria-label={"الكمية: " + r.name}
+                    aria-label={t("inventoryLegacy.quantityLabel", { namespace: "openingBalance" }) + r.name}
                     className="h-8 border-slate-200 text-end tabular-nums text-xs"
                   />
                 </div>
@@ -58,7 +60,7 @@ export function InventorySection({ rows, onRowChange, total, onNavigateToInvoice
                     step="0.01"
                     value={r.cost}
                     onChange={(e) => onRowChange(r.material_id, { cost: e.target.value })}
-                    aria-label={"التكلفة: " + r.name}
+                    aria-label={t("inventoryLegacy.costLabel", { namespace: "openingBalance" }) + r.name}
                     className="h-8 border-slate-200 text-end tabular-nums text-xs"
                   />
                 </div>
@@ -72,7 +74,7 @@ export function InventorySection({ rows, onRowChange, total, onNavigateToInvoice
       )}
 
       <div className="rounded-lg border border-slate-200 bg-slate-50/60 px-3 py-2 flex items-center justify-between">
-        <span className="text-xs font-semibold text-slate-600">إجمالي المخزون</span>
+        <span className="text-xs font-semibold text-slate-600">{t("inventoryLegacy.totalInventory", { namespace: "openingBalance" })}</span>
         <span className="tabular-nums text-sm font-black text-indigo-700">{toFixed(total, 2)}</span>
       </div>
 
@@ -83,7 +85,7 @@ export function InventorySection({ rows, onRowChange, total, onNavigateToInvoice
           onClick={onNavigateToInvoice}
           className="h-8 shrink-0 rounded-full border-blue-300 bg-blue-50 px-3 text-xs font-bold text-blue-700 hover:bg-blue-100 hover:border-blue-400 transition-all"
         >
-          صفحة فاتورة أول المدة
+          {t("inventoryLegacy.invoicePageButton", { namespace: "openingBalance" })}
           <ArrowLeft className="w-3.5 h-3.5 me-1" />
         </Button>
       </div>

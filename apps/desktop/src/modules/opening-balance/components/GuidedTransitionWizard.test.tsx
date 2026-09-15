@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { TabProvider } from "@app/providers/TabProvider";
+import { LocalizationProvider } from "@app/providers/LocalizationProvider";
 import { GuidedTransitionWizard } from "@modules/opening-balance/components/GuidedTransitionWizard";
 import { fiscalPeriodService } from "@modules/accounting/api/fiscalPeriodService";
 import { settingsService } from "@modules/core/api/settingsService";
@@ -122,19 +123,22 @@ const LOCKED_MIGRATION = {
 };
 
 function renderWizard(initialPath = "/opening-balance-migration") {
+  localStorage.setItem("erp_language", "ar");
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
   return render(
     <MemoryRouter initialEntries={[initialPath]}>
       <QueryClientProvider client={qc}>
-        <TabProvider>
-          <Routes>
-            <Route path="/opening-balance-migration" element={<GuidedTransitionWizard />} />
-            <Route path="/partners" element={<div>PARTNERS_ROOT</div>} />
-            <Route path="/dashboard" element={<div>DASHBOARD_ROOT</div>} />
-          </Routes>
-        </TabProvider>
+        <LocalizationProvider>
+          <TabProvider>
+            <Routes>
+              <Route path="/opening-balance-migration" element={<GuidedTransitionWizard />} />
+              <Route path="/partners" element={<div>PARTNERS_ROOT</div>} />
+              <Route path="/dashboard" element={<div>DASHBOARD_ROOT</div>} />
+            </Routes>
+          </TabProvider>
+        </LocalizationProvider>
       </QueryClientProvider>
     </MemoryRouter>,
   );
@@ -151,19 +155,19 @@ describe("GuidedTransitionWizard", () => {
   it("NewCompany mode renders only the two-step flow with first-period fields", async () => {
     renderWizard();
     expect(await screen.findByText("بدء محاسبة شركة جديدة")).toBeInTheDocument();
-    expect(screen.getByText("steps.companyStart")).toBeInTheDocument();
-    expect(screen.getByText("steps.done")).toBeInTheDocument();
-    expect(screen.queryByText("steps.partnersEquity")).not.toBeInTheDocument();
+    expect(screen.getByText("بدء الحسابات")).toBeInTheDocument();
+    expect(screen.getByText("اكتمال")).toBeInTheDocument();
+    expect(screen.queryByText("حقوق الشركاء")).not.toBeInTheDocument();
     expect(screen.getByLabelText(/بداية الفترة/)).toBeInTheDocument();
     expect(screen.getByLabelText(/نهاية الفترة/)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "nextLabel.createFirstPeriod" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "إنشاء الفترة الأولى والبدء" })).toBeEnabled();
   });
 
   it("creates the first financial period and finishes for a new company", async () => {
     const user = userEvent.setup();
     renderWizard();
     await screen.findByText("بدء محاسبة شركة جديدة");
-    await user.click(screen.getByRole("button", { name: "nextLabel.createFirstPeriod" }));
+    await user.click(screen.getByRole("button", { name: "إنشاء الفترة الأولى والبدء" }));
     await waitFor(() => {
       expect(fiscalPeriodService.createFiscalPeriod).toHaveBeenCalledWith({
         start_date: expect.any(String),
@@ -178,16 +182,16 @@ describe("GuidedTransitionWizard", () => {
     renderWizard();
     expect(await screen.findByText("معالج التحويل الموجه (شركة قائمة)")).toBeInTheDocument();
     for (const label of [
-      "steps.companyStart",
-      "steps.cashBanks",
-      "steps.customers",
-      "steps.inventory",
-      "steps.fixedAssets",
-      "steps.suppliersLoans",
-      "steps.partnersEquity",
-      "steps.review",
-      "steps.action",
-      "steps.done",
+      "بدء الحسابات",
+      "النقد والبنوك",
+      "الذمم المدينة",
+      "المخزون",
+      "الأصول الثابتة",
+      "الموردون والالتزامات",
+      "حقوق الشركاء",
+      "المراجعة والحفظ",
+      "إتمام الترحيل",
+      "اكتمال",
     ]) {
       expect(screen.getAllByText(label).length).toBeGreaterThan(0);
     }
@@ -240,7 +244,7 @@ describe("GuidedTransitionWizard", () => {
     const user = userEvent.setup();
     renderWizard();
     expect(await screen.findByText("اكتمل إعداد الشركة ✓")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "openingBalance.finishButton" }));
+    await user.click(screen.getByRole("button", { name: "إنهاء" }));
     expect(await screen.findByText("DASHBOARD_ROOT")).toBeInTheDocument();
   });
 

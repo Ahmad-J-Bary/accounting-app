@@ -4,6 +4,7 @@ import { Input } from "@shared/ui/input";
 import { Button } from "@shared/ui/button";
 import { Badge } from "@shared/ui/badge";
 import type { DerivedRow } from "@modules/opening-balance/lib/wizard-types";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 interface InlineBalanceRowProps {
   row: DerivedRow;
@@ -20,6 +21,7 @@ interface InlineBalanceRowProps {
  * Editing state: editable input + "حفظ" button.
  */
 export function InlineBalanceRow({ row, onSave, onDelete, label, nativeHint = "debit", disabled = false }: InlineBalanceRowProps) {
+  const { t } = useLocalization();
   const [value, setValue] = useState(row.amount);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -60,7 +62,7 @@ export function InlineBalanceRow({ row, onSave, onDelete, label, nativeHint = "d
               className="h-8 w-32 border-slate-200 text-end tabular-nums text-xs"
               autoFocus
             />
-            <span className="text-2xs text-slate-400">{nativeHint === "debit" ? "مدين" : "دائن"}</span>
+            <span className="text-2xs text-slate-400">{nativeHint === "debit" ? t("inlineBalance.debit", { namespace: "openingBalance" }) : t("inlineBalance.credit", { namespace: "openingBalance" })}</span>
           </div>
           <div className="flex items-center gap-1.5 shrink-0">
             <Button
@@ -69,10 +71,10 @@ export function InlineBalanceRow({ row, onSave, onDelete, label, nativeHint = "d
               onClick={() => void save()}
               disabled={disabled || saving}
               className="h-8 px-2 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shrink-0"
-              aria-label="حفظ الرصيد"
+              aria-label={t("inlineBalance.saveBalance", { namespace: "openingBalance" })}
             >
               {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
-              حفظ
+              {t("inlineBalance.save", { namespace: "openingBalance" })}
             </Button>
             <Button
               type="button"
@@ -81,7 +83,7 @@ export function InlineBalanceRow({ row, onSave, onDelete, label, nativeHint = "d
               onClick={() => { setEditing(false); setValue(row.amount); }}
               disabled={disabled}
               className="h-8 w-8 p-0 text-slate-400 hover:text-slate-600 shrink-0"
-              aria-label="إلغاء التعديل"
+              aria-label={t("inlineBalance.cancelEdit", { namespace: "openingBalance" })}
             >
               <X className="w-3.5 h-3.5" />
             </Button>
@@ -98,7 +100,7 @@ export function InlineBalanceRow({ row, onSave, onDelete, label, nativeHint = "d
           </div>
           <div className="flex items-center gap-1.5 shrink-0">
             <span className="tabular-nums text-xs font-bold text-slate-700 w-32 text-end">{parseFloat(row.amount || "0").toFixed(2)}</span>
-            <span className="text-2xs text-slate-400">{nativeHint === "debit" ? "مدين" : "دائن"}</span>
+            <span className="text-2xs text-slate-400">{nativeHint === "debit" ? t("inlineBalance.debit", { namespace: "openingBalance" }) : t("inlineBalance.credit", { namespace: "openingBalance" })}</span>
             <Button
               type="button"
               size="sm"
@@ -106,10 +108,10 @@ export function InlineBalanceRow({ row, onSave, onDelete, label, nativeHint = "d
               onClick={startEdit}
               disabled={disabled}
               className="h-8 px-2 text-xs font-bold border-emerald-300 text-emerald-700 hover:bg-emerald-50"
-              aria-label="تعديل الرصيد"
+              aria-label={t("inlineBalance.editBalance", { namespace: "openingBalance" })}
             >
               <Pencil className="w-3.5 h-3.5" />
-              تعديل
+              {t("inlineBalance.edit", { namespace: "openingBalance" })}
             </Button>
             {onDelete && !disabled && (
               <Button
@@ -118,7 +120,7 @@ export function InlineBalanceRow({ row, onSave, onDelete, label, nativeHint = "d
                 variant="ghost"
                 onClick={() => onDelete(row)}
                 className="h-8 w-8 p-0 text-red-400 hover:bg-red-50 hover:text-red-600 shrink-0"
-                aria-label="حذف التجاوز"
+                aria-label={t("inlineBalance.deleteOverflow", { namespace: "openingBalance" })}
               >
                 <Trash2 className="h-3.5 w-3.5" />
               </Button>

@@ -25,21 +25,23 @@ export interface AccountLine {
   description: string;
 }
 
-export const TYPE_LABEL: Record<string, string> = {
-  Assets: "أصل",
-  Liabilities: "التزام",
-  Equity: "حقوق ملكية",
-  Revenue: "إيراد",
-  Expenses: "مصروف",
+export type TranslateFn = (key: string, opts?: Record<string, unknown>) => string;
+
+export const TYPE_LABEL: Record<string, (t: TranslateFn) => string> = {
+  Assets: (t) => t("wizard.typeAsset", { namespace: "openingBalance" }),
+  Liabilities: (t) => t("wizard.typeLiability", { namespace: "openingBalance" }),
+  Equity: (t) => t("wizard.typeEquity", { namespace: "openingBalance" }),
+  Revenue: (t) => t("wizard.typeRevenue", { namespace: "openingBalance" }),
+  Expenses: (t) => t("wizard.typeExpense", { namespace: "openingBalance" }),
 };
 
-export const RECON_ROW_LABEL: Record<string, string> = {
-  AR: "الذمم المدينة (العملاء)",
-  AP: "الذمم الدائنة (الموردون)",
-  Inventory: "المخزون",
-  FixedAssets: "الأصول الثابتة",
-  Bank: "البنوك",
-  Loan: "القروض",
+export const RECON_ROW_LABEL: Record<string, (t: TranslateFn) => string> = {
+  AR: (t) => t("wizard.reconRowAR", { namespace: "openingBalance" }),
+  AP: (t) => t("wizard.reconRowAP", { namespace: "openingBalance" }),
+  Inventory: (t) => t("wizard.reconRowInventory", { namespace: "openingBalance" }),
+  FixedAssets: (t) => t("wizard.reconRowFixedAssets", { namespace: "openingBalance" }),
+  Bank: (t) => t("wizard.reconRowBanks", { namespace: "openingBalance" }),
+  Loan: (t) => t("wizard.reconRowLoans", { namespace: "openingBalance" }),
 };
 
 export function isDebitNature(accountType: string): boolean {
@@ -69,28 +71,29 @@ export interface Readiness {
   readyToPost: boolean;
   readyToLock: boolean;
   blockers: string[];
+  nonZeroedBlockers: string[];
 }
 
-/** Precise per-row mismatch message: «رصيد البنوك = 40، دفتر الأستاذ = 0». */
-function mismatchMessage(row: ReconciliationRowLite): string {
-  const label = RECON_ROW_LABEL[row.key] || row.key;
-  return `رصيد ${label}: التفاصيل ${parseFloat(row.subledger)} ≠ دفتر الأستاذ ${parseFloat(row.general_ledger)}`;
+/** Precise per-row mismatch message. */
+function mismatchMessage(row: ReconciliationRowLite, t: TranslateFn): string {
+  const label = RECON_ROW_LABEL[row.key]?.(t) || row.key;
+  return t("wizard.reconRowMismatch", { namespace: "openingBalance", vars: { label, subledger: parseFloat(row.subledger), generalLedger: parseFloat(row.general_ledger) } });
 }
 
 /** Pure readiness calculation shared by the wizard and the reconciliation card. */
-export function reconciliationReadiness(recon: ReadinessInput): Readiness {
+export function reconciliationReadiness(recon: ReadinessInput, t: TranslateFn): Readiness {
   const controlZero = parseFloat(recon.opening_control_balance) === 0;
   const readyToPost = recon.debit_equals_credit && recon.all_reconciled;
   const readyToLock = readyToPost && controlZero;
   const rowMismatches = (recon.rows || [])
     .filter((r) => !r.reconciled)
-    .map(mismatchMessage);
+    .map((r) => mismatchMessage(r, t));
+  const notZeroed = !controlZero ? [t("wizard.blockerNotZeroed", { namespace: "openingBalance" })] : [];
   const blockers = [
-    !recon.debit_equals_credit && "القيد غير متوازن (مدين ≠ دائن)",
-    !recon.all_reconciled && (rowMismatches.length ? rowMismatches.join(" · ") : "الواجهات الفرعية غير مطابقة"),
-    !controlZero && "رصيد الافتتاح (53) لم يُصفَّر بعد",
+    !recon.debit_equals_credit && t("wizard.blockerUnbalanced", { namespace: "openingBalance" }),
+    !recon.all_reconciled && (rowMismatches.length ? rowMismatches.join(" · ") : t("wizard.blockerSubledgerMismatch", { namespace: "openingBalance" })),
   ].filter(Boolean) as string[];
-  return { controlZero, readyToPost, readyToLock, blockers };
+  return { controlZero, readyToPost, readyToLock, blockers, nonZeroedBlockers: notZeroed };
 }
 
 /** Verify gate for the wizard's «تأكيد التحقق» step: the migration must be
@@ -104,12 +107,12 @@ export function canValidateOpening(
 ): boolean {
   if (!migration) return false;
   if (["Posted", "Locked", "Cancelled"].includes(migration.status)) return false;
-  const readiness = reconciliation ? reconciliationReadiness(reconciliation) : null;
+  const readiness = reconciliation ? reconciliationReadiness(reconciliation, (k, _o) => k) : null;
   return readiness?.readyToPost ?? false;
 }
 
-export function readinessLabel(r: Readiness): string {
-  if (r.readyToLock) return "جاهز للترحيل والقفل ✓";
-  if (r.readyToPost) return "جاهز للترحيل (صفّر رصيد 53 قبل القفل)";
-  return "غير جاهز: " + r.blockers.join(" · ");
+export function readinessLabel(r: Readiness, t: TranslateFn): string {
+  if (r.readyToLock) return t("wizard.readyToPostAndLock", { namespace: "openingBalance" });
+  if (r.readyToPost) return t("wizard.readyToPostOnly", { namespace: "openingBalance" });
+  return t("wizard.notReady", { namespace: "openingBalance" }) + r.blockers.join(" · ");
 }
