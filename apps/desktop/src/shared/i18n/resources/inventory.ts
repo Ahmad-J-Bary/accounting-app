@@ -37,6 +37,7 @@ export const inventory: Record<AppLanguage, TranslationTree> = {
       noResults: "لا توجد نتائج للبحث",
       noResultsMatch: "لا توجد نتائج تطابق معايير البحث",
       loading: "جاري التحميل...",
+      materialsCount: "عدد المواد",
     },
     errors: {
       failedLoadProducts: "فشل تحميل المنتجات",
@@ -186,6 +187,7 @@ export const inventory: Record<AppLanguage, TranslationTree> = {
     materials: {
       units: "الوحدات",
       uncategorized: "غير مصنف",
+      piece: "قطعة",
       created: "تمت إضافة المادة",
       updated: "تم تحديث المادة",
       deleteTitle: "حذف المادة",
@@ -661,6 +663,7 @@ export const inventory: Record<AppLanguage, TranslationTree> = {
       noResults: "No search results",
       noResultsMatch: "No results match the search criteria",
       loading: "Loading...",
+      materialsCount: "Materials Count",
     },
     errors: {
       failedLoadProducts: "Failed to load products",
@@ -810,6 +813,7 @@ export const inventory: Record<AppLanguage, TranslationTree> = {
     materials: {
       units: "Units",
       uncategorized: "Uncategorized",
+      piece: "Piece",
       created: "Material added",
       updated: "Material updated",
       deleteTitle: "Delete Material",

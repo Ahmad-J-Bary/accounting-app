@@ -23,9 +23,6 @@ import { useCurrencyContext, type CurrencyDisplayMode } from "@app/providers/Cur
 
 import { useLocalization } from '@app/providers/LocalizationProvider';
 
-// Month names in Arabic
-const MONTH_NAMES = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
-
 const CHART_COLORS = ["#2563eb", "#10b981", "#f59e0b", "#64748b", "#8b5cf6", "#ec4899"];
 
 export default function Dashboard() {
@@ -59,16 +56,30 @@ export default function Dashboard() {
 
   // === Revenue/Expenses chart from GL (posted ledger, grouped by month) ===
   const revenueChartData = useMemo(() => {
+    const monthNames: string[] = [
+      t("chart.months0", { namespace: "dashboard" }),
+      t("chart.months1", { namespace: "dashboard" }),
+      t("chart.months2", { namespace: "dashboard" }),
+      t("chart.months3", { namespace: "dashboard" }),
+      t("chart.months4", { namespace: "dashboard" }),
+      t("chart.months5", { namespace: "dashboard" }),
+      t("chart.months6", { namespace: "dashboard" }),
+      t("chart.months7", { namespace: "dashboard" }),
+      t("chart.months8", { namespace: "dashboard" }),
+      t("chart.months9", { namespace: "dashboard" }),
+      t("chart.months10", { namespace: "dashboard" }),
+      t("chart.months11", { namespace: "dashboard" }),
+    ];
     const monthly = new Map<string, { revenue: number; expenses: number }>();
     const now = new Date();
     for (let i = 0; i < 6; i++) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      monthly.set(MONTH_NAMES[d.getMonth()], { revenue: 0, expenses: 0 });
+      monthly.set(monthNames[d.getMonth()], { revenue: 0, expenses: 0 });
     }
     glMonthly.forEach(({ yearMonth, revenue, expenses }) => {
       const d = new Date(`${yearMonth}-01T00:00:00`);
       if (Number.isNaN(d.getTime())) return;
-      const name = MONTH_NAMES[d.getMonth()];
+      const name = monthNames[d.getMonth()];
       if (monthly.has(name)) {
         const cur = monthly.get(name)!;
         cur.revenue += revenue;
@@ -78,7 +89,7 @@ export default function Dashboard() {
     return Array.from(monthly.entries()).map(([month, data]) => ({
       month, ...data
     }));
-  }, [glMonthly]);
+  }, [glMonthly, t]);
 
   // === Category distribution from real materials ===
   const catNameById = useMemo(() => {

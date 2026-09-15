@@ -532,7 +532,7 @@ export function InvoiceTable({
             const inv = row as unknown as InvoiceDto;
             if (col.id === "invoice_number") return parseInt(inv.invoice_number ?? "0", 10) || 0;
             if (col.id === partyField) return (partyType === "supplier" ? inv.supplier_name : inv.customer_name) || defaultName;
-            if (col.id === "status") return inv.status === "Posted" ? "مرحّل" : "مسودة";
+            if (col.id === "status") return inv.status === "Posted" ? t("invoice.postedLabel", { namespace: "invoicing" }) : t("invoice.draftLabel", { namespace: "invoicing" });
             if (col.id === "notes") return inv.notes || "";
             const extra = extraColumns.find((c) => c.key === col.id);
             if (extra) {
@@ -723,7 +723,7 @@ export function InvoiceTable({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all" className="text-xs font-bold">{t("invoice.filterAll", { namespace: "invoicing",  })}</SelectItem>
-            <SelectItem value="Draft" className="text-xs font-bold text-amber-600">مسودة</SelectItem>
+            <SelectItem value="Draft" className="text-xs font-bold text-amber-600">{t("invoice.draftLabel", { namespace: "invoicing" })}</SelectItem>
             <SelectItem value="Posted" className="text-xs font-bold text-emerald-600">مرحلة</SelectItem>
           </SelectContent>
         </Select>

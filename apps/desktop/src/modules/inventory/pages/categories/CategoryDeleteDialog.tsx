@@ -52,7 +52,7 @@ export function CategoryDeleteDialog({
         </p>
         <p className="text-slate-700">
           {kind.isGeneralSub
-            ? <>{t("categories.delete.reassignToDefault", { namespace: "inventory", vars: { name: "غير مصنف" },  })}</>
+            ? <>{t("categories.delete.reassignToDefault", { namespace: "inventory", vars: { name: t("materials.uncategorized", { namespace: "inventory" }) },  })}</>
             : <>{t("categories.delete.reassignToGeneralSub", { namespace: "inventory", vars: { name: kind.targetName },  })}</>
           }
         </p>

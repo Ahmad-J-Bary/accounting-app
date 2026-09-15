@@ -123,7 +123,7 @@ export function MaterialUnitsManager({ material, onClose, onUnitsUpdated }: Mate
         <UnitCard
           key={`base-${editingUnitId === '__base__' ? 'edit' : 'view'}`}
           mode={editingUnitId === '__base__' ? "edit" : "view"}
-          unit={editingUnitId === '__base__' && editingUnitData ? { name: editingUnitData.name, conversion_factor: editingUnitData.conversion_factor, barcode: editingUnitData.barcode || "" } : { name: baseUnit?.name || "قطعة", conversion_factor: baseUnit?.conversion_factor || "1", barcode: baseUnit?.barcode || "" }}
+          unit={editingUnitId === '__base__' && editingUnitData ? { name: editingUnitData.name, conversion_factor: editingUnitData.conversion_factor, barcode: editingUnitData.barcode || "" } : { name: baseUnit?.name || t("materials.piece", { namespace: "inventory" }), conversion_factor: baseUnit?.conversion_factor || "1", barcode: baseUnit?.barcode || "" }}
           isBase={true}
           baseUnitName={baseUnit?.name}
           onEdit={editingUnitId === '__base__' ? undefined : () => { setEditingUnitId('__base__'); setEditingUnitData(baseUnit ? { ...baseUnit } : null); }}
@@ -171,7 +171,7 @@ export function MaterialUnitsManager({ material, onClose, onUnitsUpdated }: Mate
 
               {showAddForm && (
                 <AddUnitForm
-                  baseUnitName={baseUnit?.name || "قطعة"}
+                  baseUnitName={baseUnit?.name || t("materials.piece", { namespace: "inventory" })}
                   materialName={material.name}
                   existingNames={displayUnits.map(u => u.name)}
                   onAdd={handleAddUnit}

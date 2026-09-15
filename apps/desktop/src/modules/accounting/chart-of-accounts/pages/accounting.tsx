@@ -45,7 +45,7 @@ const ROOT_ACCOUNT_ID = "__chart_of_accounts_root__";
 export default function Accounting() {
   const queryClient = useQueryClient();
   const { openTab } = useTabs();
-  const { t } = useLocalization();
+  const { t, language } = useLocalization();
   const { currencies, rateMap, baseCurrency } = useCurrencyContext();
   const companySettings = useCompanyTypeSettings();
   const { initState, isReady } = useCompanyInitState();
@@ -176,8 +176,9 @@ export default function Accounting() {
   );
   const parentName = useMemo(() => {
     if (!selected?.parent_id) return null;
-    return accounts.find((a) => a.id === selected.parent_id)?.name_ar ?? null;
-  }, [selected, accounts]);
+    const parent = accounts.find((a) => a.id === selected.parent_id);
+    return parent ? (language === "ar" ? parent.name_ar : parent.name_en) ?? null : null;
+  }, [selected, accounts, language]);
 
   // ── Central resolution: classification + capabilities + actions ──
 

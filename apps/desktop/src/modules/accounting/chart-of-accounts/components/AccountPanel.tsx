@@ -44,7 +44,7 @@ export function AccountPanel({
   onClose,
   onSaved,
 }: AccountPanelProps) {
-  const { t } = useLocalization();
+  const { t, language } = useLocalization();
   const { hasMultipleCurrencies } = useCurrencyContext();
   const entity = useLinkedEntityFields(resolved, selected ?? null);
 
@@ -76,7 +76,7 @@ export function AccountPanel({
   // duplicate currency / balance entries removed (see `mergeAccountEntityFields`).
   const accountFields: AccountField[] = [
     { key: "account-code", label: t("chartOfAccounts.detail.accountCode", { namespace: "accounting",  }), value: selected.code ?? "—" },
-    { key: "account-name", label: t("chartOfAccounts.detail.accountName", { namespace: "accounting",  }), value: selected.name_ar ?? "—" },
+    { key: "account-name", label: t("chartOfAccounts.detail.accountName", { namespace: "accounting",  }), value: (language === "ar" ? selected.name_ar : selected.name_en) ?? "—" },
     {
       key: "account-parent",
       label: t("chartOfAccounts.detail.parentOf", { namespace: "accounting",  }),

@@ -41,7 +41,7 @@ type InlineCreateMode =
   | { type: "sub"; parentId: string; parentName: string }
   | null;
 
-const EMPTY_FORM = {
+const getEmptyForm = (t: (key: string, options?: { namespace?: string; vars?: Record<string, unknown> }) => string) => ({
   name: "",
   name_en: "",
   barcode: "",
@@ -49,10 +49,10 @@ const EMPTY_FORM = {
   minimum_stock: "0",
   notes: "",
   image_path: "",
-  default_purchase_unit_id: "قطعة",
-  default_sale_unit_id: "قطعة",
+  default_purchase_unit_id: t("materials.piece", { namespace: "inventory" }),
+  default_sale_unit_id: t("materials.piece", { namespace: "inventory" }),
   units: [
-    { name: "قطعة", conversion_factor: "1", barcode: "" }
+    { name: t("materials.piece", { namespace: "inventory" }), conversion_factor: "1", barcode: "" }
   ],
   selectedCategoryIds: [] as string[],
   purchase_prices: [] as { unit_id: string; price: string; price_base: string; currency: string }[],
@@ -62,10 +62,24 @@ const EMPTY_FORM = {
   default_warehouse_id: "",
   has_expiry: false,
   expiry_alert_before_days: 0,
-};
+});
 
 export function MaterialForm({ open, onClose, material, categories, onSave, saving, onCategoryCreated, warehouses, initialCategoryId }: MaterialFormProps) {
-  const [formData, setFormData] = useState(EMPTY_FORM);
+  const { t } = useLocalization();
+  const { currencies, baseCurrency, rateMap } = useCurrencyContext();
+  const { beginScan } = useBarcodeScanner();
+  const activeCurrencies = useMemo(() => currencies.filter(c => c.is_active), [currencies]);
+
+  const saleTiers = useMemo(() => [
+    { id: 'retail', label: t("saleTiers.retail", { namespace: "inventory" }) },
+    { id: 'semi_wholesale', label: t("saleTiers.semi_wholesale", { namespace: "inventory" }) },
+    { id: 'wholesale', label: t("saleTiers.wholesale", { namespace: "inventory" }) },
+  ], [t]);
+  const uncategorizedCat = useMemo(() => categories.find(c => c.name === DEFAULT_CATEGORY_NAME && !c.parent_id), [categories]);
+  const mainCategories = useMemo(() => categories.filter(c => !c.parent_id && c.name !== DEFAULT_CATEGORY_NAME && !c.is_hybrid), [categories]);
+
+  const emptyForm = useMemo(() => getEmptyForm(t), [t]);
+  const [formData, setFormData] = useState(emptyForm);
   const [activeTab, setActiveTab] = useState("basic");
   const [inlineCreate, setInlineCreate] = useState<InlineCreateMode>(null);
   const [newCatName, setNewCatName] = useState("");
@@ -80,19 +94,6 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
   const [showUnitForm, setShowUnitForm] = useState(false);
   const [editingUnitIdx, setEditingUnitIdx] = useState<number | null>(null);
   const [editingUnitData, setEditingUnitData] = useState<{ name: string; conversion_factor: string; barcode: string } | null>(null);
-
-  const { t } = useLocalization();
-  const { currencies, baseCurrency, rateMap } = useCurrencyContext();
-  const { beginScan } = useBarcodeScanner();
-  const activeCurrencies = useMemo(() => currencies.filter(c => c.is_active), [currencies]);
-
-  const saleTiers = useMemo(() => [
-    { id: 'retail', label: t("saleTiers.retail", { namespace: "inventory" }) },
-    { id: 'semi_wholesale', label: t("saleTiers.semi_wholesale", { namespace: "inventory" }) },
-    { id: 'wholesale', label: t("saleTiers.wholesale", { namespace: "inventory" }) },
-  ], [t]);
-  const uncategorizedCat = useMemo(() => categories.find(c => c.name === DEFAULT_CATEGORY_NAME && !c.parent_id), [categories]);
-  const mainCategories = useMemo(() => categories.filter(c => !c.parent_id && c.name !== DEFAULT_CATEGORY_NAME && !c.is_hybrid), [categories]);
 
   const suggestPrefix = useCallback(() => {
     const chars = "أبتثجحخدذرزسشصضطظعغفقكلمنهويABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -263,7 +264,7 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
         });
 
         // Initialize tier max qty from existing data
-        const baseUnit = material.units[0]?.name || 'قطعة';
+        const baseUnit = material.units[0]?.name || t("materials.piece", { namespace: "inventory" });
         const newMaxQty: Record<string, string> = {};
         const newMaxUnit: Record<string, string> = {};
         for (const tier of ['retail', 'semi_wholesale']) {
@@ -284,18 +285,18 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
         setTierMaxQtyUnit(newMaxUnit);
       } else {
         setFormData({
-          ...EMPTY_FORM,
+          ...emptyForm,
           selectedCategoryIds: initialCategoryId
             ? [initialCategoryId]
             : (uncategorizedCat ? [uncategorizedCat.id] : []),
         });
         setTierMaxQty({ retail: "0", semi_wholesale: "0" });
-        setTierMaxQtyUnit({ retail: "قطعة", semi_wholesale: "قطعة" });
+        setTierMaxQtyUnit({ retail: t("materials.piece", { namespace: "inventory" }), semi_wholesale: t("materials.piece", { namespace: "inventory" }) });
       }
       setActiveTab("basic");
       cancelInlineCreate();
     }
-  }, [open, material, uncategorizedCat, cancelInlineCreate, initialCategoryId]);
+  }, [open, material, uncategorizedCat, cancelInlineCreate, initialCategoryId, emptyForm, t]);
 
   // Sync default unit selections if units change
   useEffect(() => {
@@ -395,7 +396,7 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
     for (const tier of ['retail', 'semi_wholesale']) {
       const hasEntry = finalSalePrices.some(p => p.tier === tier);
       if (!hasEntry && activeCurrencies.length > 0) {
-        const firstUnitId = formData.units[0]?.name || 'قطعة';
+        const firstUnitId = formData.units[0]?.name || t("materials.piece", { namespace: "inventory" });
         finalSalePrices.push({
           unit_id: firstUnitId,
           tier,
@@ -522,7 +523,7 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
   };
 
   const getTierUnitFactor = (tier: string): number => {
-    const unitName = tierMaxQtyUnit[tier] || formData.units[0]?.name || 'قطعة';
+    const unitName = tierMaxQtyUnit[tier] || formData.units[0]?.name || t("materials.piece", { namespace: "inventory" });
     const unit = formData.units.find(u => u.name === unitName);
     const factor = unit ? parseFloat(unit.conversion_factor) : 1;
     return factor > 0 ? factor : 1;

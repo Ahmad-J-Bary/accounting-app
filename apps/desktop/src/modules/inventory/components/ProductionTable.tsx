@@ -37,7 +37,7 @@ export function ProductionTable({ data, loading, search, onSearchChange, onVisib
       label: t("production.columns.materialsLabel", { namespace: "inventory",  }),
       accessor: (o) => (
         <span className="inline-flex items-center gap-1.5 bg-slate-100 px-2 py-1 rounded text-slate-600 font-bold text-xs">
-          {o.materials.length} أصناف
+          {t("production.materialsSummary", { namespace: "inventory", vars: { count: o.materials.length } })}
         </span>
       ),
     },
@@ -47,7 +47,7 @@ export function ProductionTable({ data, loading, search, onSearchChange, onVisib
       label: t("production.columns.productsLabel", { namespace: "inventory",  }),
       accessor: (o) => (
         <span className="inline-flex items-center gap-1.5 bg-blue-50 px-2 py-1 rounded text-blue-600 font-bold text-xs">
-          {o.outputs.length} منتجات
+          {t("production.productsSummary", { namespace: "inventory", vars: { count: o.outputs.length } })}
         </span>
       ),
     },
@@ -60,7 +60,7 @@ export function ProductionTable({ data, loading, search, onSearchChange, onVisib
     },
     {
       id: "status",
-      header: t("production.status", { namespace: "inventory",  }),
+      header: t("labels.status", { namespace: "inventory" }),
       label: t("production.columns.statusLabel", { namespace: "inventory",  }),
       accessor: (o) => <StatusBadge status={o.status} />,
     }
@@ -94,11 +94,11 @@ export function ProductionTable({ data, loading, search, onSearchChange, onVisib
       loading={loading}
       search={search}
       onSearchChange={onSearchChange}
-      searchPlaceholder="بحث برقم الأمر..."
+      searchPlaceholder={t("production.searchPlaceholder", { namespace: "inventory" })}
       tableId="production"
       sortConfig={{ field: "production_date", direction: "desc", sortFn }}
       sortableFields={["order_number", "production_date", "materials_count", "outputs_count", "total_cost", "status"]}
-      emptyMessage={search ? "لا توجد نتائج للبحث" : "لا توجد أوامر إنتاج مسجّلة"}
+      emptyMessage={search ? t("labels.noResults", { namespace: "inventory" }) : t("production.empty", { namespace: "inventory" })}
       onVisibleColumnsChange={onVisibleColumnsChange}
     />
   );

@@ -54,6 +54,12 @@ export const common: Record<AppLanguage, TranslationTree> = {
       restoreDefaults: "استعادة الإعدادات الافتراضية",
       restoreDefaultColumns: "استعادة الأعمدة الافتراضية",
     },
+    status: {
+      paid: "مدفوع",
+      draft: "مسودة",
+      overdue: "متأخر",
+      partial: "جزئي",
+    },
     states: {
       loading: "جاري التحميل...",
       saving: "جاري الحفظ...",
@@ -225,6 +231,12 @@ export const common: Record<AppLanguage, TranslationTree> = {
       unpost: "Unpost",
       restoreDefaults: "Restore Defaults",
       restoreDefaultColumns: "Restore Default Columns",
+    },
+    status: {
+      paid: "Paid",
+      draft: "Draft",
+      overdue: "Overdue",
+      partial: "Partial",
     },
     states: {
       loading: "Loading...",

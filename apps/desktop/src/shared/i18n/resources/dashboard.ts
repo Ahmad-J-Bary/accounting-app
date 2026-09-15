@@ -45,6 +45,9 @@ export const dashboard: Record<AppLanguage, TranslationTree> = {
       revenueSeries: "الإيرادات",
       expensesSeries: "المصروفات",
       empty: "لا توجد بيانات إيرادات أو مصروفات مسجلة بعد",
+      months0: "يناير", months1: "فبراير", months2: "مارس", months3: "أبريل",
+      months4: "مايو", months5: "يونيو", months6: "يوليو", months7: "أغسطس",
+      months8: "سبتمبر", months9: "أكتوبر", months10: "نوفمبر", months11: "ديسمبر",
     },
     pie: {
       title: "توزيع المخزون",
@@ -164,6 +167,9 @@ export const dashboard: Record<AppLanguage, TranslationTree> = {
       revenueSeries: "Revenue",
       expensesSeries: "Expenses",
       empty: "No revenue or expense data recorded yet",
+      months0: "January", months1: "February", months2: "March", months3: "April",
+      months4: "May", months5: "June", months6: "July", months7: "August",
+      months8: "September", months9: "October", months10: "November", months11: "December",
     },
     pie: {
       title: "Inventory Distribution",
