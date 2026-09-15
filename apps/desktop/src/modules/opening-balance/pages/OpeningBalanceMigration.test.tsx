@@ -130,18 +130,15 @@ describe("OpeningBalanceMigration company-type gate", () => {
     expect(screen.queryByText("رصيد افتتاح الشركة")).not.toBeInTheDocument();
   });
 
-  it("shows the full page for an EXISTING company with a NOT_STARTED badge", async () => {
+  it("shows the wizard directly for an EXISTING company with a NOT_STARTED badge", async () => {
     vi.mocked(settingsService.getSettings).mockResolvedValue({
       accounting_start_mode: START_MODE_EXISTING,
     } as never);
     renderPage();
-    expect(await screen.findByText("رصيد افتتاح الشركة")).toBeInTheDocument();
     expect(await screen.findByText("لم يبدأ بعد")).toBeInTheDocument();
-    // The overview tab is the default landing: welcome for NOT_STARTED companies.
-    expect(screen.getByText("نظرة عامة")).toBeInTheDocument();
-    expect(screen.getByText("قائمة الترحيلات")).toBeInTheDocument();
-    expect(screen.getByText("إعداد رصيد افتتاح الشركة القائمة")).toBeInTheDocument();
-    expect(screen.getByText("ابدأ المعالج")).toBeInTheDocument();
+    // The wizard is shown directly — no tabs, no welcome card.
+    expect(screen.queryByText("نظرة عامة")).not.toBeInTheDocument();
+    expect(screen.queryByText("قائمة الترحيلات")).not.toBeInTheDocument();
   });
 
   it("keeps a fully ACTIVE EXISTING company on the post-transition completion step (no redirect)", { timeout: 15000 }, async () => {

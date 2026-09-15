@@ -23,7 +23,7 @@ const cellWrap = "w-full leading-snug";
 export function TrialBalanceView({ data, loading }: TrialBalanceViewProps) {
   const { currencies, formatAmount } = useCurrencyContext();
   const { isBaseCurrency, currencySuffix: cs } = useBaseCurrencyColumns();
-  const { t } = useLocalization();
+  const { t, language } = useLocalization();
   const [detailLevel, setDetailLevel] = useState(3);
 
   const DETAIL_LEVELS = [
@@ -58,7 +58,7 @@ export function TrialBalanceView({ data, loading }: TrialBalanceViewProps) {
     return map;
   }, [data.trialBalance.lines]);
 
-  const treeTotals = useMemo(() => computeTreeTotals(accounts, ledgerTotals), [accounts, ledgerTotals]);
+  const treeTotals = useMemo(() => computeTreeTotals(accounts, ledgerTotals, language), [accounts, ledgerTotals, language]);
 
   const maxDepth = DETAIL_LEVELS[detailLevel - 1].maxDepth;
 
@@ -201,9 +201,9 @@ export function TrialBalanceView({ data, loading }: TrialBalanceViewProps) {
         if (!status) return <div className={cellWrap}><span className="text-slate-300">—</span></div>;
         return (
           <div className={cellWrap}>
-            <span className={cn(
+              <span className={cn(
               "font-bold text-xs",
-              status === "مدين" ? "text-red-600" : "text-emerald-600",
+              status === "debit" ? "text-red-600" : "text-emerald-600",
             )}>
               {t("trialBalance.sign." + status, { namespace: "reports"})}
             </span>
@@ -262,7 +262,8 @@ export function TrialBalanceView({ data, loading }: TrialBalanceViewProps) {
       }
 
       if (id === "status") {
-        return { id: "status_spacer", columnId: "status", label: "", value: totals.balanceStatus || "—" };
+        const statusLabel = totals.balanceStatus ? t("trialBalance.sign." + totals.balanceStatus, { namespace: "reports" }) : "—";
+        return { id: "status_spacer", columnId: "status", label: "", value: statusLabel };
       }
 
       const openingMatch = id.match(/^opening_(.+)$/);

@@ -12,7 +12,7 @@ import { useLocalization } from "@app/providers/LocalizationProvider";
 
 export default function BalanceSheetReport() {
   const { baseCurrency, currencies, formatAmount, hasMultipleCurrencies } = useCurrencyContext();
-  const { t } = useLocalization();
+  const { t, language } = useLocalization();
   const {
     filters,
     setFilters,
@@ -54,8 +54,10 @@ export default function BalanceSheetReport() {
       { netProfit, totalDrawings: 0 },
       backendLedgerTotals,
       { closingInventory: reportData.closingInventory },
+      language,
+      t,
     );
-  }, [bsData, reportData.accounts, reportData.closingInventory]);
+  }, [bsData, reportData.accounts, reportData.closingInventory, language, t]);
 
   const formatValue = useCallback(
     (value: number) =>

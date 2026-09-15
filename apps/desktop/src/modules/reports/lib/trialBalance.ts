@@ -73,15 +73,16 @@ export function flattenTree(accounts: AccountDto[]): TrialBalanceRow[] {
   return result;
 }
 
-export function isBalanceDebit(balance: number): "مدين" | "دائن" | null {
-  if (balance > 0) return "مدين";
-  if (balance < 0) return "دائن";
+export function isBalanceDebit(balance: number): "debit" | "credit" | null {
+  if (balance > 0) return "debit";
+  if (balance < 0) return "credit";
   return null;
 }
 
 export function computeTreeTotals(
   accounts: AccountDto[],
   ltMap: Map<string, AccountLedgerTotal>,
+  language: "ar" | "en" = "ar",
 ): AccountTreeTotals[] {
   function extractData(nodes: ReturnType<typeof buildAccountTree<AccountTreeTotals>>): AccountTreeTotals[] {
     return nodes.map((n) => ({
@@ -116,7 +117,7 @@ export function computeTreeTotals(
 
         return {
           id: acc.id,
-          name: acc.name_ar,
+          name: language === "ar" ? acc.name_ar : acc.name_en,
           depth,
           openingDebit,
           openingCredit,

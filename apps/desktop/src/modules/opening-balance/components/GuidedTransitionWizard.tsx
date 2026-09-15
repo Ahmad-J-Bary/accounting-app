@@ -207,30 +207,10 @@ export function GuidedTransitionWizard() {
 
             {!isNew && (
               <>
-                <div className="rounded-lg border border-amber-200 bg-amber-50/60 p-3 space-y-1.5">
-                  <p className="text-xs font-semibold text-amber-700">{t("wizard.existingCompanyLabel", { namespace: "openingBalance" })}</p>
-                  <p className="text-xs text-amber-600">
-                    {t("wizard.existingCompanyDesc", { namespace: "openingBalance" })}
-                  </p>
-                </div>
-
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div className="space-y-1.5">
                     <FieldLabel htmlFor="wiz-cutover-date" required>{t("wizard.cutoverDate", { namespace: "openingBalance" })}</FieldLabel>
                     <Input id="wiz-cutover-date" type="date" value={w.cutoverDate} onChange={(e) => w.setCutoverDate(e.target.value)} className="h-9" />
-                    <p className="text-2xs text-slate-500">{t("wizard.cutoverHint", { namespace: "openingBalance" })}</p>
-                  </div>
-                  <div className="space-y-1.5">
-                    <FieldLabel htmlFor="wiz-source-system">{t("wizard.sourceSystem", { namespace: "openingBalance" })}</FieldLabel>
-                    <Input id="wiz-source-system" value={w.sourceSystem} onChange={(e) => w.setSourceSystem(e.target.value)} placeholder={t("wizard.sourceSystemPlaceholder", { namespace: "openingBalance" })} className="h-9" />
-                  </div>
-                  <div className="space-y-1.5">
-                    <FieldLabel htmlFor="wiz-source-reference">{t("wizard.sourceReference", { namespace: "openingBalance" })}</FieldLabel>
-                    <Input id="wiz-source-reference" value={w.sourceReference} onChange={(e) => w.setSourceReference(e.target.value)} placeholder={t("wizard.sourceReferencePlaceholder", { namespace: "openingBalance" })} className="h-9" />
-                  </div>
-                  <div className="space-y-1.5">
-                    <FieldLabel htmlFor="wiz-notes">{t("wizard.notes", { namespace: "openingBalance" })}</FieldLabel>
-                    <Input id="wiz-notes" value={w.notes} onChange={(e) => w.setNotes(e.target.value)} placeholder={t("wizard.notesPlaceholder", { namespace: "openingBalance" })} className="h-9" />
                   </div>
                 </div>
               </>

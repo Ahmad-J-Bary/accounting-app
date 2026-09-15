@@ -431,13 +431,14 @@ describe("computeBalanceSheet", () => {
     const eqSection = result.sections.find(s => s.id === "equity")!;
     const labels = eqSection.rows.map(r => r.label);
 
-    const partnerCapital = eqSection.rows.find(r => r.label === "reports.balanceSheet.sections.partnerCapital");
-    const retained = eqSection.rows.find(r => r.label === "reports.balanceSheet.sections.retainedEarnings");
+    // Single-account buckets are emitted flat (no parent–child duplication).
+    const capitalRow = eqSection.rows.find(r => r.label === "رأس المال");
+    const retainedRow = eqSection.rows.find(r => r.label === "الأرباح المبقاة");
 
-    expect(partnerCapital?.value).toBe(300);
-    expect(partnerCapital?.children?.map(r => r.label)).toEqual(["رأس المال"]);
-    expect(retained?.value).toBe(45);
-    expect(retained?.children).toBeUndefined();
+    expect(capitalRow?.value).toBe(300);
+    expect(capitalRow?.children).toBeUndefined();
+    expect(retainedRow?.value).toBe(45);
+    expect(retainedRow?.children).toBeUndefined();
     expect(labels).not.toContain("reports.balanceSheet.sections.otherEquity");
     expect(labels).not.toContain("reports.balanceSheet.sections.openingBalanceEquity");
     expect(labels).not.toContain("reports.balanceSheet.sections.equityContainer");

@@ -127,8 +127,8 @@ describe("flattenTree / flattenTreeRows", () => {
 
 describe("isBalanceDebit", () => {
   it("labels positive debit, negative credit, zero balanced", () => {
-    expect(isBalanceDebit(10)).toBe("مدين");
-    expect(isBalanceDebit(-10)).toBe("دائن");
+    expect(isBalanceDebit(10)).toBe("debit");
+    expect(isBalanceDebit(-10)).toBe("credit");
     expect(isBalanceDebit(0)).toBeNull();
   });
 });

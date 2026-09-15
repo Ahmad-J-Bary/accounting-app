@@ -45,7 +45,10 @@ export type BalanceSheetComputed = {
 type AccountBalance = {
   id: string;
   code: string;
+  /** Always the Arabic name — used for all classification / pattern matching. */
   name: string;
+  /** English display name resolved at render time. */
+  nameEn: string;
   balance: number;
   accountType: string;
   depth: number;
@@ -121,6 +124,7 @@ function buildBalanceSheetTree(
           id: acc.id,
           code: acc.code,
           name: acc.name_ar,
+          nameEn: acc.name_en,
           balance: keepOwn ? ownBalance : hasChildren ? childrenBalance : ownBalance,
           accountType: acc.account_type,
           depth,
@@ -152,21 +156,19 @@ export function computeBalanceSheet(
   profitLoss: { netProfit: number; totalDrawings: number },
   ledgerTotals?: Map<string, { debit: number; credit: number }>,
   inventory?: { closingInventory: number },
+  language: "ar" | "en" = "ar",
+  t?: (key: string, opts?: { namespace?: string }) => string,
 ): BalanceSheetComputed {
   const tree = buildBalanceSheetTree(accounts, ledgerTotals);
+  const inventoryLabel = t ? t("balanceSheet.sections.inventory", { namespace: "reports" }) : (language === "ar" ? "المخزون" : "Inventory");
 
-
-  // --- التصنيف الصحيح: يعتمد على accountType أولاً ثم الكود/الاسم ---
-  // المشكلة السابقة: "الخصوم الثابتة" كانت تُصنَّف كأصول ثابتة (يحتوي "ثابت")
-  //                  "الخصوم المتداولة" كانت تُصنَّف كأصول متداولة (يحتوي "متداول")
-
+  // --- التصنيف: accountType أولاً ثم الكود/الاسم (name = Arabic دائماً) ---
   const fixedAssets: AccountBalance[] = [];
   const currentAssets: AccountBalance[] = [];
   const fixedLiabilities: AccountBalance[] = [];
   const currentLiabilities: AccountBalance[] = [];
   const equityList: AccountBalance[] = [];
 
-// دالة مشتركة للتصنيف داخل نوع معين (أصول أو خصوم)
   function classifyWithinType(
     nodes: AccountBalance[],
     isFixed: (code: string, name: string, purpose?: string) => boolean,
@@ -177,20 +179,17 @@ export function computeBalanceSheet(
   ) {
     for (const node of nodes) {
       if (isInventoryTradingAccount(node.name)) continue;
-      // تخطي حسابات حقوق الملكية المضمّنة داخل شجرة الخصوم
       if (node.accountType === "Equity") { equityList.push(node); continue; }
       if (isFixed(node.code, node.name, node.purpose)) { fixed.push(node); }
       else if (isCurrent(node.code, node.name, node.purpose)) { current.push(node); }
       else if (node.children.length > 0) {
         classifyWithinType(node.children, isFixed, isCurrent, fixed, current, type);
       } else {
-        // حساب ورقي لا ينطبق عليه أي مصنف محدد → ضعه في المتداول افتراضياً
         current.push(node);
       }
     }
   }
 
-  // تجميع حسابات حقوق الملكية من أي مكان في الشجرة (بما فيها المضمّنة في الخصوم)
   function collectEquityDeep(nodes: AccountBalance[]) {
     for (const node of nodes) {
       if (node.accountType === "Equity") {
@@ -202,17 +201,14 @@ export function computeBalanceSheet(
   }
   collectEquityDeep(tree);
 
-  // تصنيف الأصول (فلترة بـ accountType أولاً)
   const assetRoots = tree.filter(a => a.accountType === "Assets");
   classifyWithinType(assetRoots, isFixedAsset, isCurrentAsset, fixedAssets, currentAssets, "Assets");
 
-  // تصنيف الخصوم (فلترة بـ accountType أولاً)
   const liabilityRoots = tree.filter(a => a.accountType === "Liabilities");
   classifyWithinType(liabilityRoots, isFixedLiability, isCurrentLiability, fixedLiabilities, currentLiabilities, "Liabilities");
 
   const assets = { fixed: fixedAssets, current: currentAssets };
   const liabilities = { fixed: fixedLiabilities, current: currentLiabilities };
-
 
   // --- تنظيف عميق لشجرة الأصول المتداولة ---
   const inventoryBalance = inventory?.closingInventory;
@@ -225,7 +221,8 @@ export function computeBalanceSheet(
         if (!inventoryHandled && a.name.includes("بضاعة أول المدة") && a.balance !== 0) {
           cleaned.push({
             ...a,
-            name: "المخزون",
+            name: language === "ar" ? "المخزون" : "Inventory",
+            nameEn: "Inventory",
             balance: inventoryBalance !== undefined && inventoryBalance !== 0 ? inventoryBalance : a.balance,
             children: [],
           });
@@ -238,7 +235,8 @@ export function computeBalanceSheet(
         if (!inventoryHandled) {
           cleaned.push({
             ...a,
-            name: "المخزون",
+            name: language === "ar" ? "المخزون" : "Inventory",
+            nameEn: "Inventory",
             balance: inventoryBalance !== undefined && inventoryBalance !== 0 ? inventoryBalance : a.balance,
             children: [],
           });
@@ -265,6 +263,7 @@ export function computeBalanceSheet(
       id: "__inventory__",
       code: "12-inventory",
       name: "المخزون",
+      nameEn: "Inventory",
       balance: inventoryBalance,
       accountType: "Assets",
       depth: 0,
@@ -275,21 +274,26 @@ export function computeBalanceSheet(
 
   const allEquity = equityList;
 
-  function isTreeAccount(name: string): boolean {
-    return name.includes("حقوق") || name.includes("ملكية") || name.includes("مدين") || name.includes("مخزون") || name.includes("دائن") || name.includes("شركاء") || name.includes("شريك") || name.includes("رأس المال") || name.includes("راس المال") || name.includes("جاري");
+  function isTreeAccount(nameAr: string): boolean {
+    return nameAr.includes("حقوق") || nameAr.includes("ملكية") || nameAr.includes("مدين") || nameAr.includes("مخزون") || nameAr.includes("دائن") || nameAr.includes("شركاء") || nameAr.includes("شريك") || nameAr.includes("رأس المال") || nameAr.includes("راس المال") || nameAr.includes("جاري");
+  }
+
+  /** Resolve the display name for a node based on the chosen language. */
+  function displayName(acc: AccountBalance): string {
+    return language === "ar" ? acc.name : acc.nameEn;
   }
 
   function accountToRow(acc: AccountBalance, depth: number = 0): BalanceSheetRow {
     return {
-      label: acc.name,
+      label: displayName(acc),
       value: acc.balance,
       depth,
       children: acc.children.length > 0 ? acc.children.map(c => accountToRow(c, depth + 1)) : undefined,
     };
   }
 
-  function isAccDep(name: string): boolean {
-    return name.includes("مجمع إهلاك");
+  function isAccDep(nameAr: string): boolean {
+    return nameAr.includes("مجمع إهلاك");
   }
 
   function buildSectionRows(accounts: AccountBalance[]): BalanceSheetRow[] {
@@ -301,9 +305,11 @@ export function computeBalanceSheet(
         } else if (a.children.length > 0) {
           walk(a.children, depth);
         } else {
+          const dn = displayName(a);
+          const isDep = isAccDep(a.name);
           result.push({
-            label: isAccDep(a.name) ? `(-) ${a.name}` : a.name,
-            value: isAccDep(a.name) ? Math.abs(a.balance) : a.balance,
+            label: isDep ? `(-) ${dn}` : dn,
+            value: isDep ? Math.abs(a.balance) : a.balance,
             depth,
           });
         }
@@ -313,16 +319,6 @@ export function computeBalanceSheet(
     return result;
   }
 
-  /**
-   * Equity rows grouped by account purpose so retained earnings and partner
-   * capital appear on their own lines (رأس مال الشركاء / الأرباح المبقاة /
-   * حقوق ملكية أخرى). Each tree-account container (e.g. "حقوق الملكية") keeps
-   * its exact balance and renders its transitive leaves bucketed by purpose;
-   * standalone leaves and non-tree parents keep the legacy flat walk, so
-   * charts without a container produce byte-identical output.
-   */
-  // Account purposes hidden from the Balance Sheet display
-  // (but their balances are still counted in totalEquity)
   const HIDDEN_EQUITY_PURPOSES = new Set([
     "opening_equity_adjustment",
     "prior_period_adjustment",
@@ -359,17 +355,35 @@ export function computeBalanceSheet(
         buckets.set(key, group);
       }
       return Array.from(buckets.entries()).map(([key, bucketLeaves]) => {
+        const rowLabel = key === "other" ? "reports.balanceSheet.sections.otherEquity" : bucketLabel(bucketLeaves[0]);
+        const totalValue = bucketLeaves.reduce((s, l) => s + l.balance, 0);
+
+        if (bucketLeaves.length === 1) {
+          const only = bucketLeaves[0];
+          const dn = displayName(only);
+          const isDep = isAccDep(only.name);
+          return {
+            label: isDep ? `(-) ${dn}` : dn,
+            value: isDep ? Math.abs(only.balance) : only.balance,
+            depth,
+          };
+        }
+
         const row: BalanceSheetRow = {
-          label: key === "other" ? "reports.balanceSheet.sections.otherEquity" : bucketLabel(bucketLeaves[0]),
-          value: bucketLeaves.reduce((s, l) => s + l.balance, 0),
+          label: rowLabel,
+          value: totalValue,
           depth,
         };
         if (key !== "retained_earnings") {
-          row.children = bucketLeaves.map((l) => ({
-            label: isAccDep(l.name) ? `(-) ${l.name}` : l.name,
-            value: isAccDep(l.name) ? Math.abs(l.balance) : l.balance,
-            depth: depth + 1,
-          }));
+          row.children = bucketLeaves.map((l) => {
+            const dn = displayName(l);
+            const isDep = isAccDep(l.name);
+            return {
+              label: isDep ? `(-) ${dn}` : dn,
+              value: isDep ? Math.abs(l.balance) : l.balance,
+              depth: depth + 1,
+            };
+          });
         }
         return row;
       });
