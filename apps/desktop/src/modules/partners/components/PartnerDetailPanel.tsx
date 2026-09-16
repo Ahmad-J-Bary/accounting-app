@@ -17,6 +17,7 @@ import {
   type SidebarAction,
 } from "@widgets/sidebar-shell";
 import { useLocalization } from "@app/providers/LocalizationProvider";
+import { resolvePartnerDisplayName } from "@shared/lib/system-labels";
 
 interface PartnerDetailPanelProps {
   type: "customer" | "supplier";
@@ -36,7 +37,7 @@ export function PartnerDetailPanel({
   onRefresh,
 }: PartnerDetailPanelProps) {
   const { currencies, baseCurrency } = useCurrencyContext();
-  const { t } = useLocalization();
+  const { t, language } = useLocalization();
   const { openTab } = useTabs();
   const { canAccessOpeningWorkflow } = useCompanyCapabilities();
   const [settled, setSettled] = useState(false);
@@ -171,7 +172,7 @@ export function PartnerDetailPanel({
             <SidebarDetailGrid
               columns={2}
               fields={[
-                { label: t("detail.fields.name", { namespace: "partners",  }), value: partner.name },
+                { label: t("detail.fields.name", { namespace: "partners",  }), value: resolvePartnerDisplayName(partner.name, ("code" in partner ? String((partner as unknown as Record<string, unknown>).code ?? "") : ""), type, language, t) },
               ]}
             />
             <SidebarDetailGrid
@@ -192,7 +193,7 @@ export function PartnerDetailPanel({
               columns={2}
               fields={[
                 { label: t("detail.fields.accountNumber", { namespace: "partners",  }), value: (partner as CustomerDto | SupplierDto).code || "" },
-                { label: isCustomer ? t("columns.partyNameCustomer", { namespace: "partners",  }) : t("columns.partyNameSupplier", { namespace: "partners",  }), value: partner.name },
+                { label: isCustomer ? t("columns.partyNameCustomer", { namespace: "partners",  }) : t("columns.partyNameSupplier", { namespace: "partners",  }), value: resolvePartnerDisplayName(partner.name, ("code" in partner ? String((partner as unknown as Record<string, unknown>).code ?? "") : ""), type, language, t) },
                 { label: t("detail.fields.phone", { namespace: "partners",  }), value: (partner as CustomerDto | SupplierDto).phone || "—" },
                 { label: t("detail.fields.address", { namespace: "partners",  }), value: (partner as CustomerDto | SupplierDto).address || "—" },
               ]}

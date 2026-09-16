@@ -19,7 +19,7 @@ export function useTableColumns() {
     return {
       id: "status",
       header: sortableHeader,
-      label: t("common.labels.accountStatus", { namespace: "common" }),
+      label: t("labels.accountStatus", { namespace: "common" }),
       accessor: (item) => {
         const bal = effectiveBalanceBase(
           item.debit !== undefined ? Number(item.debit || 0) : undefined,
@@ -31,7 +31,7 @@ export function useTableColumns() {
         const isDebit = bal > 0;
         return (
           <span className={`font-bold ${isDebit ? "text-red-600" : "text-emerald-600"}`}>
-            {isDebit ? t("common.labels.debit", { namespace: "common" }) : t("common.labels.creditSide", { namespace: "common" })}
+            {isDebit ? t("labels.debit", { namespace: "common" }) : t("labels.creditSide", { namespace: "common" })}
           </span>
         );
       }
@@ -44,8 +44,8 @@ export function useTableColumns() {
       const symbol = curr.symbol || curr.code;
       return {
         id: `balance_${curr.code}`,
-        header: `${t("common.labels.balance", { namespace: "common" })}${cs(symbol)}`,
-        label: `${t("common.labels.balance", { namespace: "common" })}${cs(symbol)}`,
+        header: `${t("labels.balance", { namespace: "common" })}${cs(symbol)}`,
+        label: `${t("labels.balance", { namespace: "common" })}${cs(symbol)}`,
         accessor: (item) => {
           const effectiveBalance = (item.debit !== undefined && item.credit !== undefined)
             ? Number(item.debit || 0) - Number(item.credit || 0)
@@ -121,7 +121,7 @@ export function useTableColumns() {
         return {
           id: `${id}_summary`,
           columnId: id,
-          label: overallLabel ? `${t("common.labels.balance", { namespace: "common" })} / ${overallLabel}` : "—",
+          label: overallLabel ? `${t("labels.balance", { namespace: "common" })} / ${overallLabel}` : "—",
           value: baseTotal !== 0 ? formatAmount(baseTotal, { currencyCode: currCode }) : "—",
           className: valueClass,
         };

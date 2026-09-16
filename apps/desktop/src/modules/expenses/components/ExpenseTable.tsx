@@ -34,7 +34,7 @@ const codeSuffix = (code: string, prefix?: string) => {
 };
 
 export function ExpenseTable({ expenses, loading, search, onSearchChange, onView, onEdit, onDelete, onJournal, onDocument, selectedId, parentCode, onVisibleColumnsChange }: ExpenseTableProps) {
-  const { t } = useLocalization();
+  const { t, language } = useLocalization();
   const { currencies, formatAmount, toBase } = useCurrencyContext();
   const { isBaseCurrency, currencySuffix: cs } = useBaseCurrencyColumns();
   const { getAccountStatusColumn } = useTableColumns();
@@ -46,7 +46,7 @@ export function ExpenseTable({ expenses, loading, search, onSearchChange, onView
       let comparison = 0;
       switch (field) {
         case "code": comparison = (parseInt(codeSuffix(a.code || "0", parentCode), 10) || 0) - (parseInt(codeSuffix(b.code || "0", parentCode), 10) || 0); break;
-        case "name": comparison = (a.name_ar || "").localeCompare(b.name_ar || "", "ar"); break;
+        case "name": comparison = ((language === "ar" ? a.name_ar : a.name_en) || "").localeCompare((language === "ar" ? b.name_ar : b.name_en) || "", language === "ar" ? "ar" : "en"); break;
         case "balance": comparison = (Number(a.balance) || 0) - (Number(b.balance) || 0); break;
       }
       return direction === "asc" ? comparison : -comparison;
@@ -72,7 +72,7 @@ export function ExpenseTable({ expenses, loading, search, onSearchChange, onView
         id: "name",
         header: t("expense.itemName", { namespace: "invoicing",  }),
         label: t("expense.itemName", { namespace: "invoicing",  }),
-        accessor: "name_ar",
+        accessor: (c) => language === "ar" ? (c.name_ar || "") : (c.name_en || c.name_ar || ""),
         className: "font-bold text-slate-800"
       },
     ];
@@ -116,7 +116,7 @@ export function ExpenseTable({ expenses, loading, search, onSearchChange, onView
     });
 
     return cols;
-  }, [currencies, formatAmount, toBase, parentCode, onView, onEdit, onDelete, onJournal, onDocument, getAccountStatusColumn, isBaseCurrency, cs, t]);
+  }, [currencies, formatAmount, toBase, parentCode, onView, onEdit, onDelete, onJournal, onDocument, getAccountStatusColumn, isBaseCurrency, cs, t, language]);
 
   // Default visible: only base currency's balance column is visible.
   // Secondary currency balances are hidden by default (user can toggle on).

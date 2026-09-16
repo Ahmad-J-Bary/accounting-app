@@ -203,6 +203,11 @@ export const common: Record<AppLanguage, TranslationTree> = {
       cancelChanges: "سيتم فقدان التغييرات غير المحفوظة. هل تريد المتابعة؟",
       irreversible: "لا يمكن التراجع عن هذا الإجراء.",
     },
+    system: {
+      cashCustomer: "زبون نقدي",
+      cashSupplier: "مورد نقدي",
+      uncategorized: "غير مصنف",
+    },
   },
   en: {
     actions: {
@@ -405,6 +410,11 @@ export const common: Record<AppLanguage, TranslationTree> = {
       save: "Do you want to save your changes?",
       cancelChanges: "Unsaved changes will be lost. Do you want to continue?",
       irreversible: "This action cannot be undone.",
+    },
+    system: {
+      cashCustomer: "Cash Customer",
+      cashSupplier: "Cash Supplier",
+      uncategorized: "Uncategorized",
     },
   },
 };

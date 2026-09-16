@@ -122,22 +122,24 @@ describe("App — Language Gate (7 cases)", () => {
     expect(mockIsSetupComplete).not.toHaveBeenCalled();
   });
 
-  it("persists erp_language to localStorage after user selects a language", async () => {
+  it("persists erp_language to localStorage after user selects a language and clicks Next", async () => {
     const user = userEvent.setup();
     render(<App />);
 
     await user.click(screen.getByRole("button", { name: /العربية/i }));
+    await user.click(screen.getByRole("button", { name: /التالي|Next/i }));
 
     expect(localStorage.getItem(LANGUAGE_KEY)).toBe("ar");
   });
 
-  it("switches to NormalStartup after language selection (no infinite loop)", async () => {
+  it("switches to NormalStartup after language selection and Next click (no infinite loop)", async () => {
     const user = userEvent.setup();
     render(<App />);
 
     expect(screen.getByText("اختر اللغة")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: /العربية/i }));
+    await user.click(screen.getByRole("button", { name: /التالي|Next/i }));
 
     expect(screen.queryByText("اختر اللغة")).not.toBeInTheDocument();
   });

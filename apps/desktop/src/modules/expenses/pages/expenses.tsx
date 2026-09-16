@@ -33,7 +33,7 @@ const OTHER_EXPENSES_PARENT_ID = SYSTEM_ACCOUNT_IDS.OTHER_EXPENSES;
 type ExpenseSavePayload = SaveAccountCommand & { _id?: string };
 
 export default function Expenses() {
-  const { t } = useLocalization();
+  const { t, language } = useLocalization();
   const { hasSecondaryCurrencies } = useBaseCurrencyColumns();
   const { exportData, baseCurrency, rateMap, currencies, formatAmount, currencyMode, ratesSheet, baseCode } = useExportSetup();
   const { toBase } = useCurrencyContext();
@@ -154,7 +154,7 @@ export default function Expenses() {
         const suffix = prefix && c.code?.startsWith(prefix) ? c.code.substring(prefix.length) : c.code || "";
         return suffix ? parseInt(suffix) || 0 : 0;
       }, numeric: true },
-      { id: "name", label: t("expense.itemName", { namespace: "invoicing",  }), accessor: (row) => String((row as unknown as AccountDto).name_ar ?? "") },
+      { id: "name", label: t("expense.itemName", { namespace: "invoicing",  }), accessor: (row) => { const c = row as unknown as AccountDto; return String(language === "ar" ? (c.name_ar ?? "") : (c.name_en ?? c.name_ar ?? "")); } },
       { id: "status", label: t("expense.accountStatus", { namespace: "invoicing",  }), accessor: (row) => {
         const c = row as unknown as AccountDto;
         return balanceDirectionLabel(
@@ -174,7 +174,7 @@ export default function Expenses() {
       summaryLabel: t("document.summaryLabel", { namespace: "invoicing",  }),
       currencyRatesSheet: ratesSheet,
     });
-  }, [expenses, currencies, formatAmount, toBase, currencyMode, baseCode, rateMap, expensesParent, exportData, hasSecondaryCurrencies, ratesSheet, visibleColumnIds, t]);
+  }, [expenses, currencies, formatAmount, toBase, currencyMode, baseCode, rateMap, expensesParent, exportData, hasSecondaryCurrencies, ratesSheet, visibleColumnIds, t, language]);
 
   const isLoading = loading || refreshing;
 
@@ -190,7 +190,7 @@ export default function Expenses() {
             disabled={!selectedId || !selectedExpense?.id}
             onClick={() => selectedExpense?.id && openTab({
               id: `ledger-${selectedExpense.id}`,
-              title: t("expense.ledgerTabTitle", { namespace: "invoicing", vars: { name: selectedExpense.name_ar },  }),
+              title: t("expense.ledgerTabTitle", { namespace: "invoicing", vars: { name: language === "ar" ? selectedExpense.name_ar : (selectedExpense.name_en || selectedExpense.name_ar) },  }),
               path: `/accounting/account-ledger/${selectedExpense.id}`,
               closable: true
             })}
@@ -238,7 +238,7 @@ export default function Expenses() {
             onDelete={(id) => { setSelectedId(null); handleDelete(id); }}
             onJournal={(acc) => acc.id && openTab({
               id: `ledger-${acc.id}`,
-              title: t("expense.ledgerTabTitle", { namespace: "invoicing", vars: { name: acc.name_ar },  }),
+              title: t("expense.ledgerTabTitle", { namespace: "invoicing", vars: { name: language === "ar" ? acc.name_ar : (acc.name_en || acc.name_ar) },  }),
               path: `/accounting/account-ledger/${acc.id}`,
               closable: true
             })}

@@ -8,6 +8,7 @@ import { formatNumber } from "@shared/lib/format";
 import { NotebookText, Receipt, User, Truck } from "lucide-react";
 import { TableActions } from "@widgets/table-shell/TableActions";
 import { useLocalization } from "@app/providers/LocalizationProvider";
+import { resolvePartnerDisplayName } from "@shared/lib/system-labels";
 
 interface PartyTableProps<T extends { id: string; name: string; code?: string; phone?: string | null; balance?: string | number; notes?: string | null }> {
   entityName: "customer" | "supplier";
@@ -71,7 +72,7 @@ export function PartyTable<T extends { id: string; name: string; code?: string; 
 }: PartyTableProps<T>) {
   const cfg = ENTITY_CONFIG[entityName];
   const Icon = cfg.icon;
-  const { t } = useLocalization();
+  const { t, language } = useLocalization();
   const { currencies } = useCurrencyContext();
   const { isBaseCurrency } = useBaseCurrencyColumns();
   const { getAccountStatusColumn, getBalanceColumns, getSummaryColumns } = useTableColumns();
@@ -122,7 +123,7 @@ export function PartyTable<T extends { id: string; name: string; code?: string; 
             <div className={`w-8 h-8 rounded-full ${cfg.avatarBg} flex items-center justify-center ${cfg.avatarText} shrink-0`}>
               <Icon className="w-4 h-4" />
             </div>
-            <span className="font-bold text-slate-800">{item.name}</span>
+            <span className="font-bold text-slate-800">{resolvePartnerDisplayName(item.name, item.code || "", entityName, language, t)}</span>
           </div>
         ),
       },
@@ -181,7 +182,7 @@ export function PartyTable<T extends { id: string; name: string; code?: string; 
     });
 
     return cols;
-  }, [onView, onEdit, onDelete, onJournal, onDocument, getAccountStatusColumn, getBalanceColumns, isBaseCurrency, entityName, cfg, Icon, labels, t]);
+  }, [onView, onEdit, onDelete, onJournal, onDocument, getAccountStatusColumn, getBalanceColumns, isBaseCurrency, entityName, cfg, Icon, labels, t, language]);
 
   const defaultVisible = useMemo(() => {
     const ids: string[] = ["code", "name", "status"];

@@ -20,8 +20,7 @@ import { UnitCard } from './UnitCard';
 import { AddUnitForm } from './AddUnitForm';
 import { useBarcodeScanner } from "@app/providers/BarcodeScannerProvider";
 import { useLocalization } from "@app/providers/LocalizationProvider";
-
-const DEFAULT_CATEGORY_NAME = "غير مصنف";
+import { DEFAULT_CATEGORY_ID } from "@modules/inventory/hooks/useCategoryTree";
 
 interface MaterialFormProps {
   open: boolean;
@@ -142,7 +141,7 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
   const handleCreateMain = useCallback(async () => {
     if (!newCatName.trim()) { toast.error(t("categories.form.categoryNameRequired", { namespace: "inventory" })); return; }
     const trimmed = newCatName.trim();
-    if (categories.some(c => !c.parent_id && c.name === trimmed && c.name !== DEFAULT_CATEGORY_NAME)) {
+    if (categories.some(c => !c.parent_id && c.name === trimmed && c.id !== DEFAULT_CATEGORY_ID)) {
       toast.error(t("categories.form.duplicateRoot", { namespace: "inventory", vars: { name: trimmed } }));
       return;
     }

@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import type { CategoryDto, MaterialDto } from "@erp/shared-types";
 
 export const VIRTUAL_ROOT_ID = "__categories_root__";
-const DEFAULT_CATEGORY_NAME = "غير مصنف";
+export const DEFAULT_CATEGORY_ID = "00000000-0000-0000-0000-000000000001";
 
 export interface CategoryTreeNode extends CategoryDto {
   children: CategoryTreeNode[];
@@ -36,7 +36,7 @@ function buildTree(cats: CategoryDto[], materials: MaterialDto[], virtualRootNam
     };
 
     if (categoryIds.length === 0) {
-      const uncategorized = normalCats.find(c => c.name === DEFAULT_CATEGORY_NAME && !c.parent_id);
+      const uncategorized = normalCats.find(c => c.id === DEFAULT_CATEGORY_ID && !c.parent_id);
       if (uncategorized) {
         const node = map.get(uncategorized.id);
         if (node) node.children.push({ ...matNode, parent_id: uncategorized.id });
@@ -51,7 +51,7 @@ function buildTree(cats: CategoryDto[], materials: MaterialDto[], virtualRootNam
 
   // 3. Build hierarchy with strict cycle detection
   const rootChildren: CategoryTreeNode[] = [];
-  const uncategorizedNode = normalCats.find(c => c.name === DEFAULT_CATEGORY_NAME && !c.parent_id);
+  const uncategorizedNode = normalCats.find(c => c.id === DEFAULT_CATEGORY_ID && !c.parent_id);
   const attachedIds = new Set<string>();
 
   const isAncestor = (parentId: string, nodeId: string): boolean => {

@@ -20,30 +20,43 @@ describe("FirstLaunchLanguageGate — LanguageSelector", () => {
     expect(screen.getByText("Choose Language")).toBeInTheDocument();
   });
 
-  it("renders Arabic and English buttons", () => {
+  it("renders Arabic, English buttons and Next button", () => {
     render(<LanguageSelector onComplete={() => {}} />);
     expect(screen.getByRole("button", { name: /العربية/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /English/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /التالي|Next/i })).toBeInTheDocument();
   });
 
-  it("calls onComplete with 'ar' when Arabic is selected", async () => {
+  it("calls onComplete with 'ar' when Arabic is selected and Next is clicked", async () => {
+    const onComplete = vi.fn();
+    const user = userEvent.setup();
+    render(<LanguageSelector onComplete={onComplete} />);
+
+    await user.click(screen.getByRole("button", { name: /العربية/i }));
+    await user.click(screen.getByRole("button", { name: /التالي|Next/i }));
+
+    expect(onComplete).toHaveBeenCalledWith("ar");
+  });
+
+  it("calls onComplete with 'en' when English is selected and Next is clicked", async () => {
+    const onComplete = vi.fn();
+    const user = userEvent.setup();
+    render(<LanguageSelector onComplete={onComplete} />);
+
+    await user.click(screen.getByRole("button", { name: /English/i }));
+    await user.click(screen.getByRole("button", { name: /التالي|Next/i }));
+
+    expect(onComplete).toHaveBeenCalledWith("en");
+  });
+
+  it("does NOT call onComplete when only a language is clicked (without Next)", async () => {
     const onComplete = vi.fn();
     const user = userEvent.setup();
     render(<LanguageSelector onComplete={onComplete} />);
 
     await user.click(screen.getByRole("button", { name: /العربية/i }));
 
-    expect(onComplete).toHaveBeenCalledWith("ar");
-  });
-
-  it("calls onComplete with 'en' when English is selected", async () => {
-    const onComplete = vi.fn();
-    const user = userEvent.setup();
-    render(<LanguageSelector onComplete={onComplete} />);
-
-    await user.click(screen.getByRole("button", { name: /English/i }));
-
-    expect(onComplete).toHaveBeenCalledWith("en");
+    expect(onComplete).not.toHaveBeenCalled();
   });
 
   it("does NOT persist to localStorage directly — parent is responsible", async () => {
@@ -52,21 +65,23 @@ describe("FirstLaunchLanguageGate — LanguageSelector", () => {
     render(<LanguageSelector onComplete={onComplete} />);
 
     await user.click(screen.getByRole("button", { name: /العربية/i }));
+    await user.click(screen.getByRole("button", { name: /التالي|Next/i }));
 
     // LanguageSelector calls onComplete — the PARENT (App.tsx) persists
     expect(localStorage.getItem(LANGUAGE_KEY)).toBeNull();
     expect(onComplete).toHaveBeenCalled();
   });
 
-  it("disables buttons after selection (prevents double-click)", async () => {
+  it("disables buttons after Next is clicked (prevents double-click)", async () => {
     const onComplete = vi.fn();
     const user = userEvent.setup();
     render(<LanguageSelector onComplete={onComplete} />);
 
-    const btn = screen.getByRole("button", { name: /العربية/i });
-    await user.click(btn);
+    await user.click(screen.getByRole("button", { name: /العربية/i }));
+    const nextBtn = screen.getByRole("button", { name: /التالي|Next/i });
+    await user.click(nextBtn);
 
-    expect(btn).toBeDisabled();
+    expect(nextBtn).toBeDisabled();
   });
 
   it("renders without any provider — standalone", () => {

@@ -18,13 +18,11 @@ import { CategoryDeleteDialog, type CategoryDeleteKind } from "./categories/Cate
 import { MaterialForm } from "@modules/inventory/components/MaterialForm";
 import { MaterialUnitsManager } from "@modules/inventory/components/MaterialUnitsManager";
 import { MaterialDetailPanel } from "@modules/inventory/components/MaterialDetailPanel";
-import { useCategoryTree, VIRTUAL_ROOT_ID, type CategoryTreeNode } from '@modules/inventory/hooks/useCategoryTree';
+import { useCategoryTree, VIRTUAL_ROOT_ID, DEFAULT_CATEGORY_ID, type CategoryTreeNode } from '@modules/inventory/hooks/useCategoryTree';
 import { useCategories } from "@shared/hooks/queries/useCategoryQueries";
 import { useMaterials } from "@shared/hooks/queries/useMaterialQueries";
 import { QUERY_KEYS, INVENTORY_MUTATION_KEYS, invalidateKeys } from "@shared/hooks/queryClient";
 import { useLocalization } from "@app/providers/LocalizationProvider";
-
-const DEFAULT_CATEGORY_NAME = "غير مصنف";
 
 /** What the side panel should render for the current selection. */
 type PanelAction =
@@ -119,7 +117,7 @@ export default function Categories() {
 
   const isRootSelected = selected?.id === VIRTUAL_ROOT_ID;
   const isMaterialSelected = !!selected?.isMaterial;
-  const isUncategorizedSelected = !!selected && !selected.isMaterial && selected.name === DEFAULT_CATEGORY_NAME;
+  const isUncategorizedSelected = !!selected && !selected.isMaterial && selected.id === DEFAULT_CATEGORY_ID;
   const canOperate = !!selected && !isRootSelected;
   const canDelete = canOperate && !isUncategorizedSelected;
 
@@ -139,13 +137,13 @@ export default function Categories() {
     if (node.isMaterial) return null; // handled by material flow
 
     const id = node.id;
-    const isRoot = !node.parent_id && node.name !== DEFAULT_CATEGORY_NAME;
+    const isRoot = !node.parent_id && node.id !== DEFAULT_CATEGORY_ID;
 
     if (isRoot) {
       const subs = categories.filter(c => c.parent_id === id);
       const subMaterialCount = subs.reduce((s, c) => s + (c.material_count ?? 0), 0);
       if (subs.length === 0) return { type: "root_no_subs" };
-      const defaultCat = categories.find(c => c.name === DEFAULT_CATEGORY_NAME);
+      const defaultCat = categories.find(c => c.id === DEFAULT_CATEGORY_ID);
       return {
         type: "root_with_subs",
         subCount: subs.length,
@@ -162,7 +160,7 @@ export default function Categories() {
     const isGeneralSub = !!root && node.name === `${root.name} عام`;
 
     if (isGeneralSub) {
-      const defaultCat = categories.find(c => c.name === DEFAULT_CATEGORY_NAME);
+      const defaultCat = categories.find(c => c.id === DEFAULT_CATEGORY_ID);
       return {
         type: "sub_with_materials",
         materialCount,
@@ -181,7 +179,7 @@ export default function Categories() {
       };
     }
 
-    const defaultCat = categories.find(c => c.name === DEFAULT_CATEGORY_NAME);
+    const defaultCat = categories.find(c => c.id === DEFAULT_CATEGORY_ID);
     return {
       type: "sub_with_materials",
       materialCount,
@@ -194,9 +192,9 @@ export default function Categories() {
   const computeReassignTargetId = useCallback((node: CategoryTreeNode): string | null => {
     if (node.id === VIRTUAL_ROOT_ID || node.isMaterial) return null;
 
-    const isRoot = !node.parent_id && node.name !== DEFAULT_CATEGORY_NAME;
+    const isRoot = !node.parent_id && node.id !== DEFAULT_CATEGORY_ID;
     if (isRoot) {
-      const defaultCat = categories.find(c => c.name === DEFAULT_CATEGORY_NAME);
+      const defaultCat = categories.find(c => c.id === DEFAULT_CATEGORY_ID);
       return defaultCat?.id ?? null;
     }
 
@@ -204,14 +202,14 @@ export default function Categories() {
     const isGeneralSub = !!root && node.name === `${root.name} عام`;
 
     if (isGeneralSub) {
-      const defaultCat = categories.find(c => c.name === DEFAULT_CATEGORY_NAME);
+      const defaultCat = categories.find(c => c.id === DEFAULT_CATEGORY_ID);
       return defaultCat?.id ?? null;
     }
 
     const generalSub = root ? categories.find(c => c.parent_id === root.id && c.name === `${root.name} عام`) : undefined;
     if (generalSub) return generalSub.id;
 
-    const defaultCat = categories.find(c => c.name === DEFAULT_CATEGORY_NAME);
+    const defaultCat = categories.find(c => c.id === DEFAULT_CATEGORY_ID);
     return defaultCat?.id ?? null;
   }, [categories]);
 
@@ -250,7 +248,7 @@ export default function Categories() {
       setMaterialDeleteOpen(true);
       return;
     }
-    if (selected.name === DEFAULT_CATEGORY_NAME) {
+    if (selected.id === DEFAULT_CATEGORY_ID) {
       toast.error(t("categories.cannotDeleteDefault", { namespace: "inventory", vars: { name: t("materials.uncategorized", { namespace: "inventory" }) },  }));
       return;
     }
