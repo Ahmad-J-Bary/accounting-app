@@ -305,20 +305,20 @@ export default function Dashboard() {
         <div className="space-y-4">
           {lowStock.length > 0 ? (
             <>
-              <div className="flex items-center gap-3 p-4 rounded-2xl bg-rose-50 border border-rose-100">
-                <div className="w-10 h-10 rounded-xl bg-rose-600 flex items-center justify-center">
-                  <Bell className="w-5 h-5 text-white" />
+              <div className="flex items-center gap-3 p-4 rounded-2xl bg-destructive/10 border border-destructive/20">
+                <div className="w-10 h-10 rounded-xl bg-destructive flex items-center justify-center">
+                  <Bell className="w-5 h-5 text-destructive-foreground" />
                 </div>
                 <div className="flex-1">
-                  <div className="text-xs font-black text-rose-600">{t("alerts.lowStockTitle", { namespace: "dashboard",  })}</div>
-                  <div className="text-sm font-bold text-rose-900">{t("alerts.lowStockBody", { namespace: "dashboard", vars: { count: lowStock.length } })}</div>
+                  <div className="text-xs font-black text-destructive">{t("alerts.lowStockTitle", { namespace: "dashboard",  })}</div>
+                  <div className="text-sm font-bold text-destructive/90">{t("alerts.lowStockBody", { namespace: "dashboard", vars: { count: lowStock.length } })}</div>
                 </div>
               </div>
               <div className="space-y-2 max-h-[200px] overflow-auto">
                 {lowStock.map(p => (
                   <div key={p.id} className="flex items-center justify-between p-3 border-b border-slate-50 last:border-0 group hover:bg-slate-50 rounded-lg transition-colors">
                     <span className="text-sm font-bold text-slate-700">{p.name}</span>
-                    <span className="text-xs font-black tabular-nums text-rose-600 bg-rose-50 px-2 py-1 rounded-md">
+                    <span className="text-xs font-black tabular-nums text-destructive bg-destructive/10 px-2 py-1 rounded-md">
                       {p.total_available} / {p.minimum_stock}
                     </span>
                   </div>
@@ -326,15 +326,15 @@ export default function Dashboard() {
               </div>
             </>
           ) : (
-            <div className="flex items-center gap-3 p-4 rounded-2xl bg-emerald-50 border border-emerald-100">
-              <div className="w-10 h-10 rounded-xl bg-emerald-600 flex items-center justify-center">
-                <Package className="w-5 h-5 text-white" />
+              <div className="flex items-center gap-3 p-4 rounded-2xl bg-success/10 border border-success/20">
+                <div className="w-10 h-10 rounded-xl bg-success flex items-center justify-center">
+                  <Package className="w-5 h-5 text-success-foreground" />
+                </div>
+                <div className="flex-1">
+                  <div className="text-xs font-black text-success">{t("alerts.safeTitle", { namespace: "dashboard",  })}</div>
+                  <div className="text-sm font-bold text-success/90">{t("alerts.safeBody", { namespace: "dashboard",  })}</div>
+                </div>
               </div>
-              <div className="flex-1">
-                <div className="text-xs font-black text-emerald-600">{t("alerts.safeTitle", { namespace: "dashboard",  })}</div>
-                <div className="text-sm font-bold text-emerald-900">{t("alerts.safeBody", { namespace: "dashboard",  })}</div>
-              </div>
-            </div>
           )}
           <QuickActions columns={1} />
         </div>

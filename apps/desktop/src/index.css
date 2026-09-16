@@ -107,6 +107,14 @@
     --sidebar-border: 215 30% 28%;
     --sidebar-ring: 210 40% 70%;
 
+    /* ── Semantic Status Colors ── */
+    --success: 152 69% 35%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+    --info: 217 91% 60%;
+    --info-foreground: 0 0% 100%;
+
     /* ── Global Density Tokens (comfortable = default) ── */
     --density-spacing-xs: 0.25rem;
     --density-spacing-sm: 0.5rem;
@@ -145,6 +153,14 @@
     --sidebar-accent-foreground: 210 40% 90%;
     --sidebar-border: 217 33% 18%;
     --sidebar-ring: 210 40% 70%;
+
+    /* ── Semantic Status Colors (dark) ── */
+    --success: 152 69% 42%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 55%;
+    --warning-foreground: 0 0% 100%;
+    --info: 217 91% 65%;
+    --info-foreground: 0 0% 100%;
   }
 
   /* ── Smooth theme transitions ── */
