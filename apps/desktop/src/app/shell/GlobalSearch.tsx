@@ -1,7 +1,7 @@
 import { useEffect, useMemo } from "react";
 import { Command } from "cmdk";
 import { Search, X } from "lucide-react";
-import { useGlobalSearch } from "@app/providers/GlobalSearchProvider";
+import { useGlobalSearch } from "@app/providers/useGlobalSearch";
 import { ICON_MAP } from "@app/shell/sidebarConfig";
 import { cn } from "@shared/lib/utils";
 import { useLocalization } from "@app/providers/LocalizationProvider";

@@ -2,6 +2,7 @@ import { ArrowLeftToLine, ArrowRightFromLine } from "lucide-react";
 import { Button } from "@shared/ui/button";
 import { cn } from '@shared/lib/utils';
 import { useNavSidebarSettings } from '@shared/hooks';
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 interface SidebarCollapseBtnProps {
   collapsed: boolean;
@@ -11,6 +12,7 @@ interface SidebarCollapseBtnProps {
 
 export function SidebarCollapseBtn({ collapsed, onToggle, verticalAppearance }: SidebarCollapseBtnProps) {
   const { settings } = useNavSidebarSettings();
+  const { t } = useLocalization();
   const lightBgs = ['bg-white', 'bg-slate-50', 'bg-gray-50', 'bg-zinc-50'];
   const isBgLight = verticalAppearance
     ? verticalAppearance === 'light'
@@ -30,14 +32,14 @@ export function SidebarCollapseBtn({ collapsed, onToggle, verticalAppearance }: 
           "w-full flex items-center justify-center gap-2 rounded-lg text-xs font-medium transition-all duration-200",
           textClass
         )}
-        title={collapsed ? "توسيع الشريط" : "طي الشريط"}
+        title={collapsed ? t("expand", { namespace: "shell" }) : t("collapse", { namespace: "shell" })}
       >
         {collapsed ? (
           <ArrowLeftToLine className="w-4 h-4" />
         ) : (
           <>
             <ArrowRightFromLine className="w-4 h-4" />
-            <span>طي</span>
+            <span>{t("collapse", { namespace: "shell" })}</span>
           </>
         )}
       </Button>

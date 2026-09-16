@@ -1,16 +1,10 @@
-import React, { createContext, useContext, useMemo } from "react";
+import React, { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTabs } from "@app/providers/TabContext";
-import { findRouteById } from "@app/shell/routeRegistry";
-import type { AppCommand } from "@shared/types/commands";
+import { findRouteById, resolveRouteLabel } from "@app/shell/routeRegistry";
 import { useLocalization } from "@app/providers/LocalizationProvider";
-
-interface CommandContextValue {
-  commands: AppCommand[];
-  executeCommand: (id: string) => void;
-}
-
-const CommandContext = createContext<CommandContextValue | undefined>(undefined);
+import { CommandContext, type CommandContextValue } from "./CommandContext";
+import type { AppCommand } from "@shared/types/commands";
 
 function createTabId(prefix: string) {
   return `${prefix}-${Date.now()}`;
@@ -60,7 +54,7 @@ export function CommandProvider({ children }: { children: React.ReactNode }) {
         shortcut: ["Ctrl", "N"],
         keywords: ["sales", "invoice"],
         group: "documents",
-        run: () => openRouteInTab("sales-invoices", "فواتير المبيعات"),
+        run: () => openRouteInTab("sales-invoices", resolveRouteLabel("sales-invoices", t)),
       },
       {
         id: "new-purchase-invoice",
@@ -69,7 +63,7 @@ export function CommandProvider({ children }: { children: React.ReactNode }) {
         shortcut: ["Ctrl", "B"],
         keywords: ["purchase", "invoice"],
         group: "documents",
-        run: () => openRouteInTab("purchase-invoices", "فواتير المشتريات"),
+        run: () => openRouteInTab("purchase-invoices", resolveRouteLabel("purchase-invoices", t)),
       },
       {
         id: "new-journal-entry",
@@ -78,7 +72,7 @@ export function CommandProvider({ children }: { children: React.ReactNode }) {
         shortcut: ["Ctrl", "J"],
         keywords: ["journal", "entry"],
         group: "documents",
-        run: () => openRouteInTab("journal", "القيود اليومية"),
+        run: () => openRouteInTab("journal", resolveRouteLabel("journal", t)),
       },
       {
         id: "new-opening-balance",
@@ -86,7 +80,7 @@ export function CommandProvider({ children }: { children: React.ReactNode }) {
         icon: "PackageOpen",
         keywords: ["opening", "balance", "inventory"],
         group: "documents",
-        run: () => openRouteInTab("opening-balance", "فاتورة أول المدة"),
+        run: () => openRouteInTab("opening-balance", resolveRouteLabel("opening-balance", t)),
       },
     ];
   }, [navigate, openDashboardTab, openTab, t]);
@@ -105,12 +99,4 @@ export function CommandProvider({ children }: { children: React.ReactNode }) {
   );
 
   return <CommandContext.Provider value={value}>{children}</CommandContext.Provider>;
-}
-
-export function useCommands() {
-  const context = useContext(CommandContext);
-  if (!context) {
-    throw new Error("useCommands must be used within CommandProvider");
-  }
-  return context;
 }

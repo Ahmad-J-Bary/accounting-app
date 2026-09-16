@@ -22,10 +22,10 @@ import { UpdateBanner } from '@modules/core/update/components/UpdateBanner';
 import { useCurrencyContext } from '@app/providers/CurrencyContext';
 import { settingsService } from '@modules/core/api/settingsService';
 import type { CompanySettings } from "@erp/shared-types";
-import { useGlobalSearch } from '@app/providers/GlobalSearchProvider';
+import { useGlobalSearch } from '@app/providers/useGlobalSearch';
 import { useVoice } from '@app/providers/VoiceProvider';
 import { useLocalization } from '@app/providers/LocalizationProvider';
-import { useCommands } from '@app/providers/CommandProvider';
+import { useCommands } from '@app/providers/useCommands';
 
 interface TopBarProps {
   onToggleSidebar?: () => void;

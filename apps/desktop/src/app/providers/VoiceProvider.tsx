@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useMemo, useState } from "react";
-import { useCommands } from "@app/providers/CommandProvider";
+import { useCommands } from "@app/providers/useCommands";
 
 export type VoiceState =
   | "idle"

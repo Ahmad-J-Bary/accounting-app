@@ -16,8 +16,8 @@ import { HorizontalLayout } from './layouts/HorizontalLayout';
 import { ComboLayout } from './layouts/ComboLayout';
 import { MobileNav } from './MobileNav';
 import { UpdateProvider } from '@modules/core/update/context/UpdateContext';
-import { useGlobalSearch } from '@app/providers/GlobalSearchProvider';
-import { useCommands } from '@app/providers/CommandProvider';
+import { useGlobalSearch } from '@app/providers/useGlobalSearch';
+import { useCommands } from '@app/providers/useCommands';
 import { GlobalSearch } from './GlobalSearch';
 import { VoiceAssistantOverlay } from './VoiceAssistantOverlay';
 import { BarcodeScanDialog } from '@shared/ui/BarcodeScanDialog';
@@ -36,7 +36,7 @@ export function AppLayout({ title, subtitle }: AppLayoutProps) {
   const { hasMultipleCurrencies } = useCurrencyContext();
   const { openSearch } = useGlobalSearch();
   const { executeCommand } = useCommands();
-  const { direction } = useLocalization();
+  const { direction, t } = useLocalization();
 
   useEffect(() => {
     warehouseService.ensureDefaultWarehouse().catch(() => {});
@@ -57,12 +57,12 @@ export function AppLayout({ title, subtitle }: AppLayoutProps) {
   };
 
   const shortcuts = useMemo(() => [
-    { key: 'k', ctrlKey: true, action: () => openSearch(), description: 'فتح البحث' },
-    { key: 'n', ctrlKey: true, action: () => executeCommand('new-sales-invoice'), description: 'فاتورة مبيعات جديدة' },
-    { key: 'b', ctrlKey: true, action: () => executeCommand('new-purchase-invoice'), description: 'فاتورة مشتريات جديدة' },
-    { key: 'r', ctrlKey: true, action: () => executeCommand('new-opening-balance'), description: 'فاتورة أول المدة جديدة' },
-    { key: 'j', ctrlKey: true, action: () => executeCommand('new-journal-entry'), description: 'قيد يومية جديد' },
-  ], [executeCommand, openSearch]);
+    { key: 'k', ctrlKey: true, action: () => openSearch(), description: t('shortcuts.openSearch', { namespace: 'shell' }) },
+    { key: 'n', ctrlKey: true, action: () => executeCommand('new-sales-invoice'), description: t('shortcuts.newSalesInvoice', { namespace: 'shell' }) },
+    { key: 'b', ctrlKey: true, action: () => executeCommand('new-purchase-invoice'), description: t('shortcuts.newPurchaseInvoice', { namespace: 'shell' }) },
+    { key: 'r', ctrlKey: true, action: () => executeCommand('new-opening-balance'), description: t('shortcuts.newOpeningBalance', { namespace: 'shell' }) },
+    { key: 'j', ctrlKey: true, action: () => executeCommand('new-journal-entry'), description: t('shortcuts.newJournalEntry', { namespace: 'shell' }) },
+  ], [executeCommand, openSearch, t]);
 
   useKeyboardShortcuts(shortcuts);
 

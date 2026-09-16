@@ -1,25 +1,14 @@
-import React, { createContext, useCallback, useContext, useMemo, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ALL_SYSTEM_ROUTES } from "@app/shell/routeRegistry";
-import { useCommands } from "@app/providers/CommandProvider";
+import { ALL_SYSTEM_ROUTES, resolveRouteLabel, resolveGroupLabel } from "@app/shell/routeRegistry";
+import { useCommands } from "@app/providers/useCommands";
 import { useTabs } from "@app/providers/TabContext";
+import { useLocalization } from "@app/providers/LocalizationProvider";
+import { GlobalSearchContext, type GlobalSearchContextValue } from "./GlobalSearchContext";
 import type { GlobalSearchResult } from "@shared/types/navigation";
-
-interface GlobalSearchContextValue {
-  isOpen: boolean;
-  query: string;
-  recent: GlobalSearchResult[];
-  results: GlobalSearchResult[];
-  openSearch: () => void;
-  closeSearch: () => void;
-  setQuery: (value: string) => void;
-  activateResult: (result: GlobalSearchResult) => void;
-}
 
 const RECENT_LIMIT = 8;
 const SEARCH_RECENT_STORAGE_KEY = "erp.search.recent";
-
-const GlobalSearchContext = createContext<GlobalSearchContextValue | undefined>(undefined);
 
 function loadRecent(): GlobalSearchResult[] {
   if (typeof window === "undefined") return [];
@@ -37,6 +26,7 @@ export function GlobalSearchProvider({ children }: { children: React.ReactNode }
   const navigate = useNavigate();
   const { commands, executeCommand } = useCommands();
   const { tabs, switchTab, openTab } = useTabs();
+  const { t } = useLocalization();
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [recent, setRecent] = useState<GlobalSearchResult[]>(loadRecent);
@@ -46,14 +36,14 @@ export function GlobalSearchProvider({ children }: { children: React.ReactNode }
       ALL_SYSTEM_ROUTES.filter((route) => !route.isSeparator && route.to).map((route) => ({
         id: `route:${route.id}`,
         type: "route",
-        title: route.label,
-        subtitle: route.groupLabel,
+        title: resolveRouteLabel(route.id, t),
+        subtitle: resolveGroupLabel(route.groupId, t),
         icon: route.icon,
         destination: { route: route.to },
         group: "navigation",
-        keywords: [route.label, route.id, route.groupLabel],
+        keywords: [resolveRouteLabel(route.id, t), route.id, resolveGroupLabel(route.groupId, t)],
       })),
-    [],
+    [t],
   );
 
   const commandResults = useMemo<GlobalSearchResult[]>(
@@ -156,12 +146,4 @@ export function GlobalSearchProvider({ children }: { children: React.ReactNode }
   );
 
   return <GlobalSearchContext.Provider value={value}>{children}</GlobalSearchContext.Provider>;
-}
-
-export function useGlobalSearch() {
-  const context = useContext(GlobalSearchContext);
-  if (!context) {
-    throw new Error("useGlobalSearch must be used within GlobalSearchProvider");
-  }
-  return context;
 }

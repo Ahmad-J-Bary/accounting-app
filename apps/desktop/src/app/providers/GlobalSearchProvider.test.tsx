@@ -4,7 +4,8 @@ import { MemoryRouter } from "react-router-dom";
 import { LocalizationProvider } from "./LocalizationProvider";
 import { TabProvider } from "./TabProvider";
 import { CommandProvider } from "./CommandProvider";
-import { GlobalSearchProvider, useGlobalSearch } from "./GlobalSearchProvider";
+import { GlobalSearchProvider } from "./GlobalSearchProvider";
+import { useGlobalSearch } from "./useGlobalSearch";
 
 function Probe() {
   const { openSearch, results, setQuery } = useGlobalSearch();

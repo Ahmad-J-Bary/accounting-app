@@ -46,6 +46,7 @@ export const shell: Record<AppLanguage, TranslationTree> = {
     },
     nav: {
       dashboard: "لوحة التحكم",
+      page: "صفحة",
       groups: {
         main: "الرئيسية",
         accounting: "المحاسبة العامة",
@@ -100,6 +101,13 @@ export const shell: Record<AppLanguage, TranslationTree> = {
     customize: "تخصيص",
     notifications: "الإشعارات",
     noNotifications: "لا توجد إشعارات",
+    shortcuts: {
+      openSearch: "فتح البحث",
+      newSalesInvoice: "فاتورة مبيعات جديدة",
+      newPurchaseInvoice: "فاتورة مشتريات جديدة",
+      newOpeningBalance: "فاتورة أول المدة جديدة",
+      newJournalEntry: "قيد يومية جديد",
+    },
     newSalesInvoiceTab: "فاتورة مبيعات جديدة",
     newPurchaseInvoiceTab: "فاتورة مشتريات جديدة",
     quickActionsList: {
@@ -166,6 +174,7 @@ export const shell: Record<AppLanguage, TranslationTree> = {
     },
     nav: {
       dashboard: "Dashboard",
+      page: "Page",
       groups: {
         main: "Main",
         accounting: "General Accounting",
@@ -220,6 +229,13 @@ export const shell: Record<AppLanguage, TranslationTree> = {
     customize: "Customize",
     notifications: "Notifications",
     noNotifications: "No notifications",
+    shortcuts: {
+      openSearch: "Open Search",
+      newSalesInvoice: "New Sales Invoice",
+      newPurchaseInvoice: "New Purchase Invoice",
+      newOpeningBalance: "New Opening Balance",
+      newJournalEntry: "New Journal Entry",
+    },
     newSalesInvoiceTab: "New Sales Invoice",
     newPurchaseInvoiceTab: "New Purchase Invoice",
     quickActionsList: {

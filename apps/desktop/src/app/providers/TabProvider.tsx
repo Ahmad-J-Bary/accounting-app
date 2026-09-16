@@ -3,7 +3,8 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import type { WorkspaceItem } from '@shared/types/navigation';
 import type { Tab } from '@shared/types/tabs';
 import { TabContext } from './TabContext';
-import { findRouteByPath } from '@app/shell/routeRegistry';
+import { findRouteByPath, resolveRouteLabel } from '@app/shell/routeRegistry';
+import { useLocalization } from '@app/providers/LocalizationProvider';
 
 const TAB_STORAGE_KEY = "erp.workspace.tabs";
 const ACTIVE_TAB_STORAGE_KEY = "erp.workspace.activeTabId";
@@ -59,6 +60,7 @@ export const TabProvider = ({ children }: { children: ReactNode }) => {
   });
   const navigate = useNavigate();
   const location = useLocation();
+  const { t } = useLocalization();
   const activeTabIdRef = useRef(activeTabId);
   activeTabIdRef.current = activeTabId;
   const tabsRef = useRef(tabs);
@@ -235,7 +237,7 @@ export const TabProvider = ({ children }: { children: ReactNode }) => {
         if (isDocumentPath) {
           const id = `nav-${Date.now()}`;
           const resolvedRoute = findRouteByPath(currentFullPath);
-          const title = resolvedRoute?.label || currentFullPath.split('/').pop() || 'صفحة';
+          const title = resolvedRoute ? resolveRouteLabel(resolvedRoute.id, t) : currentFullPath.split('/').pop() || t("nav.page", { namespace: "shell" });
           setTabs(prev => [...prev.map(t => ({ ...t, active: false })), {
             id,
             title,
@@ -259,7 +261,7 @@ export const TabProvider = ({ children }: { children: ReactNode }) => {
 
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
-  }, [navigate]);
+  }, [navigate, t]);
 
   // Sync browser URL to active tab when URL changes from our own navigate() calls
   useEffect(() => {

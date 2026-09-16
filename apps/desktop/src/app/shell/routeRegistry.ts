@@ -130,3 +130,11 @@ export function findRouteByPath(path: string): SystemRouteEntry | undefined {
 export function findRouteById(id: string): SystemRouteEntry | undefined {
   return ALL_SYSTEM_ROUTES.find(r => r.id === id);
 }
+
+export function resolveRouteLabel(routeId: string, t: (key: string, opts?: { namespace?: string }) => string): string {
+  return t(`nav.${routeId}`, { namespace: "shell" });
+}
+
+export function resolveGroupLabel(groupId: string, t: (key: string, opts?: { namespace?: string }) => string): string {
+  return t(`nav.groups.${groupId}`, { namespace: "shell" });
+}
