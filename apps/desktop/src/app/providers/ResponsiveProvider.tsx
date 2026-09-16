@@ -15,7 +15,10 @@ export function ResponsiveProvider({
         mode,
         isMobile: mode === 'mobile',
         isTablet: mode === 'tablet',
-        isDesktop: mode === 'desktop',
+        isLaptop: mode === 'laptop',
+        isDesktop: mode === 'desktop' || mode === 'laptop',
+        isWide: mode === 'wide',
+        isLegacyMobile: mode === 'mobile',
       }}
     >
       {children}

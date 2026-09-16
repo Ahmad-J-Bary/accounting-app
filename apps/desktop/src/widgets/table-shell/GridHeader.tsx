@@ -107,7 +107,7 @@ export const GridHeader: React.FC<GridHeaderProps> = ({
       className={cn(
         'transition-colors',
         useGrid ? 'grid' : 'flex',
-        headerColor || 'bg-slate-50/50 backdrop-blur-md',
+        headerColor || 'bg-muted/30 backdrop-blur-md',
         getRowBorderClass(borderStyle ?? ""),
         stickyHeader && 'sticky top-0 z-10 backdrop-blur-sm shadow-sm',
       )}
@@ -121,7 +121,7 @@ export const GridHeader: React.FC<GridHeaderProps> = ({
           data-col-id={col.id}
           className={cn(
             getDensityPadding(),
-            'relative text-slate-700 font-black uppercase tracking-wider select-text flex items-center',
+            'relative text-foreground font-black uppercase tracking-wider select-text flex items-center',
             'justify-center',
             getLeftBorderClass(borderStyle ?? ""),
             !useGrid && !columnWidths[col.id] && col.width,

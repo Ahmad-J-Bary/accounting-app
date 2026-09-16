@@ -1,6 +1,7 @@
 import { ReactNode } from "react";
 import { cn } from "@shared/lib/utils";
 import { useSidePanelSettings } from "@shared/hooks";
+import { useIsLaptop } from "@shared/hooks/useResponsive";
 
 interface TemplateDetailPanelProps {
   isOpen: boolean;
@@ -14,6 +15,7 @@ export function TemplateDetailPanel({
   className,
 }: TemplateDetailPanelProps) {
   const { getSidebarWidth, settings } = useSidePanelSettings();
+  const isLaptop = useIsLaptop();
 
   return (
     <aside
@@ -28,7 +30,10 @@ export function TemplateDetailPanel({
         transitionProperty: "width, opacity",
       }}
     >
-      <div className="flex-1 overflow-auto" style={{ minWidth: typeof window !== 'undefined' && window.innerWidth < 1024 ? undefined : settings.customWidth + "px" }}>
+      <div
+        className="flex-1 overflow-auto"
+        style={{ minWidth: isLaptop ? undefined : settings.customWidth + "px" }}
+      >
         {children}
       </div>
     </aside>

@@ -12,8 +12,8 @@ export function getAlignmentClass(align?: Align): string {
 
 export function getCellBorderClass(borderStyle: string): string {
   return cn(
-    borderStyle === 'full' && 'border border-slate-200',
-    borderStyle === 'horizontal' && 'border-b border-slate-200',
+    borderStyle === 'full' && 'border border-border',
+    borderStyle === 'horizontal' && 'border-b border-border',
     borderStyle === 'none' && 'border-0'
   );
 }
@@ -24,13 +24,13 @@ export function getHeaderBorderClass(borderStyle: string): string {
 
 export function getRowBorderClass(borderStyle: string): string {
   return cn(
-    borderStyle !== "none" && "border-b border-slate-100",
-    borderStyle === "full" && "border-b border-slate-200",
+    borderStyle !== "none" && "border-b border-border/50",
+    borderStyle === "full" && "border-b border-border",
   );
 }
 
 export function getLeftBorderClass(borderStyle: string): string {
-  return borderStyle === "full" ? "border-l border-slate-200" : "";
+  return borderStyle === "full" ? "border-l border-border" : "";
 }
 
 export function getRowBackgroundClass(
@@ -39,10 +39,10 @@ export function getRowBackgroundClass(
   isZebra: boolean,
   hasHover: boolean,
 ): string {
-  if (isSelected) return "bg-blue-50/80";
-  if (isZebra && rowIdx % 2 === 1) return "bg-slate-100/60";
-  if (hasHover) return "hover:bg-slate-50/80";
-  return "bg-white";
+  if (isSelected) return "bg-primary/10";
+  if (isZebra && rowIdx % 2 === 1) return "bg-muted/30";
+  if (hasHover) return "hover:bg-muted/50";
+  return "bg-background";
 }
 
 export interface ColumnWidthDef {

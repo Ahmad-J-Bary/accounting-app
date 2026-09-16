@@ -87,6 +87,23 @@ export const breakpoints = {
   '2xl': '1536px',
 } as const;
 
+/** 5-breakpoint system aligned with DESIGN.md */
+export const responsiveBreakpoints = {
+  mobile: 0,
+  tablet: 640,
+  laptop: 1024,
+  desktop: 1280,
+  wide: 1440,
+} as const;
+
+/** Container query breakpoints (for @container rules) */
+export const containerBreakpoints = {
+  mobile: 0,
+  tablet: 640,
+  laptop: 1024,
+  desktop: 1280,
+} as const;
+
 // ── Z-Index Scale ───────────────────────────────────────────
 export const zIndex = {
   base: 0,

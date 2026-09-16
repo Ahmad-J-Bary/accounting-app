@@ -33,26 +33,26 @@ export function TabBar() {
   const getTabClassName = (active: boolean) => {
     if (settings.tabStyle === "browser") {
       return active
-        ? "bg-white border-slate-300 text-slate-900 shadow-sm rounded-t-xl rounded-b-none"
-        : "bg-slate-100 border-slate-200 text-slate-500 hover:bg-slate-200 rounded-t-xl rounded-b-none";
+        ? "bg-background border-border text-foreground shadow-sm rounded-t-xl rounded-b-none"
+        : "bg-muted border-border text-muted-foreground hover:bg-accent rounded-t-xl rounded-b-none";
     }
 
     if (settings.tabStyle === "vscode") {
       return active
-        ? "bg-slate-800 text-white border-slate-700 rounded-none"
-        : "bg-slate-900/90 text-slate-300 hover:bg-slate-800 rounded-none";
+        ? "bg-sidebar text-sidebar-foreground border-sidebar-border rounded-none"
+        : "bg-sidebar/90 text-sidebar-foreground/80 hover:bg-sidebar rounded-none";
     }
 
     return active
-      ? "bg-slate-50 border-blue-600 text-blue-700 shadow-[0_-1px_3px_rgba(0,0,0,0.05)] rounded-t-md"
-      : "text-slate-500 hover:bg-slate-100 hover:text-slate-700 rounded-t-md";
+      ? "bg-muted/50 border-primary text-primary shadow-[0_-1px_3px_hsl(var(--primary)/0.05)] rounded-t-md"
+      : "text-muted-foreground hover:bg-muted hover:text-foreground rounded-t-md";
   };
 
   return (
     <div
       className={cn(
         "flex items-center border-b px-2 h-10 gap-1 overflow-hidden group",
-        settings.tabStyle === "vscode" ? "bg-slate-900 border-slate-700" : "bg-white border-slate-200",
+        settings.tabStyle === "vscode" ? "bg-sidebar border-sidebar-border" : "bg-background border-border",
       )}
     >
       <Button 
@@ -83,11 +83,11 @@ export function TabBar() {
             key={tab.id}
             onClick={() => switchTab(tab.id)}
             className={cn(
-              "group/tab relative flex items-center h-[34px] px-4 min-w-[120px] max-w-[220px] text-xs font-medium cursor-pointer transition-all border-t-2 border-transparent",
+              "group/tab relative flex items-center h-9 px-4 min-w-[120px] max-w-[220px] text-xs font-medium cursor-pointer transition-all border-t-2 border-transparent",
               getTabClassName(tab.active)
             )}
           >
-            {tab.dirty && <span className="me-2 h-2 w-2 shrink-0 rounded-full bg-amber-500" />}
+            {tab.dirty && <span className="me-2 h-2 w-2 shrink-0 rounded-full bg-warning" />}
             <span className="truncate flex-1 text-end">{tab.title}</span>
             {tab.closable && (
               <button
@@ -96,7 +96,7 @@ export function TabBar() {
                   closeTab(tab.id);
                 }}
                 className={cn(
-                  "ms-2 p-0.5 rounded-full hover:bg-slate-200 transition-colors",
+                  "ms-2 p-0.5 rounded-full hover:bg-accent transition-colors",
                   tab.active ? "opacity-100" : "opacity-0 group-hover/tab:opacity-100"
                 )}
               >
@@ -106,7 +106,7 @@ export function TabBar() {
             
             {/* Divider for non-active tabs */}
             {!tab.active && settings.tabStyle === "default" && (
-              <div className="absolute start-0 top-1/4 bottom-1/4 w-[1px] bg-slate-200" />
+              <div className="absolute start-0 top-1/4 bottom-1/4 w-[1px] bg-border" />
             )}
           </div>
         ))}

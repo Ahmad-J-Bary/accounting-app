@@ -34,7 +34,7 @@ export function SidebarItem({
       <li className="py-1.5">
         <div className={cn(
           "h-px mx-2",
-          verticalAppearance === 'light' ? "bg-slate-200" : "bg-white/10"
+          verticalAppearance === 'light' ? "bg-border" : "bg-white/10"
         )} />
       </li>
     );
@@ -46,10 +46,10 @@ export function SidebarItem({
     : settings.navBackground === 'bg-white' || settings.navBackground === 'bg-slate-50';
   const activeTextClass = verticalAppearance === 'light' ? 'text-primary' : 'text-white';
   const fontSizeClass = getNavFontSizeClass();
-  const inactiveTextClass = isBgLight ? 'text-slate-600' : 'text-slate-400';
+  const inactiveTextClass = isBgLight ? 'text-muted-foreground' : 'text-slate-400';
   const iconColorClass = isActive
     ? activeTextClass
-    : isBgLight ? 'text-slate-500 group-hover:text-slate-800' : 'text-slate-500 group-hover:text-slate-300';
+    : isBgLight ? 'text-muted-foreground group-hover:text-foreground' : 'text-slate-500 group-hover:text-slate-300';
 
   const IconComp = ICON_MAP[item.icon] ?? ICON_MAP['Settings'];
   const displayLabel = itemLabel(item);
@@ -61,10 +61,10 @@ export function SidebarItem({
     } else {
       updateMainTab({ title: displayLabel, path: item.to });
     }
-    if (onClose && window.innerWidth < 1024) onClose();
+    if (onClose) onClose();
   };
 
-  const badgeClass = badge === 'pinned' ? 'text-amber-400' : '';
+  const badgeClass = badge === 'pinned' ? 'text-warning' : '';
 
   return (
     <li className="group/item relative">
@@ -90,11 +90,11 @@ export function SidebarItem({
               <span className="truncate flex-1">{displayLabel}</span>
               {badge && (
                 <span className={cn("shrink-0", badgeClass)}>
-                  <Pin className="w-2.5 h-2.5 fill-amber-400 text-amber-400" />
+                  <Pin className="w-2.5 h-2.5 fill-warning text-warning" />
                 </span>
               )}
               {isActive && (
-                <div className="mr-auto w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                <div className="mr-auto w-1.5 h-1.5 rounded-full bg-primary-foreground animate-pulse" />
               )}
             </>
           )}

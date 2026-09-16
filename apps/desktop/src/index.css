@@ -463,6 +463,37 @@
 }
 
 /* ==========================================
+   Container Query Utilities
+   ========================================== */
+
+/* Container types */
+.container-layout { container-type: inline-size; }
+.container-visual { container-type: size; }
+
+/* Container query breakpoints */
+@container (max-width: 639px) {
+  .container-hide-mobile { display: none !important; }
+  .container-show-mobile { display: block !important; }
+  .container-flex-mobile { flex-direction: column; }
+  .container-grid-mobile { grid-template-columns: 1fr !important; }
+}
+
+@container (min-width: 640px) and (max-width: 1023px) {
+  .container-hide-tablet { display: none !important; }
+  .container-show-tablet { display: block !important; }
+}
+
+@container (min-width: 1024px) and (max-width: 1279px) {
+  .container-hide-laptop { display: none !important; }
+  .container-show-laptop { display: block !important; }
+}
+
+@container (min-width: 1280px) {
+  .container-hide-desktop { display: none !important; }
+  .container-show-desktop { display: block !important; }
+}
+
+/* ==========================================
    Dynamic Sidebar Spacing & Density
    ========================================== */
 

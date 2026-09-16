@@ -345,7 +345,7 @@ export function UnifiedTable<T>({
                 className={cn(
                   getDensityPadding(),
                   cellBorderClass,
-                  "text-slate-600 transition-colors group-hover:text-slate-900",
+                  "text-muted-foreground transition-colors group-hover:text-foreground",
                   col.className,
                 )}
                 style={getCellStyle()}
