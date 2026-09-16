@@ -83,7 +83,7 @@ export function TreeItem<T extends BaseTreeNode>({
                 onDoubleClick={(event) => event.stopPropagation()}
                 className={cn(
                   "p-1 rounded-md transition-colors",
-                  "hover:bg-slate-200/70 text-slate-500 hover:text-slate-700",
+                  "hover:bg-muted/70 text-muted-foreground hover:text-foreground",
                   "focus:outline-none focus:ring-1 focus:ring-primary/30"
                 )}
                 type="button"

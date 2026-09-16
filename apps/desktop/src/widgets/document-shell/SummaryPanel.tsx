@@ -226,7 +226,7 @@ export function SummaryPanel({
                     <option
                       key={c.code}
                       value={c.code}
-                      className="text-slate-800 font-bold"
+                      className="text-foreground font-bold"
                     >
                       {c.name_ar} ({c.symbol || resolveCurrencySymbol(c.code)})
                     </option>
@@ -388,7 +388,7 @@ export function SummaryPanel({
                             {t('labels.costsPayment', )}
                           </span>
                           {isCashParty ? (
-                            <span className="h-5 px-1 font-black text-3xs text-emerald-600 flex items-center">
+                            <span className="h-5 px-1 font-black text-3xs text-success flex items-center">
                               {t('labels.cash', )}
                             </span>
                           ) : (
@@ -451,12 +451,12 @@ export function SummaryPanel({
                       </div>
 
                       {/* دفع الفاتورة */}
-                      <div className="flex items-center gap-2 bg-blue-50/40 px-2.5 py-1 rounded-md border border-blue-100/60 h-[42px] justify-center shrink-0">
-                        <span className="text-4xs font-black text-blue-500 uppercase tracking-wider">
+                      <div className="flex items-center gap-2 bg-primary/10 px-2.5 py-1 rounded-md border border-primary/20 h-[42px] justify-center shrink-0">
+                        <span className="text-4xs font-black text-primary uppercase tracking-wider">
                           {t('labels.invoicePaymentMethod', )}
                         </span>
                         {isCashParty ? (
-                          <span className="h-6 px-1 font-black text-2xs text-emerald-600 flex items-center">
+                          <span className="h-6 px-1 font-black text-2xs text-success flex items-center">
                             {t('labels.cash', )}
                           </span>
                         ) : (

@@ -21,8 +21,8 @@ export function IconPicker({ value, onChange, className }: IconPickerProps) {
             className={cn(
               "flex items-center justify-center p-2 rounded-lg border transition-all duration-150",
               isSelected
-                ? "border-blue-500 bg-blue-50 text-blue-600 shadow-sm ring-1 ring-blue-500/30"
-                : "border-slate-200 text-slate-500 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-700"
+                ? "border-primary bg-primary/10 text-primary shadow-sm ring-1 ring-primary/30"
+                : "border-muted text-muted-foreground hover:border-muted hover:bg-muted/50 hover:text-foreground"
             )}
             title={iconName}
           >

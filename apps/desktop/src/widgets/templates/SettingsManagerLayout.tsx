@@ -12,7 +12,7 @@ interface SettingsGroupProps {
   className?: string;
 }
 
-export function SettingsGroup({ title, icon: Icon, color = "text-blue-600", children, className }: SettingsGroupProps) {
+export function SettingsGroup({ title, icon: Icon, color = "text-primary", children, className }: SettingsGroupProps) {
   return (
     <div className={cn("bg-card rounded-2xl p-4 sm:p-5 border border-border shadow-sm space-y-3 sm:space-y-4", className)}>
       <div className="flex items-center gap-2.5 sm:gap-3">

@@ -28,7 +28,7 @@ export function BarcodeScanDialog() {
       <DialogContent className="max-w-md" dir="rtl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <ScanLine className="h-5 w-5 text-blue-600" />
+            <ScanLine className="h-5 w-5 text-primary" />
             مسح الباركود
           </DialogTitle>
           <DialogDescription>

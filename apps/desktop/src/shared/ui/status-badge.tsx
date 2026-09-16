@@ -7,14 +7,14 @@ import {
 } from "@shared/ui/status";
 
 const TONE_CLASS: Record<StatusTone, string> = {
-  slate: "bg-slate-50 text-slate-700 ring-slate-200 border-slate-200",
-  amber: "bg-amber-50 text-amber-700 ring-amber-200 border-amber-200",
-  blue: "bg-blue-50 text-blue-700 ring-blue-200 border-blue-200",
-  green: "bg-green-50 text-green-700 ring-green-200 border-green-200",
-  orange: "bg-orange-50 text-orange-700 ring-orange-200 border-orange-200",
-  emerald: "bg-emerald-50 text-emerald-700 ring-emerald-200 border-emerald-200",
-  red: "bg-red-50 text-red-700 ring-red-200 border-red-200",
-  rose: "bg-rose-50 text-rose-700 ring-rose-200 border-rose-200",
+  slate: "bg-muted text-muted-foreground ring-border border-border",
+  amber: "bg-warning/10 text-warning ring-warning/20 border-warning/20",
+  blue: "bg-primary/10 text-primary ring-primary/20 border-primary/20",
+  green: "bg-success/10 text-success ring-success/20 border-success/20",
+  orange: "bg-warning/10 text-warning ring-warning/20 border-warning/20",
+  emerald: "bg-success/10 text-success ring-success/20 border-success/20",
+  red: "bg-destructive/10 text-destructive ring-destructive/20 border-destructive/20",
+  rose: "bg-destructive/10 text-destructive ring-destructive/20 border-destructive/20",
 };
 
 export interface StatusBadgeProps {

@@ -456,7 +456,7 @@ export function GenericDocumentGrid({
               "p-1 transition-colors rounded",
               isModified
                 ? "text-amber-600 hover:text-amber-700 hover:bg-amber-50"
-                : "text-slate-400 hover:text-blue-600 hover:bg-blue-50",
+                : "text-muted-foreground hover:text-primary hover:bg-primary/10",
             )}
             title="إظهار / إخفاء الأعمدة"
           >
@@ -465,14 +465,14 @@ export function GenericDocumentGrid({
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="w-64 max-h-[420px] overflow-y-auto shadow-xl">
           <DropdownMenuLabel className="flex items-center justify-between text-right gap-2">
-            <span className="text-2xs font-black uppercase text-slate-500 tracking-widest">
+            <span className="text-2xs font-black uppercase text-muted-foreground tracking-widest">
               إظهار / إخفاء الأعمدة
             </span>
             <span className={cn(
               "text-2xs tabular-nums font-bold px-1.5 py-0.5 rounded",
               isModified
                 ? "bg-amber-100 text-amber-700"
-                : "bg-slate-100 text-slate-500"
+                : "bg-muted text-muted-foreground"
             )}>
               {visibleCount} / {totalCount}
             </span>
@@ -494,7 +494,7 @@ export function GenericDocumentGrid({
               <DropdownMenuItem
                 onClick={resetToDefault}
                 disabled={!isModified}
-                className="flex-row-reverse text-blue-600 focus:text-blue-600 disabled:text-slate-400 disabled:opacity-50"
+                className="flex-row-reverse text-primary focus:text-primary disabled:text-muted-foreground disabled:opacity-50"
               >
                 <RotateCcw className="w-4 h-4 ml-2" />
                 استعادة الأعمدة الافتراضية

@@ -36,14 +36,14 @@ export class ErrorBoundary extends Component<Props, State> {
       }
       return (
         <div className="flex flex-col items-center justify-center h-full p-8 text-center">
-          <AlertTriangle className="w-10 h-10 text-rose-500 mb-3" />
-          <h3 className="text-sm font-bold text-slate-700 mb-1">حدث خطأ في هذه الصفحة</h3>
-          <p className="text-xs text-slate-500 mb-3 max-w-xs">
+          <AlertTriangle className="w-10 h-10 text-destructive mb-3" />
+          <h3 className="text-sm font-bold text-foreground mb-1">حدث خطأ في هذه الصفحة</h3>
+          <p className="text-xs text-muted-foreground mb-3 max-w-xs">
             {this.state.error?.message || "خطأ غير متوقع"}
           </p>
           <button
             onClick={this.handleRetry}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-primary bg-primary/10 rounded-lg hover:bg-primary/20 transition-colors"
           >
             <RefreshCw className="w-3.5 h-3.5" />
             إعادة المحاولة

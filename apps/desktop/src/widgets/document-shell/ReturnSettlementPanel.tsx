@@ -76,7 +76,7 @@ export function ReturnSettlementPanel({
                   className="h-7 px-1 rounded border-none bg-transparent font-black text-primary text-[11px] outline-none focus:ring-0 cursor-pointer"
                 >
                   {availableCurrencies.map((c) => (
-                    <option key={c.code} value={c.code} className="text-slate-800 font-bold">
+                    <option key={c.code} value={c.code} className="text-foreground font-bold">
                       {c.name_ar} ({c.symbol || resolveCurrencySymbol(c.code)})
                     </option>
                   ))}
@@ -199,8 +199,8 @@ export function ReturnSettlementPanel({
           )}
 
           {effectiveMode === "full_cash_return" && (
-            <div className="flex items-center gap-2 text-2xs font-bold text-blue-600 bg-blue-50/40 px-2.5 py-1 rounded-md border border-blue-100/60 h-7 shrink-0">
-              <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
+            <div className="flex items-center gap-2 text-2xs font-bold text-primary bg-primary/10 px-2.5 py-1 rounded-md border border-primary/20 h-7 shrink-0">
+              <span className="w-1.5 h-1.5 rounded-full bg-primary" />
               <span>{isPaid ? paymentLabel : t("labels.deferredReturn", { namespace: "common" })} {isPaid ? "" : `(${t("labels.notYetPaid", { namespace: "common" })})`}:</span>
               <span className="font-black tabular-nums">{totalAmount.toFixed(2)}</span>
             </div>
@@ -208,8 +208,8 @@ export function ReturnSettlementPanel({
 
           {effectiveMode === "partial_settlement" && (
             <div className="flex flex-col gap-1.5 shrink-0">
-              <div className="flex items-center gap-2 text-2xs font-bold text-blue-600 bg-blue-50/40 px-2.5 py-1 rounded-md border border-blue-100/60 h-7 shrink-0">
-                <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
+              <div className="flex items-center gap-2 text-2xs font-bold text-primary bg-primary/10 px-2.5 py-1 rounded-md border border-primary/20 h-7 shrink-0">
+                <span className="w-1.5 h-1.5 rounded-full bg-primary" />
                 <span>{isPaid ? paymentLabel : t("labels.deferredPayment", { namespace: "common" })}:</span>
                 <input
                   type="number"

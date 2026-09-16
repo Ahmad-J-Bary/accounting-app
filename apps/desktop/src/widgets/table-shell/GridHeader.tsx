@@ -147,16 +147,16 @@ export const GridHeader: React.FC<GridHeaderProps> = ({
           {col.id === sortField && (
             <span className="shrink-0 mr-1">
               {sortDirection === 'asc' ? (
-                <ChevronUp className="w-3.5 h-3.5 text-blue-500" />
+                <ChevronUp className="w-3.5 h-3.5 text-primary" />
               ) : (
-                <ChevronDown className="w-3.5 h-3.5 text-blue-500" />
+                <ChevronDown className="w-3.5 h-3.5 text-primary" />
               )}
             </span>
           )}
 
           {enableResize && onResizeStart && idx < columns.length - 1 && (
             <div
-              className="absolute top-0 bottom-0 w-2 cursor-col-resize z-20 hover:bg-blue-500/10 active:bg-blue-500/20 transition-colors flex items-center justify-center group/resize"
+              className="absolute top-0 bottom-0 w-2 cursor-col-resize z-20 hover:bg-primary/10 active:bg-primary/20 transition-colors flex items-center justify-center group/resize"
               style={{ left: -4 }}
               onMouseDown={(e) => {
                 e.stopPropagation();
@@ -167,7 +167,7 @@ export const GridHeader: React.FC<GridHeaderProps> = ({
                 onAutoFit?.(col.id);
               }}
             >
-              <div className="w-[1px] h-3 bg-slate-200 group-hover/resize:bg-blue-400 group-active/resize:bg-blue-600 rounded-full transition-colors" />
+              <div className="w-[1px] h-3 bg-muted group-hover/resize:bg-primary group-active/resize:bg-primary rounded-full transition-colors" />
             </div>
           )}
         </div>

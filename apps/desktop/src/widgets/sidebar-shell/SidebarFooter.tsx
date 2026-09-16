@@ -58,7 +58,7 @@ export function SidebarFooter({
               type="button"
               onClick={onSave}
               disabled={isSaving || saveDisabled}
-              className="h-9 px-4 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md shadow-blue-100"
+              className="h-9 px-4 rounded-lg bg-primary hover:bg-primary/80 text-white text-xs font-bold shadow-md shadow-primary/20"
             >
               {isSaving ? t('states.saving', ) : resolvedSaveLabel}
             </Button>
