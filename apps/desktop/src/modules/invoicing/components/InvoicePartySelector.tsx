@@ -65,7 +65,7 @@ export function InvoicePartySelector({
 
   const label = type === "customer" ? t("party.customer", { namespace: "partners",  }) : t("party.supplier", { namespace: "partners",  });
   const Icon = type === "customer" ? User : Truck;
-  const placeholder = type === "customer" ? (defaultName ?? "زبون نقدي") : (defaultName ?? "مورد نقدي");
+  const placeholder = type === "customer" ? (defaultName ?? t("invoice.cashCustomerName", { namespace: "invoicing" })) : (defaultName ?? t("invoice.cashSupplierName", { namespace: "invoicing" }));
 
   useEffect(() => {
     if (selectedId && selectedName) {

@@ -150,7 +150,7 @@ export default function Categories() {
         type: "root_with_subs",
         subCount: subs.length,
         subMaterialCount,
-        targetName: defaultCat?.name || DEFAULT_CATEGORY_NAME,
+        targetName: defaultCat?.name || t("inventory.materials.uncategorized", { namespace: "inventory" }),
       };
     }
 
@@ -166,7 +166,7 @@ export default function Categories() {
       return {
         type: "sub_with_materials",
         materialCount,
-        targetName: defaultCat?.name || DEFAULT_CATEGORY_NAME,
+        targetName: defaultCat?.name || t("inventory.materials.uncategorized", { namespace: "inventory" }),
         isGeneralSub: true,
       };
     }
@@ -185,10 +185,10 @@ export default function Categories() {
     return {
       type: "sub_with_materials",
       materialCount,
-      targetName: defaultCat?.name || DEFAULT_CATEGORY_NAME,
+      targetName: defaultCat?.name || t("inventory.materials.uncategorized", { namespace: "inventory" }),
       isGeneralSub: true,
     };
-  }, [categories]);
+  }, [categories, t]);
 
   /** Compute the target category id to receive reassigned materials. */
   const computeReassignTargetId = useCallback((node: CategoryTreeNode): string | null => {
@@ -251,7 +251,7 @@ export default function Categories() {
       return;
     }
     if (selected.name === DEFAULT_CATEGORY_NAME) {
-      toast.error(t("categories.cannotDeleteDefault", { namespace: "inventory", vars: { name: DEFAULT_CATEGORY_NAME },  }));
+      toast.error(t("categories.cannotDeleteDefault", { namespace: "inventory", vars: { name: t("materials.uncategorized", { namespace: "inventory" }) },  }));
       return;
     }
     const kind = computeDeleteKind(selected);

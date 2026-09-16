@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useSidebarLayout } from '@shared/hooks';
+import { useSidebarLayout, useNavLabels } from '@shared/hooks';
 import { Button } from "@shared/ui/button";
 import { ICON_MAP } from '@app/shell/sidebarConfig';
 import { ALL_SYSTEM_ROUTES, findRouteById } from '@app/shell/routeRegistry';
@@ -36,6 +36,7 @@ export const SidebarContentManager: React.FC = () => {
     // Global
     resetToDefault,
   } = useSidebarLayout();
+  const { itemLabel, groupTitle, routeLabel } = useNavLabels();
 
   // State management
   const [newGroupTitle, setNewGroupTitle] = useState('');
@@ -159,7 +160,7 @@ export const SidebarContentManager: React.FC = () => {
             <div className="border border-slate-150 rounded-xl divide-y divide-slate-100 overflow-hidden bg-white shadow-sm">
               {layout.groups.map((group, idx) => {
                 const isEditing = editingGroupId === group.id;
-                const displayTitle = group.customTitle ?? group.defaultTitle;
+                const displayTitle = groupTitle(group);
                 return (
                   <div key={group.id} className={cn("flex items-center justify-between p-3 transition-colors hover:bg-slate-50/40", !group.visible && "bg-slate-50/50 opacity-60")}>
                     <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -256,13 +257,13 @@ export const SidebarContentManager: React.FC = () => {
         <SettingsGroup title={t("sidebarContent.itemsTitle", { namespace: "settings",  })} icon={Link} color="text-indigo-600">
           <div className="space-y-6">
             {layout.groups.map((group) => {
-              const groupTitle = group.customTitle ?? group.defaultTitle;
+              const displayGroupTitle = groupTitle(group);
               return (
                 <div key={group.id} className="border border-slate-150 rounded-xl overflow-hidden bg-slate-50/30">
                   {/* ترويسة المجموعة */}
                   <div className="flex items-center justify-between px-4 py-2.5 bg-slate-100 border-b border-slate-150">
                     <div className="flex items-center gap-2">
-                      <span className="text-xs font-black text-slate-800">{groupTitle}</span>
+                      <span className="text-xs font-black text-slate-800">{displayGroupTitle}</span>
                       {group.isCustom && <span className="bg-blue-100 text-blue-700 text-[8px] font-black px-1.5 py-0.5 rounded-full">{t("sidebarContent.customGroupBadge", { namespace: "settings",  })}</span>}
                     </div>
                     <span className="text-[10px] text-slate-400 font-bold">{t("sidebarContent.activeItems", { namespace: "settings", vars: { count: group.items.filter(i => i.visible).length } })}</span>
@@ -277,7 +278,7 @@ export const SidebarContentManager: React.FC = () => {
                     <div className="divide-y divide-slate-100 bg-white">
                       {group.items.map((item, itemIdx) => {
                         const isItemEditing = editingItemId === item.id;
-                        const itemLabel = item.customLabel ?? item.defaultLabel;
+                        const displayItemLabel = itemLabel(item);
                         const IconComp = ICON_MAP[item.icon] ?? ICON_MAP['Settings'];
 
                         return (
@@ -323,11 +324,11 @@ export const SidebarContentManager: React.FC = () => {
                                 </div>
                               ) : (
                                 <div className="flex items-center gap-1.5 min-w-0">
-                                  <span className="text-xs font-bold text-slate-700 truncate">{itemLabel}</span>
+                                  <span className="text-xs font-bold text-slate-700 truncate">{displayItemLabel}</span>
                                   <span className="text-[9px] text-slate-400 truncate direction-ltr">({item.to})</span>
                                   {item.isCustom && <span className="bg-emerald-50 text-emerald-600 text-[8px] font-black px-1 rounded-full">{t("sidebarContent.customItemBadge", { namespace: "settings",  })}</span>}
                                   <button
-                                    onClick={() => handleStartRenameItem(item.id, itemLabel)}
+                                    onClick={() => handleStartRenameItem(item.id, displayItemLabel)}
                                     className="p-0.5 rounded text-slate-400 hover:text-blue-500 transition-colors"
                                   >
                                     <Edit2 className="w-2.5 h-2.5" />
@@ -345,7 +346,7 @@ export const SidebarContentManager: React.FC = () => {
                                 className="text-[10px] bg-slate-50 border border-slate-200 rounded px-1.5 py-1 outline-none text-slate-600 font-bold focus:border-blue-500"
                               >
                                 {layout.groups.map(g => (
-                                  <option key={g.id} value={g.id}>{g.customTitle ?? g.defaultTitle}</option>
+                                  <option key={g.id} value={g.id}>{groupTitle(g)}</option>
                                 ))}
                               </select>
 
@@ -434,7 +435,7 @@ export const SidebarContentManager: React.FC = () => {
                         .filter(item => !layout.groups.some(g => g.items.some(i => i.id === item.id && g.items.find(x => x.id === item.id)?.visible)))
                         .map(item => (
                           <option key={item.id} value={item.id}>
-                            {item.label}{item.groupLabel ? ` (${item.groupLabel})` : ''}
+                            {routeLabel(item.id, item.label)}{item.groupId ? ` (${t(`nav.groups.${item.groupId}`, { namespace: "shell", fallback: item.groupLabel, })} )` : ''}
                           </option>
                         ))}
                     </select>
@@ -457,7 +458,7 @@ export const SidebarContentManager: React.FC = () => {
                     >
                       <option value="">{t("sidebarContent.selectGroup", { namespace: "settings",  })}</option>
                       {layout.groups.filter(g => g.visible).map(g => (
-                        <option key={g.id} value={g.id}>{g.customTitle ?? g.defaultTitle}</option>
+                        <option key={g.id} value={g.id}>{groupTitle(g)}</option>
                       ))}
                     </select>
                   </div>
@@ -516,9 +517,9 @@ export const SidebarContentManager: React.FC = () => {
                     <div key={item.id} className="flex items-center justify-between px-3 py-2 hover:bg-slate-50/50 transition-colors">
                       <div className="flex items-center gap-2.5 min-w-0">
                         <IconComp className={cn("w-4 h-4 shrink-0", isInSidebar ? "text-slate-500" : "text-slate-400")} />
-                        <span className={cn("text-xs font-bold truncate", isInSidebar ? "text-slate-800" : "text-slate-500")}>{item.label}</span>
+                          <span className={cn("text-xs font-bold truncate", isInSidebar ? "text-slate-800" : "text-slate-500")}>{routeLabel(item.id, item.label)}</span>
                         <span className="text-[9px] text-slate-400 direction-ltr" dir="ltr">{item.to}</span>
-                        {item.groupLabel && <span className="text-[8px] text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-full">{item.groupLabel}</span>}
+                        {item.groupId && <span className="text-[8px] text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-full">{t(`nav.groups.${item.groupId}`, { namespace: "shell", fallback: item.groupLabel, })}</span>}
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
                         <span className={cn("text-[9px] font-bold px-1.5 py-0.5 rounded-full", isInSidebar ? "bg-emerald-50 text-emerald-600" : "bg-slate-100 text-slate-500")}>

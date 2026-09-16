@@ -263,7 +263,7 @@ export default function SalesInvoices() {
                 selectedId={headerState.customer_id || ""}
                 selectedName={headerState.customer_name || t("invoice.cashCustomerName", { namespace: "invoicing",  })}
                 onSelect={(id, name) => setHeaderState(s => ({ ...s, customer_id: id, customer_name: name }))}
-                onClear={() => setHeaderState(s => ({ ...s, customer_id: "", customer_name: "زبون نقدي" }))}
+                onClear={() => setHeaderState(s => ({ ...s, customer_id: "", customer_name: t("invoice.cashCustomerName", { namespace: "invoicing" }) }))}
                 readOnly={isReadOnly}
                 hideLabel
                 noBorder
@@ -320,7 +320,7 @@ export default function SalesInvoices() {
             }}
             paidAmount={headerState.paid_amount}
             onPaidAmountChange={(amount) => setHeaderState(s => ({ ...s, paid_amount: amount }))}
-            isCashParty={!isSearchingParty && (!headerState.customer_name || headerState.customer_name === "زبون نقدي")}
+            isCashParty={!isSearchingParty && (!headerState.customer_name || headerState.customer_name === t("invoice.cashCustomerName", { namespace: "invoicing" }))}
           />
         }
         sidebar={null}

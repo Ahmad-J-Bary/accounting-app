@@ -105,7 +105,7 @@ export function InvoiceList({
   const partyLabel = partyType === "supplier"
     ? t("invoice.partySupplier", { namespace: "invoicing",  })
     : t("invoice.partyCustomer", { namespace: "invoicing",  });
-  const defaultName = partyType === "supplier" ? "مورد نقدي" : "زبون نقدي";
+  const defaultName = partyType === "supplier" ? t("invoice.cashSupplierName", { namespace: "invoicing" }) : t("invoice.cashCustomerName", { namespace: "invoicing" });
 
   return (
     <OperationalTableTemplate

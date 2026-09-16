@@ -9,8 +9,6 @@ import { categoryService } from '@modules/inventory/api/categoryService';
 import { toast } from "sonner";
 import { useLocalization } from "@app/providers/LocalizationProvider";
 
-const DEFAULT_CATEGORY_NAME = "غير مصنف";
-
 interface CategoryFormProps {
   /** Whether the form panel is open */
   open: boolean;
@@ -40,13 +38,14 @@ export function CategoryForm({
   onClose,
   onSaved,
 }: CategoryFormProps) {
-  const { t } = useLocalization();
+  const { t, language } = useLocalization();
   const [name, setName] = useState("");
   const [codePrefix, setCodePrefix] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const isUncategorized = !!selected && selected.name === DEFAULT_CATEGORY_NAME && !selected.parent_id;
+  const uncategorizedName = t("materials.uncategorized", { namespace: "inventory" });
+  const isUncategorized = !!selected && selected.name === uncategorizedName && !selected.parent_id;
   const isRoot = !!selected && !!selected.parent_id === false && !isUncategorized;
 
   const getGeneralSubPrefix = useCallback((rootId: string) => {
@@ -55,11 +54,12 @@ export function CategoryForm({
   }, [allCategories]);
 
   const suggestPrefix = useCallback(() => {
-    const chars = "أبتثجحخدذرزسشصضطظعغفقكلمنهوي";
+    const isArabic = language === "ar";
+    const chars = isArabic ? "أبتثجحخدذرزسشصضطظعغفقكلمنهوي" : "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     const existingPrefixes = new Set(allCategories.map((c) => c.code_prefix).filter(Boolean));
     for (const char of chars) { if (!existingPrefixes.has(char)) return char; }
     return "X";
-  }, [allCategories]);
+  }, [allCategories, language]);
 
   useEffect(() => {
     if (!open) return;
@@ -67,7 +67,7 @@ export function CategoryForm({
     setSaving(false);
     if (mode === "edit_cat" && selected) {
       setName(selected.name);
-      if (isUncategorized && !selected.code_prefix) setCodePrefix("غ");
+      if (isUncategorized && !selected.code_prefix) setCodePrefix(language === "ar" ? "غ" : "U");
       else if (isRoot) setCodePrefix(getGeneralSubPrefix(selected.id));
       else setCodePrefix(selected.code_prefix || "");
     } else {
@@ -94,7 +94,7 @@ export function CategoryForm({
             return;
           }
         } else {
-          if (allCategories.some((c) => !c.parent_id && c.name === trimmedName && c.name !== DEFAULT_CATEGORY_NAME)) {
+          if (allCategories.some((c) => !c.parent_id && c.name === trimmedName && c.name !== uncategorizedName)) {
             setError(t("categories.form.duplicateRoot", { namespace: "inventory", vars: { name: trimmedName },  }));
             return;
           }
@@ -107,7 +107,7 @@ export function CategoryForm({
         toast.success(t("categories.form.categoryCreated", { namespace: "inventory",  }));
       } else if (mode === "edit_cat" && selected) {
         if (isRoot) {
-          if (allCategories.some((c) => !c.parent_id && c.name === trimmedName && c.name !== DEFAULT_CATEGORY_NAME && c.id !== selected.id)) {
+          if (allCategories.some((c) => !c.parent_id && c.name === trimmedName && c.name !== uncategorizedName && c.id !== selected.id)) {
             setError(t("categories.form.duplicateRoot", { namespace: "inventory", vars: { name: trimmedName },  }));
             return;
           }

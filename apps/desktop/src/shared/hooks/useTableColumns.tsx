@@ -3,15 +3,13 @@ import type { UnifiedColumn } from "@widgets/table-shell/UnifiedTable";
 import type { SummaryColumn } from "@widgets/table-shell/TableSummary";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { useBaseCurrencyColumns } from "./useBaseCurrencyColumns";
-import {
-  effectiveBalance as calcEffectiveBalance,
-  effectiveBalanceBase,
-  balanceDirectionLabel,
-} from "@shared/lib/balance-utils";
+import {  effectiveBalanceBase, balanceDirectionLabel} from "@shared/lib/balance-utils";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 export function useTableColumns() {
   const { currencies, baseCurrency, formatAmount, toBase } = useCurrencyContext();
   const { currencySuffix: cs } = useBaseCurrencyColumns();
+  const { t } = useLocalization();
 
   const getAccountStatusColumn = useCallback(<T extends { balance?: number | string; debit?: number | string; credit?: number | string }>(
     sortableHeader: React.ReactNode,
@@ -21,7 +19,7 @@ export function useTableColumns() {
     return {
       id: "status",
       header: sortableHeader,
-      label: "حالة الحساب",
+      label: t("common.labels.accountStatus", { namespace: "common" }),
       accessor: (item) => {
         const bal = effectiveBalanceBase(
           item.debit !== undefined ? Number(item.debit || 0) : undefined,
@@ -33,12 +31,12 @@ export function useTableColumns() {
         const isDebit = bal > 0;
         return (
           <span className={`font-bold ${isDebit ? "text-red-600" : "text-emerald-600"}`}>
-            {isDebit ? "مدين" : "دائن"}
+            {isDebit ? t("common.labels.debit", { namespace: "common" }) : t("common.labels.creditSide", { namespace: "common" })}
           </span>
         );
       }
     };
-  }, []);
+  }, [t]);
 
   const getBalanceColumns = useCallback(<T extends { balance?: number | string; debit?: number | string; credit?: number | string; currency?: string }>(
   ): UnifiedColumn<T>[] => {
@@ -46,8 +44,8 @@ export function useTableColumns() {
       const symbol = curr.symbol || curr.code;
       return {
         id: `balance_${curr.code}`,
-        header: `الرصيد${cs(symbol)}`,
-        label: `الرصيد${cs(symbol)}`,
+        header: `${t("common.labels.balance", { namespace: "common" })}${cs(symbol)}`,
+        label: `${t("common.labels.balance", { namespace: "common" })}${cs(symbol)}`,
         accessor: (item) => {
           const effectiveBalance = (item.debit !== undefined && item.credit !== undefined)
             ? Number(item.debit || 0) - Number(item.credit || 0)
@@ -59,7 +57,7 @@ export function useTableColumns() {
         className: "tabular-nums font-black text-slate-900"
       };
     });
-  }, [currencies, formatAmount, toBase, baseCurrency?.code, cs]);
+  }, [currencies, formatAmount, toBase, baseCurrency?.code, cs, t]);
 
   const getSummaryColumns = useCallback(<T extends { balance?: number | string; debit?: number | string; credit?: number | string; currency?: string }>(
     enrichedColumns: UnifiedColumn<T>[],
@@ -123,14 +121,14 @@ export function useTableColumns() {
         return {
           id: `${id}_summary`,
           columnId: id,
-          label: overallLabel ? `الرصيد / ${overallLabel}` : "—",
+          label: overallLabel ? `${t("common.labels.balance", { namespace: "common" })} / ${overallLabel}` : "—",
           value: baseTotal !== 0 ? formatAmount(baseTotal, { currencyCode: currCode }) : "—",
           className: valueClass,
         };
       }
       return { id: `${id}_spacer`, columnId: id, label: '', value: '' };
     });
-  }, [formatAmount, toBase, baseCurrency]);
+  }, [formatAmount, toBase, baseCurrency, t]);
 
   return {
     getAccountStatusColumn,

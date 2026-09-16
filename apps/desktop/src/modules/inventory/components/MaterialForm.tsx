@@ -65,7 +65,7 @@ const getEmptyForm = (t: (key: string, options?: { namespace?: string; vars?: Re
 });
 
 export function MaterialForm({ open, onClose, material, categories, onSave, saving, onCategoryCreated, warehouses, initialCategoryId }: MaterialFormProps) {
-  const { t } = useLocalization();
+  const { t, language } = useLocalization();
   const { currencies, baseCurrency, rateMap } = useCurrencyContext();
   const { beginScan } = useBarcodeScanner();
   const activeCurrencies = useMemo(() => currencies.filter(c => c.is_active), [currencies]);
@@ -75,8 +75,9 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
     { id: 'semi_wholesale', label: t("saleTiers.semi_wholesale", { namespace: "inventory" }) },
     { id: 'wholesale', label: t("saleTiers.wholesale", { namespace: "inventory" }) },
   ], [t]);
-  const uncategorizedCat = useMemo(() => categories.find(c => c.name === DEFAULT_CATEGORY_NAME && !c.parent_id), [categories]);
-  const mainCategories = useMemo(() => categories.filter(c => !c.parent_id && c.name !== DEFAULT_CATEGORY_NAME && !c.is_hybrid), [categories]);
+  const uncategorizedName = t("materials.uncategorized", { namespace: "inventory" });
+  const uncategorizedCat = useMemo(() => categories.find(c => c.name === uncategorizedName && !c.parent_id), [categories, uncategorizedName]);
+  const mainCategories = useMemo(() => categories.filter(c => !c.parent_id && c.name !== uncategorizedName && !c.is_hybrid), [categories, uncategorizedName]);
 
   const emptyForm = useMemo(() => getEmptyForm(t), [t]);
   const [formData, setFormData] = useState(emptyForm);
@@ -96,13 +97,14 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
   const [editingUnitData, setEditingUnitData] = useState<{ name: string; conversion_factor: string; barcode: string } | null>(null);
 
   const suggestPrefix = useCallback(() => {
-    const chars = "أبتثجحخدذرزسشصضطظعغفقكلمنهويABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    const isArabic = language === "ar";
+    const chars = isArabic ? "أبتثجحخدذرزسشصضطظعغفقكلمنهوي" : "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     const existingPrefixes = new Set(categories.map(c => c.code_prefix).filter(Boolean) as string[]);
     for (const ch of chars) {
       if (!existingPrefixes.has(ch)) return ch;
     }
     return "X";
-  }, [categories]);
+  }, [categories, language]);
 
   const filteredMains = useMemo(() => {
     const q = categorySearch.trim().toLowerCase();

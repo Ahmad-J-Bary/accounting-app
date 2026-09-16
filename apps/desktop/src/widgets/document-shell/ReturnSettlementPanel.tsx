@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { type Currency } from "@modules/core/api/currencyService";
 import { resolveCurrencySymbol } from "@modules/invoicing/lib/constants";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 interface ReturnSettlementPanelProps {
   totalAmount: number;
@@ -33,6 +34,7 @@ export function ReturnSettlementPanel({
   onCurrencyChange,
 }: ReturnSettlementPanelProps) {
   const { currencies: contextCurrencies, baseCurrency, hasMultipleCurrencies } = useCurrencyContext();
+  const { t } = useLocalization();
   const availableCurrencies = currenciesProp ?? contextCurrencies;
   const safeCurrency = selectedCurrency || baseCurrency?.code || (availableCurrencies[0]?.code ?? "");
   const minCash = useMemo(() => {
@@ -40,8 +42,8 @@ export function ReturnSettlementPanel({
     return 0;
   }, [totalAmount, partnerBalance]);
 
-  const partnerLabel = isSales ? "العميل" : "المورد";
-  const paymentLabel = isSales ? "سند دفع لعميل" : "سند قبض من مورد";
+  const partnerLabel = isSales ? t("common.term.customer", { namespace: "common" }) : t("common.term.supplier", { namespace: "common" });
+  const paymentLabel = isSales ? t("common.action.salesPaymentVoucher", { namespace: "common" }) : t("common.action.purchaseReceiptVoucher", { namespace: "common" });
 
   const hasDebt = partnerBalance > 0 && totalAmount > 0;
   const cashAmount = useMemo(() => {
@@ -66,7 +68,7 @@ export function ReturnSettlementPanel({
         <div className="flex flex-wrap items-center gap-2 overflow-x-auto no-scrollbar py-1">
           {hasMultipleCurrencies ? (
             <div className="flex items-center gap-1.5 shrink-0 px-2.5 py-1 bg-muted rounded-md border border-border">
-              <span className="text-2xs font-bold text-muted-foreground">العملة:</span>
+              <span className="text-2xs font-bold text-muted-foreground">{t("common.labels.currency", { namespace: "common" })}</span>
               {onCurrencyChange && availableCurrencies.length > 0 ? (
                 <select
                   value={safeCurrency}
@@ -89,7 +91,7 @@ export function ReturnSettlementPanel({
 
           <div className="flex items-center gap-2 text-2xs font-bold text-slate-500 bg-muted px-2.5 py-1 rounded-md border border-border h-7 shrink-0">
             <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
-            <span>قيمة المرتجع:</span>
+            <span>{t("common.labels.returnValue", { namespace: "common" })}</span>
             <span className="font-black text-slate-800 tabular-nums">{totalAmount.toFixed(2)}</span>
           </div>
 
@@ -105,7 +107,7 @@ export function ReturnSettlementPanel({
               : "text-emerald-600 bg-emerald-50/40 border-emerald-100"
           }`}>
             <span className={`w-1.5 h-1.5 rounded-full ${partnerBalance > 0 ? "bg-rose-400" : "bg-emerald-400"}`} />
-            <span>رصيد {partnerLabel}:</span>
+            <span>{t("common.labels.partnerBalance", { namespace: "common", vars: { partner: partnerLabel } })}</span>
             <span className="font-black tabular-nums">{partnerBalance.toFixed(2)}</span>
           </div>
 
@@ -117,7 +119,7 @@ export function ReturnSettlementPanel({
 
           <div className="flex flex-col items-center bg-muted px-2.5 py-1 rounded-md border border-border h-[42px] justify-center shrink-0">
             <span className="text-4xs font-black text-muted-foreground uppercase tracking-wider">
-              طريقة التسوية
+              {t("common.labels.settlementMethod", { namespace: "common" })}
             </span>
             <select
               value={effectiveMode}
@@ -129,13 +131,13 @@ export function ReturnSettlementPanel({
               className="h-6 px-1 bg-transparent font-black text-2xs outline-none cursor-pointer border-none text-slate-800 focus:ring-0"
             >
               {showFullCashReturn && (
-                <option value="full_cash_return">إرجاع نقدي كامل</option>
+                <option value="full_cash_return">{t("common.labels.fullCashReturn", { namespace: "common" })}</option>
               )}
               {showDeductFromDebt && (
-                <option value="deduct_from_debt">تسوية الدين</option>
+                <option value="deduct_from_debt">{t("common.labels.deductFromDebt", { namespace: "common" })}</option>
               )}
               {showPartialSettlement && (
-                <option value="partial_settlement">تسوية جزئية</option>
+                <option value="partial_settlement">{t("common.labels.partialSettlement", { namespace: "common" })}</option>
               )}
             </select>
           </div>
@@ -150,15 +152,15 @@ export function ReturnSettlementPanel({
               </div>
               <div className="flex flex-col items-center bg-muted px-2 py-1 rounded-md border border-border h-[42px] justify-center shrink-0">
                 <span className="text-4xs font-black text-muted-foreground uppercase tracking-wider">
-                  حالة الدفعة
+                  {t("common.labels.paymentStatus", { namespace: "common" })}
                 </span>
                 <select
                   value={isPaid ? "paid" : "unpaid"}
                   onChange={(e) => onIsPaidChange(e.target.value === "paid")}
                   className="h-6 px-1 bg-transparent font-black text-2xs outline-none cursor-pointer border-none text-slate-800 focus:ring-0"
                 >
-                  <option value="paid">تم الدفع مباشر</option>
-                  <option value="unpaid">لم يتم الدفع بعد</option>
+                  <option value="paid">{t("common.labels.paidDirectly", { namespace: "common" })}</option>
+                  <option value="unpaid">{t("common.labels.notYetPaidAfter", { namespace: "common" })}</option>
                 </select>
               </div>
             </>
@@ -175,7 +177,7 @@ export function ReturnSettlementPanel({
               {Math.min(totalAmount, partnerBalance) > 0 && (
                 <div className="flex items-center gap-2 text-2xs font-bold text-emerald-600 bg-emerald-50/40 px-2.5 py-1 rounded-md border border-emerald-100/60 h-7 shrink-0">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                  <span>خصم من الرصيد:</span>
+                  <span>{t("common.labels.deductedFromBalance", { namespace: "common" })}</span>
                   <span className="font-black tabular-nums">{Math.min(totalAmount, partnerBalance).toFixed(2)}</span>
                 </div>
               )}
@@ -199,7 +201,7 @@ export function ReturnSettlementPanel({
           {effectiveMode === "full_cash_return" && (
             <div className="flex items-center gap-2 text-2xs font-bold text-blue-600 bg-blue-50/40 px-2.5 py-1 rounded-md border border-blue-100/60 h-7 shrink-0">
               <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
-              <span>{isPaid ? paymentLabel : "إرجاع مؤجل"} {isPaid ? "" : "(لم يسدد بعد)"}:</span>
+              <span>{isPaid ? paymentLabel : t("common.labels.deferredReturn", { namespace: "common" })} {isPaid ? "" : `(${t("common.labels.notYetPaid", { namespace: "common" })})`}:</span>
               <span className="font-black tabular-nums">{totalAmount.toFixed(2)}</span>
             </div>
           )}
@@ -208,7 +210,7 @@ export function ReturnSettlementPanel({
             <div className="flex flex-col gap-1.5 shrink-0">
               <div className="flex items-center gap-2 text-2xs font-bold text-blue-600 bg-blue-50/40 px-2.5 py-1 rounded-md border border-blue-100/60 h-7 shrink-0">
                 <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
-                <span>{isPaid ? paymentLabel : "دفعة مؤجلة"}:</span>
+                <span>{isPaid ? paymentLabel : t("common.labels.deferredPayment", { namespace: "common" })}:</span>
                 <input
                   type="number"
                   value={settlementCash}
@@ -226,7 +228,7 @@ export function ReturnSettlementPanel({
               {(totalAmount - parseFloat(settlementCash || "0")) > 0 && (
                 <div className="flex items-center gap-2 text-2xs font-bold text-emerald-600 bg-emerald-50/40 px-2.5 py-1 rounded-md border border-emerald-100/60 h-7 shrink-0">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                  <span>خصم من الرصيد:</span>
+                  <span>{t("common.labels.deductedFromBalance", { namespace: "common" })}</span>
                   <span className="font-black tabular-nums">{(totalAmount - parseFloat(settlementCash || "0")).toFixed(2)}</span>
                 </div>
               )}
@@ -242,7 +244,7 @@ export function ReturnSettlementPanel({
                 ? "text-emerald-600"
                 : "text-rose-600"
           }`}>
-            الرصيد بعد التسوية
+            {t("common.labels.balanceAfterSettlement", { namespace: "common" })}
           </span>
           <span className={`text-sm font-black tabular-nums tracking-tight ${
             effectiveMode === "full_cash_return"
@@ -265,8 +267,8 @@ export function ReturnSettlementPanel({
       {effectiveMode === "partial_settlement" && (
         <div className="mt-3 pt-3 border-t border-border space-y-2">
           <div className="flex justify-between text-2xs text-muted-foreground">
-            <span>الحد الأدنى للدفع النقدي: {minCash.toFixed(2)}</span>
-            <span>الحد الأقصى: {totalAmount.toFixed(2)}</span>
+            <span>{t("common.labels.minCashPayment", { namespace: "common" })} {minCash.toFixed(2)}</span>
+            <span>{t("common.labels.maxAmount", { namespace: "common" })} {totalAmount.toFixed(2)}</span>
           </div>
           <input
             type="range"
@@ -278,8 +280,8 @@ export function ReturnSettlementPanel({
             className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-500"
           />
           <div className="flex justify-between text-2xs text-muted-foreground">
-            <span className="text-blue-600 font-bold">نقداً: {parseFloat(settlementCash || "0").toFixed(2)}</span>
-            <span className="text-emerald-600 font-bold">خصم من الرصيد: {(totalAmount - parseFloat(settlementCash || "0")).toFixed(2)}</span>
+            <span className="text-blue-600 font-bold">{t("common.labels.cashLabel", { namespace: "common" })} {parseFloat(settlementCash || "0").toFixed(2)}</span>
+            <span className="text-emerald-600 font-bold">{t("common.labels.deductedFromBalance", { namespace: "common" })} {(totalAmount - parseFloat(settlementCash || "0")).toFixed(2)}</span>
           </div>
         </div>
       )}

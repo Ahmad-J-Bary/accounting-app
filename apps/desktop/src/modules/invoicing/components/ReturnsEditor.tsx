@@ -45,7 +45,7 @@ export function ReturnsEditor({ returnType, partyType, parties, materials, wareh
   const [loadingExisting, setLoadingExisting] = useState(false);
   const [selectedCurrency, setSelectedCurrency] = useState("");
   const [partyId, setPartyId] = useState("");
-  const [partyName, setPartyName] = useState(isSales ? "زبون نقدي" : "مورد نقدي");
+  const [partyName, setPartyName] = useState(isSales ? t("invoice.cashCustomerName", { namespace: "invoicing" }) : t("invoice.cashSupplierName", { namespace: "invoicing" }));
   const [returnDate, setReturnDate] = useState(new Date().toISOString().slice(0, 10));
   const [returnNumber, setReturnNumber] = useState("");
   const [notes, setNotes] = useState("");
@@ -568,7 +568,7 @@ export function ReturnsEditor({ returnType, partyType, parties, materials, wareh
               selectedId={partyId}
               selectedName={partyName}
               onSelect={(id, name) => { setPartyId(id); setPartyName(name); }}
-              onClear={() => { setPartyId(""); setPartyName(isSales ? "زبون نقدي" : "مورد نقدي"); }}
+              onClear={() => { setPartyId(""); setPartyName(isSales ? t("invoice.cashCustomerName", { namespace: "invoicing" }) : t("invoice.cashSupplierName", { namespace: "invoicing" })); }}
               readOnly={readOnly}
               hideLabel
               noBorder

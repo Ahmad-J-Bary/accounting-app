@@ -31,7 +31,8 @@ export function CategoryTreeNodeItem({
 }: CategoryTreeNodeItemProps) {
   const { t } = useLocalization();
   const isVirtualRoot = node.id === VIRTUAL_ROOT_ID;
-  const isDefault = node.name === "غير مصنف" && !node.parent_id;
+  const uncategorizedName = t("materials.uncategorized", { namespace: "inventory" });
+  const isDefault = node.name === uncategorizedName && !node.parent_id;
   const isRoot = !node.parent_id && !isVirtualRoot;
 
   const renderIcon = (n: CategoryTreeNode, expanded: boolean) => {
