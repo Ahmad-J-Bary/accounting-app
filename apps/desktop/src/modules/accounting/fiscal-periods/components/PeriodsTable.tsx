@@ -34,7 +34,7 @@ export function PeriodsTable({ periods, current, isLoading, actionBusy, onAction
       {!isLoading && periods.length > 0 && (
         <table className="w-full text-xs">
           <thead>
-            <tr className="border-b border-slate-200 text-slate-500">
+            <tr className="border-b border-muted text-muted-foreground">
               <th scope="col" className="text-end px-4 py-2 font-semibold">{t("fiscalPeriods.table.colStart", { namespace: "accounting",  })}</th>
               <th scope="col" className="text-end px-4 py-2 font-semibold">{t("fiscalPeriods.table.colEnd", { namespace: "accounting",  })}</th>
               <th scope="col" className="text-end px-4 py-2 font-semibold">{t("fiscalPeriods.table.colStatus", { namespace: "accounting",  })}</th>
@@ -53,15 +53,15 @@ export function PeriodsTable({ periods, current, isLoading, actionBusy, onAction
               return (
                 <tr
                   key={p.id}
-                  className={cn("border-b border-slate-100", isCurrent && "bg-emerald-50/40")}
+                  className={cn("border-b border-muted", isCurrent && "bg-success/10/40")}
                 >
                   <td className="px-4 py-2 tabular-nums">{toLocalDateStr(p.start_date)}</td>
                   <td className="px-4 py-2 tabular-nums">{toLocalDateStr(p.end_date)}</td>
                   <td className="px-4 py-2">
                     <span className="flex items-center gap-1.5">
                       <StatusBadge status={p.status} />
-                      {isCurrent && <span className="text-[10px] font-bold text-emerald-600">{t("fiscalPeriods.table.currentBadge", { namespace: "accounting",  })}</span>}
-                      {blocked && <span className="text-[10px] font-bold text-slate-400">{t("fiscalPeriods.table.blockedBadge", { namespace: "accounting",  })}</span>}
+                      {isCurrent && <span className="text-[10px] font-bold text-success">{t("fiscalPeriods.table.currentBadge", { namespace: "accounting",  })}</span>}
+                      {blocked && <span className="text-[10px] font-bold text-muted-foreground">{t("fiscalPeriods.table.blockedBadge", { namespace: "accounting",  })}</span>}
                     </span>
                   </td>
                   <td className="px-4 py-2 text-slate-600">{p.closed_by || "—"}</td>
@@ -71,7 +71,7 @@ export function PeriodsTable({ periods, current, isLoading, actionBusy, onAction
                       {canClose && (
                         <Button
                           variant="outline"
-                          className="h-8 text-xs border-slate-200 text-slate-700 font-bold"
+                          className="h-8 text-xs border-muted text-foreground font-bold"
                           disabled={actionBusy}
                           onClick={() => onAction("close", p)}
                         >
@@ -81,7 +81,7 @@ export function PeriodsTable({ periods, current, isLoading, actionBusy, onAction
                       {canReopen && (
                         <Button
                           variant="outline"
-                          className="h-8 text-xs border-blue-200 text-blue-700 font-bold"
+                          className="h-8 text-xs border-primary/20 text-blue-700 font-bold"
                           disabled={actionBusy}
                           onClick={() => onAction("reopen", p)}
                         >
@@ -92,7 +92,7 @@ export function PeriodsTable({ periods, current, isLoading, actionBusy, onAction
                       {canLock && (
                         <Button
                           variant="outline"
-                          className="h-8 text-xs border-slate-200 text-slate-700 font-bold"
+                          className="h-8 text-xs border-muted text-foreground font-bold"
                           disabled={actionBusy}
                           onClick={() => onAction("lock", p)}
                         >

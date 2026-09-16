@@ -82,12 +82,12 @@ export default function MaterialMovementsPage() {
             {displayMovements.map((m, idx) => (
               <div
                 key={idx}
-                className="p-4 border border-slate-200 rounded-xl bg-white shadow-sm"
+                className="p-4 border border-muted rounded-xl bg-white shadow-sm"
               >
                 <div className="flex items-center justify-between mb-2">
-                  <span className="font-bold text-slate-800 flex items-center gap-2">
+                  <span className="font-bold text-foreground flex items-center gap-2">
                     {m.is_inflow ? (
-                      <ArrowDown className="w-4 h-4 text-emerald-600" />
+                      <ArrowDown className="w-4 h-4 text-success" />
                     ) : (
                       <ArrowUp className="w-4 h-4 text-red-600" />
                     )}
@@ -99,24 +99,24 @@ export default function MaterialMovementsPage() {
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                   <div>
-                    <span className="text-slate-400 text-xs">{t("labels.quantity", { namespace: "common",  })}</span>
+                    <span className="text-muted-foreground text-xs">{t("labels.quantity", { namespace: "common",  })}</span>
                     <p className="font-bold">{toLocalString(parseFloat(m.quantity))}</p>
                   </div>
                   <div>
-                    <span className="text-slate-400 text-xs">{t("labels.cost", { namespace: "inventory",  })}</span>
+                    <span className="text-muted-foreground text-xs">{t("labels.cost", { namespace: "inventory",  })}</span>
                     <p className="font-bold">{formatCurrency(parseFloat(m.unit_cost), baseCurrency?.symbol || "")}</p>
                   </div>
                   <div>
-                    <span className="text-slate-400 text-xs">{t("labels.total", { namespace: "common",  })}</span>
+                    <span className="text-muted-foreground text-xs">{t("labels.total", { namespace: "common",  })}</span>
                     <p className="font-bold">{formatCurrency(parseFloat(m.total_cost), baseCurrency?.symbol || "")}</p>
                   </div>
                   <div>
-                    <span className="text-slate-400 text-xs">{t("labels.party", { namespace: "inventory",  })}</span>
+                    <span className="text-muted-foreground text-xs">{t("labels.party", { namespace: "inventory",  })}</span>
                     <p className="font-medium">{m.party_name || "—"}</p>
                   </div>
                 </div>
                 {m.notes && (
-                  <div className="mt-2 text-xs text-slate-400 bg-slate-50 rounded-lg p-2">
+                  <div className="mt-2 text-xs text-muted-foreground bg-muted rounded-lg p-2">
                     {m.notes}
                   </div>
                 )}

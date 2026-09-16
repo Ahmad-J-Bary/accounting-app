@@ -173,8 +173,8 @@ export function ExpenseFormPanel({
                     className={cn(
                       "flex-1 rounded-md text-sm font-bold transition-colors border",
                       balanceDirection === "debit"
-                        ? "bg-blue-100 text-blue-700 border-blue-300"
-                        : "bg-slate-50 text-slate-400 border-slate-200 hover:bg-slate-100"
+                        ? "bg-primary/20 text-blue-700 border-blue-300"
+                        : "bg-muted text-muted-foreground border-muted hover:bg-muted"
                     )}
                     onClick={() => setBalanceDirection("debit")}
                   >
@@ -185,8 +185,8 @@ export function ExpenseFormPanel({
                     className={cn(
                       "flex-1 rounded-md text-sm font-bold transition-colors border",
                       balanceDirection === "credit"
-                        ? "bg-emerald-100 text-emerald-700 border-emerald-300"
-                        : "bg-slate-50 text-slate-400 border-slate-200 hover:bg-slate-100"
+                        ? "bg-success/20 text-success border-success/30"
+                        : "bg-muted text-muted-foreground border-muted hover:bg-muted"
                     )}
                     onClick={() => setBalanceDirection("credit")}
                   >
@@ -204,7 +204,7 @@ export function ExpenseFormPanel({
             value={notes}
             onChange={e => setNotes(e.target.value)}
             placeholder={t("expense.notesPlaceholder", { namespace: "invoicing",  })}
-            className="min-h-[60px] bg-white border-slate-200"
+            className="min-h-[60px] bg-white border-muted"
           />
         </div>
       </div>

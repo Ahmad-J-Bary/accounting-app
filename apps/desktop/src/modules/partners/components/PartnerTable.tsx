@@ -73,7 +73,7 @@ export function PartnerTable({
             <div className="w-8 h-8 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600 shrink-0">
               <Users className="w-4 h-4" />
             </div>
-            <span className="font-bold text-slate-800">{p.name}</span>
+            <span className="font-bold text-foreground">{p.name}</span>
           </div>
         )
       },
@@ -92,7 +92,7 @@ export function PartnerTable({
         },
         className: isBase
           ? "tabular-nums font-black text-slate-900"
-          : "tabular-nums font-medium text-slate-400"
+          : "tabular-nums font-medium text-muted-foreground"
       });
     });
 
@@ -102,7 +102,7 @@ export function PartnerTable({
         header: t("columns.capitalRatio", { namespace: "partners",  }),
         label: t("columns.capitalRatioFull", { namespace: "partners",  }),
         accessor: (p: PartnerWithRatios) => (
-          <span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 text-[10px] font-black tabular-nums">
+          <span className="px-2 py-0.5 rounded-full bg-primary/10 text-blue-700 text-[10px] font-black tabular-nums">
             {toFixed(p.calculatedCapitalRatio, 2)}%
           </span>
         ),
@@ -112,7 +112,7 @@ export function PartnerTable({
         header: t("columns.profitRatio", { namespace: "partners",  }),
         label: t("columns.profitRatioFull", { namespace: "partners",  }),
         accessor: (p: PartnerWithRatios) => (
-          <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-black tabular-nums">
+          <span className="px-2 py-0.5 rounded-full bg-success/10 text-success text-[10px] font-black tabular-nums">
             {toFixed(p.calculatedRatio, 2)}%
           </span>
         ),
@@ -165,11 +165,11 @@ export function PartnerTable({
       const id = col.id;
       switch (id) {
         case "name":
-          return { id: "count", columnId: "name", label: "", value: t("summary.count", { namespace: "partners", vars: { count: sortedPartners.length },  }), className: "text-slate-500 font-medium" };
+          return { id: "count", columnId: "name", label: "", value: t("summary.count", { namespace: "partners", vars: { count: sortedPartners.length },  }), className: "text-muted-foreground font-medium" };
         case "capital_ratio":
           return { id: "total_capital_ratio", columnId: "capital_ratio", label: t("summary.total", { namespace: "partners",  }), value: `${toFixed(totalCapitalRatio, 2)}%`, className: "text-blue-700 font-black" };
         case "ratio":
-          return { id: "total_ratio", columnId: "ratio", label: t("summary.total", { namespace: "partners",  }), value: `${toFixed(totalRatio, 2)}%`, className: "text-emerald-700 font-black" };
+          return { id: "total_ratio", columnId: "ratio", label: t("summary.total", { namespace: "partners",  }), value: `${toFixed(totalRatio, 2)}%`, className: "text-success font-black" };
         default: {
           const match = id.match(/^amount_(.+)$/);
           if (match) {
@@ -182,7 +182,7 @@ export function PartnerTable({
               value: baseTotal > 0 ? formatAmount(baseTotal, { currencyCode: currCode }) : "—",
               className: isBase
                 ? "text-slate-900 font-black"
-                : "text-slate-500 font-extrabold"
+                : "text-muted-foreground font-extrabold"
             };
           }
           return { id: `${id}_spacer`, columnId: id, label: "", value: "" };

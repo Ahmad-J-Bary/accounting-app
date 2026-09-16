@@ -606,7 +606,7 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
   return (
     <FormPanel 
       title={material ? t("materials.form.editTitle", { namespace: "inventory" }) : t("materials.form.createTitle", { namespace: "inventory" })}
-      icon={material ? <Edit className="w-5 h-5 text-blue-600" /> : <Package2 className="w-5 h-5 text-emerald-600" />}
+      icon={material ? <Edit className="w-5 h-5 text-primary" /> : <Package2 className="w-5 h-5 text-success" />}
       onClose={onClose}
       onSave={handleSave}
       isSaving={saving}
@@ -740,13 +740,13 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
                 <div className="divide-y divide-border text-right">
                   {uncategorizedCat && (!categorySearch.trim() || uncategorizedCat.name.includes(categorySearch.trim())) && (
                     <div className="grid grid-cols-[1fr_1fr_28px] items-center min-h-[36px] hover:bg-accent/50">
-                      <div className="px-3 py-1.5 font-black text-blue-600 text-xs italic">{t("materials.uncategorized", { namespace: "inventory" })}</div>
+                      <div className="px-3 py-1.5 font-black text-primary text-xs italic">{t("materials.uncategorized", { namespace: "inventory" })}</div>
                       <div className="px-3 py-1.5">
                         <div
                           onClick={() => handleCategoryToggle(uncategorizedCat.id, true)}
                           className={cn("inline-flex items-center justify-center gap-2 px-3 py-1 rounded-xl border cursor-pointer text-[10px] transition-all",
                             formData.selectedCategoryIds.includes(uncategorizedCat.id)
-                              ? "bg-blue-50 border-blue-200 text-blue-700 font-bold"
+                              ? "bg-primary/10 border-primary/20 text-primary font-bold"
                               : "bg-card border-border text-muted-foreground hover:bg-accent"
                           )}
                         >
@@ -783,13 +783,13 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
                                     onClick={(e) => { e.stopPropagation(); handleCategoryToggle(sub.id, false, main.id); }}
                                     className={cn("inline-flex items-center gap-1 px-2 py-0.5 rounded-lg border cursor-pointer text-[9px] transition-all",
                                       formData.selectedCategoryIds.includes(sub.id)
-                                        ? "bg-emerald-50 border-emerald-200 text-emerald-700 font-bold"
+                                        ? "bg-success/10 border-success/20 text-success font-bold"
                                         : "bg-card border-border text-muted-foreground hover:bg-accent"
                                     )}
                                   >
                                     <div className={cn("w-2 h-2 rounded-sm border flex items-center justify-center transition-colors",
                                       formData.selectedCategoryIds.includes(sub.id)
-                                        ? "bg-emerald-600 border-emerald-600"
+                                        ? "bg-success border-success"
                                         : "border-border bg-card"
                                     )}>
                                       {formData.selectedCategoryIds.includes(sub.id) && <Check className="w-1.5 h-1.5 text-white" />}
@@ -813,7 +813,7 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
                               type="button"
                               onClick={(e) => { e.stopPropagation(); openInlineCreate({ type: "sub", parentId: main.id, parentName: main.name }); }}
                               title={t("materials.form.addSubFor", { namespace: "inventory", vars: { name: main.name } })}
-                              className="opacity-0 group-hover:opacity-100 w-6 h-6 rounded-lg border border-dashed border-border text-muted-foreground hover:border-blue-500 hover:text-blue-600 hover:bg-blue-50 flex items-center justify-center transition-all"
+                              className="opacity-0 group-hover:opacity-100 w-6 h-6 rounded-lg border border-dashed border-border text-muted-foreground hover:border-primary hover:text-primary hover:bg-primary/10 flex items-center justify-center transition-all"
                             >
                               <Plus className="w-3 h-3" />
                             </button>
@@ -830,7 +830,7 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
                       size="sm"
                       variant="outline"
                       onClick={() => openInlineCreate({ type: "main" })}
-                      className="w-full h-7 text-[10px] font-bold gap-1 border-dashed border-border hover:border-blue-500 hover:bg-blue-50 hover:text-blue-700"
+                      className="w-full h-7 text-[10px] font-bold gap-1 border-dashed border-border hover:border-primary hover:bg-primary/10 hover:text-primary"
                     >
                       <Plus className="w-3 h-3" /> {t("materials.form.addMainCategory", { namespace: "inventory" })}
                     </Button>
@@ -839,13 +839,13 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
 
                 {/* Inline create form */}
                 {inlineCreate && (
-                  <div className="border-t-2 border-blue-200 bg-blue-50/60 p-3 space-y-2">
+                  <div className="border-t-2 border-primary/20 bg-primary/10 p-3 space-y-2">
                     <div className="flex items-center justify-between">
-                      <div className="text-[11px] font-black text-blue-800 flex items-center gap-1.5">
+                      <div className="text-[11px] font-black text-primary flex items-center gap-1.5">
                         {inlineCreate.type === "main" ? (
                           <><Plus className="w-3.5 h-3.5" /> {t("materials.form.newMainCategory", { namespace: "inventory" })}</>
                         ) : (
-                          <><Plus className="w-3.5 h-3.5" /> {t("materials.form.newSubUnder", { namespace: "inventory" })} <span className="text-blue-600">{inlineCreate.parentName}</span></>
+                          <><Plus className="w-3.5 h-3.5" /> {t("materials.form.newSubUnder", { namespace: "inventory" })} <span className="text-primary">{inlineCreate.parentName}</span></>
                         )}
                       </div>
                     </div>
@@ -866,7 +866,7 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
                     </p>
                     <div className="flex items-center gap-2 justify-end">
                       <Button type="button" size="sm" variant="ghost" onClick={cancelInlineCreate} disabled={creatingSaving} className="h-7 text-[10px] font-bold">{t("labels.cancel", { namespace: "inventory" })}</Button>
-                      <Button type="button" size="sm" onClick={submitInlineCreate} disabled={creatingSaving || !newCatName.trim()} className="h-7 text-[10px] font-bold bg-blue-600 hover:bg-blue-700">
+                      <Button type="button" size="sm" onClick={submitInlineCreate} disabled={creatingSaving || !newCatName.trim()} className="h-7 text-[10px] font-bold bg-primary hover:bg-primary/80">
                         {creatingSaving ? t("categories.form.saving", { namespace: "inventory" }) : t("categories.form.saveCategory", { namespace: "inventory" })}
                       </Button>
                     </div>
@@ -916,10 +916,10 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
           {/* إدارة الوحدات */}
           <div className="flex items-center justify-between border-b pb-2 pt-2">
             <div className="space-y-0.5 text-right">
-              <h3 className="text-sm font-bold text-slate-800">{t("materials.form.manageUnits", { namespace: "inventory" })}</h3>
+              <h3 className="text-sm font-bold text-foreground">{t("materials.form.manageUnits", { namespace: "inventory" })}</h3>
               <p className="text-[10px] text-muted-foreground italic">{t("materials.form.manageUnitsHint", { namespace: "inventory" })}</p>
             </div>
-            <Button type="button" size="sm" onClick={() => setShowUnitForm(true)} className="bg-blue-600 hover:bg-blue-700 gap-1.5 h-8 text-xs font-bold rounded-lg shadow-sm"><Plus className="w-3.5 h-3.5" /> {t("materials.form.addUnit", { namespace: "inventory" })}</Button>
+            <Button type="button" size="sm" onClick={() => setShowUnitForm(true)} className="bg-primary hover:bg-primary/80 gap-1.5 h-8 text-xs font-bold rounded-lg shadow-sm"><Plus className="w-3.5 h-3.5" /> {t("materials.form.addUnit", { namespace: "inventory" })}</Button>
           </div>
 
           <div className="space-y-3">
@@ -996,8 +996,8 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
 
           {/* أسعار المبيع */}
           <div className="flex items-center gap-2 pt-2 border-b pb-1.5 text-right">
-            <TrendingUp className="w-4 h-4 text-emerald-600" />
-            <h3 className="font-bold text-xs text-slate-800">{t("materials.form.salePricesTitle", { namespace: "inventory" })}</h3>
+            <TrendingUp className="w-4 h-4 text-success" />
+            <h3 className="font-bold text-xs text-foreground">{t("materials.form.salePricesTitle", { namespace: "inventory" })}</h3>
           </div>
 
           {/* الحد الأعلى للكمية لكل مستوى (على مستوى المادة) */}
@@ -1006,7 +1006,7 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
             <div className="flex items-center gap-4 flex-wrap">
               {saleTiers.filter(tier => tier.id !== 'wholesale').map(tier => (
                 <div key={tier.id} className="flex items-center gap-1.5">
-                  <span className="text-[10px] font-bold text-slate-600 whitespace-nowrap">{tier.label}:</span>
+                  <span className="text-[10px] font-bold text-foreground whitespace-nowrap">{tier.label}:</span>
                   <Input
                     type="number"
                     min="0"
@@ -1032,7 +1032,7 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
                 </div>
               ))}
               <div className="flex items-center gap-1.5">
-                <span className="text-[10px] font-bold text-slate-600 whitespace-nowrap">{t("saleTiers.wholesale", { namespace: "inventory" })}:</span>
+                <span className="text-[10px] font-bold text-foreground whitespace-nowrap">{t("saleTiers.wholesale", { namespace: "inventory" })}:</span>
                 <span className="text-[9px] text-muted-foreground italic font-medium">{t("materials.form.unlimited", { namespace: "inventory" })}</span>
               </div>
             </div>
@@ -1108,10 +1108,10 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
                   <Button 
                     type="button" 
                     variant="outline" 
-                    className="flex-1 h-9 border-dashed border-border hover:border-blue-400 hover:bg-blue-50/50 gap-2 text-xs font-bold"
+                    className="flex-1 h-9 border-dashed border-border hover:border-primary/60 hover:bg-primary/10 gap-2 text-xs font-bold"
                     onClick={() => document.getElementById('material-image-upload')?.click()}
                   >
-                    <ImageIcon className="w-3.5 h-3.5 text-blue-500" />
+                    <ImageIcon className="w-3.5 h-3.5 text-primary" />
                     {t("materials.form.uploadFromDevice", { namespace: "inventory" })}
                   </Button>
                   {formData.image_path && (
@@ -1151,7 +1151,7 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
                   {formData.image_path ? (
                     <img src={formData.image_path} alt="Preview" className="w-full h-full object-contain animate-in zoom-in-75 duration-200" />
                   ) : (
-                    <ImageIcon className="w-8 h-8 text-slate-200" />
+                    <ImageIcon className="w-8 h-8 text-muted-foreground" />
                   )}
                 </div>
                 <div className="space-y-0.5">

@@ -504,10 +504,10 @@ export default function Accounting() {
             const Icon = action.icon;
             const toneClass =
               action.tone === "primary"
-                ? "bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100 text-white"
+                ? "bg-primary hover:bg-primary/80 shadow-lg shadow-primary/20 text-white"
                 : action.tone === "danger"
-                  ? "bg-card border-rose-200 text-rose-700 hover:bg-rose-50"
-                  : "bg-card border-border text-foreground hover:bg-slate-50";
+                  ? "bg-card border-destructive/20 text-destructive hover:bg-destructive/10"
+                  : "bg-card border-border text-foreground hover:bg-muted";
             return (
               <Button
                 key={action.key}
@@ -516,7 +516,7 @@ export default function Accounting() {
                 disabled={action.disabled}
                 onClick={action.onClick}
               >
-                {Icon && <Icon className={`w-4 h-4 ms-2 ${action.tone === "primary" ? "" : action.tone === "danger" ? "text-rose-600" : action.key === "ledger" ? "text-blue-600" : ""}`} />}
+                {Icon && <Icon className={`w-4 h-4 ms-2 ${action.tone === "primary" ? "" : action.tone === "danger" ? "text-destructive" : action.key === "ledger" ? "text-primary" : ""}`} />}
                 {action.label}
               </Button>
             );
@@ -529,27 +529,27 @@ export default function Accounting() {
             <button
               type="button"
               onClick={() => setTreePresentation("default")}
-              className={`rounded-md px-2 py-1 text-[11px] font-bold transition-colors ${treePresentation === "default" ? "bg-blue-600 text-white" : "text-slate-500 hover:bg-slate-100"}`}
+              className={`rounded-md px-2 py-1 text-[11px] font-bold transition-colors ${treePresentation === "default" ? "bg-primary text-white" : "text-muted-foreground hover:bg-muted"}`}
             >
               {t("chartOfAccounts.tree.presentation", { namespace: "accounting",  })}
             </button>
             <button
               type="button"
               onClick={() => setTreePresentation("explorer")}
-              className={`rounded-md px-2 py-1 text-[11px] font-bold transition-colors ${treePresentation === "explorer" ? "bg-slate-900 text-white" : "text-slate-500 hover:bg-slate-100"}`}
+              className={`rounded-md px-2 py-1 text-[11px] font-bold transition-colors ${treePresentation === "explorer" ? "bg-background text-white" : "text-muted-foreground hover:bg-muted"}`}
             >
               Explorer
             </button>
           </div>
           <button
             onClick={expandAll}
-            className="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-bold text-slate-500 hover:text-slate-800 hover:bg-slate-200/70 transition-colors"
+            className="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-bold text-muted-foreground hover:text-foreground hover:bg-muted/70 transition-colors"
           >
             <ChevronLeft className="w-3 h-3" /> {t("chartOfAccounts.tree.expand", { namespace: "accounting",  })}
           </button>
           <button
             onClick={collapseAll}
-            className="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-bold text-slate-500 hover:text-slate-800 hover:bg-slate-200/70 transition-colors"
+            className="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-bold text-muted-foreground hover:text-foreground hover:bg-muted/70 transition-colors"
           >
             {t("chartOfAccounts.tree.collapse", { namespace: "accounting",  })} <ChevronRight className="w-3 h-3" />
           </button>
@@ -559,7 +559,7 @@ export default function Accounting() {
         <div className={`space-y-1 ${treePresentation === "explorer" ? "[&_*]:border-slate-800 [&_*]:text-slate-100" : ""}`}>
           {isLoadingNow ? (
              Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className={`h-10 animate-pulse rounded-lg mb-2 ${treePresentation === "explorer" ? "bg-slate-900" : "bg-slate-50"}`} />
+              <div key={i} className={`h-10 animate-pulse rounded-lg mb-2 ${treePresentation === "explorer" ? "bg-background" : "bg-muted"}`} />
             ))
           ) : (
             <AccountTreeNodeItem

@@ -185,12 +185,12 @@ export default function DamagedPage() {
           <Button
             size="sm"
             onClick={handleNewClick}
-            className="bg-rose-600 hover:bg-rose-700 shadow-lg shadow-rose-100 font-bold"
+            className="bg-destructive hover:bg-destructive/80 shadow-lg shadow-destructive/20 font-bold"
           >
             <Plus className="w-4 h-4 ml-2" /> {t("damaged.register", { namespace: "inventory",  })}
           </Button>
-          <Button variant="outline" size="sm" onClick={handleExport} className="border-slate-200 hover:bg-slate-50 font-bold">
-            <Download className="w-4 h-4 ml-2 text-slate-500" /> {t("labels.exportExcel", { namespace: "inventory",  })}
+          <Button variant="outline" size="sm" onClick={handleExport} className="border-muted hover:bg-muted font-bold">
+            <Download className="w-4 h-4 ml-2 text-muted-foreground" /> {t("labels.exportExcel", { namespace: "inventory",  })}
           </Button>
         </div>
       }

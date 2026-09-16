@@ -75,7 +75,7 @@ export function QuickCreateFixedAsset({ warehouses, onCreate, navLink }: QuickCr
           variant="outline"
           size="sm"
           onClick={() => setExpanded(true)}
-          className="h-8 shrink-0 rounded-full border-emerald-300 bg-emerald-50 px-3 text-xs font-bold text-emerald-700 hover:bg-emerald-100 hover:border-emerald-400 transition-all"
+          className="h-8 shrink-0 rounded-full border-success/20 bg-success/10 px-3 text-xs font-bold text-success hover:bg-success/20 hover:border-success/40 transition-all"
         >
           <Plus className="w-3.5 h-3.5 ms-1" />
           {t("fixedAssetLegacy.addButton", { namespace: "openingBalance" })}
@@ -121,7 +121,7 @@ export function QuickCreateFixedAsset({ warehouses, onCreate, navLink }: QuickCr
             }}
           />
           <div className="relative">
-            <Calendar className="absolute start-1.5 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400 pointer-events-none" />
+            <Calendar className="absolute start-1.5 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground pointer-events-none" />
             <Input
               type="date"
               value={purchaseDate}
@@ -136,7 +136,7 @@ export function QuickCreateFixedAsset({ warehouses, onCreate, navLink }: QuickCr
             size="sm"
             variant="ghost"
             onClick={cancel}
-            className="h-7 w-7 p-0 text-slate-400 hover:text-slate-600 shrink-0"
+            className="h-7 w-7 p-0 text-muted-foreground hover:text-muted-foreground shrink-0"
           >
             <X className="w-3.5 h-3.5" />
           </Button>
@@ -174,7 +174,7 @@ export function QuickCreateFixedAsset({ warehouses, onCreate, navLink }: QuickCr
             size="sm"
             onClick={() => void handleCreate()}
             disabled={creating || !name.trim() || !cost.trim()}
-            className="h-7 px-2 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shrink-0"
+            className="h-7 px-2 text-xs font-bold bg-success hover:bg-success/80 text-white shrink-0"
           >
             {creating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
           </Button>

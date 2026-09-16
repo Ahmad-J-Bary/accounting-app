@@ -103,7 +103,7 @@ export function InvoiceTable({
         header: partyLabel,
         label: partyLabel,
         accessor: (inv) => inv.invoice_type === "OpeningBalance" ? "" : (partyType === "supplier" ? (inv.supplier_name || defaultName) : (inv.customer_name || defaultName)),
-        className: "font-bold text-slate-800"
+        className: "font-bold text-foreground"
       },
       ...(showSubtotal ? currencies.map(curr => {
         const isBase = isBaseCurrency(curr.code);
@@ -124,7 +124,7 @@ export function InvoiceTable({
           },
           className: isBase
             ? "font-bold tabular-nums text-foreground"
-            : "font-medium tabular-nums text-slate-400"
+            : "font-medium tabular-nums text-muted-foreground"
         };
       }) : []),
       ...(showDiscountGranted ? currencies.map(curr => {
@@ -145,8 +145,8 @@ export function InvoiceTable({
             return formatAmount(baseAmt, { currencyCode: curr.code });
           },
           className: isBase
-            ? "font-bold tabular-nums text-rose-600"
-            : "font-medium tabular-nums text-rose-300"
+            ? "font-bold tabular-nums text-destructive"
+            : "font-medium tabular-nums text-destructive/60"
         };
       }) : []),
       ...(showDiscount ? currencies.map(curr => {
@@ -167,7 +167,7 @@ export function InvoiceTable({
             return formatAmount(baseAmt, { currencyCode: curr.code });
           },
           className: isBase
-            ? "font-bold tabular-nums text-blue-600"
+            ? "font-bold tabular-nums text-primary"
             : "font-medium tabular-nums text-blue-300"
         };
       }) : []),
@@ -189,8 +189,8 @@ export function InvoiceTable({
             return formatAmount(baseAmt, { currencyCode: curr.code });
           },
           className: isBase
-            ? "font-bold tabular-nums text-rose-600"
-            : "font-medium tabular-nums text-rose-300"
+            ? "font-bold tabular-nums text-destructive"
+            : "font-medium tabular-nums text-destructive/60"
         };
       }) : []),
       ...currencies.map(curr => {
@@ -209,7 +209,7 @@ export function InvoiceTable({
           },
           className: isBase
             ? "font-black tabular-nums text-slate-900"
-            : "font-medium tabular-nums text-slate-400"
+            : "font-medium tabular-nums text-muted-foreground"
         };
       }),
       ...currencies.map(curr => {
@@ -230,8 +230,8 @@ export function InvoiceTable({
             return formatAmount(baseAmt, { currencyCode: curr.code });
           },
           className: isBase
-            ? "font-bold tabular-nums text-emerald-600"
-            : "font-medium tabular-nums text-emerald-300"
+            ? "font-bold tabular-nums text-success"
+            : "font-medium tabular-nums text-success/60"
         };
       }),
       ...currencies.map(curr => {
@@ -266,21 +266,21 @@ export function InvoiceTable({
         header: t("invoice.colDescription", { namespace: "invoicing",  }),
         label: t("invoice.colDescription", { namespace: "invoicing",  }),
         accessor: (inv) => inv.notes || "",
-        className: "text-slate-500 italic"
+        className: "text-muted-foreground italic"
       },
       {
         id: "issued_at",
         header: t("invoice.colDate", { namespace: "invoicing",  }),
         label: t("invoice.labelDate", { namespace: "invoicing",  }),
         accessor: (inv) => formatDateTime(inv.issued_at),
-        className: "text-slate-500 tabular-nums"
+        className: "text-muted-foreground tabular-nums"
       },
       ...extraColumns.map(c => ({
         id: c.key,
         header: c.label,
         label: c.label,
         accessor: c.accessor,
-        className: c.className || "text-slate-500"
+        className: c.className || "text-muted-foreground"
       })),
       {
         id: "actions",
@@ -590,7 +590,7 @@ export function InvoiceTable({
           value: baseSubtotalTotal > 0 ? formatAmount(baseSubtotalTotal, { currencyCode: currCode }) : "—",
           className: isBase
             ? 'font-bold text-foreground'
-            : 'font-extrabold text-slate-400',
+            : 'font-extrabold text-muted-foreground',
         };
       }
 
@@ -605,8 +605,8 @@ export function InvoiceTable({
           label: `${t("invoice.baseDiscountGranted", { namespace: "invoicing",  })}${cs(sym)}`,
           value: baseDiscountTotal > 0 ? formatAmount(baseDiscountTotal, { currencyCode: currCode }) : "—",
           className: isBase
-            ? 'font-bold text-rose-600'
-            : 'font-extrabold text-rose-300',
+            ? 'font-bold text-destructive'
+            : 'font-extrabold text-destructive/60',
         };
       }
 
@@ -621,7 +621,7 @@ export function InvoiceTable({
           label: `${t("invoice.baseDiscountEarned", { namespace: "invoicing",  })}${cs(sym)}`,
           value: baseDiscountTotal > 0 ? formatAmount(baseDiscountTotal, { currencyCode: currCode }) : "—",
           className: isBase
-            ? 'font-bold text-blue-600'
+            ? 'font-bold text-primary'
             : 'font-extrabold text-blue-300',
         };
       }
@@ -637,8 +637,8 @@ export function InvoiceTable({
           label: `${t("invoice.baseExtraCosts", { namespace: "invoicing",  })}${cs(sym)}`,
           value: baseExtraCostsTotal > 0 ? formatAmount(baseExtraCostsTotal, { currencyCode: currCode }) : "—",
           className: isBase
-            ? 'font-bold text-rose-600'
-            : 'font-extrabold text-rose-300',
+            ? 'font-bold text-destructive'
+            : 'font-extrabold text-destructive/60',
         };
       }
 
@@ -654,7 +654,7 @@ export function InvoiceTable({
           value: baseComputedTotal > 0 ? formatAmount(baseComputedTotal, { currencyCode: currCode }) : "—",
           className: isBase
             ? 'font-black text-slate-900'
-            : 'font-extrabold text-slate-500',
+            : 'font-extrabold text-muted-foreground',
         };
       }
 
@@ -669,8 +669,8 @@ export function InvoiceTable({
           label: `${t("invoice.basePaid", { namespace: "invoicing",  })}${cs(sym)}`,
           value: basePaidTotal > 0 ? formatAmount(basePaidTotal, { currencyCode: currCode }) : "—",
           className: isBase
-            ? 'font-bold text-emerald-600'
-            : 'font-extrabold text-emerald-300',
+            ? 'font-bold text-success'
+            : 'font-extrabold text-success/60',
         };
       }
 
@@ -711,20 +711,20 @@ export function InvoiceTable({
           className="h-8 border-border bg-card text-foreground hover:bg-accent"
           onClick={handleExport}
         >
-          <Download className="w-3.5 h-3.5 ml-1.5 text-emerald-600" />
+          <Download className="w-3.5 h-3.5 ml-1.5 text-success" />
           {t("actions.exportExcel", { namespace: "invoicing",  })}
         </Button>
       )}
       filterBar={
         <Select value={statusFilter} onValueChange={onStatusFilterChange}>
           <SelectTrigger className="w-[130px] h-8 bg-card font-bold shadow-sm border-border text-xs">
-            <Filter className="w-3.5 h-3.5 ml-1.5 text-slate-400" />
+            <Filter className="w-3.5 h-3.5 ml-1.5 text-muted-foreground" />
             <SelectValue placeholder={t("invoice.filterStatusPlaceholder", { namespace: "invoicing",  })} />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all" className="text-xs font-bold">{t("invoice.filterAll", { namespace: "invoicing",  })}</SelectItem>
             <SelectItem value="Draft" className="text-xs font-bold text-amber-600">{t("invoice.draftLabel", { namespace: "invoicing" })}</SelectItem>
-            <SelectItem value="Posted" className="text-xs font-bold text-emerald-600">مرحلة</SelectItem>
+            <SelectItem value="Posted" className="text-xs font-bold text-success">مرحلة</SelectItem>
           </SelectContent>
         </Select>
       }

@@ -18,7 +18,7 @@ export function FinancialSettings({ settings, onChange }: FinancialSettingsProps
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:gap-8 lg:gap-10">
         <div className="space-y-4 sm:space-y-6">
           <div className="space-y-2 sm:space-y-3">
-            <Label className="font-black text-foreground flex items-center gap-2"><Percent className="w-4 h-4 text-rose-600" /> {t("financial.taxRate", { namespace: "settings" })}</Label>
+            <Label className="font-black text-foreground flex items-center gap-2"><Percent className="w-4 h-4 text-destructive" /> {t("financial.taxRate", { namespace: "settings" })}</Label>
             <div className="relative">
               <Input type="number" step="0.01" className="h-12 sm:h-14 font-black pe-6 ps-14" value={settings.tax_rate} onChange={e => onChange("tax_rate", e.target.value)} />
               <span className="absolute start-4 top-1/2 -translate-y-1/2 font-black text-muted-foreground">%</span>

@@ -67,27 +67,27 @@ export function AccountCombobox({
           <span className="truncate text-end">
             {selected ? (
               <span className="flex items-center gap-2">
-                <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[11px] font-bold tabular-nums text-slate-600">
+                <span className="rounded bg-muted px-1.5 py-0.5 text-[11px] font-bold tabular-nums text-muted-foreground">
                   {selected.code}
                 </span>
-                <span className="truncate font-semibold text-slate-800">{selected.name_ar}</span>
-                <span className="shrink-0 text-[11px] text-slate-400">({TYPE_LABEL[selected.account_type]?.(t)})</span>
+                <span className="truncate font-semibold text-foreground">{selected.name_ar}</span>
+                <span className="shrink-0 text-[11px] text-muted-foreground">({TYPE_LABEL[selected.account_type]?.(t)})</span>
                 <span
                   className={cn(
                     "shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold",
                     isDebitNature(selected.account_type)
-                      ? "bg-blue-50 text-blue-600"
-                      : "bg-emerald-50 text-emerald-600",
+                      ? "bg-primary/10 text-primary"
+                      : "bg-success/10 text-success",
                   )}
                 >
                   {isDebitNature(selected.account_type) ? t("accountCombobox.debit", { namespace: "openingBalance" }) : t("accountCombobox.credit", { namespace: "openingBalance" })}
                 </span>
               </span>
             ) : (
-              <span className="text-slate-400">{resolvedPlaceholder}</span>
+              <span className="text-muted-foreground">{resolvedPlaceholder}</span>
             )}
           </span>
-          <ChevronDown className="h-4 w-4 shrink-0 text-slate-400" />
+          <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-full min-w-[320px] p-0" align="start">
@@ -109,15 +109,15 @@ export function AccountCombobox({
                     className="flex items-center justify-between gap-2"
                   >
                     <span className="flex items-center gap-2 truncate">
-                      <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[11px] font-bold tabular-nums text-slate-600">
+                      <span className="rounded bg-muted px-1.5 py-0.5 text-[11px] font-bold tabular-nums text-muted-foreground">
                         {a.code}
                       </span>
                       <span className="truncate text-foreground">{a.name_ar}</span>
-                      <span className="text-[11px] text-slate-400">({TYPE_LABEL[a.account_type]?.(t)})</span>
+                      <span className="text-[11px] text-muted-foreground">({TYPE_LABEL[a.account_type]?.(t)})</span>
                       <span
                         className={cn(
                           "rounded-full px-2 py-0.5 text-[10px] font-bold",
-                          debit ? "bg-blue-50 text-blue-600" : "bg-emerald-50 text-emerald-600",
+                          debit ? "bg-primary/10 text-primary" : "bg-success/10 text-success",
                         )}
                       >
                         {debit ? t("accountCombobox.debit", { namespace: "openingBalance" }) : t("accountCombobox.credit", { namespace: "openingBalance" })}
@@ -125,7 +125,7 @@ export function AccountCombobox({
                     </span>
                     <Check
                       className={cn(
-                        "h-4 w-4 shrink-0 text-blue-600",
+                        "h-4 w-4 shrink-0 text-primary",
                         value === a.id ? "opacity-100" : "opacity-0",
                       )}
                     />

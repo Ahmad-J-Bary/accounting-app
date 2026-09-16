@@ -374,7 +374,7 @@ export default function SalesInvoices() {
       searchPlaceholder={t("invoice.salesSearchPlaceholder", { namespace: "invoicing",  })}
       emptyMessage={t("invoice.salesEmpty", { namespace: "invoicing",  })}
       statsLabel={t("invoice.salesStatsLabel", { namespace: "invoicing",  })}
-      statsColor="text-blue-600"
+      statsColor="text-primary"
       preferenceKey="sales_invoices_v2"
     />
   );

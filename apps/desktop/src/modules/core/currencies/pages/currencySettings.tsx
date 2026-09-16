@@ -300,7 +300,7 @@ export default function CurrencySettings() {
                     <TableCell className="font-mono">{curr.symbol}</TableCell>
                     <TableCell>
                       {curr.is_base ? (
-                        <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100 border-none gap-1">
+                        <Badge className="bg-warning/20 text-warning hover:bg-warning/20 border-none gap-1">
                           <Star className="w-3 h-3" /> {t("currencies.base", { namespace: "settings",  })}
                         </Badge>
                       ) : (
@@ -310,15 +310,15 @@ export default function CurrencySettings() {
                     <TableCell className="font-mono text-xs">{curr.decimals}</TableCell>
                     <TableCell className="text-left">
                       <div className="flex items-center justify-end gap-1">
-                        <Button variant="ghost" size="sm" className="text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-50" onClick={() => openEditDialog(curr)}>
+                        <Button variant="ghost" size="sm" className="text-xs text-primary hover:text-primary/80 hover:bg-primary/10" onClick={() => openEditDialog(curr)}>
                           <Pencil className="w-3.5 h-3.5 ms-1" /> {t("currencies.edit", { namespace: "settings" })}
                         </Button>
                         {!curr.is_base ? (
                           <>
-                            <Button variant="ghost" size="sm" className="text-xs text-amber-600 hover:text-amber-800 hover:bg-amber-50" onClick={() => handleSetBase(curr.code)}>
+                            <Button variant="ghost" size="sm" className="text-xs text-warning hover:text-warning/80 hover:bg-warning/10" onClick={() => handleSetBase(curr.code)}>
                               <Star className="w-3.5 h-3.5 ms-1" /> {t("currencies.setBase", { namespace: "settings" })}
                             </Button>
-                            <Button variant="ghost" size="icon" onClick={() => handleDeleteCurrency(curr.code)} className="text-red-500 hover:text-red-700 hover:bg-red-50">
+                            <Button variant="ghost" size="icon" onClick={() => handleDeleteCurrency(curr.code)} className="text-destructive hover:text-destructive/80 hover:bg-destructive/10">
                               <Trash2 className="w-4 h-4" />
                             </Button>
                           </>
@@ -347,15 +347,15 @@ export default function CurrencySettings() {
             </CardHeader>
             <CardContent className="space-y-4">
               {rateStatus.map((status) => (
-                <div key={status.currency_code} className="p-3 border rounded-lg bg-slate-50/50 space-y-2">
+                <div key={status.currency_code} className="p-3 border rounded-lg bg-muted/50 space-y-2">
                   <div className="flex items-center justify-between">
                     <div className="font-semibold">{status.currency_code}</div>
                     {status.has_rate_today ? (
-                      <div className="flex items-center text-xs text-green-600 gap-1">
+                      <div className="flex items-center text-xs text-success gap-1">
                         <CheckCircle2 className="w-3 h-3" /> {t("currencies.updated", { namespace: "settings",  })}
                       </div>
                     ) : (
-                      <div className="flex items-center text-xs text-amber-600 gap-1">
+                      <div className="flex items-center text-xs text-warning gap-1">
                         <AlertCircle className="w-3 h-3" /> {t("currencies.needsUpdate", { namespace: "settings",  })}
                       </div>
                     )}
@@ -498,14 +498,14 @@ export default function CurrencySettings() {
                 <button
                   key={wc.code}
                   onClick={() => handleAddCurrency(wc)}
-                  className="w-full flex items-center gap-4 p-3 rounded-lg hover:bg-slate-50 transition-colors border border-transparent hover:border-slate-200 text-right"
+                  className="w-full flex items-center gap-4 p-3 rounded-lg hover:bg-muted transition-colors border border-transparent hover:border-muted text-right"
                 >
-                  <div className="w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center text-lg font-bold text-slate-700">
+                  <div className="w-12 h-12 bg-muted rounded-xl flex items-center justify-center text-lg font-bold text-foreground">
                     {wc.symbol}
                   </div>
                   <div className="flex-1">
-                    <div className="font-bold text-slate-800">{wc.name_ar} ({wc.code})</div>
-                    <div className="text-xs text-slate-400">{wc.name_en}</div>
+                    <div className="font-bold text-foreground">{wc.name_ar} ({wc.code})</div>
+                    <div className="text-xs text-muted-foreground">{wc.name_en}</div>
                   </div>
                   <div className="text-xs text-muted-foreground">{wc.decimals} {t("currencies.decimalsLabel", { namespace: "settings",  })}</div>
                   <Plus className="w-4 h-4 text-primary shrink-0" />

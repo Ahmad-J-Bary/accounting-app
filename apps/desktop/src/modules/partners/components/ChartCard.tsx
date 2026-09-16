@@ -31,13 +31,13 @@ export function ChartCard({
   formatter,
 }: ChartCardProps) {
   return (
-    <Card className="p-6 bg-white border-slate-200/70 shadow-sm rounded-2xl overflow-hidden group hover:shadow-md transition-all">
+    <Card className="p-6 bg-white border-muted/70 shadow-sm rounded-2xl overflow-hidden group hover:shadow-md transition-all">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-blue-600">
+          <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center text-primary">
             <Icon className="w-5 h-5" />
           </div>
-          <h3 className="font-black text-slate-800">{title}</h3>
+          <h3 className="font-black text-foreground">{title}</h3>
         </div>
       </div>
       <div className="h-[220px] w-full">

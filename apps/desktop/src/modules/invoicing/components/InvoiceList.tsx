@@ -112,7 +112,7 @@ export function InvoiceList({
       title={title}
       toolbar={
         <div className="no-print flex items-center gap-2">
-          <Button size="sm" onClick={onCreate} className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100 h-9 px-4 font-bold">
+          <Button size="sm" onClick={onCreate} className="bg-primary hover:bg-primary/80 shadow-lg shadow-primary/20 h-9 px-4 font-bold">
             <Plus className="w-4 h-4 ml-2" />{createLabel}
           </Button>
           <div className="w-[1px] h-6 bg-muted mx-1" />
@@ -126,7 +126,7 @@ export function InvoiceList({
               }
             }}
             className="h-9 border-border hover:bg-accent font-bold">
-            <Eye className="w-4 h-4 ml-2 text-blue-500" /> {t("actions.view", { namespace: "invoicing",  })}
+            <Eye className="w-4 h-4 ml-2 text-primary" /> {t("actions.view", { namespace: "invoicing",  })}
           </Button>
           <Button variant="outline" size="sm" disabled={!selectedId}
             onClick={() => {
@@ -142,13 +142,13 @@ export function InvoiceList({
           </Button>
           <Button variant="outline" size="sm" disabled={!selectedId}
             onClick={handleDeleteSelected}
-            className="h-9 border-border hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 font-bold transition-all">
-            <Trash2 className="w-4 h-4 ml-2 text-rose-500" /> {t("actions.delete", { namespace: "invoicing",  })}
+            className="h-9 border-border hover:bg-destructive/10 hover:text-destructive hover:border-destructive/20 font-bold transition-all">
+            <Trash2 className="w-4 h-4 ml-2 text-destructive" /> {t("actions.delete", { namespace: "invoicing",  })}
           </Button>
           <Button variant="outline" size="sm" disabled={!selectedId}
             onClick={() => { window.dispatchEvent(new Event("app:prepare-print")); requestAnimationFrame(() => window.print()); }}
             className="h-9 border-border hover:bg-accent font-bold">
-            <Printer className="w-4 h-4 ml-2 text-slate-500" /> {t("actions.print", { namespace: "invoicing",  })}
+            <Printer className="w-4 h-4 ml-2 text-muted-foreground" /> {t("actions.print", { namespace: "invoicing",  })}
           </Button>
         </div>
       }

@@ -41,7 +41,7 @@ export function CreatePeriodCard({
       <Button
         onClick={onCreate}
         disabled={!canCreate || isPending}
-        className="bg-blue-600 hover:bg-blue-700 text-white font-bold"
+        className="bg-primary hover:bg-primary/80 text-white font-bold"
       >
         {isPending ? t("fiscalPeriods.createCard.pending", { namespace: "accounting",  }) : t("fiscalPeriods.createCard.create", { namespace: "accounting",  })}
       </Button>

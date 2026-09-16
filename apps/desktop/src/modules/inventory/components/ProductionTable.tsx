@@ -22,21 +22,21 @@ export function ProductionTable({ data, loading, search, onSearchChange, onVisib
       header: t("production.columns.orderNumber", { namespace: "inventory",  }),
       label: t("production.columns.orderNumberLabel", { namespace: "inventory",  }),
       accessor: "order_number",
-      className: "font-black text-blue-600 font-mono"
+      className: "font-black text-primary font-mono"
     },
     {
       id: "production_date",
       header: t("production.columns.productionDate", { namespace: "inventory",  }),
       label: t("production.columns.productionDate", { namespace: "inventory",  }),
       accessor: (o) => formatDateTime(o.production_date),
-      className: "tabular-nums text-slate-500"
+      className: "tabular-nums text-muted-foreground"
     },
     {
       id: "materials_count",
       header: t("production.columns.materials", { namespace: "inventory",  }),
       label: t("production.columns.materialsLabel", { namespace: "inventory",  }),
       accessor: (o) => (
-        <span className="inline-flex items-center gap-1.5 bg-slate-100 px-2 py-1 rounded text-slate-600 font-bold text-xs">
+        <span className="inline-flex items-center gap-1.5 bg-muted px-2 py-1 rounded text-foreground font-bold text-xs">
           {t("production.materialsSummary", { namespace: "inventory", vars: { count: o.materials.length } })}
         </span>
       ),
@@ -46,7 +46,7 @@ export function ProductionTable({ data, loading, search, onSearchChange, onVisib
       header: t("production.columns.products", { namespace: "inventory",  }),
       label: t("production.columns.productsLabel", { namespace: "inventory",  }),
       accessor: (o) => (
-        <span className="inline-flex items-center gap-1.5 bg-blue-50 px-2 py-1 rounded text-blue-600 font-bold text-xs">
+        <span className="inline-flex items-center gap-1.5 bg-primary/10 px-2 py-1 rounded text-primary font-bold text-xs">
           {t("production.productsSummary", { namespace: "inventory", vars: { count: o.outputs.length } })}
         </span>
       ),
@@ -56,7 +56,7 @@ export function ProductionTable({ data, loading, search, onSearchChange, onVisib
       header: t("production.columns.totalCost", { namespace: "inventory",  }),
       label: t("production.columns.totalCostLabel", { namespace: "inventory",  }),
       accessor: (o) => formatCurrency(parseFloat(o.total_cost)),
-      className: "tabular-nums font-black text-slate-900"
+      className: "tabular-nums font-black text-foreground"
     },
     {
       id: "status",

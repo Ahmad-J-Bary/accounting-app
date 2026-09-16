@@ -178,8 +178,8 @@ export default function Transfers() {
           <Button size="sm" onClick={() => { setTransferDetailData(null); setTransferFormMode('create'); setTransferFormData(null); setWarehouseTransferPreset(null); setTransferFormOpen(true); }} className="bg-amber-600 hover:bg-amber-700 text-white shadow-lg shadow-amber-100 font-bold">
             <Plus className="w-4 h-4 ml-2" />{t("transfers.add", { namespace: "inventory",  })}
           </Button>
-          <Button variant="outline" size="sm" onClick={handleExport} className="border-slate-200 hover:bg-slate-50 font-bold">
-            <Download className="w-4 h-4 ml-2 text-slate-500" /> {t("labels.exportExcel", { namespace: "inventory",  })}
+          <Button variant="outline" size="sm" onClick={handleExport} className="border-muted hover:bg-muted font-bold">
+            <Download className="w-4 h-4 ml-2 text-muted-foreground" /> {t("labels.exportExcel", { namespace: "inventory",  })}
           </Button>
         </div>
       }

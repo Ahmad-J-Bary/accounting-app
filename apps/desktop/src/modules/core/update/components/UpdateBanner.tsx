@@ -28,52 +28,52 @@ interface PhaseMeta {
 const PHASE_META: Record<BannerPhase, PhaseMeta> = {
   available: {
     label: "تحديث متاح",
-    color: "text-blue-600 dark:text-blue-400",
-    dotColor: "bg-blue-500",
-    btnColor: "hover:bg-blue-50 dark:hover:bg-blue-950/40 text-blue-600 dark:text-blue-400",
+    color: "text-primary dark:text-primary/80",
+    dotColor: "bg-primary",
+    btnColor: "hover:bg-primary/10 dark:hover:bg-primary/20 text-primary dark:text-primary/80",
     Icon: ArrowDownToLine,
   },
   downloading: {
     label: "جارٍ التنزيل",
-    color: "text-blue-600 dark:text-blue-400",
-    dotColor: "bg-blue-400 animate-pulse",
-    btnColor: "hover:bg-blue-50 dark:hover:bg-blue-950/40 text-blue-600 dark:text-blue-400",
+    color: "text-primary dark:text-primary/80",
+    dotColor: "bg-primary animate-pulse",
+    btnColor: "hover:bg-primary/10 dark:hover:bg-primary/20 text-primary dark:text-primary/80",
     Icon: Download,
   },
   preparing: {
     label: "جارٍ التحضير",
-    color: "text-amber-600 dark:text-amber-400",
-    dotColor: "bg-amber-400 animate-pulse",
-    btnColor: "hover:bg-amber-50 dark:hover:bg-amber-950/40 text-amber-600 dark:text-amber-400",
+    color: "text-warning dark:text-warning/80",
+    dotColor: "bg-warning animate-pulse",
+    btnColor: "hover:bg-warning/10 dark:hover:bg-warning/20 text-warning dark:text-warning/80",
     Icon: RefreshCw,
   },
   ready: {
     label: "جاهز للتثبيت",
-    color: "text-emerald-600 dark:text-emerald-400",
-    dotColor: "bg-emerald-500",
-    btnColor: "hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400",
+    color: "text-success dark:text-success/80",
+    dotColor: "bg-success",
+    btnColor: "hover:bg-success/10 dark:hover:bg-success/20 text-success dark:text-success/80",
     Icon: CheckCircle2,
   },
   failed: {
     label: "فشل التحديث",
-    color: "text-rose-600 dark:text-rose-400",
-    dotColor: "bg-rose-500",
-    btnColor: "hover:bg-rose-50 dark:hover:bg-rose-950/40 text-rose-600 dark:text-rose-400",
+    color: "text-destructive dark:text-destructive/80",
+    dotColor: "bg-destructive",
+    btnColor: "hover:bg-destructive/10 dark:hover:bg-destructive/20 text-destructive dark:text-destructive/80",
     Icon: AlertCircle,
   },
 };
 
 const headerIconCls: Record<BannerPhase, string> = {
   available:
-    "bg-blue-50 dark:bg-blue-950/40 border-blue-200 dark:border-blue-800 text-blue-600 dark:text-blue-400",
+    "bg-primary/10 dark:bg-primary/20 border-primary/20 dark:border-primary text-primary dark:text-primary/80",
   downloading:
-    "bg-blue-50 dark:bg-blue-950/40 border-blue-200 dark:border-blue-800 text-blue-600 dark:text-blue-400",
+    "bg-primary/10 dark:bg-primary/20 border-primary/20 dark:border-primary text-primary dark:text-primary/80",
   preparing:
-    "bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-800 text-amber-600 dark:text-amber-400",
+    "bg-warning/10 dark:bg-warning/20 border-warning/20 dark:border-warning text-warning dark:text-warning/80",
   ready:
-    "bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800 text-emerald-600 dark:text-emerald-400",
+    "bg-success/10 dark:bg-success/20 border-success/20 dark:border-success text-success dark:text-success/80",
   failed:
-    "bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-800 text-rose-600 dark:text-rose-400",
+    "bg-destructive/10 dark:bg-destructive/20 border-destructive/20 dark:border-destructive text-destructive dark:text-destructive/80",
 };
 
 interface UpdateBannerProps {
@@ -165,7 +165,7 @@ export function UpdateBanner({ variant = 'stacked', dark = false }: UpdateBanner
 
   const buttonCls = cn(
     "relative flex items-center gap-1.5 rounded-lg transition-all duration-200 outline-none",
-    "focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-blue-500",
+    "focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-primary",
     isSlim ? "px-1.5 py-0.5" : "px-2.5 py-1.5",
     dark
       ? cn("text-slate-200 hover:bg-white/10", open && "bg-white/10")
@@ -193,7 +193,7 @@ export function UpdateBanner({ variant = 'stacked', dark = false }: UpdateBanner
         )}
         {!isSlim && phase === "available" && (
           <span
-            className="text-[10px] font-mono px-1 py-0.5 rounded bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 leading-none"
+            className="text-[10px] font-mono px-1 py-0.5 rounded bg-primary/20 dark:bg-primary/30 text-primary dark:text-primary/80 leading-none"
             dir="ltr"
           >
             v{updateInfo.latest_version}
@@ -284,9 +284,9 @@ export function UpdateBanner({ variant = 'stacked', dark = false }: UpdateBanner
                   >
                     لاحقاً
                   </button>
-                    <button
-                      onClick={startUpdate}
-                      className="flex-[2] flex items-center justify-center gap-1.5 text-xs py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-sm transition"
+              <button
+                    onClick={startUpdate}
+                    className="flex-[2] flex items-center justify-center gap-1.5 text-xs py-2 rounded-lg bg-primary hover:bg-primary/80 text-white font-semibold shadow-sm transition"
                     >
                       <Download className="w-3.5 h-3.5" /> تحديث الآن
                     </button>
@@ -302,7 +302,7 @@ export function UpdateBanner({ variant = 'stacked', dark = false }: UpdateBanner
                   </button>
                     <button
                       onClick={restartToUpdate}
-                      className="flex-[2] flex items-center justify-center gap-1.5 text-xs py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-sm transition"
+                      className="flex-[2] flex items-center justify-center gap-1.5 text-xs py-2 rounded-lg bg-success hover:bg-success/80 text-white font-semibold shadow-sm transition"
                     >
                       <RotateCcw className="w-3.5 h-3.5" /> إعادة التشغيل والتثبيت
                     </button>
@@ -318,7 +318,7 @@ export function UpdateBanner({ variant = 'stacked', dark = false }: UpdateBanner
                   </button>
                     <button
                       onClick={retry}
-                      className="flex-[2] flex items-center justify-center gap-1.5 text-xs py-2 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-semibold shadow-sm transition"
+                      className="flex-[2] flex items-center justify-center gap-1.5 text-xs py-2 rounded-lg bg-destructive hover:bg-destructive/80 text-white font-semibold shadow-sm transition"
                     >
                       <RefreshCw className="w-3.5 h-3.5" /> إعادة المحاولة
                     </button>

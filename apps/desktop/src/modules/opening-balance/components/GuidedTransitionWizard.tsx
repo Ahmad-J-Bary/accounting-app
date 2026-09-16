@@ -92,7 +92,7 @@ export function GuidedTransitionWizard() {
     const locked = w.migration?.status === "Locked";
     return (
       <div className="space-y-3">
-        <div className={"rounded-lg p-4 text-center " + (isNew || locked ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-700")}>
+        <div className={"rounded-lg p-4 text-center " + (isNew || locked ? "bg-green-50 text-green-700" : "bg-warning/10 text-warning")}>
           <p className="text-base font-black">
             {isNew ? t("wizard.doneNewTitle", { namespace: "openingBalance" }) : locked ? t("wizard.doneLockedTitle", { namespace: "openingBalance" }) : t("wizard.doneFallbackTitle", { namespace: "openingBalance" })}
           </p>
@@ -127,12 +127,12 @@ export function GuidedTransitionWizard() {
       </p>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div className="border border-border rounded-lg p-3 space-y-1 bg-card">
-          <div className="text-xs font-semibold text-blue-700">{t("wizard.assetsDebit", { namespace: "openingBalance" })}</div>
-          <div className="text-xl font-black tabular-nums text-blue-700">{toFixed(w.totals.debit, 2)}</div>
+          <div className="text-xs font-semibold text-primary">{t("wizard.assetsDebit", { namespace: "openingBalance" })}</div>
+          <div className="text-xl font-black tabular-nums text-primary">{toFixed(w.totals.debit, 2)}</div>
         </div>
         <div className="border border-border rounded-lg p-3 space-y-1 bg-card">
-          <div className="text-xs font-semibold text-emerald-700">{t("wizard.liabilitiesCredit", { namespace: "openingBalance" })}</div>
-          <div className="text-xl font-black tabular-nums text-emerald-700">{toFixed(w.totals.liabilities, 2)}</div>
+          <div className="text-xs font-semibold text-success">{t("wizard.liabilitiesCredit", { namespace: "openingBalance" })}</div>
+          <div className="text-xl font-black tabular-nums text-success">{toFixed(w.totals.liabilities, 2)}</div>
         </div>
         <div className="border border-border rounded-lg p-3 space-y-1 bg-card">
           <div className="text-xs font-semibold text-indigo-700">{t("wizard.equityCredit", { namespace: "openingBalance" })}</div>
@@ -169,12 +169,12 @@ export function GuidedTransitionWizard() {
       )}
 
       {w.totals.plugAmount !== 0 && (
-        <div className="rounded-lg p-3 text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+        <div className="rounded-lg p-3 text-xs font-semibold bg-primary/10 text-primary border border-primary/20">
           {t("wizard.autoPlugLine", { namespace: "openingBalance", vars: { amount: toFixed(w.totals.plugAmount, 2) } })}
         </div>
       )}
 
-      <div className={"rounded-lg p-3 text-sm font-bold " + (w.totals.balanced ? "bg-green-50 text-green-700" : "bg-red-50 text-red-600")}>
+      <div className={"rounded-lg p-3 text-sm font-bold " + (w.totals.balanced ? "bg-green-50 text-green-700" : "bg-destructive/10 text-destructive")}>
         {w.totals.balanced
           ? t("wizard.balancedStatus", { namespace: "openingBalance", vars: { debit: toFixed(w.totals.debit, 2), credit: toFixed(w.totals.credit, 2) } })
           : t("wizard.unbalancedStatus", { namespace: "openingBalance", vars: { diff: toFixed(w.totals.debit - w.totals.credit, 2) } })}
@@ -189,9 +189,9 @@ export function GuidedTransitionWizard() {
           <div className="space-y-4">
             {isNew && (
               <>
-                <div className="rounded-lg border border-blue-200 bg-blue-50/60 p-3 space-y-1.5">
-                  <p className="text-xs font-semibold text-blue-700">{t("wizard.newCompanyMode", { namespace: "openingBalance" })}</p>
-                  <p className="text-xs text-blue-600">
+                <div className="rounded-lg border border-primary/20 bg-primary/10/60 p-3 space-y-1.5">
+                  <p className="text-xs font-semibold text-primary">{t("wizard.newCompanyMode", { namespace: "openingBalance" })}</p>
+                  <p className="text-xs text-primary">
                     {t("wizard.newCompanyDesc", { namespace: "openingBalance" })}
                   </p>
                 </div>
@@ -257,7 +257,7 @@ export function GuidedTransitionWizard() {
                   direction="debit"
                   onCreate={(name, amount) => w.createCustomer(name, amount)}
                   navLink={
-                    <Button size="sm" variant="outline" onClick={() => goTo("/customers", t("wizard.customersPage", { namespace: "openingBalance" }))} className="h-8 shrink-0 rounded-full border-blue-300 bg-blue-50 px-3 text-xs font-bold text-blue-700 hover:bg-blue-100 hover:border-blue-400 transition-all">
+                    <Button size="sm" variant="outline" onClick={() => goTo("/customers", t("wizard.customersPage", { namespace: "openingBalance" }))} className="h-8 shrink-0 rounded-full border-primary/20 bg-primary/10 px-3 text-xs font-bold text-primary hover:bg-primary/20 hover:border-primary/40 transition-all">
                       {t("wizard.customersPageButton", { namespace: "openingBalance" })}
                       <ArrowLeft className="w-3.5 h-3.5 me-1" />
                     </Button>
@@ -291,7 +291,7 @@ export function GuidedTransitionWizard() {
                   warehouses={warehouses}
                   onCreate={(data) => w.createFixedAssetQuick(data)}
                   navLink={
-                    <Button size="sm" variant="outline" onClick={() => goTo("/fixed-assets", t("wizard.fixedAssetsTitle", { namespace: "openingBalance" }))} className="h-8 shrink-0 rounded-full border-blue-300 bg-blue-50 px-3 text-xs font-bold text-blue-700 hover:bg-blue-100 hover:border-blue-400 transition-all">
+                    <Button size="sm" variant="outline" onClick={() => goTo("/fixed-assets", t("wizard.fixedAssetsTitle", { namespace: "openingBalance" }))} className="h-8 shrink-0 rounded-full border-primary/20 bg-primary/10 px-3 text-xs font-bold text-primary hover:bg-primary/20 hover:border-primary/40 transition-all">
                       {t("wizard.fixedAssetsPageButton", { namespace: "openingBalance" })}
                       <ArrowLeft className="w-3.5 h-3.5 me-1" />
                     </Button>
@@ -319,7 +319,7 @@ export function GuidedTransitionWizard() {
                   direction="credit"
                   onCreate={(name, amount) => w.createSupplier(name, amount)}
                   navLink={
-                    <Button size="sm" variant="outline" onClick={() => goTo("/suppliers", t("wizard.suppliersPage", { namespace: "openingBalance" }))} className="h-8 shrink-0 rounded-full border-blue-300 bg-blue-50 px-3 text-xs font-bold text-blue-700 hover:bg-blue-100 hover:border-blue-400 transition-all">
+                    <Button size="sm" variant="outline" onClick={() => goTo("/suppliers", t("wizard.suppliersPage", { namespace: "openingBalance" }))} className="h-8 shrink-0 rounded-full border-primary/20 bg-primary/10 px-3 text-xs font-bold text-primary hover:bg-primary/20 hover:border-primary/40 transition-all">
                       {t("wizard.suppliersPageButton", { namespace: "openingBalance" })}
                       <ArrowLeft className="w-3.5 h-3.5 me-1" />
                     </Button>
@@ -337,9 +337,9 @@ export function GuidedTransitionWizard() {
             />
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-700">{t("wizard.otherLiabilities", { namespace: "openingBalance" })}</span>
+                <span className="text-xs font-bold text-foreground">{t("wizard.otherLiabilities", { namespace: "openingBalance" })}</span>
                 {w.liabilitiesManual.some((l) => parseFloat(l.amount) > 0) && (
-                  <span className="rounded-full bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-xs font-bold text-emerald-700 tabular-nums">
+                  <span className="rounded-full bg-success/10 border border-success/20 px-2 py-0.5 text-xs font-bold text-success tabular-nums">
                     {toFixed(w.liabilitiesManual.reduce((s, l) => s + (parseFloat(l.amount) || 0), 0), 2)}
                   </span>
                 )}
@@ -362,7 +362,7 @@ export function GuidedTransitionWizard() {
                 <QuickCreatePartner
                   onCreate={(data) => w.createPartnerQuick(data)}
                   navLink={
-                    <Button size="sm" variant="outline" onClick={() => goTo("/partners", t("wizard.partnersPage", { namespace: "openingBalance" }))} className="h-8 shrink-0 rounded-full border-blue-300 bg-blue-50 px-3 text-xs font-bold text-blue-700 hover:bg-blue-100 hover:border-blue-400 transition-all">
+                    <Button size="sm" variant="outline" onClick={() => goTo("/partners", t("wizard.partnersPage", { namespace: "openingBalance" }))} className="h-8 shrink-0 rounded-full border-primary/20 bg-primary/10 px-3 text-xs font-bold text-primary hover:bg-primary/20 hover:border-primary/40 transition-all">
                       {t("wizard.partnersPageButton", { namespace: "openingBalance" })}
                       <ArrowLeft className="w-3.5 h-3.5 me-1" />
                     </Button>
@@ -382,9 +382,9 @@ export function GuidedTransitionWizard() {
             )}
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-700">{t("wizard.otherEquity", { namespace: "openingBalance" })}</span>
+                <span className="text-xs font-bold text-foreground">{t("wizard.otherEquity", { namespace: "openingBalance" })}</span>
                 {w.equityManual.some((l) => parseFloat(l.amount) > 0) && (
-                  <span className="rounded-full bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-xs font-bold text-emerald-700 tabular-nums">
+                  <span className="rounded-full bg-success/10 border border-success/20 px-2 py-0.5 text-xs font-bold text-success tabular-nums">
                     {toFixed(w.equityManual.reduce((s, l) => s + (parseFloat(l.amount) || 0), 0), 2)}
                   </span>
                 )}
@@ -419,7 +419,7 @@ export function GuidedTransitionWizard() {
               </div>
             )}
             {w.residualClassification === "RetainedEarnings" && (
-              <div className="rounded-lg border border-indigo-200 bg-indigo-50/60 p-3 space-y-2">
+              <div className="rounded-lg border border-primary/20 bg-primary/10/60 p-3 space-y-2">
                 <p className="text-xs font-bold text-indigo-700">
                   {t("wizard.retainedEarningsNote", { namespace: "openingBalance" })}
                 </p>
@@ -432,7 +432,7 @@ export function GuidedTransitionWizard() {
                     `/partners?profit-distribution=open&migration=${w.migration?.id ?? ""}`,
                     t("wizard.partnersTitle", { namespace: "openingBalance" }),
                   )}
-                  className="bg-blue-600 hover:bg-blue-700 text-white font-bold"
+                  className="bg-primary hover:bg-primary/80 text-white font-bold"
                 >
                   {t("wizard.profitDistribution", { namespace: "openingBalance" })}
                 </Button>
@@ -443,7 +443,7 @@ export function GuidedTransitionWizard() {
       case STEP_ACTION: {
         return (
           <div className="space-y-3">
-            <p className="text-sm font-bold text-slate-700">{t("wizard.actionTitle", { namespace: "openingBalance" })}</p>
+            <p className="text-sm font-bold text-foreground">{t("wizard.actionTitle", { namespace: "openingBalance" })}</p>
             <p className="text-xs text-muted-foreground">
               {t("wizard.actionDesc", { namespace: "openingBalance" })}
             </p>
@@ -452,7 +452,7 @@ export function GuidedTransitionWizard() {
               {w.migration ? (
                 <StatusBadge status={w.migration.status} className="me-1.5" />
               ) : (
-                <span className="text-slate-400 me-1.5">—</span>
+                <span className="text-muted-foreground me-1.5">—</span>
               )}
               {w.migration && w.migration.notes && <span> · {w.migration.notes}</span>}
             </div>
@@ -463,14 +463,14 @@ export function GuidedTransitionWizard() {
                 { label: t("wizard.lockCheck", { namespace: "openingBalance" }), done: w.migration?.status === "Locked" },
               ].map((item) => (
                 <div key={item.label} className="flex items-center gap-2 text-xs font-semibold">
-                  <span className={cn("rounded-full p-0.5", item.done ? "bg-emerald-600 text-white" : "bg-slate-300 text-white")}>
+                  <span className={cn("rounded-full p-0.5", item.done ? "bg-success text-white" : "bg-slate-300 text-white")}>
                     <Check className="w-3 h-3" />
                   </span>
-                  <span className={item.done ? "text-emerald-700" : "text-muted-foreground"}>{item.label}</span>
+                  <span className={item.done ? "text-success" : "text-muted-foreground"}>{item.label}</span>
                 </div>
               ))}
             </div>
-            {w.busy && <p className="text-xs text-blue-600 font-semibold">{t("wizard.executing", { namespace: "openingBalance" })}</p>}
+            {w.busy && <p className="text-xs text-primary font-semibold">{t("wizard.executing", { namespace: "openingBalance" })}</p>}
           </div>
         );
       }
@@ -630,15 +630,15 @@ function InlineRows({
   return (
     <div className="space-y-1">
       <div className="flex items-center justify-between">
-        <span className="text-xs font-bold text-slate-700">{title}</span>
+        <span className="text-xs font-bold text-foreground">{title}</span>
         {rows.some((r) => parseFloat(r.amount) > 0) && (
-          <span className="rounded-full bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-xs font-bold text-emerald-700 tabular-nums">
+          <span className="rounded-full bg-success/10 border border-success/20 px-2 py-0.5 text-xs font-bold text-success tabular-nums">
             {rows.reduce((s, r) => s + (parseFloat(r.amount) || 0), 0).toFixed(2)}
           </span>
         )}
       </div>
       {rows.length === 0 && !addForm ? (
-        <p className="text-xs text-slate-400 py-1.5">{t("wizard.noDerivedLines", { namespace: "openingBalance" })}</p>
+        <p className="text-xs text-muted-foreground py-1.5">{t("wizard.noDerivedLines", { namespace: "openingBalance" })}</p>
       ) : (
         <div className="border border-border rounded-lg divide-y divide-border bg-muted/40">
           {rows.map((r) => (
@@ -674,7 +674,7 @@ function FirstPeriodFields({
   const { t } = useLocalization();
   return (
     <div className="space-y-1.5">
-      <div className="rounded-lg border border-indigo-200 bg-indigo-50/60 p-3 space-y-1.5">
+      <div className="rounded-lg border border-primary/20 bg-primary/10/60 p-3 space-y-1.5">
         <p className="text-xs font-semibold text-indigo-700">{t("wizard.firstPeriodHint", { namespace: "openingBalance" })}</p>
         <p className="text-xs text-indigo-600">
           {t("wizard.firstPeriodDesc", { namespace: "openingBalance" })}
@@ -756,16 +756,16 @@ export function ResidualClassificationSection({
     : [];
 
   return (
-    <div className="rounded-lg border border-amber-200 bg-amber-50/60 p-3 space-y-3">
-      <p className="text-xs font-semibold text-amber-700">
+    <div className="rounded-lg border border-warning/20 bg-warning/10 p-3 space-y-3">
+      <p className="text-xs font-semibold text-warning">
         {t("wizard.residualTitle", { namespace: "openingBalance", vars: { amount: toFixed(residual, 2) } })}
       </p>
       {residual > 0 ? (
-        <p className="text-xs text-amber-600">
+        <p className="text-xs text-warning">
           {t("wizard.residualPositiveDesc", { namespace: "openingBalance" })}
         </p>
       ) : (
-        <p className="text-xs text-amber-600">
+        <p className="text-xs text-warning">
           {t("wizard.residualNegativeDesc", { namespace: "openingBalance" })}
         </p>
       )}
@@ -785,9 +785,9 @@ export function ResidualClassificationSection({
                   className={cn(
                     "flex items-center justify-between gap-2 rounded-lg border px-3 py-2 text-xs font-bold transition-colors",
                     selected
-                      ? "border-blue-400 bg-blue-50 text-blue-700 ring-1 ring-blue-400"
+                      ? "border-primary/40 bg-primary/10 text-primary ring-1 ring-primary"
                       : "border-border bg-card text-muted-foreground hover:bg-accent",
-                    !s.allows_posting && "text-red-600",
+                    !s.allows_posting && "text-destructive",
                   )}
                 >
                   <span className="truncate">{s.label_ar}</span>
@@ -798,19 +798,19 @@ export function ResidualClassificationSection({
           </div>
 
           {value === "UnresolvedDifference" && (
-            <div className="rounded-lg border border-red-200 bg-red-50/70 p-3 space-y-1">
-              <p className="text-xs font-bold text-red-700">
+            <div className="rounded-lg border border-destructive/20 bg-destructive/10/70 p-3 space-y-1">
+              <p className="text-xs font-bold text-destructive">
                 {t("wizard.unresolvedDiffTitle", { namespace: "openingBalance" })}
               </p>
-              <p className="text-xs text-red-600">
+              <p className="text-xs text-destructive">
                 {t("wizard.unresolvedDiffDesc", { namespace: "openingBalance" })}
               </p>
             </div>
           )}
 
           {value !== "" && value !== "UnresolvedDifference" && (
-            <div className="rounded-lg border border-blue-200 bg-card p-3 space-y-1.5">
-              <p className="text-xs font-semibold text-blue-700">{t("wizard.previewBeforeSave", { namespace: "openingBalance" })}</p>
+            <div className="rounded-lg border border-primary/20 bg-card p-3 space-y-1.5">
+              <p className="text-xs font-semibold text-primary">{t("wizard.previewBeforeSave", { namespace: "openingBalance" })}</p>
               {plugAmount !== 0 && (
                 <p className="text-xs text-muted-foreground">
                   {t("wizard.previewValue", { namespace: "openingBalance", vars: { amount: toFixed(plugAmount, 2), type: spec?.label_ar ?? value } })}
@@ -824,7 +824,7 @@ export function ResidualClassificationSection({
                     <span className="rounded bg-muted px-1.5 py-0.5 text-[11px] font-bold tabular-nums text-muted-foreground">
                       {(spec?.designated_account ?? effectiveAccount)?.code ?? ""}
                     </span>
-                    <span className="font-bold text-slate-800">
+                    <span className="font-bold text-foreground">
                       {(spec?.designated_account ?? effectiveAccount)?.name_ar ?? ""}
                     </span>
                   </span>
@@ -848,7 +848,7 @@ export function ResidualClassificationSection({
             <button
               type="button"
               onClick={() => setAdvanced((v) => !v)}
-              className="text-[11px] font-semibold text-muted-foreground underline decoration-dotted hover:text-slate-700"
+              className="text-[11px] font-semibold text-muted-foreground underline decoration-dotted hover:text-foreground"
               aria-expanded={advanced}
             >
               {advanced ? t("wizard.advancedModeClose", { namespace: "openingBalance" }) : t("wizard.advancedModeToggle", { namespace: "openingBalance" })}
@@ -912,11 +912,11 @@ function NegativeResidualSection({
   const total = sumLines(manualLines);
   const balanced = Math.abs(residual + total) < 0.01;
   return (
-    <div className="rounded-lg border border-red-200 bg-red-50/60 p-3 space-y-3">
-      <p className="text-xs font-semibold text-red-700">
+    <div className="rounded-lg border border-destructive/20 bg-destructive/10/60 p-3 space-y-3">
+      <p className="text-xs font-semibold text-destructive">
         {t("wizard.negativeResidualTitle", { namespace: "openingBalance", vars: { amount: toFixed(residual, 2) } })}
       </p>
-      <p className="text-xs text-red-600">
+      <p className="text-xs text-destructive">
         {t("wizard.negativeResidualDesc", { namespace: "openingBalance" })}
       </p>
       <NegativeManualLinesEditor
@@ -928,7 +928,7 @@ function NegativeResidualSection({
         detailAccounts={detailAccounts}
       />
       {manualLines.length > 0 && (
-        <div className={"rounded-lg p-2 text-xs font-semibold " + (balanced ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-700")}>
+        <div className={"rounded-lg p-2 text-xs font-semibold " + (balanced ? "bg-green-50 text-green-700" : "bg-warning/10 text-warning")}>
           {balanced
             ? t("wizard.balancedAfterAdd", { namespace: "openingBalance", vars: { diff: toFixed(residual + total, 2) } })
             : t("wizard.unbalancedAfterAdd", { namespace: "openingBalance", vars: { diff: toFixed(residual + total, 2) } })}
@@ -980,7 +980,7 @@ function NegativeManualLinesEditor({
         variant="outline"
         size="sm"
         onClick={onAdd}
-        className="w-full border-dashed border-red-300 text-red-600 hover:bg-red-50 font-bold"
+        className="w-full border-dashed border-red-300 text-destructive hover:bg-red-50 font-bold"
       >
         {t("wizard.addDebitLine", { namespace: "openingBalance" })}
       </Button>

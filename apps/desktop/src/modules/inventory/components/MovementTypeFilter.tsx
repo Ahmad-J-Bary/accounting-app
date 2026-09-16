@@ -73,8 +73,8 @@ export function MovementTypeFilter({ value, onChange, excludeKeys }: MovementTyp
           variant="outline"
           size="sm"
           className={cn(
-            "h-8 gap-1.5 border-slate-200 bg-white text-xs font-medium",
-            !noneSelected && "border-emerald-200 bg-emerald-50 text-emerald-700"
+            "h-8 gap-1.5 border-muted bg-white text-xs font-medium",
+            !noneSelected && "border-success/20 bg-success/10 text-success"
           )}
         >
           <Filter className="w-3.5 h-3.5 shrink-0" />
@@ -90,28 +90,28 @@ export function MovementTypeFilter({ value, onChange, excludeKeys }: MovementTyp
         <div className="space-y-1">
           <button
             onClick={selectAll}
-            className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-xs font-medium text-slate-600 hover:bg-slate-100 transition-colors"
+            className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-xs font-medium text-foreground hover:bg-muted transition-colors"
           >
             <Checkbox checked={allSelected} />
             <span>{allSelected ? t("movementTypes.filter.clearAll", { namespace: "inventory",  }) : t("movementTypes.filter.selectAll", { namespace: "inventory",  })}</span>
           </button>
-          <div className="h-px bg-slate-100 my-1" />
+          <div className="h-px bg-muted my-1" />
           {visibleKeys.map(key => {
             const cfg = MOVEMENT_TYPE_CONFIG[key];
             const showSep = lastGroup !== null && cfg.group !== lastGroup;
             lastGroup = cfg.group;
             return (
               <div key={key}>
-                {showSep && <div className="h-px bg-slate-200 my-1.5" />}
+                {showSep && <div className="h-px bg-muted my-1.5" />}
                 <button
                   onClick={() => toggle(key)}
-                  className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-xs hover:bg-slate-100 transition-colors"
+                  className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-xs hover:bg-muted transition-colors"
                 >
                   <Checkbox checked={value.includes(key)} />
                   <span className={cn(
                     "inline-flex items-center px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider ring-1 ring-inset",
-                    cfg.inflow ? 'bg-emerald-50 text-emerald-700 ring-emerald-100' :
-                    'bg-rose-50 text-rose-700 ring-rose-100'
+                    cfg.inflow ? 'bg-success/10 text-success ring-success/20' :
+                    'bg-destructive/10 text-destructive ring-destructive/20'
                   )}>
                     {cfg.label}
                   </span>
@@ -121,10 +121,10 @@ export function MovementTypeFilter({ value, onChange, excludeKeys }: MovementTyp
           })}
           {!noneSelected && (
             <>
-              <div className="h-px bg-slate-100 my-1" />
+              <div className="h-px bg-muted my-1" />
               <button
                 onClick={clear}
-                className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-xs font-medium text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-xs font-medium text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
               >
                 <X className="w-3 h-3" />
                 <span>{t("movementTypes.filter.clear", { namespace: "inventory",  })}</span>

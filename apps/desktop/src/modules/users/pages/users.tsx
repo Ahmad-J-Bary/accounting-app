@@ -114,7 +114,7 @@ export default function UsersPage() {
               setSelectedRole(null);
               setShowRoleDialog(true);
             }
-          }} className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100 font-bold">
+          }} className="bg-primary hover:bg-primary/80 shadow-lg shadow-primary/20 font-bold">
             <Plus className="w-4 h-4 ml-2" />
             {activeTab === "users" ? t("actions.newUser", { namespace: "users",  }) : t("actions.newRole", { namespace: "users",  })}
           </Button>
@@ -123,16 +123,16 @@ export default function UsersPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <StatSummary label={t("stats.totalUsers", { namespace: "users",  })} value={users.length} icon={<UsersIcon />} />
-        <StatSummary label={t("stats.activeUsers", { namespace: "users",  })} value={activeCount} icon={<ShieldCheck />} color="text-emerald-600" />
-        <StatSummary label={t("stats.systemRoles", { namespace: "users",  })} value={roles.length} icon={<Shield />} color="text-blue-600" />
+        <StatSummary label={t("stats.activeUsers", { namespace: "users",  })} value={activeCount} icon={<ShieldCheck />} color="text-success" />
+        <StatSummary label={t("stats.systemRoles", { namespace: "users",  })} value={roles.length} icon={<Shield />} color="text-primary" />
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="bg-white border border-slate-200 p-1 h-12 rounded-xl shadow-sm">
-          <TabsTrigger value="users" className="rounded-lg px-6 gap-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white transition-all">
+        <TabsList className="bg-white border border-muted p-1 h-12 rounded-xl shadow-sm">
+          <TabsTrigger value="users" className="rounded-lg px-6 gap-2 data-[state=active]:bg-primary data-[state=active]:text-white transition-all">
             <UsersIcon className="w-4 h-4" /> {t("tabs.users", { namespace: "users",  })}
           </TabsTrigger>
-          <TabsTrigger value="roles" className="rounded-lg px-6 gap-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white transition-all">
+          <TabsTrigger value="roles" className="rounded-lg px-6 gap-2 data-[state=active]:bg-primary data-[state=active]:text-white transition-all">
             <Shield className="w-4 h-4" /> {t("tabs.roles", { namespace: "users",  })}
           </TabsTrigger>
         </TabsList>
@@ -148,7 +148,7 @@ export default function UsersPage() {
         </TabsContent>
 
         <TabsContent value="roles">
-          <Card className="p-1 border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+          <Card className="p-1 border border-muted rounded-xl overflow-hidden shadow-sm">
              <RoleTable 
                roles={roles}
                loading={loadingRoles}
@@ -178,14 +178,14 @@ export default function UsersPage() {
   );
 }
 
-function StatSummary({ label, value, icon, color = "text-slate-900" }: { label: string, value: number, icon: React.ReactNode, color?: string }) {
+function StatSummary({ label, value, icon, color = "text-foreground" }: { label: string, value: number, icon: React.ReactNode, color?: string }) {
   return (
     <Card className="p-4 border border-slate-100 shadow-sm flex items-center gap-4">
-      <div className={cn("p-3 rounded-xl bg-slate-50", color.replace("text-", "bg-").replace("600", "50"))}>
+      <div className={cn("p-3 rounded-xl bg-muted", color.replace("text-", "bg-").replace("600", "50"))}>
         {icon}
       </div>
       <div>
-        <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">{label}</p>
+        <p className="text-[10px] font-black text-muted-foreground uppercase tracking-wider">{label}</p>
         <p className={cn("text-2xl font-black tabular-nums", color)}>{value}</p>
       </div>
     </Card>

@@ -179,7 +179,7 @@ export function PaymentForm({ customers, suppliers, accounts, onSave, onClose, s
   return (
     <FormPanel
       title={t("payment.formTitle", { namespace: "invoicing",  })}
-      icon={<Receipt className="w-5 h-5 text-blue-600" />}
+      icon={<Receipt className="w-5 h-5 text-primary" />}
       onClose={onClose}
       onSave={handleSave}
       isSaving={saving}
@@ -202,7 +202,7 @@ export function PaymentForm({ customers, suppliers, accounts, onSave, onClose, s
                   credit_account_id: undefined 
                 }))}
               >
-                <SelectTrigger className="h-9 font-bold bg-card border-blue-200 focus:ring-blue-500"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="h-9 font-bold bg-card border-primary/20 focus:ring-blue-500"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {Object.entries(PAYMENT_TYPE_LABELS).filter(([k]) => initialValues ? true : !HIDDEN_PAYMENT_TYPES.includes(k)).map(([k]) => (
                     <SelectItem key={k} value={k}>{t(`paymentTypeLabel.${k}`, { namespace: "invoicing"})}</SelectItem>

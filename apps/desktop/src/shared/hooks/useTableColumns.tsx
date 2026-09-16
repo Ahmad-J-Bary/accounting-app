@@ -30,7 +30,7 @@ export function useTableColumns() {
         if (bal === 0) return <span className="text-slate-300">—</span>;
         const isDebit = bal > 0;
         return (
-          <span className={`font-bold ${isDebit ? "text-red-600" : "text-emerald-600"}`}>
+          <span className={`font-bold ${isDebit ? "text-red-600" : "text-success"}`}>
             {isDebit ? t("labels.debit", { namespace: "common" }) : t("labels.creditSide", { namespace: "common" })}
           </span>
         );
@@ -82,8 +82,8 @@ export function useTableColumns() {
     const overallColor = totalEffectiveBalance > 0
       ? 'text-red-600'
       : totalEffectiveBalance < 0
-      ? 'text-emerald-600'
-      : 'text-slate-400';
+      ? 'text-success'
+      : 'text-muted-foreground';
 
     const baseTotal = items.reduce((sum, item) => {
       const effBal = effectiveBalanceBase(
@@ -103,7 +103,7 @@ export function useTableColumns() {
         columnId: 'name',
         label: '',
         value: `${items.length} ${countLabel}`,
-        className: 'text-slate-500 font-medium'
+        className: 'text-muted-foreground font-medium'
       };
       if (['code', 'status', 'phone', 'actions'].includes(id)) return {
         id: `${id}_spacer`,
@@ -117,7 +117,7 @@ export function useTableColumns() {
         const isBaseColumn = baseCurrency?.code === currCode;
         const valueClass = isBaseColumn
           ? `${overallColor} font-black`
-          : 'text-slate-500 font-extrabold';
+          : 'text-muted-foreground font-extrabold';
         return {
           id: `${id}_summary`,
           columnId: id,

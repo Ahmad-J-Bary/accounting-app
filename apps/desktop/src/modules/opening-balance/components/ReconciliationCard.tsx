@@ -26,12 +26,12 @@ export function ReconciliationCard({
   return (
     <SectionCard
       title="التحقق من تسوية الرصيد الافتتاحي"
-      icon={<Scale className="w-4 h-4 text-blue-600" />}
+      icon={<Scale className="w-4 h-4 text-primary" />}
       description="يقارن أرصدة السجل المساعد (AR/AP/Inventory/FA) بأرصدة دفتر الأستاذ العام، ويعرض رصيد حساب رصيد الافتتاح (53) ومدين/دائن القيد لفحص معادلة الميزانية: A = L + E."
     >
       <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3 items-end">
         <MigrationPicker id="recon-migration" label="الترحيل" candidates={candidates} value={reconId} onChange={onReconIdChange} />
-        {loading && <span className="text-xs font-semibold text-blue-600">جارٍ الفحص...</span>}
+        {loading && <span className="text-xs font-semibold text-primary">جارٍ الفحص...</span>}
       </div>
 
       {reconciliation && (

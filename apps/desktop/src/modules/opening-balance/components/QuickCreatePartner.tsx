@@ -48,7 +48,7 @@ export function QuickCreatePartner({ onCreate, navLink }: QuickCreatePartnerProp
           variant="outline"
           size="sm"
           onClick={() => setExpanded(true)}
-          className="h-8 shrink-0 rounded-full border-emerald-300 bg-emerald-50 px-3 text-xs font-bold text-emerald-700 hover:bg-emerald-100 hover:border-emerald-400 transition-all"
+          className="h-8 shrink-0 rounded-full border-success/30 bg-success/10 px-3 text-xs font-bold text-success hover:bg-success/20 hover:border-success/40 transition-all"
         >
           <Plus className="w-3.5 h-3.5 ms-1" />
           {t("quickCreate.addPartner", { namespace: "partners" })}
@@ -65,7 +65,7 @@ export function QuickCreatePartner({ onCreate, navLink }: QuickCreatePartnerProp
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder={t("quickCreate.partnerNamePlaceholder", { namespace: "partners" })}
-          className="h-8 flex-1 border-slate-200 text-xs bg-white"
+          className="h-8 flex-1 border-muted text-xs bg-white"
           disabled={creating}
           autoFocus
           onKeyDown={(e) => {
@@ -83,7 +83,7 @@ export function QuickCreatePartner({ onCreate, navLink }: QuickCreatePartnerProp
           value={amount}
           onChange={(e) => setAmount(e.target.value)}
           placeholder={t("quickCreate.capitalPlaceholder", { namespace: "partners" })}
-          className="h-8 w-32 border-slate-200 text-xs text-end tabular-nums bg-white"
+          className="h-8 w-32 border-muted text-xs text-end tabular-nums bg-white"
           disabled={creating}
           onKeyDown={(e) => {
             if (e.key === "Enter") {
@@ -92,13 +92,13 @@ export function QuickCreatePartner({ onCreate, navLink }: QuickCreatePartnerProp
             }
           }}
         />
-        <span className="text-2xs font-semibold text-slate-400 shrink-0">{t("quickCreate.credit", { namespace: "partners" })}</span>
+        <span className="text-2xs font-semibold text-muted-foreground shrink-0">{t("quickCreate.credit", { namespace: "partners" })}</span>
         <Button
           type="button"
           size="sm"
           onClick={() => void handleCreate()}
           disabled={creating || !name.trim() || !amount.trim()}
-          className="h-8 px-2 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shrink-0"
+          className="h-8 px-2 text-xs font-bold bg-success hover:bg-success/80 text-white shrink-0"
         >
           {creating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
           {t("quickCreate.save", { namespace: "partners" })}
@@ -108,7 +108,7 @@ export function QuickCreatePartner({ onCreate, navLink }: QuickCreatePartnerProp
           size="sm"
           variant="ghost"
           onClick={cancel}
-          className="h-8 w-8 p-0 text-slate-400 hover:text-slate-600 shrink-0"
+          className="h-8 w-8 p-0 text-muted-foreground hover:text-slate-600 shrink-0"
         >
           <X className="w-3.5 h-3.5" />
         </Button>

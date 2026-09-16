@@ -87,7 +87,7 @@ export default function JournalEntryCreatePage() {
   return (
     <ErrorBoundary>
       <div className="flex flex-col h-full">
-        <header className="flex items-center justify-between px-4 py-3 border-b border-slate-200 bg-white shrink-0">
+        <header className="flex items-center justify-between px-4 py-3 border-b border-muted bg-white shrink-0">
           <div className="flex items-center gap-3">
             <Button
               type="button"
@@ -100,8 +100,8 @@ export default function JournalEntryCreatePage() {
               <ArrowRight className="h-4 w-4" />
             </Button>
             <div>
-              <h1 className="text-lg font-bold text-slate-800">{t("journal.create.title", { namespace: "accounting",  })}</h1>
-              <p className="text-xs text-slate-500">{t("journal.create.subtitle", { namespace: "accounting",  })}</p>
+              <h1 className="text-lg font-bold text-foreground">{t("journal.create.title", { namespace: "accounting",  })}</h1>
+              <p className="text-xs text-muted-foreground">{t("journal.create.subtitle", { namespace: "accounting",  })}</p>
             </div>
           </div>
 
@@ -109,7 +109,7 @@ export default function JournalEntryCreatePage() {
             type="button"
             onClick={handleSubmit}
             disabled={isSubmitting || !validation.isValid}
-            className="h-9 px-5 font-bold bg-blue-600 hover:bg-blue-700 text-white"
+            className="h-9 px-5 font-bold bg-primary hover:bg-primary/80 text-white"
           >
             {isSubmitting ? t("journal.create.submitting", { namespace: "accounting",  }) : t("journal.create.submit", { namespace: "accounting",  })}
           </Button>
@@ -133,7 +133,7 @@ export default function JournalEntryCreatePage() {
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-1.5">
-                  <label className="text-sm font-bold text-slate-600">
+                  <label className="text-sm font-bold text-muted-foreground">
                     {t("journal.create.journalType", { namespace: "accounting",  })} <span className="text-red-500">*</span>
                   </label>
                   <Select
@@ -154,7 +154,7 @@ export default function JournalEntryCreatePage() {
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-sm font-bold text-slate-600">
+                  <label className="text-sm font-bold text-muted-foreground">
                     {t("journal.create.date", { namespace: "accounting",  })} <span className="text-red-500">*</span>
                   </label>
                   <Input
@@ -166,7 +166,7 @@ export default function JournalEntryCreatePage() {
                 </div>
 
                 <div className="space-y-1.5 md:col-span-1 md:row-span-1">
-                  <label className="text-sm font-bold text-slate-600">
+                  <label className="text-sm font-bold text-muted-foreground">
                     {t("journal.create.description", { namespace: "accounting",  })} <span className="text-red-500">*</span>
                   </label>
                   <Input

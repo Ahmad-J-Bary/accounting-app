@@ -25,12 +25,12 @@ export const PanelSettingsManager: React.FC = () => {
   return (
     <SettingsManagerLayout resetAction={resetSideSettings}>
       <div className="space-y-5">
-        <div className="flex flex-col gap-1 border-r-4 border-emerald-600 pr-3 pb-1 mb-2">
-          <h2 className="text-xl font-black text-slate-800">{t("panel.title", { namespace: "settings",  })}</h2>
-          <p className="text-xs text-slate-500">{t("panel.description", { namespace: "settings",  })}</p>
+        <div className="flex flex-col gap-1 border-r-4 border-success pr-3 pb-1 mb-2">
+          <h2 className="text-xl font-black text-foreground">{t("panel.title", { namespace: "settings",  })}</h2>
+          <p className="text-xs text-muted-foreground">{t("panel.description", { namespace: "settings",  })}</p>
         </div>
 
-        <SettingsGroup title={t("panel.layoutTitle", { namespace: "settings",  })} icon={LayoutGrid} color="text-emerald-600">
+        <SettingsGroup title={t("panel.layoutTitle", { namespace: "settings",  })} icon={LayoutGrid} color="text-success">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
               <Label className="text-slate-600 font-semibold">{t("panel.defaultWidth", { namespace: "settings",  })}</Label>
@@ -38,7 +38,7 @@ export const PanelSettingsManager: React.FC = () => {
                 value={sideSettings.widthPreset}
                 onValueChange={(v) => updateSideSetting('widthPreset', v as SidebarWidthPreset)}
               >
-                <SelectTrigger className="h-10 rounded-lg border-slate-200">
+                <SelectTrigger className="h-10 rounded-lg border-muted">
                   <SelectValue placeholder={t("panel.widthPlaceholder", { namespace: "settings",  })} />
                 </SelectTrigger>
                 <SelectContent>
@@ -70,7 +70,7 @@ export const PanelSettingsManager: React.FC = () => {
                 value={sideSettings.paddingPreset}
                 onValueChange={(v) => updateSideSetting('paddingPreset', v as PresetUnion)}
               >
-                <SelectTrigger className="h-10 rounded-lg border-slate-200">
+                <SelectTrigger className="h-10 rounded-lg border-muted">
                   <SelectValue placeholder={t("panel.paddingPlaceholder", { namespace: "settings",  })} />
                 </SelectTrigger>
                 <SelectContent>
@@ -87,7 +87,7 @@ export const PanelSettingsManager: React.FC = () => {
                 value={sideSettings.spacingPreset}
                 onValueChange={(v) => updateSideSetting('spacingPreset', v as PresetUnion)}
               >
-                <SelectTrigger className="h-10 rounded-lg border-slate-200">
+                <SelectTrigger className="h-10 rounded-lg border-muted">
                   <SelectValue placeholder={t("panel.spacingPlaceholder", { namespace: "settings",  })} />
                 </SelectTrigger>
                 <SelectContent>
@@ -104,7 +104,7 @@ export const PanelSettingsManager: React.FC = () => {
                 value={sideSettings.background}
                 onValueChange={(v) => updateSideSetting('background', v)}
               >
-                <SelectTrigger className="h-10 rounded-lg border-slate-200">
+                <SelectTrigger className="h-10 rounded-lg border-muted">
                   <SelectValue placeholder={t("panel.backgroundPlaceholder", { namespace: "settings",  })} />
                 </SelectTrigger>
                 <SelectContent>
@@ -121,7 +121,7 @@ export const PanelSettingsManager: React.FC = () => {
                 value={sideSettings.shadow}
                 onValueChange={(v) => updateSideSetting('shadow', v as ShadowUnion)}
               >
-                <SelectTrigger className="h-10 rounded-lg border-slate-200">
+                <SelectTrigger className="h-10 rounded-lg border-muted">
                   <SelectValue placeholder={t("panel.shadowPlaceholder", { namespace: "settings",  })} />
                 </SelectTrigger>
                 <SelectContent>
@@ -158,7 +158,7 @@ export const PanelSettingsManager: React.FC = () => {
                 value={sideSettings.borderStyle}
                 onValueChange={(v) => updateSideSetting('borderStyle', v as BorderUnion)}
               >
-                <SelectTrigger className="h-10 rounded-lg border-slate-200">
+                <SelectTrigger className="h-10 rounded-lg border-muted">
                   <SelectValue placeholder={t("panel.borderPlaceholder", { namespace: "settings",  })} />
                 </SelectTrigger>
                 <SelectContent>
@@ -174,15 +174,15 @@ export const PanelSettingsManager: React.FC = () => {
 
         <SettingsGroup title={t("panel.behaviorTitle", { namespace: "settings",  })} icon={Monitor} color="text-orange-600">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div className="flex items-center justify-between p-3 rounded-xl border border-slate-100 bg-slate-50/30">
+            <div className="flex items-center justify-between p-3 rounded-xl border border-muted bg-muted/30">
               <div className="space-y-0.5">
-                <Label className="text-slate-700 font-semibold">{t("panel.displayBehavior", { namespace: "settings",  })}</Label>
+                <Label className="text-foreground font-semibold">{t("panel.displayBehavior", { namespace: "settings",  })}</Label>
               </div>
               <Select
                 value={sideSettings.overlayVsInline}
                 onValueChange={(v) => updateSideSetting('overlayVsInline', v as OverlayUnion)}
               >
-                <SelectTrigger className="w-24 h-9 border-slate-200 font-bold text-xs">
+                <SelectTrigger className="w-24 h-9 border-muted font-bold text-xs">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -192,9 +192,9 @@ export const PanelSettingsManager: React.FC = () => {
               </Select>
             </div>
 
-            <div className="flex items-center justify-between p-3 rounded-xl border border-slate-100 bg-slate-50/30">
+            <div className="flex items-center justify-between p-3 rounded-xl border border-muted bg-muted/30">
               <div className="space-y-0.5">
-                <Label className="text-slate-700 font-semibold">{t("panel.stickyHeaderFooter", { namespace: "settings",  })}</Label>
+                <Label className="text-foreground font-semibold">{t("panel.stickyHeaderFooter", { namespace: "settings",  })}</Label>
               </div>
               <Switch
                 checked={sideSettings.stickyHeaderFooter}
@@ -202,15 +202,15 @@ export const PanelSettingsManager: React.FC = () => {
               />
             </div>
 
-            <div className="flex items-center justify-between p-3 rounded-xl border border-slate-100 bg-slate-50/30">
+            <div className="flex items-center justify-between p-3 rounded-xl border border-muted bg-muted/30">
               <div className="space-y-0.5">
-                <Label className="text-slate-700 font-semibold">{t("panel.saveButtonPlacement", { namespace: "settings",  })}</Label>
+                <Label className="text-foreground font-semibold">{t("panel.saveButtonPlacement", { namespace: "settings",  })}</Label>
               </div>
               <Select
                 value={sideSettings.saveButtonPlacement}
                 onValueChange={(v) => updateSideSetting('saveButtonPlacement', v as PlacementUnion)}
               >
-                <SelectTrigger className="w-24 h-9 border-slate-200 font-bold text-xs">
+                <SelectTrigger className="w-24 h-9 border-muted font-bold text-xs">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -221,9 +221,9 @@ export const PanelSettingsManager: React.FC = () => {
               </Select>
             </div>
 
-            <div className="flex items-center justify-between p-3 rounded-xl border border-slate-100 bg-slate-50/30">
+            <div className="flex items-center justify-between p-3 rounded-xl border border-muted bg-muted/30">
               <div className="space-y-0.5">
-                <Label className="text-slate-700 font-semibold">{t("panel.closeButton", { namespace: "settings",  })}</Label>
+                <Label className="text-foreground font-semibold">{t("panel.closeButton", { namespace: "settings",  })}</Label>
               </div>
               <Switch
                 checked={sideSettings.closeButtonVisibility}
@@ -231,15 +231,15 @@ export const PanelSettingsManager: React.FC = () => {
               />
             </div>
 
-            <div className="flex items-center justify-between p-3 rounded-xl border border-slate-100 bg-slate-50/30">
+            <div className="flex items-center justify-between p-3 rounded-xl border border-muted bg-muted/30">
               <div className="space-y-0.5">
-                <Label className="text-slate-700 font-semibold">{t("panel.animationSpeed", { namespace: "settings",  })}</Label>
+                <Label className="text-foreground font-semibold">{t("panel.animationSpeed", { namespace: "settings",  })}</Label>
               </div>
               <Select
                 value={sideSettings.animationSpeed.toString()}
                 onValueChange={(v) => updateSideSetting('animationSpeed', parseInt(v))}
               >
-                <SelectTrigger className="w-24 h-9 border-slate-200 font-bold text-xs">
+                <SelectTrigger className="w-24 h-9 border-muted font-bold text-xs">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -274,19 +274,19 @@ export const PanelSettingsManager: React.FC = () => {
             </Button>
           </div>
 
-          <div className="border border-slate-200 rounded-xl overflow-hidden bg-slate-50/40 p-4 flex justify-center items-stretch h-[350px]">
-            <div className="flex-1 flex items-center justify-center text-slate-400 text-xs font-bold border border-dashed border-slate-200 rounded-lg ml-3 bg-white">
+          <div className="border border-muted rounded-xl overflow-hidden bg-muted/40 p-4 flex justify-center items-stretch h-[350px]">
+            <div className="flex-1 flex items-center justify-center text-muted-foreground text-xs font-bold border border-dashed border-muted rounded-lg ml-3 bg-white">
               {t("panel.mainContent", { namespace: "settings",  })}
             </div>
             {!previewOverlay ? (
-              <SidebarShell isOpen={true} onClose={() => {}} forceOverlay={false} className="h-full border border-slate-200 rounded-lg overflow-hidden">
+              <SidebarShell isOpen={true} onClose={() => {}} forceOverlay={false} className="h-full border border-muted rounded-lg overflow-hidden">
                 <SidebarHeader title={t("panel.preview.addCustomer", { namespace: "settings",  })} subtitle={t("panel.preview.addCustomerSub", { namespace: "settings",  })} onClose={() => {}} />
                 <SidebarBody>
                   <SidebarSection title={t("panel.preview.basicSection", { namespace: "settings",  })}>
                     <SidebarFieldGroup>
                       <div className="space-y-1">
-                        <span className="text-[10px] text-slate-500 font-bold">{t("panel.preview.customerName", { namespace: "settings",  })}</span>
-                        <div className="h-9 border border-slate-200 rounded bg-white px-3 flex items-center text-xs text-slate-400">{t("panel.preview.companyName", { namespace: "settings",  })}</div>
+                        <span className="text-[10px] text-muted-foreground font-bold">{t("panel.preview.customerName", { namespace: "settings",  })}</span>
+                        <div className="h-9 border border-muted rounded bg-white px-3 flex items-center text-xs text-muted-foreground">{t("panel.preview.companyName", { namespace: "settings",  })}</div>
                       </div>
                     </SidebarFieldGroup>
                   </SidebarSection>
@@ -294,14 +294,14 @@ export const PanelSettingsManager: React.FC = () => {
                 <SidebarFooter onCancel={() => {}} onSave={() => {}} saveLabel={t("panel.preview.saveCustomer", { namespace: "settings",  })} />
               </SidebarShell>
             ) : (
-              <SidebarShell isOpen={true} onClose={() => setPreviewOverlay(false)} forceOverlay={true} className="h-full border border-slate-200 rounded-lg overflow-hidden">
+              <SidebarShell isOpen={true} onClose={() => setPreviewOverlay(false)} forceOverlay={true} className="h-full border border-muted rounded-lg overflow-hidden">
                 <SidebarHeader title={t("panel.preview.addCustomer", { namespace: "settings",  })} subtitle={t("panel.preview.addCustomerSub", { namespace: "settings",  })} onClose={() => setPreviewOverlay(false)} />
                 <SidebarBody>
                   <SidebarSection title={t("panel.preview.basicSection", { namespace: "settings",  })}>
                     <SidebarFieldGroup>
                       <div className="space-y-1">
-                        <span className="text-[10px] text-slate-500 font-bold">{t("panel.preview.customerName", { namespace: "settings",  })}</span>
-                        <div className="h-9 border border-slate-200 rounded bg-white px-3 flex items-center text-xs text-slate-400">{t("panel.preview.companyName", { namespace: "settings",  })}</div>
+                        <span className="text-[10px] text-muted-foreground font-bold">{t("panel.preview.customerName", { namespace: "settings",  })}</span>
+                        <div className="h-9 border border-muted rounded bg-white px-3 flex items-center text-xs text-muted-foreground">{t("panel.preview.companyName", { namespace: "settings",  })}</div>
                       </div>
                     </SidebarFieldGroup>
                   </SidebarSection>

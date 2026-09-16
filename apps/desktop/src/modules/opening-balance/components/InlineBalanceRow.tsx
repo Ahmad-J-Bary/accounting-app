@@ -50,7 +50,7 @@ export function InlineBalanceRow({ row, onSave, onDelete, label, nativeHint = "d
       {editing ? (
         <>
           <div className="flex items-center gap-1.5 min-w-0 flex-1">
-            <span className="text-2xs font-semibold text-slate-400">{label}</span>
+            <span className="text-2xs font-semibold text-muted-foreground">{label}</span>
             <Input
               type="number"
               min={0}
@@ -59,10 +59,10 @@ export function InlineBalanceRow({ row, onSave, onDelete, label, nativeHint = "d
               disabled={disabled}
               onChange={(e) => setValue(e.target.value)}
               aria-label={label}
-              className="h-8 w-32 border-slate-200 text-end tabular-nums text-xs"
+              className="h-8 w-32 border-muted text-end tabular-nums text-xs"
               autoFocus
             />
-            <span className="text-2xs text-slate-400">{nativeHint === "debit" ? t("inlineBalance.debit", { namespace: "openingBalance" }) : t("inlineBalance.credit", { namespace: "openingBalance" })}</span>
+            <span className="text-2xs text-muted-foreground">{nativeHint === "debit" ? t("inlineBalance.debit", { namespace: "openingBalance" }) : t("inlineBalance.credit", { namespace: "openingBalance" })}</span>
           </div>
           <div className="flex items-center gap-1.5 shrink-0">
             <Button
@@ -70,7 +70,7 @@ export function InlineBalanceRow({ row, onSave, onDelete, label, nativeHint = "d
               size="sm"
               onClick={() => void save()}
               disabled={disabled || saving}
-              className="h-8 px-2 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shrink-0"
+              className="h-8 px-2 text-xs font-bold bg-success hover:bg-success/80 text-white shrink-0"
               aria-label={t("inlineBalance.saveBalance", { namespace: "openingBalance" })}
             >
               {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
@@ -82,7 +82,7 @@ export function InlineBalanceRow({ row, onSave, onDelete, label, nativeHint = "d
               variant="ghost"
               onClick={() => { setEditing(false); setValue(row.amount); }}
               disabled={disabled}
-              className="h-8 w-8 p-0 text-slate-400 hover:text-slate-600 shrink-0"
+              className="h-8 w-8 p-0 text-muted-foreground hover:text-muted-foreground shrink-0"
               aria-label={t("inlineBalance.cancelEdit", { namespace: "openingBalance" })}
             >
               <X className="w-3.5 h-3.5" />
@@ -92,22 +92,22 @@ export function InlineBalanceRow({ row, onSave, onDelete, label, nativeHint = "d
       ) : (
         <>
           <div className="flex items-center gap-2 min-w-0 flex-1">
-            <span className="text-2xs font-bold text-slate-400 tabular-nums shrink-0">{row.account_code || "—"}</span>
+            <span className="text-2xs font-bold text-muted-foreground tabular-nums shrink-0">{row.account_code || "—"}</span>
             {row.category && (
-              <Badge variant="outline" className="text-2xs shrink-0 border-slate-200 text-slate-500">{row.category}</Badge>
+              <Badge variant="outline" className="text-2xs shrink-0 border-muted text-muted-foreground">{row.category}</Badge>
             )}
-            <span className="truncate text-slate-700">{row.label}</span>
+            <span className="truncate text-foreground">{row.label}</span>
           </div>
           <div className="flex items-center gap-1.5 shrink-0">
-            <span className="tabular-nums text-xs font-bold text-slate-700 w-32 text-end">{parseFloat(row.amount || "0").toFixed(2)}</span>
-            <span className="text-2xs text-slate-400">{nativeHint === "debit" ? t("inlineBalance.debit", { namespace: "openingBalance" }) : t("inlineBalance.credit", { namespace: "openingBalance" })}</span>
+            <span className="tabular-nums text-xs font-bold text-foreground w-32 text-end">{parseFloat(row.amount || "0").toFixed(2)}</span>
+            <span className="text-2xs text-muted-foreground">{nativeHint === "debit" ? t("inlineBalance.debit", { namespace: "openingBalance" }) : t("inlineBalance.credit", { namespace: "openingBalance" })}</span>
             <Button
               type="button"
               size="sm"
               variant="outline"
               onClick={startEdit}
               disabled={disabled}
-              className="h-8 px-2 text-xs font-bold border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+              className="h-8 px-2 text-xs font-bold border-success/20 text-success hover:bg-success/10"
               aria-label={t("inlineBalance.editBalance", { namespace: "openingBalance" })}
             >
               <Pencil className="w-3.5 h-3.5" />

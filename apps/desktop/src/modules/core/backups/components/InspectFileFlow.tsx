@@ -70,8 +70,8 @@ const MODE = {
     actionBusy: "جارٍ التحقق...",
     doneToast: "تم تجهيز الاستعادة — سيتم إعادة تشغيل التطبيق لتطبيقها",
     note: "اخترنا لك التفاصيل أعلاه من الملف — راجعها قبل المتابعة.",
-    primary: "bg-amber-600 hover:bg-amber-700",
-    icon: "text-amber-600",
+    primary: "bg-warning hover:bg-warning/80",
+    icon: "text-warning",
   },
 } as const;
 
@@ -169,52 +169,52 @@ export function InspectFileFlow({ mode, operating, preset = null, onPresetConsum
       </Button>
 
       {candidate && insp && (
-        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-3">
+        <div className="rounded-xl border border-muted bg-muted p-4 space-y-3">
           <div className="flex items-center gap-2">
             <FileUp className={`w-4 h-4 ${copy.icon}`} />
-            <p className="text-sm font-bold text-slate-700 truncate" dir="ltr">{candidate.label}</p>
+            <p className="text-sm font-bold text-foreground truncate" dir="ltr">{candidate.label}</p>
           </div>
           <div className="grid grid-cols-2 gap-2 text-xs">
             <div className="space-y-1">
-              <span className="text-slate-400 font-medium">تاريخ الإنشاء</span>
-              <p className="font-bold text-slate-700">
+              <span className="text-muted-foreground font-medium">تاريخ الإنشاء</span>
+              <p className="font-bold text-foreground">
                 {insp.created_at ? formatTimestamp(insp.created_at) : "غير متاح"}
               </p>
             </div>
             <div className="space-y-1">
-              <span className="text-slate-400 font-medium">الحجم</span>
-              <p className="font-bold text-slate-700">{formatSize(insp.size_bytes)}</p>
+              <span className="text-muted-foreground font-medium">الحجم</span>
+              <p className="font-bold text-foreground">{formatSize(insp.size_bytes)}</p>
             </div>
             <div className="space-y-1">
-              <span className="text-slate-400 font-medium">إصدار القاعدة</span>
-              <p className="font-bold text-slate-700">
+              <span className="text-muted-foreground font-medium">إصدار القاعدة</span>
+              <p className="font-bold text-foreground">
                 <span dir="ltr" className="font-mono">{insp.schema_version}</span>
                 {insp.newer_than_supported ? (
-                  <Badge variant="outline" className="ml-1 bg-rose-50 text-rose-700 text-[10px]">أحدث من المدعوم</Badge>
+                  <Badge variant="outline" className="ml-1 bg-destructive/10 text-destructive text-[10px]">أحدث من المدعوم</Badge>
                 ) : upgradable ? (
-                  <span className="text-amber-600 mr-1">(سيتم ترقيته إلى {insp.supported_version})</span>
+                  <span className="text-warning mr-1">(سيتم ترقيته إلى {insp.supported_version})</span>
                 ) : (
-                  <span className="text-emerald-600 mr-1">(متوافق مع الإصدار المدعوم {insp.supported_version})</span>
+                  <span className="text-success mr-1">(متوافق مع الإصدار المدعوم {insp.supported_version})</span>
                 )}
               </p>
             </div>
             <div className="space-y-1">
-              <span className="text-slate-400 font-medium">إصدار التطبيق</span>
-              <p className="font-bold text-slate-700">{candidate.appVersion ?? "غير معروف"}</p>
+              <span className="text-muted-foreground font-medium">إصدار التطبيق</span>
+              <p className="font-bold text-foreground">{candidate.appVersion ?? "غير معروف"}</p>
             </div>
           </div>
           {insp.company_scope ? (
-            <div className="text-xs text-slate-600">
+            <div className="text-xs text-foreground">
               الشركة: <span className="font-bold">{insp.company_scope}</span>
             </div>
           ) : null}
-          <div className="text-xs text-slate-600">
+          <div className="text-xs text-foreground">
             القيود: {insp.journal_entry_count.toLocaleString("ar-EG")} • الحسابات:{" "}
             {insp.account_count.toLocaleString("ar-EG")}
           </div>
           <div
             className={`text-xs font-bold ${
-              insp.tables_present && insp.integrity_ok ? "text-emerald-600" : "text-rose-600"
+              insp.tables_present && insp.integrity_ok ? "text-success" : "text-destructive"
             }`}
           >
             {insp.tables_present && insp.integrity_ok ? (
@@ -228,7 +228,7 @@ export function InspectFileFlow({ mode, operating, preset = null, onPresetConsum
             )}
           </div>
           {reject ? (
-            <div className="flex items-start gap-2 p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold">
+            <div className="flex items-start gap-2 p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-xs font-bold">
               <AlertTriangle className="w-4 h-4 shrink-0" />
               <span>{reject}</span>
             </div>
@@ -246,13 +246,13 @@ export function InspectFileFlow({ mode, operating, preset = null, onPresetConsum
       )}
 
       {staged && !busy && (
-        <div className="flex items-center gap-2 rounded-lg bg-emerald-50 border border-emerald-200 p-3 text-emerald-700 text-sm font-bold">
+        <div className="flex items-center gap-2 rounded-lg bg-success/10 border border-success/20 p-3 text-success text-sm font-bold">
           <CheckCircle2 className="w-4 h-4 shrink-0" /> {copy.doneToast} ✓
         </div>
       )}
 
       {flowError && !busy && (
-        <div role="alert" className="rounded-lg bg-rose-50 border border-rose-200 p-3 text-rose-700">
+        <div role="alert" className="rounded-lg bg-destructive/10 border border-destructive/20 p-3 text-destructive">
           <p className="flex items-center gap-1.5 text-xs font-bold">
             <AlertTriangle className="w-4 h-4 shrink-0" /> {flowError.friendly}
           </p>
@@ -266,50 +266,50 @@ export function InspectFileFlow({ mode, operating, preset = null, onPresetConsum
             <AlertDialogTitle>{copy.confirmTitle}</AlertDialogTitle>
             <AlertDialogDescription asChild>
               <div className="space-y-3">
-                <p className="text-sm text-slate-700">
+                <p className="text-sm text-foreground">
                   الملف: <span dir="ltr" className="font-mono text-xs">{candidate?.label}</span>
                 </p>
                 <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
-                  <span className="text-slate-400 font-medium">الحجم</span>
-                  <span className="font-bold text-slate-700">{candidate ? formatSize(candidate.inspection.size_bytes) : "—"}</span>
-                  <span className="text-slate-400 font-medium">إصدار القاعدة</span>
-                  <span dir="ltr" className="font-mono font-bold text-slate-700">{candidate?.inspection.schema_version ?? "—"}</span>
-                  <span className="text-slate-400 font-medium">الشركة</span>
-                  <span className="font-bold text-slate-700">{candidate?.inspection.company_scope ?? "—"}</span>
-                  <span className="text-slate-400 font-medium">القيود</span>
-                  <span className="font-bold text-slate-700">{candidate ? candidate.inspection.journal_entry_count.toLocaleString("ar-EG") : "—"}</span>
-                  <span className="text-slate-400 font-medium">الحسابات</span>
-                  <span className="font-bold text-slate-700">{candidate ? candidate.inspection.account_count.toLocaleString("ar-EG") : "—"}</span>
-                  <span className="text-slate-400 font-medium">الفحص</span>
-                  <span className={`font-bold ${candidate && candidate.inspection.tables_present && candidate.inspection.integrity_ok ? "text-emerald-600" : "text-rose-600"}`}>
+                  <span className="text-muted-foreground font-medium">الحجم</span>
+                  <span className="font-bold text-foreground">{candidate ? formatSize(candidate.inspection.size_bytes) : "—"}</span>
+                  <span className="text-muted-foreground font-medium">إصدار القاعدة</span>
+                  <span dir="ltr" className="font-mono font-bold text-foreground">{candidate?.inspection.schema_version ?? "—"}</span>
+                  <span className="text-muted-foreground font-medium">الشركة</span>
+                  <span className="font-bold text-foreground">{candidate?.inspection.company_scope ?? "—"}</span>
+                  <span className="text-muted-foreground font-medium">القيود</span>
+                  <span className="font-bold text-foreground">{candidate ? candidate.inspection.journal_entry_count.toLocaleString("ar-EG") : "—"}</span>
+                  <span className="text-muted-foreground font-medium">الحسابات</span>
+                  <span className="font-bold text-foreground">{candidate ? candidate.inspection.account_count.toLocaleString("ar-EG") : "—"}</span>
+                  <span className="text-muted-foreground font-medium">الفحص</span>
+                  <span className={`font-bold ${candidate && candidate.inspection.tables_present && candidate.inspection.integrity_ok ? "text-success" : "text-destructive"}`}>
                     {candidate && candidate.inspection.tables_present && candidate.inspection.integrity_ok
                       ? "نجح الفحص ✓"
                       : "لم يمر الفحص"}
                   </span>
                 </div>
                 {reject ? (
-                  <div className="flex items-start gap-2 p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold">
+                  <div className="flex items-start gap-2 p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-xs font-bold">
                     <AlertTriangle className="w-4 h-4 shrink-0" />
                     <span>{reject}</span>
                   </div>
                 ) : (
-                  <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-sm font-bold leading-relaxed">
+                  <div className="p-3 rounded-lg bg-warning/10 border border-warning/20 text-warning text-sm font-bold leading-relaxed">
                     <span className="flex items-center gap-1.5">
                       <AlertTriangle className="w-4 h-4 shrink-0" />
                       {copy.warningHeading}
                     </span>
-                    <span className="block mt-1.5 text-amber-700">{copy.warningBody}</span>
+                    <span className="block mt-1.5 text-warning">{copy.warningBody}</span>
                   </div>
                 )}
-                <p className="text-xs text-slate-500">{copy.note}</p>
+                <p className="text-xs text-muted-foreground">{copy.note}</p>
                 {busy && phase ? (
                   <div role="status" aria-live="polite" className="space-y-1.5">
                     <Progress
                       value={backupProgressValue(phase)}
                       aria-label="تقدم التجهيز"
-                      className="[&>div]:bg-emerald-600"
+                      className="[&>div]:bg-success"
                     />
-                    <p className="text-xs font-bold text-slate-500">{BACKUP_PROGRESS_LABELS[phase]}</p>
+                    <p className="text-xs font-bold text-muted-foreground">{BACKUP_PROGRESS_LABELS[phase]}</p>
                   </div>
                 ) : null}
               </div>

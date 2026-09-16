@@ -459,11 +459,11 @@ export default function Categories() {
       toolbar={
         <>
           {isMaterialSelected ? (
-            <Button size="sm" onClick={handleOpenUnits} className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100">
+            <Button size="sm" onClick={handleOpenUnits} className="bg-primary hover:bg-primary/80 shadow-lg shadow-primary/20">
               <Scale className="w-4 h-4 ml-2" /> {t("materials.units", { namespace: "inventory",  })}
             </Button>
           ) : (
-            <Button size="sm" onClick={handleOpenNew} className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100">
+            <Button size="sm" onClick={handleOpenNew} className="bg-primary hover:bg-primary/80 shadow-lg shadow-primary/20">
               <Plus className="w-4 h-4 ml-2" /> {newButtonLabel}
             </Button>
           )}
@@ -479,11 +479,11 @@ export default function Categories() {
           <Button
             size="sm"
             variant="outline"
-            className="bg-card border-rose-200 text-rose-700 hover:bg-rose-50"
+            className="bg-card border-destructive/20 text-destructive hover:bg-destructive/10"
             disabled={!canDelete}
             onClick={handleDeleteRequest}
           >
-            <Trash2 className="w-4 h-4 ml-2 text-rose-600" /> {t("actions.delete", { namespace: "common",  })}
+            <Trash2 className="w-4 h-4 ml-2 text-destructive" /> {t("actions.delete", { namespace: "common",  })}
           </Button>
         </>
       }
@@ -491,13 +491,13 @@ export default function Categories() {
         <>
           <button
             onClick={expandAll}
-            className="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-bold text-muted-foreground hover:text-slate-800 hover:bg-accent transition-colors"
+            className="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-bold text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
           >
             <ChevronLeft className="w-3 h-3" /> {t("categories.expand", { namespace: "inventory",  })}
           </button>
           <button
             onClick={collapseAll}
-            className="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-bold text-muted-foreground hover:text-slate-800 hover:bg-accent transition-colors"
+            className="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-bold text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
           >
             {t("categories.collapse", { namespace: "inventory",  })} <ChevronRight className="w-3 h-3" />
           </button>

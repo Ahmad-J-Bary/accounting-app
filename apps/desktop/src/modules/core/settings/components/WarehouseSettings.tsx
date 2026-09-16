@@ -62,7 +62,7 @@ export function WarehouseSettings({ settings, onChange }: WarehouseSettingsProps
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
         <div className="space-y-2 sm:space-y-3">
           <Label className="font-bold text-foreground flex items-center gap-2">
-            <Building className="w-4 h-4 text-blue-600" />
+            <Building className="w-4 h-4 text-primary" />
             {t("warehouses.purchase", { namespace: "settings" })}
           </Label>
           <Select
@@ -83,7 +83,7 @@ export function WarehouseSettings({ settings, onChange }: WarehouseSettingsProps
         </div>
         <div className="space-y-2 sm:space-y-3">
           <Label className="font-bold text-foreground flex items-center gap-2">
-            <Warehouse className="w-4 h-4 text-emerald-600" />
+            <Warehouse className="w-4 h-4 text-success" />
             {t("warehouses.sales", { namespace: "settings" })}
           </Label>
           <Select

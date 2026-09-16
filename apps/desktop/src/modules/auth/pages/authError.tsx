@@ -63,7 +63,7 @@ export default function AuthErrorPage() {
               {countdown > 0 ? (
                 <>
                   {t("error.countdownPrefix", { namespace: "auth",  })}{' '}
-                  <span className="text-blue-600 font-semibold text-base">
+                  <span className="text-primary font-semibold text-base">
                     {countdown}
                   </span>{' '}
                   {t("error.countdownSuffix", { namespace: "auth",  })}

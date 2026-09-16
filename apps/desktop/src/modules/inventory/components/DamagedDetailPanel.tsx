@@ -67,18 +67,18 @@ export function DamagedDetailPanel({
               { label: t("damaged.registerDate", { namespace: "inventory",  }), value: formatDateTime(item.damage_date) },
             ]}
           />
-          <div className="p-4 border border-rose-100 rounded-2xl bg-rose-50/40">
-            <div className="p-3 bg-white rounded-xl border border-rose-100">
-              <div className="text-[10px] text-slate-400 font-bold uppercase mb-1">
+          <div className="p-4 border border-destructive/10 rounded-2xl bg-destructive/10">
+            <div className="p-3 bg-white rounded-xl border border-destructive/10">
+              <div className="text-[10px] text-muted-foreground font-bold uppercase mb-1">
                 {t("damaged.loss", { namespace: "inventory",  })}
               </div>
-              <div className="text-base font-black text-rose-600 tabular-nums">
+              <div className="text-base font-black text-destructive tabular-nums">
                 {lossBase > 0
                   ? formatAmount(lossBase, { currencyCode: baseCurrency?.code || "" })
                   : displayLoss}
               </div>
             </div>
-            <div className="mt-3 text-[11px] text-rose-400 font-bold">
+            <div className="mt-3 text-[11px] text-muted-foreground font-bold">
               {t("damaged.quantityLabel", { namespace: "inventory",  })}: {toLocalString(Math.round(parseFloat(item.quantity || "0")))}
             </div>
           </div>

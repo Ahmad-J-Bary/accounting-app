@@ -138,16 +138,16 @@ export default function Dashboard() {
       header={
         <>
           <div className="flex items-center gap-4">
-            <div className="w-14 h-14 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-200">
+            <div className="w-14 h-14 bg-primary rounded-2xl flex items-center justify-center shadow-lg shadow-primary/20">
               <LayoutDashboard className="w-8 h-8 text-white" />
             </div>
             <div className="space-y-1">
-              <h1 className="text-3xl font-black text-slate-900">{t("title", { namespace: "dashboard",  })}</h1>
-              <p className="text-slate-400 font-medium">{t("subtitle", { namespace: "dashboard",  })}</p>
+              <h1 className="text-3xl font-black text-foreground">{t("title", { namespace: "dashboard",  })}</h1>
+              <p className="text-muted-foreground font-medium">{t("subtitle", { namespace: "dashboard",  })}</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <div className="flex bg-slate-100 p-1 rounded-xl">
+            <div className="flex bg-muted p-1 rounded-xl">
               <button
                 onClick={() => setLocalDisplayMode("base")}
                 className={`px-3 py-1.5 text-xs rounded-lg font-bold transition-all ${localDisplayMode === "base" ? "bg-card shadow-sm" : "text-muted-foreground"}`}
@@ -209,19 +209,19 @@ export default function Dashboard() {
 
       {/* Row 2: Operational metrics */}
       <DashboardCard span={4} title={t("ops.sales", { namespace: "dashboard",  })} subtitle={t("ops.salesSubtitle", { namespace: "dashboard",  })}>
-        <div className="text-3xl font-black tabular-nums text-slate-900">
+        <div className="text-3xl font-black tabular-nums text-foreground">
           {formatAmount(sales, { mode: localDisplayMode })}
         </div>
       </DashboardCard>
 
       <DashboardCard span={4} title={t("ops.purchases", { namespace: "dashboard",  })} subtitle={t("ops.purchasesSubtitle", { namespace: "dashboard",  })}>
-        <div className="text-3xl font-black tabular-nums text-slate-900">
+        <div className="text-3xl font-black tabular-nums text-foreground">
           {formatAmount(purchases, { mode: localDisplayMode })}
         </div>
       </DashboardCard>
 
       <DashboardCard span={4} title={t("ops.inventory", { namespace: "dashboard",  })} subtitle={t("ops.inventorySubtitle", { namespace: "dashboard",  })}>
-        <div className="text-3xl font-black tabular-nums text-slate-900">
+        <div className="text-3xl font-black tabular-nums text-foreground">
           {formatAmount(data.inventory, { mode: localDisplayMode })}
         </div>
       </DashboardCard>
@@ -232,7 +232,7 @@ export default function Dashboard() {
         title={t("chart.title", { namespace: "dashboard",  })} 
         subtitle={t("chart.subtitle", { namespace: "dashboard",  })}
         actions={
-          <div className="flex bg-slate-100 p-1 rounded-xl">
+          <div className="flex bg-muted p-1 rounded-xl">
             <Button size="sm" variant="ghost" className="rounded-lg h-8 px-4 bg-card shadow-sm font-bold">{t("chart.buttons.area", { namespace: "dashboard",  })}</Button>
             <Button size="sm" variant="ghost" className="rounded-lg h-8 px-4 text-muted-foreground font-bold">{t("chart.buttons.bars", { namespace: "dashboard",  })}</Button>
           </div>
@@ -262,7 +262,7 @@ export default function Dashboard() {
             </AreaChart>
           </ResponsiveContainer>
         ) : (
-          <div className="flex items-center justify-center h-[320px] text-slate-300 font-bold text-sm">
+          <div className="flex items-center justify-center h-[320px] text-muted-foreground font-bold text-sm">
             {t("chart.empty", { namespace: "dashboard",  })}
           </div>
         )}
@@ -282,18 +282,18 @@ export default function Dashboard() {
               </ResponsiveContainer>
               <div className="grid grid-cols-2 gap-4 mt-6">
                 {pieData.map((d) => (
-                  <div key={d.name} className="flex items-center gap-3 p-3 rounded-2xl bg-slate-50 border border-slate-100">
+                  <div key={d.name} className="flex items-center gap-3 p-3 rounded-2xl bg-muted border border-slate-100">
                     <div className="w-2.5 h-2.5 rounded-full" style={{backgroundColor: d.color}} />
                     <div>
-                      <div className="text-[10px] font-black text-slate-400 uppercase">{d.name}</div>
-                      <div className="font-black text-slate-900">{d.value}%</div>
+                      <div className="text-[10px] font-black text-muted-foreground uppercase">{d.name}</div>
+                      <div className="font-black text-foreground">{d.value}%</div>
                     </div>
                   </div>
                 ))}
               </div>
             </>
           ) : (
-            <div className="flex items-center justify-center h-[320px] text-slate-300 font-bold text-sm">
+            <div className="flex items-center justify-center h-[320px] text-muted-foreground font-bold text-sm">
               {t("pie.empty", { namespace: "dashboard",  })}
             </div>
           )}
@@ -316,8 +316,8 @@ export default function Dashboard() {
               </div>
               <div className="space-y-2 max-h-[200px] overflow-auto">
                 {lowStock.map(p => (
-                  <div key={p.id} className="flex items-center justify-between p-3 border-b border-slate-50 last:border-0 group hover:bg-slate-50 rounded-lg transition-colors">
-                    <span className="text-sm font-bold text-slate-700">{p.name}</span>
+                  <div key={p.id} className="flex items-center justify-between p-3 border-b border-slate-50 last:border-0 group hover:bg-muted rounded-lg transition-colors">
+                    <span className="text-sm font-bold text-foreground">{p.name}</span>
                     <span className="text-xs font-black tabular-nums text-destructive bg-destructive/10 px-2 py-1 rounded-md">
                       {p.total_available} / {p.minimum_stock}
                     </span>
@@ -342,7 +342,7 @@ export default function Dashboard() {
 
       <DashboardCard span={8} title={t("recent.title", { namespace: "dashboard",  })} subtitle={t("recent.subtitle", { namespace: "dashboard",  })}>
         <Tabs defaultValue="sales" className="w-full">
-          <TabsList className="bg-slate-100 p-1 rounded-xl mb-6">
+          <TabsList className="bg-muted p-1 rounded-xl mb-6">
             <TabsTrigger value="sales" className="rounded-lg font-bold data-[state=active]:bg-card">{t("recent.tabs.journals", { namespace: "dashboard",  })}</TabsTrigger>
             <TabsTrigger value="payments" className="rounded-lg font-bold data-[state=active]:bg-card">{t("recent.tabs.payments", { namespace: "dashboard",  })}</TabsTrigger>
           </TabsList>
@@ -352,7 +352,7 @@ export default function Dashboard() {
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="text-slate-400 font-black text-[10px] uppercase tracking-widest border-b border-slate-100">
+                    <tr className="text-muted-foreground font-black text-[10px] uppercase tracking-widest border-b border-slate-100">
                       <th className="text-right pb-4">{t("recent.journalCols.number", { namespace: "dashboard",  })}</th>
                       <th className="text-right pb-4">{t("recent.journalCols.statement", { namespace: "dashboard",  })}</th>
                       <th className="text-left pb-4">{t("recent.journalCols.amount", { namespace: "dashboard",  })}</th>
@@ -361,9 +361,9 @@ export default function Dashboard() {
                   </thead>
                   <tbody className="divide-y divide-slate-50">
                     {recentJournals.map((j) => (
-                      <tr key={j.id} className="hover:bg-slate-50/50 transition-colors">
-                        <td className="py-4 font-black text-blue-600">{formatNumber(parseInt(j.entry_number) || 0)}</td>
-                        <td className="py-4 font-bold text-slate-700 truncate max-w-[200px]">{j.description}</td>
+                      <tr key={j.id} className="hover:bg-muted/50 transition-colors">
+                        <td className="py-4 font-black text-primary">{formatNumber(parseInt(j.entry_number) || 0)}</td>
+                        <td className="py-4 font-bold text-foreground truncate max-w-[200px]">{j.description}</td>
                         <td className="py-4 text-left tabular-nums font-black">
                           {toNumber(j.total_base_debit) > 0
                             ? formatAmount(toNumber(j.total_base_debit), { mode: localDisplayMode })
@@ -376,7 +376,7 @@ export default function Dashboard() {
                 </table>
               </div>
             ) : (
-              <div className="flex items-center justify-center h-[200px] text-slate-300 font-bold text-sm">
+              <div className="flex items-center justify-center h-[200px] text-muted-foreground font-bold text-sm">
                 {t("recent.journalsEmpty", { namespace: "dashboard",  })}
               </div>
             )}
@@ -387,7 +387,7 @@ export default function Dashboard() {
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="text-slate-400 font-black text-[10px] uppercase tracking-widest border-b border-slate-100">
+                    <tr className="text-muted-foreground font-black text-[10px] uppercase tracking-widest border-b border-slate-100">
                       <th className="text-right pb-4">{t("recent.paymentCols.number", { namespace: "dashboard",  })}</th>
                       <th className="text-right pb-4">{t("recent.paymentCols.type", { namespace: "dashboard",  })}</th>
                       <th className="text-right pb-4">{t("recent.paymentCols.party", { namespace: "dashboard",  })}</th>
@@ -397,10 +397,10 @@ export default function Dashboard() {
                   </thead>
                   <tbody className="divide-y divide-slate-50">
                     {recentPayments.map((p) => (
-                      <tr key={p.id} className="hover:bg-slate-50/50 transition-colors">
-                        <td className="py-4 font-black text-blue-600">{formatNumber(parseInt(p.voucher_number) || 0)}</td>
-                        <td className="py-4 font-bold text-slate-700">{paymentTypeLabel[p.payment_type] || p.payment_type}</td>
-                        <td className="py-4 font-bold text-slate-700">{p.customer_name || p.supplier_name || "—"}</td>
+                      <tr key={p.id} className="hover:bg-muted/50 transition-colors">
+                        <td className="py-4 font-black text-primary">{formatNumber(parseInt(p.voucher_number) || 0)}</td>
+                        <td className="py-4 font-bold text-foreground">{paymentTypeLabel[p.payment_type] || p.payment_type}</td>
+                        <td className="py-4 font-bold text-foreground">{p.customer_name || p.supplier_name || "—"}</td>
                         <td className="py-4 text-left tabular-nums font-black">{formatAmount(toNumber(p.amount), { mode: localDisplayMode })}</td>
                         <td className="py-4 text-muted-foreground tabular-nums font-mono text-xs">{formatDate(p.payment_date)}</td>
                       </tr>
@@ -409,7 +409,7 @@ export default function Dashboard() {
                 </table>
               </div>
             ) : (
-              <div className="flex items-center justify-center h-[200px] text-slate-300 font-bold text-sm">
+              <div className="flex items-center justify-center h-[200px] text-muted-foreground font-bold text-sm">
                 {t("recent.paymentsEmpty", { namespace: "dashboard",  })}
               </div>
             )}

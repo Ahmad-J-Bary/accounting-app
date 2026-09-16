@@ -105,15 +105,15 @@ export function MaterialUnitsManager({ material, onClose, onUnitsUpdated }: Mate
   return (
     <div className="flex flex-col h-full bg-card" dir="rtl">
       {/* Header */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-slate-50/50 shrink-0">
+      <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-muted/50 shrink-0">
         <div className="flex flex-col gap-1 text-right">
-          <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-            <Scale className="w-5 h-5 text-blue-600" />
+          <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
+            <Scale className="w-5 h-5 text-primary" />
             {t("materials.unitsManager.title", { namespace: "inventory",  })}
           </h2>
           <span className="text-xs text-muted-foreground">{material.name}</span>
         </div>
-        <Button variant="ghost" size="icon" onClick={onClose} className="rounded-full text-slate-400 hover:text-slate-600">
+        <Button variant="ghost" size="icon" onClick={onClose} className="rounded-full text-muted-foreground hover:text-foreground">
           <X className="w-5 h-5" />
         </Button>
       </div>
@@ -134,14 +134,14 @@ export function MaterialUnitsManager({ material, onClose, onUnitsUpdated }: Mate
         {/* Secondary Units Section */}
         <div>
           <div className="flex items-center justify-between border-b pb-2">
-            <h3 className="text-sm font-bold text-slate-800">{t("materials.unitsManager.currentUnits", { namespace: "inventory",  })} ({secondaryUnits.length})</h3>
-            <Button type="button" size="sm" onClick={() => setShowAddForm(true)} className="bg-blue-600 hover:bg-blue-700 gap-1.5 h-8 text-xs font-bold rounded-lg shadow-sm"><Plus className="w-3.5 h-3.5" /> {t("materials.form.addUnit", { namespace: "inventory",  })}</Button>
+            <h3 className="text-sm font-bold text-foreground">{t("materials.unitsManager.currentUnits", { namespace: "inventory",  })} ({secondaryUnits.length})</h3>
+            <Button type="button" size="sm" onClick={() => setShowAddForm(true)} className="bg-primary hover:bg-primary/80 gap-1.5 h-8 text-xs font-bold rounded-lg shadow-sm"><Plus className="w-3.5 h-3.5" /> {t("materials.form.addUnit", { namespace: "inventory",  })}</Button>
           </div>
 
           {secondaryUnits.length === 0 && !showAddForm ? (
-            <div className="text-center py-10 bg-slate-50/50 rounded-xl border border-dashed mt-3">
-              <Boxes className="w-8 h-8 mx-auto mb-2 opacity-30 text-slate-400" />
-              <p className="text-xs text-slate-400 mb-3">{t("materials.unitsManager.none", { namespace: "inventory",  })}</p>
+            <div className="text-center py-10 bg-muted/50 rounded-xl border border-dashed mt-3">
+              <Boxes className="w-8 h-8 mx-auto mb-2 opacity-30 text-muted-foreground" />
+              <p className="text-xs text-muted-foreground mb-3">{t("materials.unitsManager.none", { namespace: "inventory",  })}</p>
               <Button variant="outline" size="sm" onClick={() => setShowAddForm(true)}>
                 <Plus className="w-3.5 h-3.5 ml-1.5" />
                 {t("materials.unitsManager.addFirst", { namespace: "inventory",  })}

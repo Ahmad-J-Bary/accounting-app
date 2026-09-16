@@ -19,9 +19,9 @@ export function PartnerEquityCard() {
   const show = (v?: string) => (v !== undefined && v !== null ? formatAmount(parseFloat(v), { currencyCode: baseCurrency?.code || "" }) : "—");
 
   return (
-    <Card className="border-slate-200 shadow-sm">
+    <Card className="border-muted shadow-sm">
       <CardHeader className="py-3">
-        <CardTitle className="text-base font-bold text-slate-800 flex items-center gap-2">
+        <CardTitle className="text-base font-bold text-foreground flex items-center gap-2">
           <Wallet className="w-4 h-4 text-indigo-600" /> {t("chart.equityTitle", { namespace: "partners", vars: { currency: sym },  })}
         </CardTitle>
       </CardHeader>
@@ -36,7 +36,7 @@ export function PartnerEquityCard() {
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
               <thead>
-                <tr className="border-b border-slate-200 text-slate-500">
+                <tr className="border-b border-muted text-muted-foreground">
                   <th className="text-right px-4 py-2 font-semibold">{t("chart.equityColumns.partner", { namespace: "partners",  })}</th>
                   <th className="text-right px-4 py-2 font-semibold">{t("chart.equityColumns.capitalRegistered", { namespace: "partners",  })}</th>
                   <th className="text-right px-4 py-2 font-semibold">{t("chart.equityColumns.ledgerBalance", { namespace: "partners",  })}</th>
@@ -50,27 +50,27 @@ export function PartnerEquityCard() {
               <tbody>
                 {data.rows.length === 0 && (
                   <tr>
-                    <td colSpan={8} className="text-center py-4 text-slate-400">{t("chart.equityEmpty", { namespace: "partners",  })}</td>
+                    <td colSpan={8} className="text-center py-4 text-muted-foreground">{t("chart.equityEmpty", { namespace: "partners",  })}</td>
                   </tr>
                 )}
                 {data.rows.map((r) => (
-                  <tr key={r.partner_id} className="border-b border-slate-100">
-                    <td className="px-4 py-2 font-bold text-slate-700">{r.partner_name}</td>
+                  <tr key={r.partner_id} className="border-b border-muted">
+                    <td className="px-4 py-2 font-bold text-foreground">{r.partner_name}</td>
                     <td className="px-4 py-2 tabular-nums text-slate-600">{show(r.capital_registered)}</td>
                     <td className="px-4 py-2 tabular-nums text-slate-600">{show(r.ledger_balance)}</td>
                     <td className="px-4 py-2 tabular-nums text-slate-600">{show(r.current_balance)}</td>
                     <td className="px-4 py-2 tabular-nums text-red-600">{show(r.drawings)}</td>
-                    <td className={"px-4 py-2 tabular-nums " + (parseFloat(r.profit_allocated) < 0 ? "text-red-600" : "text-emerald-700")}>
+                    <td className={"px-4 py-2 tabular-nums " + (parseFloat(r.profit_allocated) < 0 ? "text-red-600" : "text-success")}>
                       {show(r.profit_allocated)}
                     </td>
-                    <td className={"px-4 py-2 tabular-nums " + (parseFloat(r.loss_allocated) > 0 ? "text-red-600" : "text-slate-500")}>
+                    <td className={"px-4 py-2 tabular-nums " + (parseFloat(r.loss_allocated) > 0 ? "text-red-600" : "text-muted-foreground")}>
                       {show(r.loss_allocated)}
                     </td>
                     <td className="px-4 py-2 tabular-nums font-black text-indigo-700">{show(r.total_equity)}</td>
                   </tr>
                 ))}
                 {data.rows.length > 0 && (
-                  <tr className="bg-slate-50 font-black text-slate-800">
+                  <tr className="bg-muted font-black text-foreground">
                     <td className="px-4 py-2">{t("chart.equityTotal", { namespace: "partners",  })}</td>
                     <td className="px-4 py-2 tabular-nums">{show(data.total_capital)}</td>
                     <td className="px-4 py-2 tabular-nums">—</td>

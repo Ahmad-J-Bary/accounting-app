@@ -72,62 +72,62 @@ export function WarehouseMaterialList({
       <SidebarHeader
         title={warehouse.name}
         subtitle={t("warehouses.materialList.subtitle", { namespace: "inventory",  })}
-        icon={<WarehouseIcon className="w-4 h-4 text-blue-600" />}
+        icon={<WarehouseIcon className="w-4 h-4 text-primary" />}
         onClose={onClose}
       />
       <SidebarBody>
         {/* Stats Strip */}
         <div className="grid grid-cols-2 gap-3 mb-4">
-          <div className="rounded-xl border border-slate-100 bg-slate-50 p-3 flex flex-col gap-0.5">
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">{t("warehouses.materialList.itemCount", { namespace: "inventory",  })}</span>
-            <span className="text-xl font-black text-blue-600 tabular-nums">{formatNumber(materialsInWarehouse.length)}</span>
+          <div className="rounded-xl border border-muted bg-muted p-3 flex flex-col gap-0.5">
+            <span className="text-[10px] font-black text-muted-foreground uppercase tracking-wider">{t("warehouses.materialList.itemCount", { namespace: "inventory",  })}</span>
+            <span className="text-xl font-black text-primary tabular-nums">{formatNumber(materialsInWarehouse.length)}</span>
           </div>
-          <div className="rounded-xl border border-slate-100 bg-slate-50 p-3 flex flex-col gap-0.5">
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">{t("warehouses.materialList.totalQty", { namespace: "inventory",  })}</span>
-            <span className="text-xl font-black text-emerald-600 tabular-nums">{formatNumber(totalQty)}</span>
+          <div className="rounded-xl border border-muted bg-muted p-3 flex flex-col gap-0.5">
+            <span className="text-[10px] font-black text-muted-foreground uppercase tracking-wider">{t("warehouses.materialList.totalQty", { namespace: "inventory",  })}</span>
+            <span className="text-xl font-black text-success tabular-nums">{formatNumber(totalQty)}</span>
           </div>
         </div>
 
         {/* Search */}
         <div className="relative mb-4">
-          <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+          <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
           <Input
             placeholder={t("warehouses.materialList.searchPlaceholder", { namespace: "inventory",  })}
             value={search}
             onChange={e => setSearch(e.target.value)}
-            className="pr-9 h-9 text-xs bg-white border-slate-200"
+            className="pr-9 h-9 text-xs bg-white border-muted"
           />
         </div>
 
         {/* Materials List */}
         {materialsInWarehouse.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-slate-400">
+          <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
             <Package className="w-12 h-12 mb-3 opacity-20" />
-            <p className="font-bold text-slate-500 text-sm">{t("warehouses.materialList.emptyTitle", { namespace: "inventory",  })}</p>
-            <p className="text-[11px] text-slate-400 mt-1">{t("warehouses.materialList.emptyHint", { namespace: "inventory",  })}</p>
+            <p className="font-bold text-muted-foreground text-sm">{t("warehouses.materialList.emptyTitle", { namespace: "inventory",  })}</p>
+            <p className="text-[11px] text-muted-foreground mt-1">{t("warehouses.materialList.emptyHint", { namespace: "inventory",  })}</p>
           </div>
         ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12 text-slate-400">
+          <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
             <Search className="w-8 h-8 mb-2 opacity-20" />
-            <p className="text-sm text-slate-500">{t("labels.noResults", { namespace: "inventory",  })}</p>
+            <p className="text-sm text-muted-foreground">{t("labels.noResults", { namespace: "inventory",  })}</p>
           </div>
         ) : (
           <div className="space-y-1.5">
             {filtered.map(({ material, quantity, qtyText }) => (
               <div
                 key={material.id}
-                className="group rounded-xl border border-slate-100 bg-white hover:bg-blue-50/30 hover:border-blue-100 transition-all duration-150 p-3"
+                className="group rounded-xl border border-muted bg-white hover:bg-primary/10 hover:border-primary/20 transition-all duration-150 p-3"
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-start gap-2.5 min-w-0">
-                    <div className="w-8 h-8 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center shrink-0 mt-0.5">
-                      <Package className="w-3.5 h-3.5 text-blue-500" />
+                    <div className="w-8 h-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0 mt-0.5">
+                      <Package className="w-3.5 h-3.5 text-primary" />
                     </div>
                     <div className="min-w-0">
-                      <p className="font-bold text-slate-800 text-xs leading-tight truncate">{material.name}</p>
+                      <p className="font-bold text-foreground text-xs leading-tight truncate">{material.name}</p>
                       <div className="flex items-center gap-2 mt-0.5">
                         {material.code && (
-                          <span className="flex items-center gap-0.5 text-[10px] text-slate-400 font-mono">
+                          <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground font-mono">
                             <Hash className="w-2.5 h-2.5" />{material.code}
                           </span>
                         )}
@@ -138,12 +138,12 @@ export function WarehouseMaterialList({
                     <div className="text-left">
                       <p className={cn(
                         "text-sm font-black tabular-nums leading-tight",
-                        quantity > 0 ? "text-emerald-600" : "text-red-500"
+                        quantity > 0 ? "text-success" : "text-destructive"
                       )}>
                         {formatNumber(quantity)}
                       </p>
                       {qtyText !== formatNumber(quantity) && (
-                        <p className="text-[9px] text-slate-400 font-medium leading-tight">{qtyText}</p>
+                        <p className="text-[9px] text-muted-foreground font-medium leading-tight">{qtyText}</p>
                       )}
                     </div>
                     {onOpenTransfer && (

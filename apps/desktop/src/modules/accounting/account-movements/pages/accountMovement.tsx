@@ -40,12 +40,12 @@ function getDescendantIds(accountId: string, accounts: AccountDto[]): string[] {
   return [accountId, ...children.flatMap(c => getDescendantIds(c.id, accounts))];
 }
 
-const OUTLINE_BUTTON_CLASS = "border-slate-200 text-slate-700 hover:bg-slate-50";
+const OUTLINE_BUTTON_CLASS = "border-muted text-foreground hover:bg-muted";
 const TOOLBAR_CLASS_BY_TYPE = {
-  partner: "bg-amber-600 hover:bg-amber-700 text-white",
-  customer: "bg-blue-600 hover:bg-blue-700 text-white",
-  supplier: "bg-emerald-600 hover:bg-emerald-700 text-white",
-  expense: "bg-red-600 hover:bg-red-700 text-white",
+  partner: "bg-warning hover:bg-warning/80 text-white",
+  customer: "bg-primary hover:bg-primary/80 text-white",
+  supplier: "bg-success hover:bg-success/80 text-white",
+  expense: "bg-destructive hover:bg-destructive/80 text-white",
 } as const;
 
 export default function AccountMovement() {
@@ -223,7 +223,7 @@ export default function AccountMovement() {
   const toolbarButtons = useMemo(() => {
     const commonPrint = (
       <Button key="print" variant="outline" size="sm" className={OUTLINE_BUTTON_CLASS}>
-        <Printer className="w-4 h-4 ms-2 text-blue-500" />
+        <Printer className="w-4 h-4 ms-2 text-primary" />
         {t("ledger.print", { namespace: "accounting",  })}
       </Button>
     );
@@ -261,7 +261,7 @@ export default function AccountMovement() {
               }}
               className={OUTLINE_BUTTON_CLASS}
             >
-              <ShoppingCart className="w-4 h-4 ms-2 text-blue-500" />
+              <ShoppingCart className="w-4 h-4 ms-2 text-primary" />
               {t("ledger.salesFor", { namespace: "accounting", vars: { name: linkedEntityName },  })}
             </Button>
           ) : null
@@ -288,7 +288,7 @@ export default function AccountMovement() {
               }}
               className={OUTLINE_BUTTON_CLASS}
             >
-              <ShoppingCart className="w-4 h-4 ms-2 text-emerald-500" />
+              <ShoppingCart className="w-4 h-4 ms-2 text-success" />
               {t("ledger.purchasesFor", { namespace: "accounting", vars: { name: linkedEntityName },  })}
             </Button>
           ) : null

@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Table,
   TableBody,
@@ -118,7 +118,7 @@ export const PartnerStatement: React.FC<PartnerStatementProps> = ({
     return (
       <div className="flex flex-col items-center justify-center h-64 space-y-4">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
-        <p className="text-slate-500 font-bold">{t("statement.loading", { namespace: "partners",  })}</p>
+        <p className="text-muted-foreground font-bold">{t("statement.loading", { namespace: "partners",  })}</p>
       </div>
     );
   }
@@ -148,9 +148,9 @@ export const PartnerStatement: React.FC<PartnerStatementProps> = ({
         </div>
       </CardHeader>
       <CardContent className="px-0">
-        <div className="rounded-xl border border-slate-200 overflow-hidden bg-white shadow-sm">
+        <div className="rounded-xl border border-muted overflow-hidden bg-white shadow-sm">
           <Table>
-            <TableHeader className="bg-slate-50/50">
+            <TableHeader className="bg-muted/50">
               <TableRow>
                 <TableHead className="text-right font-bold w-[120px]">{t("statement.colDate", { namespace: "partners",  })}</TableHead>
                 <TableHead className="text-right font-bold w-[100px]">{t("statement.colEntryNumber", { namespace: "partners",  })}</TableHead>
@@ -169,7 +169,7 @@ export const PartnerStatement: React.FC<PartnerStatementProps> = ({
                 <TableRow>
                   <TableCell
                     colSpan={3 + sortedCurrencies.length * 3}
-                    className="text-center py-12 text-slate-400 font-medium italic"
+                    className="text-center py-12 text-muted-foreground font-medium italic"
                   >
                     {emptyText}
                   </TableCell>
@@ -195,7 +195,7 @@ export const PartnerStatement: React.FC<PartnerStatementProps> = ({
                   return (
                     <TableRow
                       key={entry.id}
-                      className="hover:bg-slate-50/30 transition-colors"
+                      className="hover:bg-muted/50/30 transition-colors"
                     >
                       <TableCell className="font-medium text-slate-600">
                         {format(new Date(entry.entry_date), "yyyy/MM/dd")}
@@ -203,8 +203,8 @@ export const PartnerStatement: React.FC<PartnerStatementProps> = ({
                       <TableCell className="font-bold text-primary">{formatNumber(parseInt(entry.entry_number) || 0)}</TableCell>
                       <TableCell>
                         <div className="flex flex-col">
-                          <span className="font-bold text-slate-800">{entry.description}</span>
-                          <span className="text-xs text-slate-400">
+                          <span className="font-bold text-foreground">{entry.description}</span>
+                          <span className="text-xs text-muted-foreground">
                             {getJournalDisplay(entry, t)}
                           </span>
                         </div>
@@ -223,7 +223,7 @@ export const PartnerStatement: React.FC<PartnerStatementProps> = ({
                           </TableCell>
                           <TableCell className="text-left">
                             {credit > 0 ? (
-                              <div className="flex items-center justify-end gap-1 text-emerald-600 font-bold">
+                              <div className="flex items-center justify-end gap-1 text-success font-bold">
                                 {toLocalString(credit)}
                                 <TrendingDown className="w-3 h-3" />
                               </div>
@@ -231,9 +231,9 @@ export const PartnerStatement: React.FC<PartnerStatementProps> = ({
                               "-"
                             )}
                           </TableCell>
-                          <TableCell className="text-left font-black text-slate-900 bg-slate-50/20">
+                          <TableCell className="text-left font-black text-slate-900 bg-muted/20">
                             {toLocalString(balance)}
-                            <span className="text-[10px] mr-1 text-slate-400">{symbol}</span>
+                            <span className="text-[10px] mr-1 text-muted-foreground">{symbol}</span>
                           </TableCell>
                         </React.Fragment>
                       ))}
@@ -250,8 +250,8 @@ export const PartnerStatement: React.FC<PartnerStatementProps> = ({
             if (!row) return null;
             const bal = (row.debit - row.credit) * dirMul;
             return (
-              <TableRow key={targetCurr.code} className="bg-slate-50 font-bold">
-                <TableCell className="text-slate-400 text-xs" colSpan={3}>
+              <TableRow key={targetCurr.code} className="bg-muted font-bold">
+                <TableCell className="text-muted-foreground text-xs" colSpan={3}>
                   {t("statement.total", { namespace: "partners", vars: { currency: targetCurr.symbol },  })}
                 </TableCell>
                 {sortedCurrencies.map((_, idx) => {
@@ -261,7 +261,7 @@ export const PartnerStatement: React.FC<PartnerStatementProps> = ({
                         <TableCell className="text-left text-red-600">
                           {toLocalString(row.debit) || "0"}
                         </TableCell>
-                        <TableCell className="text-left text-emerald-600">
+                        <TableCell className="text-left text-success">
                           {toLocalString(row.credit) || "0"}
                         </TableCell>
                         <TableCell className="text-left font-black text-slate-900">

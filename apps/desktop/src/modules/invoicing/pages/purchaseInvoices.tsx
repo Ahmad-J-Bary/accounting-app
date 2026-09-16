@@ -425,7 +425,7 @@ export default function PurchaseInvoices() {
       searchPlaceholder={t("invoice.purchaseSearchPlaceholder", { namespace: "invoicing",  })}
       emptyMessage={t("invoice.purchaseEmpty", { namespace: "invoicing",  })}
       statsLabel={t("invoice.purchaseStatsLabel", { namespace: "invoicing",  })}
-      statsColor="text-rose-600"
+      statsColor="text-destructive"
       preferenceKey="purchase_invoices"
       showSubtotal
       showDiscount

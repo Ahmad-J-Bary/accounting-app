@@ -205,7 +205,7 @@ export default function FixedAssetsPage() {
             const base = val / rate;
             return formatAmount(base, { currencyCode: curr.code });
           },
-          className: "tabular-nums font-black text-slate-900",
+          className: "tabular-nums font-black text-foreground",
         });
       });
       currencies.forEach((curr) => {
@@ -217,7 +217,7 @@ export default function FixedAssetsPage() {
           accessor: (r: FixedAssetDto) => {
             const val = parseFloat(r.accumulated_depreciation.amount);
             if (val === 0 && r.useful_life_months === 0)
-              return <span className="text-slate-400 text-xs">{t("table.notApplicable", { namespace: "fixedAssets",  })}</span>;
+              return <span className="text-muted-foreground text-xs">{t("table.notApplicable", { namespace: "fixedAssets",  })}</span>;
             if (Math.abs(val) === 0) return "";
             if (curr.code === r.accumulated_depreciation.currency.code) {
               return formatAmount(val, { currencyCode: curr.code });
@@ -226,7 +226,7 @@ export default function FixedAssetsPage() {
             const base = val / rate;
             return formatAmount(base, { currencyCode: curr.code });
           },
-          className: "tabular-nums font-black text-slate-900",
+          className: "tabular-nums font-black text-foreground",
         });
       });
       currencies.forEach((curr) => {
@@ -247,7 +247,7 @@ export default function FixedAssetsPage() {
             const base = nbv / rate;
             return formatAmount(base, { currencyCode: curr.code });
           },
-          className: "tabular-nums font-black text-slate-900",
+          className: "tabular-nums font-black text-foreground",
         });
       });
 
@@ -402,7 +402,7 @@ export default function FixedAssetsPage() {
           <Button
             size="sm"
             variant="outline"
-            className="bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
+            className="bg-white border-muted text-foreground hover:bg-muted"
             onClick={handleRunRotation}
           >
             {t("table.rotateButton", { namespace: "fixedAssets",  })}
@@ -410,10 +410,10 @@ export default function FixedAssetsPage() {
           <Button
             size="sm"
             variant="outline"
-            className="bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
+            className="bg-white border-muted text-foreground hover:bg-muted"
             onClick={handleExport}
           >
-            <Download className="w-4 h-4 ml-2 text-slate-500" /> {t("table.exportButton", { namespace: "fixedAssets",  })}
+            <Download className="w-4 h-4 ml-2 text-muted-foreground" /> {t("table.exportButton", { namespace: "fixedAssets",  })}
           </Button>
           <Button
             size="sm"
@@ -422,7 +422,7 @@ export default function FixedAssetsPage() {
               setEditingAsset(null);
               setShowForm(true);
             }}
-            className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100 font-bold"
+            className="bg-primary hover:bg-primary/80 shadow-lg shadow-primary/20 font-bold"
           >
             <Plus className="w-4 h-4 ml-2" /> {t("table.addButton", { namespace: "fixedAssets",  })}
           </Button>
@@ -450,7 +450,7 @@ export default function FixedAssetsPage() {
                   setWarehouseFilter("all");
                 }}
               >
-                <SelectTrigger className="w-[180px] bg-white border-slate-200 h-8 text-xs font-bold text-slate-700">
+                <SelectTrigger className="w-[180px] bg-white border-muted h-8 text-xs font-bold text-foreground">
                   <SelectValue placeholder={t("table.assetTypePlaceholder", { namespace: "fixedAssets",  })} />
                 </SelectTrigger>
                 <SelectContent>

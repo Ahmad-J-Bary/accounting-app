@@ -15,7 +15,7 @@ interface NavBarProps {
   horizontalAppearance?: 'light' | 'dark';
 }
 
-export function NavBar({ slim = false, activeBg = 'bg-blue-600', hoverBg = 'hover:bg-white/5 hover:text-white', vertical = false, horizontalAppearance }: NavBarProps) {
+export function NavBar({ slim = false, activeBg = 'bg-primary', hoverBg = 'hover:bg-white/5 hover:text-white', vertical = false, horizontalAppearance }: NavBarProps) {
   const { layout } = useSidebarLayout();
   const companySettings = useCompanyTypeSettings();
   const { initState, isReady } = useCompanyInitState();
@@ -40,7 +40,7 @@ export function NavBar({ slim = false, activeBg = 'bg-blue-600', hoverBg = 'hove
             <button
               onMouseEnter={() => setHoveredGroup(group.id)}
               onMouseLeave={() => setHoveredGroup(null)}
-              className="w-full flex items-center justify-center p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/50 transition-colors"
+              className="w-full flex items-center justify-center p-2 rounded-lg text-muted-foreground hover:text-white hover:bg-slate-800/50 transition-colors"
               title={groupTitle(group)}
             >
               {group.icon && ICON_MAP[group.icon] ? (
@@ -68,7 +68,7 @@ export function NavBar({ slim = false, activeBg = 'bg-blue-600', hoverBg = 'hove
       className={cn(
         "flex items-center justify-center gap-2 px-4 border-b overflow-visible z-50",
         isHorizLight
-          ? "bg-white border-slate-200"
+          ? "bg-white border-muted"
           : "border-[hsl(var(--sidebar-border))]",
         slim ? "h-10" : "h-12"
       )}
@@ -109,7 +109,7 @@ export function NavBar({ slim = false, activeBg = 'bg-blue-600', hoverBg = 'hove
                 isActive
                   ? isHorizLight ? "text-primary bg-primary/10" : `${activeBg} text-white shadow-sm`
                   : isHorizLight
-                    ? "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                    ? "text-slate-600 hover:text-slate-900 hover:bg-muted"
                     : `text-[hsl(var(--sidebar-foreground))] opacity-75 hover:opacity-100 hover:bg-[hsl(var(--sidebar-accent))]`
               )}
               title={displayLabel}
@@ -137,7 +137,7 @@ export function NavBar({ slim = false, activeBg = 'bg-blue-600', hoverBg = 'hove
                 isGroupActive
                   ? isHorizLight ? "text-primary bg-primary/10" : "bg-[hsl(var(--sidebar-accent))] text-[hsl(var(--sidebar-accent-foreground))] opacity-100 shadow-sm"
                   : isHorizLight
-                    ? "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                    ? "text-slate-600 hover:text-slate-900 hover:bg-muted"
                     : "text-[hsl(var(--sidebar-foreground))] opacity-75 hover:opacity-100 hover:bg-[hsl(var(--sidebar-accent))]"
               )}
             >
@@ -151,7 +151,7 @@ export function NavBar({ slim = false, activeBg = 'bg-blue-600', hoverBg = 'hove
               className={cn(
                 "absolute top-full right-0 mt-1 w-56 rounded-xl border p-1.5 shadow-xl opacity-0 translate-y-1 invisible",
                 "group-hover:opacity-100 group-hover:translate-y-0 group-hover:visible transition-all duration-200 z-50",
-                isHorizLight ? "bg-white border-slate-200" : "border-[hsl(var(--sidebar-border))]"
+                isHorizLight ? "bg-white border-muted" : "border-[hsl(var(--sidebar-border))]"
               )}
               style={!isHorizLight ? { background: 'hsl(var(--sidebar-background))' } : undefined}
             >
@@ -185,7 +185,7 @@ export function NavBar({ slim = false, activeBg = 'bg-blue-600', hoverBg = 'hove
                         isActive
                           ? isHorizLight ? "text-primary bg-primary/10" : `${activeBg} text-white shadow-sm`
                           : isHorizLight
-                            ? "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                            ? "text-slate-600 hover:text-slate-900 hover:bg-muted"
                             : `text-[hsl(var(--sidebar-foreground))] opacity-75 hover:opacity-100 ${hoverBg}`
                       )}
                     >

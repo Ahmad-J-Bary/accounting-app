@@ -127,18 +127,18 @@ export function PaymentForm({ config, onSave, onClose, saving }: PaymentFormProp
               />
             </div>
 
-            <div className="col-span-2 grid grid-cols-2 gap-4 p-3 bg-slate-50/50 rounded-lg border border-slate-100">
+            <div className="col-span-2 grid grid-cols-2 gap-4 p-3 bg-muted/50 rounded-lg border border-muted">
               <div className="space-y-1.5">
                 <FieldLabel>{payCreditLabel}</FieldLabel>
                 <Input
                   value={payCreditValue}
                   disabled
-                  className="h-9 bg-slate-50 text-slate-500 font-bold"
+                  className="h-9 bg-muted text-muted-foreground font-bold"
                 />
               </div>
               <div className="space-y-1.5">
                 <FieldLabel>{payDebitLabel}</FieldLabel>
-                <Input value={payDebitValue} disabled className="h-9 bg-slate-50 text-slate-500 font-bold" />
+                <Input value={payDebitValue} disabled className="h-9 bg-muted text-muted-foreground font-bold" />
               </div>
             </div>
 
@@ -158,7 +158,7 @@ export function PaymentForm({ config, onSave, onClose, saving }: PaymentFormProp
                 value={form.notes ?? ""}
                 onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))}
                 placeholder={t("payment.notesPlaceholder", { namespace: "partners",  })}
-                className="min-h-[60px] bg-white border-slate-200"
+                className="min-h-[60px] bg-white border-muted"
               />
             </div>
           </div>
@@ -195,7 +195,7 @@ export const PAYMENT_CONFIGS = {
     entityId: customer.id,
     entityName: customer.name,
     entityCurrency: customer.currency,
-    iconColor: "text-emerald-600",
+    iconColor: "text-success",
     title: "",
     creditLabel: "",
     debitLabel: "",
@@ -209,7 +209,7 @@ export const PAYMENT_CONFIGS = {
     entityId: supplier.id,
     entityName: supplier.name,
     entityCurrency: supplier.currency,
-    iconColor: "text-blue-600",
+    iconColor: "text-primary",
     title: "",
     creditLabel: "",
     debitLabel: "",
@@ -224,7 +224,7 @@ export const PAYMENT_CONFIGS = {
     entityName: partner.name,
     entityCurrency: partner.currency,
     drawingsAccountId: partner.drawings_account_id,
-    iconColor: "text-amber-600",
+    iconColor: "text-warning",
     title: "",
     creditLabel: "",
     debitLabel: "",

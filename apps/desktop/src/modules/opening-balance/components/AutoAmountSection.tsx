@@ -48,14 +48,14 @@ export function AutoAmountSection({ title, hint, rows, onPatch, onDelete, fixedA
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <span className="text-xs font-bold text-slate-700">{title}</span>
+        <span className="text-xs font-bold text-foreground">{title}</span>
         {existingRow && toNum(existingRow.amount) > 0 && (
-          <span className="rounded-full bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-xs font-bold text-emerald-700 tabular-nums">
+          <span className="rounded-full bg-success/10 border border-success/20 px-2 py-0.5 text-xs font-bold text-success tabular-nums">
             {toFixed(toNum(existingRow.amount), 2)}
           </span>
         )}
       </div>
-      {hint && <p className="text-xs text-slate-500">{hint}</p>}
+      {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
 
       {(!existingRow || toNum(existingRow.amount) <= 0) && !editing && (
         <Button
@@ -63,7 +63,7 @@ export function AutoAmountSection({ title, hint, rows, onPatch, onDelete, fixedA
           variant="outline"
           size="sm"
           onClick={handleAdd}
-          className="h-8 shrink-0 rounded-full border-emerald-300 bg-emerald-50 px-3 text-xs font-bold text-emerald-700 hover:bg-emerald-100 hover:border-emerald-400 transition-all"
+          className="h-8 shrink-0 rounded-full border-success/20 bg-success/10 px-3 text-xs font-bold text-success hover:bg-success/20 hover:border-success/40 transition-all"
         >
           <Plus className="w-3.5 h-3.5 ms-1" />
           {t("autoAmount.addTitle", { namespace: "openingBalance", vars: { title } })}
@@ -72,8 +72,8 @@ export function AutoAmountSection({ title, hint, rows, onPatch, onDelete, fixedA
 
       {editing && (
         <div className="flex items-center gap-2">
-          <div className="flex-1 min-w-0 rounded-lg border border-border bg-slate-50/60 px-2 py-1.5 flex items-center">
-            <span className="text-xs font-bold text-slate-700 truncate">{fixedAccountName}</span>
+          <div className="flex-1 min-w-0 rounded-lg border border-border bg-muted/60 px-2 py-1.5 flex items-center">
+            <span className="text-xs font-bold text-foreground truncate">{fixedAccountName}</span>
           </div>
           <div className="w-32 shrink-0">
             <Input
@@ -95,13 +95,13 @@ export function AutoAmountSection({ title, hint, rows, onPatch, onDelete, fixedA
             />
           </div>
           {nativeHint && (
-            <span className="text-2xs text-slate-400 shrink-0">{nativeHint === "debit" ? t("autoAmount.debit", { namespace: "openingBalance" }) : t("autoAmount.credit", { namespace: "openingBalance" })}</span>
+            <span className="text-2xs text-muted-foreground shrink-0">{nativeHint === "debit" ? t("autoAmount.debit", { namespace: "openingBalance" }) : t("autoAmount.credit", { namespace: "openingBalance" })}</span>
           )}
           <Button
             type="button"
             size="sm"
             onClick={() => existingRow && save(existingRow.key)}
-            className="h-8 px-2 text-xs font-bold shrink-0 bg-emerald-600 hover:bg-emerald-700 text-white"
+            className="h-8 px-2 text-xs font-bold shrink-0 bg-success hover:bg-success/80 text-white"
           >
             <Check className="w-3.5 h-3.5 ms-1" />
             {t("autoAmount.save", { namespace: "openingBalance" })}
@@ -111,7 +111,7 @@ export function AutoAmountSection({ title, hint, rows, onPatch, onDelete, fixedA
             size="sm"
             variant="ghost"
             onClick={() => setEditing(false)}
-            className="h-8 w-8 p-0 text-slate-400 hover:text-slate-600 shrink-0"
+            className="h-8 w-8 p-0 text-muted-foreground hover:text-slate-600 shrink-0"
           >
             <X className="w-3.5 h-3.5" />
           </Button>
@@ -120,21 +120,21 @@ export function AutoAmountSection({ title, hint, rows, onPatch, onDelete, fixedA
 
       {existingRow && toNum(existingRow.amount) > 0 && !editing && (
         <div className="flex items-center gap-2">
-          <div className="flex-1 min-w-0 rounded-lg border border-border bg-slate-50/60 px-2 py-1.5 flex items-center">
-            <span className="text-xs font-bold text-slate-700 truncate">{fixedAccountName}</span>
+          <div className="flex-1 min-w-0 rounded-lg border border-border bg-muted/60 px-2 py-1.5 flex items-center">
+            <span className="text-xs font-bold text-foreground truncate">{fixedAccountName}</span>
           </div>
           <div className="w-32 shrink-0 rounded-lg border border-border bg-card px-2 py-1.5 flex items-center justify-end">
-            <span className="tabular-nums text-xs font-bold text-slate-700">{toFixed(toNum(existingRow.amount), 2)}</span>
+            <span className="tabular-nums text-xs font-bold text-foreground">{toFixed(toNum(existingRow.amount), 2)}</span>
           </div>
           {nativeHint && (
-            <span className="text-2xs text-slate-400 shrink-0">{nativeHint === "debit" ? t("autoAmount.debit", { namespace: "openingBalance" }) : t("autoAmount.credit", { namespace: "openingBalance" })}</span>
+            <span className="text-2xs text-muted-foreground shrink-0">{nativeHint === "debit" ? t("autoAmount.debit", { namespace: "openingBalance" }) : t("autoAmount.credit", { namespace: "openingBalance" })}</span>
           )}
           <Button
             type="button"
             size="sm"
             variant="outline"
             onClick={() => startEdit(existingRow)}
-            className="h-8 px-2 text-xs font-bold shrink-0 border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+            className="h-8 px-2 text-xs font-bold shrink-0 border-success/20 text-success hover:bg-success/10"
           >
             <Pencil className="w-3.5 h-3.5" />
             {t("autoAmount.edit", { namespace: "openingBalance" })}

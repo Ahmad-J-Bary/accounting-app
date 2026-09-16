@@ -73,7 +73,7 @@ export function ReturnsTable({
           if (isPurchaseReturn(ret)) return ret.supplier_name || "";
           return "";
         },
-        className: "font-bold text-slate-800"
+        className: "font-bold text-foreground"
       },
       ...currencies.map(curr => {
         const isBase = isBaseCurrency(curr.code);
@@ -88,7 +88,7 @@ export function ReturnsTable({
           },
           className: isBase
             ? "tabular-nums font-black text-slate-900"
-            : "tabular-nums font-medium text-slate-400"
+            : "tabular-nums font-medium text-muted-foreground"
         };
       }),
       {
@@ -96,14 +96,14 @@ export function ReturnsTable({
         header: t("return.colDescription", { namespace: "invoicing",  }),
         label: t("return.colDescription", { namespace: "invoicing",  }),
         accessor: (ret) => ret.notes || "",
-        className: "text-slate-500 italic"
+        className: "text-muted-foreground italic"
       },
       {
         id: "return_date",
         header: t("return.colDate", { namespace: "invoicing",  }),
         label: t("return.colDate", { namespace: "invoicing",  }),
         accessor: (ret) => formatDateTime(ret.return_date),
-        className: "text-slate-500 tabular-nums"
+        className: "text-muted-foreground tabular-nums"
       },
       ...((onView || onEdit || onDelete) ? [{
         id: "actions",
@@ -258,7 +258,7 @@ export function ReturnsTable({
     const colIds = enrichedColumns.map(c => c.id);
     return colIds.map(id => {
       if (id === "return_number") {
-        return { id: "count", columnId: "return_number", label: "", value: t("return.countReturns", { namespace: "invoicing", vars: { count: sortedData.length },  }), className: "text-slate-500 font-medium" };
+        return { id: "count", columnId: "return_number", label: "", value: t("return.countReturns", { namespace: "invoicing", vars: { count: sortedData.length },  }), className: "text-muted-foreground font-medium" };
       }
       const match = id.match(/^total_amount_(.+)$/);
       if (match) {
@@ -271,7 +271,7 @@ export function ReturnsTable({
           value: baseTotal > 0 ? formatAmount(baseTotal, { currencyCode: currCode }) : "—",
           className: isBase
             ? "font-black text-slate-900"
-            : "font-extrabold text-slate-500"
+            : "font-extrabold text-muted-foreground"
         };
       }
       return { id: `${id}_spacer`, columnId: id, label: "", value: "" };
@@ -292,10 +292,10 @@ export function ReturnsTable({
         <Button
           size="sm"
           variant="outline"
-          className="h-8 border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+          className="h-8 border-muted bg-white text-foreground hover:bg-muted/50"
           onClick={handleExport}
         >
-          <Download className="w-3.5 h-3.5 ml-1.5 text-emerald-600" />
+          <Download className="w-3.5 h-3.5 ml-1.5 text-success" />
           {t("actions.exportExcel", { namespace: "invoicing",  })}
         </Button>
       )}

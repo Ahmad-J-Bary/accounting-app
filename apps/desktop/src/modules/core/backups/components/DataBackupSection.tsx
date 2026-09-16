@@ -160,22 +160,22 @@ export function DataBackupSection() {
   if (loading && !config) {
     return (
       <div className="flex flex-col items-center justify-center h-[50vh] space-y-4">
-        <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
-        <p className="font-black text-slate-400">جاري تحميل البيانات والنسخ الاحتياطية...</p>
+        <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+        <p className="font-black text-muted-foreground">جاري تحميل البيانات والنسخ الاحتياطية...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50/30 p-4 lg:p-6 space-y-6" dir="rtl">
+    <div className="min-h-screen bg-muted/30 p-4 lg:p-6 space-y-6" dir="rtl">
       {/* Page Header */}
       <header className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-1">
         <div className="space-y-1">
-          <h1 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-            <DatabaseBackup className="w-6 h-6 text-blue-600" />
+          <h1 className="text-2xl font-black text-foreground tracking-tight flex items-center gap-2">
+            <DatabaseBackup className="w-6 h-6 text-primary" />
             البيانات والنسخ الاحتياطية
           </h1>
-          <p className="text-slate-500 font-medium text-base">إدارة قاعدة البيانات والنسخ الاحتياطية</p>
+          <p className="text-muted-foreground font-medium text-base">إدارة قاعدة البيانات والنسخ الاحتياطية</p>
         </div>
         <Button onClick={() => void load(true)} variant="outline" size="sm">
           <RefreshCw className="w-4 h-4 ml-1" /> تحديث

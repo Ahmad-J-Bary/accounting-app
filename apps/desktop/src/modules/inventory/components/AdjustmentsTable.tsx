@@ -57,28 +57,28 @@ export function AdjustmentsTable({ data, loading, search, onSearchChange, select
         header: t("labels.number", { namespace: "inventory",  }),
         label: t("labels.number", { namespace: "inventory",  }),
         accessor: (a, idx) => a.reference ? formatNumber(parseInt(a.reference) || 0) : (idx + 1).toString(),
-        className: "font-black text-slate-900 text-center"
+        className: "font-black text-foreground text-center"
       },
       {
         id: "material_name",
         header: t("labels.material", { namespace: "inventory",  }),
         label: t("labels.material", { namespace: "inventory",  }),
         accessor: (a) => a.material_name ?? a.material_id,
-        className: "font-bold text-slate-800"
+        className: "font-bold text-foreground"
       },
       {
         id: "system_quantity",
         header: t("adjustments.systemQuantity", { namespace: "inventory",  }),
         label: t("adjustments.systemQuantity", { namespace: "inventory",  }),
         accessor: (a) => toFixed(parseFloat(a.system_quantity), 2),
-        className: "tabular-nums text-slate-600"
+        className: "tabular-nums text-foreground"
       },
       {
         id: "actual_quantity",
         header: t("adjustments.actualQuantity", { namespace: "inventory",  }),
         label: t("adjustments.actualQuantity", { namespace: "inventory",  }),
         accessor: (a) => toFixed(parseFloat(a.actual_quantity), 2),
-        className: "tabular-nums font-bold text-slate-800"
+        className: "tabular-nums font-bold text-foreground"
       },
       {
         id: "difference",
@@ -89,7 +89,7 @@ export function AdjustmentsTable({ data, loading, search, onSearchChange, select
           return (
             <span className={cn(
               "inline-flex items-center gap-1.5 font-black tabular-nums",
-              diff > 0 ? "text-emerald-600" : diff < 0 ? "text-rose-600" : "text-slate-400"
+              diff > 0 ? "text-success" : diff < 0 ? "text-destructive" : "text-muted-foreground"
             )}>
               {diff > 0 ? <ArrowUpCircle className="w-4 h-4" /> : diff < 0 ? <ArrowDownCircle className="w-4 h-4" /> : <Minus className="w-4 h-4" />}
               {diff > 0 ? "+" : ""}{toFixed(diff, 2)}
@@ -106,9 +106,9 @@ export function AdjustmentsTable({ data, loading, search, onSearchChange, select
           accessor: (a: StockAdjustment) => {
             const cost = parseFloat(a.total_cost_base || "0");
             return Math.abs(cost) > 0 ? (
-              <span className="tabular-nums font-black text-slate-900">{formatAmount(cost, { currencyCode: curr.code })}</span>
+              <span className="tabular-nums font-black text-foreground">{formatAmount(cost, { currencyCode: curr.code })}</span>
             ) : (
-              <span className="text-slate-400">—</span>
+              <span className="text-muted-foreground">—</span>
             );
           },
           className: "tabular-nums",
@@ -119,14 +119,14 @@ export function AdjustmentsTable({ data, loading, search, onSearchChange, select
         header: t("labels.note", { namespace: "inventory",  }),
         label: t("labels.note", { namespace: "inventory",  }),
         accessor: (a) => a.notes ?? a.reason ?? "",
-        className: "text-slate-500"
+        className: "text-muted-foreground"
       },
       {
         id: "adjustment_date",
         header: t("labels.date", { namespace: "inventory",  }),
         label: t("adjustments.dateLabel", { namespace: "inventory",  }),
         accessor: (a) => formatDateTime(a.adjustment_date),
-        className: "tabular-nums text-slate-500"
+        className: "tabular-nums text-muted-foreground"
       },
     ];
 
@@ -174,7 +174,7 @@ export function AdjustmentsTable({ data, loading, search, onSearchChange, select
     return enrichedColumns.map(col => {
       const id = col.id;
       if (id === "material_name") {
-        return { id: "count", columnId: id, label: "", value: `${sortedData.length} ${t("adjustments.countSummary", { namespace: "inventory",  })}`, className: "text-slate-500 font-medium" };
+        return { id: "count", columnId: id, label: "", value: `${sortedData.length} ${t("adjustments.countSummary", { namespace: "inventory",  })}`, className: "text-muted-foreground font-medium" };
       }
       if (id.startsWith("total_cost_")) {
         const total = sortedData.reduce((s, a) => s + parseFloat(a.total_cost_base || "0"), 0);
@@ -182,7 +182,7 @@ export function AdjustmentsTable({ data, loading, search, onSearchChange, select
         return {
           id: `cost_summary_${totalCostId}`, columnId: id, label: t("labels.total", { namespace: "inventory",  }),
           value: total !== 0 ? formatAmount(total, { currencyCode: id.replace("total_cost_", "") }) : "—",
-          className: "text-slate-900 font-black"
+          className: "text-foreground font-black"
         };
       }
       return { id: `${id}_spacer`, columnId: id, label: "", value: "" };

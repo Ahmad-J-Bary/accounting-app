@@ -1,4 +1,4 @@
-﻿import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { Filter, LayoutList, LayoutGrid, Plus } from "lucide-react";
@@ -47,7 +47,7 @@ export default function Journal() {
   const queryClient = useQueryClient();
 
   // Reporting policy: the normal posted list NEVER contains reversed
-  // originals or their contra journals — those live in the separated audit
+  // originals or their contra journals � those live in the separated audit
   // archive shown only when the toggle is on.
   const [showAudit, setShowAudit] = useState(false);
 
@@ -120,9 +120,9 @@ export default function Journal() {
       PurchaseCostsJournal: new Set(['PurchaseCostsJournal']),
       CashSalesJournal:     new Set(['CashSalesJournal']),
       CreditSalesJournal:   new Set(['CreditSalesJournal']),
-      // مرتجعات المبيعات: قيد المرتجع + أي سند دفع لعميل مرتبط به
+      // ??????? ????????: ??? ??????? + ?? ??? ??? ????? ????? ??
       SalesReturnJournal:   new Set(['SalesReturnJournal']),
-      // مرتجعات المشتريات: قيد المرتجع + أي سند قبض من مورد مرتبط به
+      // ??????? ?????????: ??? ??????? + ?? ??? ??? ?? ???? ????? ??
       PurchaseReturnJournal: new Set(['PurchaseReturnJournal']),
     };
 
@@ -186,7 +186,7 @@ export default function Journal() {
             <Button
               type="button"
               onClick={handleNewEntry}
-              className="h-10 px-4 font-bold bg-blue-600 hover:bg-blue-700 text-white"
+              className="h-10 px-4 font-bold bg-primary hover:bg-primary/80 text-white"
             >
               <Plus className="w-4 h-4 ms-2" />
               {t("journal.newEntry", { namespace: "accounting",  })}
@@ -205,8 +205,8 @@ export default function Journal() {
               value={journalType}
               onValueChange={(val) => setJournalType(val as JournalType)}
             >
-              <SelectTrigger className="w-[180px] h-10 bg-white font-bold shadow-sm border-slate-200">
-                <Filter className="w-4 h-4 ms-2 text-slate-400" />
+              <SelectTrigger className="w-[180px] h-10 bg-white font-bold shadow-sm border-muted">
+                <Filter className="w-4 h-4 ms-2 text-muted-foreground" />
                 <SelectValue placeholder={t("journal.typePlaceholder", { namespace: "accounting",  })} />
               </SelectTrigger>
               <SelectContent>
@@ -222,21 +222,21 @@ export default function Journal() {
               className={`px-3 py-2 rounded-lg text-sm font-bold border transition-colors ${
                 showAudit
                   ? "bg-slate-800 text-white border-slate-800"
-                  : "bg-white text-slate-600 border-slate-200 hover:bg-slate-100"
+                  : "bg-white text-slate-600 border-muted hover:bg-muted"
               }`}
               title={t("journal.audit.title", { namespace: "accounting",  })}
             >
               {showAudit ? t("journal.audit.hide", { namespace: "accounting",  }) : t("journal.audit.show", { namespace: "accounting",  })}
             </button>
 
-            <div className="flex items-center gap-1 border-slate-200 border rounded-lg overflow-hidden">
+            <div className="flex items-center gap-1 border-muted border rounded-lg overflow-hidden">
               <button
                 type="button"
                 onClick={() => setDisplayMode("two-line")}
                 className={`p-2 transition-colors ${
                   displayMode === "two-line"
-                    ? "bg-blue-600 text-white"
-                    : "text-slate-500 hover:bg-slate-100"
+                    ? "bg-primary text-white"
+                    : "text-muted-foreground hover:bg-muted"
                 }`}
                 title={t("journal.display.twoLine", { namespace: "accounting",  })}
               >
@@ -247,8 +247,8 @@ export default function Journal() {
                 onClick={() => setDisplayMode("one-line")}
                 className={`p-2 transition-colors ${
                   displayMode === "one-line"
-                    ? "bg-blue-600 text-white"
-                    : "text-slate-500 hover:bg-slate-100"
+                    ? "bg-primary text-white"
+                    : "text-muted-foreground hover:bg-muted"
                 }`}
                 title={t("journal.display.oneLine", { namespace: "accounting",  })}
               >

@@ -180,7 +180,7 @@ export default function SalesReturns() {
       searchPlaceholder={t("return.salesSearchPlaceholder", { namespace: "invoicing",  })}
       emptyMessage={t("return.salesEmpty", { namespace: "invoicing",  })}
       statsLabel={t("return.statsLabel", { namespace: "invoicing",  })}
-      statsColor="text-blue-600"
+      statsColor="text-primary"
       preferenceKey="sales-returns"
     />
   );

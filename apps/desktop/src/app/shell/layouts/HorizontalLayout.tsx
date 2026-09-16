@@ -24,7 +24,7 @@ export function HorizontalLayout({ children, isExchangeVisible, onToggleExchange
         {showNavBar && (
           <NavBar
             slim={activeLayout.navbarMode === 'slim'}
-            activeBg="bg-blue-600"
+            activeBg="bg-primary"
             hoverBg="hover:bg-white/5 hover:text-white"
             horizontalAppearance={settings.horizontalNavbarAppearance}
           />

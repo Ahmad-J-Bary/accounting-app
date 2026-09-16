@@ -3,15 +3,15 @@ import type { BackupFileInfo } from "../../api/backupService";
 import { backupStatus } from "../lib/backupFormat";
 
 const TONE = {
-  emerald: "bg-emerald-50 text-emerald-700 border-emerald-200",
-  amber: "bg-amber-50 text-amber-700 border-amber-200",
-  rose: "bg-rose-50 text-rose-700 border-rose-200",
+  emerald: "bg-success/10 text-success border-success/20",
+  amber: "bg-warning/10 text-warning border-warning/20",
+  rose: "bg-destructive/10 text-destructive border-destructive/20",
 } as const;
 
 const KEBAB = {
-  emerald: "bg-emerald-500",
-  amber: "bg-amber-500",
-  rose: "bg-rose-500",
+  emerald: "bg-success",
+  amber: "bg-warning",
+  rose: "bg-destructive",
 } as const;
 
 const ICON = {

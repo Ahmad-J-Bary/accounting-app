@@ -49,7 +49,7 @@ export function CreateFiscalYearCard({
       <Button
         onClick={onCreate}
         disabled={!canCreate || isPending}
-        className="bg-blue-600 hover:bg-blue-700 text-white font-bold"
+        className="bg-primary hover:bg-primary/80 text-white font-bold"
       >
         {isPending ? t("fiscalYears.createCard.pending", { namespace: "accounting",  }) : t("fiscalYears.createCard.create", { namespace: "accounting",  })}
       </Button>

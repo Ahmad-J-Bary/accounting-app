@@ -195,7 +195,7 @@ export default function Expenses() {
               closable: true
             })}
           >
-            <History className="w-4 h-4 ml-2 text-slate-500" /> {t("expense.journal", { namespace: "invoicing",  })}
+            <History className="w-4 h-4 ml-2 text-muted-foreground" /> {t("expense.journal", { namespace: "invoicing",  })}
           </Button>
 
           <Button
@@ -208,7 +208,7 @@ export default function Expenses() {
               setIsFormOpen(false);
             }}
           >
-            <DollarSign className="w-4 h-4 ml-2 text-rose-500" /> {t("expense.createVoucher", { namespace: "invoicing",  })}
+            <DollarSign className="w-4 h-4 ml-2 text-destructive" /> {t("expense.createVoucher", { namespace: "invoicing",  })}
           </Button>
 
           <Button
@@ -217,12 +217,12 @@ export default function Expenses() {
             className="bg-card border-border text-foreground hover:bg-accent"
             onClick={handleExport}
           >
-            <Download className="w-4 h-4 ml-2 text-slate-500" /> {t("labels.exportExcel", { namespace: "common",  })}
+            <Download className="w-4 h-4 ml-2 text-muted-foreground" /> {t("labels.exportExcel", { namespace: "common",  })}
           </Button>
 
           <div className="h-6 w-px bg-muted mx-1" />
 
-          <Button size="sm" onClick={handleOpenAdd} className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100 font-bold">
+          <Button size="sm" onClick={handleOpenAdd} className="bg-primary hover:bg-primary/80 shadow-lg shadow-primary/20 font-bold">
             <Plus className="w-4 h-4 ml-2" /> {t("expense.addItem", { namespace: "invoicing",  })}
           </Button>
         </div>

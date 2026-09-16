@@ -23,26 +23,26 @@ export function OpeningProgressChecklist({ items }: OpeningProgressChecklistProp
   const doneCount = items.filter((i) => i.done).length;
   const pct = items.length ? Math.round((doneCount / items.length) * 100) : 0;
   return (
-    <Card className="border-slate-200 shadow-sm">
+    <Card className="border-muted shadow-sm">
       <CardContent className="space-y-1.5 pt-3">
         <div className="flex items-center justify-between gap-2">
-          <span className="text-sm font-bold text-slate-800">{t("openingBalance.checklistTitle", { namespace: "accounting",  })}</span>
-          <span className="text-2xs font-bold text-slate-500 tabular-nums">
+          <span className="text-sm font-bold text-foreground">{t("openingBalance.checklistTitle", { namespace: "accounting",  })}</span>
+          <span className="text-2xs font-bold text-muted-foreground tabular-nums">
             {doneCount}/{items.length}
           </span>
         </div>
         <div className="h-1.5 bg-slate-200 rounded-full overflow-hidden">
-          <div className="h-full bg-emerald-500 transition-all" style={{ width: `${pct}%` }} />
+          <div className="h-full bg-success/100 transition-all" style={{ width: `${pct}%` }} />
         </div>
         <ul className="space-y-0.5 pt-0.5">
           {items.map((item) => (
             <li key={item.key} className="flex items-center gap-1.5 text-xs">
               {item.done ? (
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                <CheckCircle2 className="w-3.5 h-3.5 text-success shrink-0" />
               ) : (
                 <Circle className="w-3.5 h-3.5 text-slate-300 shrink-0" />
               )}
-              <span className={cn(item.done ? "text-slate-700 font-semibold" : "text-slate-400")}>{item.label}</span>
+              <span className={cn(item.done ? "text-foreground font-semibold" : "text-muted-foreground")}>{item.label}</span>
             </li>
           ))}
         </ul>

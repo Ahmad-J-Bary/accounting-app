@@ -30,8 +30,8 @@ export interface OpeningPositionSummaryProps {
 function Row({ label, value, strong }: { label: ReactNode; value: number; strong?: boolean }) {
   return (
     <div className="flex items-center justify-between gap-2 text-xs">
-      <span className={strong ? "font-bold text-slate-700" : "text-slate-500 font-medium"}>{label}</span>
-      <span className={cn("tabular-nums", strong ? "font-black text-slate-800" : "font-semibold text-slate-700")}>
+      <span className={strong ? "font-bold text-foreground" : "text-muted-foreground font-medium"}>{label}</span>
+      <span className={cn("tabular-nums", strong ? "font-black text-foreground" : "font-semibold text-foreground")}>
         {fmtMoney(value)}
       </span>
     </div>
@@ -73,11 +73,11 @@ export function OpeningPositionSummary({
   const equityWithPlug = recognizedEquity + Math.max(plugAmount, 0);
 
   return (
-    <Card className="border-slate-200 shadow-sm">
+    <Card className="border-muted shadow-sm">
       <CardContent className="space-y-2.5 pt-3">
         <div className="flex items-center justify-between gap-2">
-          <span className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
-            <Scale className="w-4 h-4 text-blue-600" />
+          <span className="text-sm font-bold text-foreground flex items-center gap-1.5">
+            <Scale className="w-4 h-4 text-primary" />
             {t("openingBalance.balanceSummary", { namespace: "accounting",  })}
           </span>
           <StatusBadge
@@ -98,7 +98,7 @@ export function OpeningPositionSummary({
           </div>
         )}
 
-        <div className="border border-blue-100 rounded-lg p-2 space-y-1 bg-blue-50/40">
+        <div className="border border-blue-100 rounded-lg p-2 space-y-1 bg-primary/10/40">
           <SectionLabel color="text-blue-700">{t("openingBalance.assets", { namespace: "accounting",  })}</SectionLabel>
           <Row label={t("openingBalance.cashAndBanks", { namespace: "accounting",  })} value={cash} />
           <Row label={t("openingBalance.banks", { namespace: "accounting",  })} value={bank} />
@@ -110,12 +110,12 @@ export function OpeningPositionSummary({
           </div>
         </div>
 
-        <div className="border border-emerald-100 rounded-lg p-2 space-y-1 bg-emerald-50/40">
-          <SectionLabel color="text-emerald-700">{t("openingBalance.liabilities", { namespace: "accounting",  })}</SectionLabel>
+        <div className="border border-success/20 rounded-lg p-2 space-y-1 bg-success/10/40">
+          <SectionLabel color="text-success">{t("openingBalance.liabilities", { namespace: "accounting",  })}</SectionLabel>
           <Row label={t("openingBalance.suppliers", { namespace: "accounting",  })} value={suppliers} />
           <Row label={t("openingBalance.loans", { namespace: "accounting",  })} value={loans} />
           <Row label={t("openingBalance.otherLiabilities", { namespace: "accounting",  })} value={otherLiabilities} />
-          <div className="pt-1 border-t border-emerald-100">
+          <div className="pt-1 border-t border-success/20">
             <Row label={t("openingBalance.totalLiabilities", { namespace: "accounting",  })} value={totalLiabilities} strong />
           </div>
         </div>
@@ -145,7 +145,7 @@ export function OpeningPositionSummary({
           <span className="tabular-nums font-black">{fmtMoney(balanced ? 0 : residual)}</span>
         </div>
 
-        <p className="text-2xs text-slate-400">
+        <p className="text-2xs text-muted-foreground">
           {t("openingBalance.residualExplanation", { namespace: "accounting",  })}
         </p>
       </CardContent>

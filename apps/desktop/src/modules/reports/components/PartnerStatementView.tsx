@@ -46,7 +46,7 @@ function usePartnerStatementColumns(formatValue: (value: number) => string) {
       id: "partnerName",
       header: t("partnerRights.statement.colPartnerName", { namespace: "reports",  }),
       label: t("partnerRights.statement.colPartnerName", { namespace: "reports",  }),
-      accessor: (row) => <span className="font-bold text-slate-800">{row.partnerName}</span>,
+      accessor: (row) => <span className="font-bold text-foreground">{row.partnerName}</span>,
       align: "right",
       className: "justify-start",
     },
@@ -56,7 +56,7 @@ function usePartnerStatementColumns(formatValue: (value: number) => string) {
       label: t("partnerRights.statement.colCapital", { namespace: "reports",  }),
       accessor: (row) => formatValue(row.capitalAmount),
       align: "left",
-      className: "justify-end tabular-nums font-black text-slate-900",
+      className: "justify-end tabular-nums font-black text-foreground",
     },
     {
       id: "accumulatedProfits",
@@ -64,7 +64,7 @@ function usePartnerStatementColumns(formatValue: (value: number) => string) {
       label: t("partnerRights.statement.colAccumulatedProfits", { namespace: "reports",  }),
       accessor: (row) => formatValue(row.accumulatedProfits),
       align: "left",
-      className: "justify-end tabular-nums font-black text-emerald-700",
+      className: "justify-end tabular-nums font-black text-success",
     },
     {
       id: "accumulatedDrawings",
@@ -72,7 +72,7 @@ function usePartnerStatementColumns(formatValue: (value: number) => string) {
       label: t("partnerRights.statement.colAccumulatedDrawings", { namespace: "reports",  }),
       accessor: (row) => formatValue(row.accumulatedDrawings),
       align: "left",
-      className: "justify-end tabular-nums font-black text-rose-700",
+      className: "justify-end tabular-nums font-black text-destructive",
     },
     {
       id: "currentAccount",
@@ -88,7 +88,7 @@ function usePartnerStatementColumns(formatValue: (value: number) => string) {
       label: t("partnerRights.statement.colThisYearProfit", { namespace: "reports",  }),
       accessor: (row) => formatValue(row.thisYearProfit),
       align: "left",
-      className: "justify-end tabular-nums font-black text-emerald-700",
+      className: "justify-end tabular-nums font-black text-success",
     },
     {
       id: "thisYearDrawings",
@@ -96,7 +96,7 @@ function usePartnerStatementColumns(formatValue: (value: number) => string) {
       label: t("partnerRights.statement.colThisYearDrawings", { namespace: "reports",  }),
       accessor: (row) => formatValue(row.thisYearDrawings),
       align: "left",
-      className: "justify-end tabular-nums font-black text-rose-700",
+      className: "justify-end tabular-nums font-black text-destructive",
     },
     {
       id: "finalAmount",
@@ -152,25 +152,25 @@ export function PartnerStatementView({ computed, formatValue, filterBar }: Partn
   const summaryColumns = useMemo<SummaryColumn[]>(() => {
     return enrichedColumns.map((col) => {
       if (col.id === "partnerName") {
-        return { id: "count", columnId: "partnerName", align: "right", label: "", value: t("partnerRights.statement.countPartners", { namespace: "reports", vars: { count: totals.count } }), className: "text-slate-500 font-medium" };
+        return { id: "count", columnId: "partnerName", align: "right", label: "", value: t("partnerRights.statement.countPartners", { namespace: "reports", vars: { count: totals.count } }), className: "text-muted-foreground font-medium" };
       }
       if (col.id === "capitalAmount") {
         return { id: "capitalAmount_summary", columnId: "capitalAmount", align: "left", label: t("partnerRights.statement.summaryCapital", { namespace: "reports",  }), value: formatValue(totals.capitalAmount), className: "text-indigo-700 font-black" };
       }
       if (col.id === "accumulatedProfits") {
-        return { id: "accumulatedProfits_summary", columnId: "accumulatedProfits", align: "left", label: t("partnerRights.statement.summaryAccumulatedProfits", { namespace: "reports",  }), value: formatValue(totals.accumulatedProfits), className: "text-emerald-700 font-black" };
+        return { id: "accumulatedProfits_summary", columnId: "accumulatedProfits", align: "left", label: t("partnerRights.statement.summaryAccumulatedProfits", { namespace: "reports",  }), value: formatValue(totals.accumulatedProfits), className: "text-success font-black" };
       }
       if (col.id === "accumulatedDrawings") {
-        return { id: "accumulatedDrawings_summary", columnId: "accumulatedDrawings", align: "left", label: t("partnerRights.statement.summaryAccumulatedDrawings", { namespace: "reports",  }), value: formatValue(totals.accumulatedDrawings), className: "text-rose-700 font-black" };
+        return { id: "accumulatedDrawings_summary", columnId: "accumulatedDrawings", align: "left", label: t("partnerRights.statement.summaryAccumulatedDrawings", { namespace: "reports",  }), value: formatValue(totals.accumulatedDrawings), className: "text-destructive font-black" };
       }
       if (col.id === "currentAccount") {
         return { id: "currentAccount_summary", columnId: "currentAccount", align: "left", label: t("partnerRights.statement.summaryCurrentAccount", { namespace: "reports",  }), value: formatValue(totals.currentAccount), className: "text-indigo-700 font-black" };
       }
       if (col.id === "thisYearProfit") {
-        return { id: "thisYearProfit_summary", columnId: "thisYearProfit", align: "left", label: t("partnerRights.statement.summaryThisYearProfit", { namespace: "reports",  }), value: formatValue(totals.thisYearProfit), className: "text-emerald-700 font-black" };
+        return { id: "thisYearProfit_summary", columnId: "thisYearProfit", align: "left", label: t("partnerRights.statement.summaryThisYearProfit", { namespace: "reports",  }), value: formatValue(totals.thisYearProfit), className: "text-success font-black" };
       }
       if (col.id === "thisYearDrawings") {
-        return { id: "thisYearDrawings_summary", columnId: "thisYearDrawings", align: "left", label: t("partnerRights.statement.summaryThisYearDrawings", { namespace: "reports",  }), value: formatValue(totals.thisYearDrawings), className: "text-rose-700 font-black" };
+        return { id: "thisYearDrawings_summary", columnId: "thisYearDrawings", align: "left", label: t("partnerRights.statement.summaryThisYearDrawings", { namespace: "reports",  }), value: formatValue(totals.thisYearDrawings), className: "text-destructive font-black" };
       }
       if (col.id === "finalAmount") {
         return { id: "finalAmount_summary", columnId: "finalAmount", align: "left", label: t("partnerRights.statement.summaryFinalAmount", { namespace: "reports",  }), value: formatValue(totals.finalAmount), className: "text-indigo-700 font-black" };

@@ -73,7 +73,7 @@ export function LocalizationSettings({ settings, onChange }: LocalizationSetting
       <div className="space-y-5 sm:space-y-6">
         <div className="space-y-2 sm:space-y-3">
           <Label className="font-black text-foreground flex items-center gap-2">
-            <Languages className="w-4 h-4 text-blue-600" /> {t("localization.interfaceLanguage", { namespace: "settings" })}
+            <Languages className="w-4 h-4 text-primary" /> {t("localization.interfaceLanguage", { namespace: "settings" })}
           </Label>
           <div className="flex gap-3">
             {[
@@ -99,7 +99,7 @@ export function LocalizationSettings({ settings, onChange }: LocalizationSetting
 
         <div className="space-y-2 sm:space-y-3">
           <Label className="font-black text-foreground flex items-center gap-2">
-            <Hash className="w-4 h-4 text-emerald-600" /> {t("localization.numeralSystem", { namespace: "settings" })}
+            <Hash className="w-4 h-4 text-success" /> {t("localization.numeralSystem", { namespace: "settings" })}
           </Label>
           <p className="text-xs text-muted-foreground font-medium">
             {t("localization.numeralHint", { namespace: "settings" })}

@@ -50,14 +50,14 @@ export function DamagedTable({
         header: t("labels.number", { namespace: "inventory",  }),
         label: t("labels.number", { namespace: "inventory",  }),
         accessor: (i) => i.reference ? formatNumber(parseInt(i.reference) || 0) : "—",
-        className: "font-black text-slate-900 text-center"
+        className: "font-black text-foreground text-center"
       },
       {
         id: "material_name",
         header: t("labels.material", { namespace: "inventory",  }),
         label: t("labels.material", { namespace: "inventory",  }),
         accessor: (i) => i.material_name || i.material_id || "",
-        className: "font-bold text-slate-800"
+        className: "font-bold text-foreground"
       },
 {
         id: "quantity",
@@ -71,7 +71,7 @@ export function DamagedTable({
         header: t("damaged.lossCol", { namespace: "inventory",  }),
         label: t("damaged.lossOriginal", { namespace: "inventory",  }),
         accessor: (i) => originalLossLabel(i),
-        className: "tabular-nums font-black text-rose-700"
+        className: "tabular-nums font-black text-destructive"
       },
     ];
 
@@ -86,8 +86,8 @@ export function DamagedTable({
           return val > 0 ? formatAmount(val, { currencyCode: curr.code }) : "";
         },
         className: isBase
-          ? "tabular-nums font-black text-rose-600"
-          : "tabular-nums font-medium text-rose-300"
+          ? "tabular-nums font-black text-destructive"
+          : "tabular-nums font-medium text-destructive/60"
       });
     });
 
@@ -96,14 +96,14 @@ export function DamagedTable({
         header: t("damaged.reason", { namespace: "inventory",  }),
         label: t("damaged.reason", { namespace: "inventory",  }),
       accessor: (i) => i.reason || "",
-      className: "text-slate-500 italic"
+      className: "text-muted-foreground italic"
     });
     cols.push({
         id: "damage_date",
         header: t("labels.date", { namespace: "inventory",  }),
         label: t("damaged.registerDate", { namespace: "inventory",  }),
       accessor: (i) => formatDateTime(i.damage_date),
-      className: "text-slate-500 tabular-nums"
+      className: "text-muted-foreground tabular-nums"
     });
 
     if (onView || onEdit || onDelete) {
@@ -141,7 +141,7 @@ export function DamagedTable({
     const colIds = allColumns.map(c => c.id);
     return colIds.map(id => {
       if (id === "material_name") {
-        return { id: 'count', columnId: id, label: '', value: `${items.length} ${t("damaged.countSummary", { namespace: "inventory",  })}`, className: 'text-slate-500 font-medium' };
+        return { id: 'count', columnId: id, label: '', value: `${items.length} ${t("damaged.countSummary", { namespace: "inventory",  })}`, className: 'text-muted-foreground font-medium' };
       }
       const costMatch = id.match(/^cost_(.+)$/);
       if (costMatch) {
@@ -153,7 +153,7 @@ export function DamagedTable({
           columnId: id,
           label: `${t("damaged.totalLoss", { namespace: "inventory",  })} ${cs(sym)}`,
           value: totalCost > 0 ? formatAmount(totalCost, { currencyCode: currCode }) : "—",
-          className: isBase ? 'text-rose-600 font-black' as const : 'text-rose-300 font-bold' as const,
+          className: isBase ? 'text-destructive font-black' as const : 'text-destructive/60 font-bold' as const,
         };
       }
       return { id: `${id}_spacer`, columnId: id, label: '', value: '' };

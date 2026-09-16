@@ -36,7 +36,7 @@ export function CategoryDeleteDialog({
     description = (
       <span>
         {t("categories.delete.confirmSub", { namespace: "inventory",  })}{" "}
-        <span className="font-bold text-slate-900">«{categoryName}»</span>؟
+        <span className="font-bold text-foreground">«{categoryName}»</span>؟
         {t("categories.delete.noMaterials", { namespace: "inventory",  })}
       </span>
     );
@@ -47,16 +47,16 @@ export function CategoryDeleteDialog({
     description = (
       <div className="space-y-2 text-right">
         <p>
-          {t("categories.delete.subCategory", { namespace: "inventory",  })} <span className="font-bold text-slate-900">«{categoryName}»</span>{" "}
-          {t("categories.delete.contains", { namespace: "inventory",  })} <span className="font-black text-rose-600">{kind.materialCount}</span> {t("categories.delete.materialNoun", { namespace: "inventory",  })}
+          {t("categories.delete.subCategory", { namespace: "inventory",  })} <span className="font-bold text-foreground">«{categoryName}»</span>{" "}
+          {t("categories.delete.contains", { namespace: "inventory",  })} <span className="font-black text-destructive">{kind.materialCount}</span> {t("categories.delete.materialNoun", { namespace: "inventory",  })}
         </p>
-        <p className="text-slate-700">
+        <p className="text-foreground">
           {kind.isGeneralSub
             ? <>{t("categories.delete.reassignToDefault", { namespace: "inventory", vars: { name: t("materials.uncategorized", { namespace: "inventory" }) },  })}</>
             : <>{t("categories.delete.reassignToGeneralSub", { namespace: "inventory", vars: { name: kind.targetName },  })}</>
           }
         </p>
-        <p className="text-xs text-slate-500">{t("categories.delete.continue", { namespace: "inventory",  })}</p>
+        <p className="text-xs text-muted-foreground">{t("categories.delete.continue", { namespace: "inventory",  })}</p>
       </div>
     );
     confirmLabel = t("categories.delete.confirmReassign", { namespace: "inventory",  });
@@ -66,7 +66,7 @@ export function CategoryDeleteDialog({
     description = (
       <span>
         {t("categories.delete.confirmRoot", { namespace: "inventory",  })}{" "}
-        <span className="font-bold text-slate-900">«{categoryName}»</span>؟
+        <span className="font-bold text-foreground">«{categoryName}»</span>؟
       </span>
     );
     confirmLabel = t("actions.delete", { namespace: "common",  });
@@ -76,10 +76,10 @@ export function CategoryDeleteDialog({
     description = (
       <div className="space-y-2 text-right">
         <p>
-          {t("categories.delete.rootCategory", { namespace: "inventory",  })} <span className="font-bold text-slate-900">«{categoryName}»</span>{" "}
-          {t("categories.delete.contains", { namespace: "inventory",  })} <span className="font-black text-rose-600">{kind.subCount}</span> {t("categories.delete.subCategoryNoun", { namespace: "inventory",  })}
+          {t("categories.delete.rootCategory", { namespace: "inventory",  })} <span className="font-bold text-foreground">«{categoryName}»</span>{" "}
+          {t("categories.delete.contains", { namespace: "inventory",  })} <span className="font-black text-destructive">{kind.subCount}</span> {t("categories.delete.subCategoryNoun", { namespace: "inventory",  })}
         </p>
-        <p className="text-slate-700">
+        <p className="text-foreground">
           {t("categories.delete.deleteRootAndSubs", { namespace: "inventory",  })}
         </p>
         {kind.subMaterialCount > 0 && (
@@ -89,7 +89,7 @@ export function CategoryDeleteDialog({
             {t("categories.delete.materialsReassignedTo", { namespace: "inventory", vars: { name: kind.targetName },  })}
           </p>
         )}
-        <p className="text-xs text-slate-500">{t("categories.delete.continue", { namespace: "inventory",  })}</p>
+        <p className="text-xs text-muted-foreground">{t("categories.delete.continue", { namespace: "inventory",  })}</p>
       </div>
     );
     confirmLabel = t("categories.delete.confirmAll", { namespace: "inventory",  });
@@ -97,7 +97,7 @@ export function CategoryDeleteDialog({
   }
 
   const Icon = tone === "rose" ? AlertTriangle : FolderTree;
-  const iconWrap = tone === "rose" ? "bg-rose-100 text-rose-600" : "bg-amber-100 text-amber-600";
+  const iconWrap = tone === "rose" ? "bg-destructive/10 text-destructive" : "bg-amber-100 text-amber-600";
 
   return (
     <AlertDialog open={open} onOpenChange={(o) => { if (!o && !confirming) onCancel(); }}>
@@ -123,7 +123,7 @@ export function CategoryDeleteDialog({
             onClick={(e) => { e.preventDefault(); onConfirm(); }}
             disabled={confirming}
             className={tone === "rose"
-              ? "bg-rose-600 hover:bg-rose-700 font-bold gap-1.5"
+              ? "bg-destructive hover:bg-destructive/80 font-bold gap-1.5"
               : "bg-amber-600 hover:bg-amber-700 font-bold gap-1.5"}
           >
             <Trash2 className="w-3.5 h-3.5" />

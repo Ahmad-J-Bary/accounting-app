@@ -30,16 +30,16 @@ export function CurrentPeriodCard({ current, distributable, show }: CurrentPerio
             </span>
           </p>
           {distributable && (
-            <div className="space-y-1 border-t border-slate-200 pt-2">
-              <p>{t("fiscalPeriods.currentCard.netProfit", { namespace: "accounting",  })}<span className="font-bold text-emerald-700">{show(distributable.current_period_profit)}</span></p>
-              <p>{t("fiscalPeriods.currentCard.retained", { namespace: "accounting",  })}<span className="font-bold text-slate-700">{show(distributable.retained_earnings_balance)}</span></p>
+            <div className="space-y-1 border-t border-muted pt-2">
+              <p>{t("fiscalPeriods.currentCard.netProfit", { namespace: "accounting",  })}<span className="font-bold text-success">{show(distributable.current_period_profit)}</span></p>
+              <p>{t("fiscalPeriods.currentCard.retained", { namespace: "accounting",  })}<span className="font-bold text-foreground">{show(distributable.retained_earnings_balance)}</span></p>
               <p>{t("fiscalPeriods.currentCard.allocated", { namespace: "accounting",  })}<span className="font-bold text-red-600">{show(distributable.allocated_to_date)}</span></p>
-              <p className="border-t border-slate-200 pt-2">{t("fiscalPeriods.currentCard.distributable", { namespace: "accounting",  })}<span className="font-black text-indigo-700">{show(distributable.distributable)}</span></p>
+              <p className="border-t border-muted pt-2">{t("fiscalPeriods.currentCard.distributable", { namespace: "accounting",  })}<span className="font-black text-indigo-700">{show(distributable.distributable)}</span></p>
             </div>
           )}
         </div>
       ) : (
-        <p className="text-xs text-slate-400">
+        <p className="text-xs text-muted-foreground">
           {t("fiscalPeriods.currentCard.empty", { namespace: "accounting",  })}
         </p>
       )}

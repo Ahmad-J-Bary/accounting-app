@@ -88,7 +88,7 @@ export function InventoryMovementsTable({
 
   const warehouseClass = useMemo(() => (m: StockMovement) => {
     const w = warehouses.find(wh => wh.id === m.warehouse_id);
-    return w?.is_default ? "bg-emerald-50 text-emerald-700 border-emerald-100" : "bg-blue-50 text-blue-700 border-blue-100";
+    return w?.is_default ? "bg-success/10 text-success border-success/10" : "bg-primary/10 text-primary border-primary/20";
   }, [warehouses]);
 
   interface PairCostEntry {
@@ -207,7 +207,7 @@ export function InventoryMovementsTable({
         header: t("movements.columns.reference", { namespace: "inventory" }),
         label: t("movements.columns.reference", { namespace: "inventory" }),
         accessor: (m) => m.reference ? (
-          <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold font-mono bg-blue-50 text-blue-700 border border-blue-100">
+          <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold font-mono bg-primary/10 text-primary border border-primary/20">
             {formatNumber(parseInt(m.reference) || 0)}
           </span>
         ) : '—',
@@ -217,7 +217,7 @@ export function InventoryMovementsTable({
         header: t("movements.columns.material", { namespace: "inventory" }),
         label: t("movements.columns.material", { namespace: "inventory" }),
         accessor: (m) => m.material_name || '—',
-        className: 'font-bold text-slate-900'
+        className: 'font-bold text-foreground'
       },
       {
         id: 'type',
@@ -235,8 +235,8 @@ export function InventoryMovementsTable({
           return (
             <span className={cn(
               "inline-flex items-center px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider ring-1 ring-inset",
-              cfg.inflow ? 'bg-emerald-50 text-emerald-700 ring-emerald-100' :
-              'bg-rose-50 text-rose-700 ring-rose-100'
+              cfg.inflow ? 'bg-success/10 text-success ring-success/20' :
+              'bg-destructive/10 text-destructive ring-destructive/20'
             )}>
               {cfg.label}
             </span>
@@ -256,7 +256,7 @@ export function InventoryMovementsTable({
           return (
             <span className={cn(
               "inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium border",
-              m.warehouse_id ? warehouseClass(m) : "bg-slate-50 text-slate-500 border-slate-200"
+              m.warehouse_id ? warehouseClass(m) : "bg-muted text-muted-foreground border-muted"
             )}>
               {prefix}{warehouseName(m)}
             </span>
@@ -271,14 +271,14 @@ export function InventoryMovementsTable({
           if (m.signed_quantity != null) {
             const sq = parseFloat(m.signed_quantity);
             return (
-              <span className={cn("tabular-nums font-black text-base", sq >= 0 ? "text-emerald-600" : "text-rose-600")}>
+              <span className={cn("tabular-nums font-black text-base", sq >= 0 ? "text-success" : "text-destructive")}>
                 {sq >= 0 ? "+" : ""}{toLocalString(sq)}
               </span>
             );
           }
           const cfg = getMovementType(m.movement_type);
           return (
-            <span className={cn("tabular-nums font-black text-base", cfg.inflow ? "text-emerald-600" : "text-rose-600")}>
+            <span className={cn("tabular-nums font-black text-base", cfg.inflow ? "text-success" : "text-destructive")}>
               {cfg.inflow ? "+" : "-"}{toLocalString(parseFloat(m.quantity))}
             </span>
           );
@@ -304,7 +304,7 @@ export function InventoryMovementsTable({
                 {formatAmount(base, { currencyCode: curr.code })}
               </span>
               {showOrig && (
-                <span className="tabular-nums text-[10px] text-slate-400 font-medium">
+                <span className="tabular-nums text-[10px] text-muted-foreground font-medium">
                   {toLocalString(parseFloat(info.original ?? "0"))} {info.currency}
                 </span>
               )}
@@ -312,8 +312,8 @@ export function InventoryMovementsTable({
           );
         },
         className: isBase
-          ? "tabular-nums font-black text-slate-900"
-          : "tabular-nums font-medium text-slate-400"
+          ? "tabular-nums font-black text-foreground"
+          : "tabular-nums font-medium text-muted-foreground"
       });
     });
 
@@ -327,7 +327,7 @@ export function InventoryMovementsTable({
             {getCleanNotes(m)}
           </span>
         ),
-        className: 'text-slate-600 text-xs max-w-[240px]',
+        className: 'text-foreground text-xs max-w-[240px]',
         align: 'center',
       },
       {
@@ -335,7 +335,7 @@ export function InventoryMovementsTable({
         header: t("movements.columns.date", { namespace: "inventory" }),
         label: t("movements.columns.date", { namespace: "inventory" }),
         accessor: (m) => formatDateTime(m.movement_date),
-        className: 'tabular-nums text-slate-500 font-medium'
+        className: 'tabular-nums text-muted-foreground font-medium'
       },
     );
     return cols;
@@ -438,7 +438,7 @@ export function InventoryMovementsTable({
     return enrichedColumns.map(col => {
       const id = col.id;
       if (id === "product_name") {
-        return { id: "count", columnId: id, label: "", value: `${sortedData.length} ${t("labels.movement", { namespace: "inventory", count: sortedData.length })}`, className: "text-slate-500 font-medium" };
+        return { id: "count", columnId: id, label: "", value: `${sortedData.length} ${t("labels.movement", { namespace: "inventory", count: sortedData.length })}`, className: "text-muted-foreground font-medium" };
       }
       if (id === "quantity") {
         return { id: "qty_spacer", columnId: id, label: "", value: "" };
@@ -463,7 +463,7 @@ export function InventoryMovementsTable({
         return {
           id: `${id}_summary`, columnId: id, label: t("labels.total", { namespace: "inventory" }),
           value: totalCost !== 0 ? formatAmount(totalCost, { currencyCode: currCode }) : "—",
-          className: isBase ? "text-slate-900 font-black" : "text-slate-500 font-extrabold"
+          className: isBase ? "text-foreground font-black" : "text-muted-foreground font-extrabold"
         };
       }
       return { id: `${id}_spacer`, columnId: id, label: "", value: "" };
@@ -486,10 +486,10 @@ export function InventoryMovementsTable({
         <Button
           size="sm"
           variant="outline"
-          className="h-8 border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+          className="h-8 border-muted bg-white text-foreground hover:bg-muted"
           onClick={handleExport}
         >
-          <Download className="w-3.5 h-3.5 ml-1.5 text-slate-500" />
+          <Download className="w-3.5 h-3.5 ml-1.5 text-muted-foreground" />
           {t("movements.columns.exportToExcel", { namespace: "inventory" })}
         </Button>
       }

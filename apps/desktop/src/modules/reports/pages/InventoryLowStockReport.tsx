@@ -42,7 +42,7 @@ export default function InventoryLowStockReport() {
     <OperationalTableTemplate
       title={t("inventoryLowStock.title", { namespace: "reports",  })}
       badge={
-        <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-3 py-1 text-xs font-black text-rose-600">
+        <span className="inline-flex items-center gap-1 rounded-full bg-destructive/10 px-3 py-1 text-xs font-black text-destructive">
           <AlertTriangle className="h-3.5 w-3.5" />
           {t("inventoryLowStock.itemCount", { namespace: "reports", vars: { count: rows.length } })}
         </span>
@@ -50,7 +50,7 @@ export default function InventoryLowStockReport() {
       toolbar={
         <div className="flex items-center gap-2">
           {isRefetching ? (
-            <span className="flex h-9 items-center gap-1.5 rounded-lg bg-white px-2.5 text-xs text-slate-500 border border-slate-200">
+            <span className="flex h-9 items-center gap-1.5 rounded-lg bg-white px-2.5 text-xs text-muted-foreground border border-muted">
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
               {t("inventoryLowStock.updating", { namespace: "reports",  })}
             </span>
@@ -59,7 +59,7 @@ export default function InventoryLowStockReport() {
               type="button"
               variant="outline"
               size="sm"
-              className="h-9 gap-1.5 rounded-lg border-slate-200 bg-white text-xs text-slate-600"
+              className="h-9 gap-1.5 rounded-lg border-muted bg-white text-xs text-muted-foreground"
               onClick={() => void refetch()}
             >
               <RefreshCw className="h-3.5 w-3.5" />
@@ -75,7 +75,7 @@ export default function InventoryLowStockReport() {
           <div className="overflow-x-auto p-2">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-slate-400 font-black text-[10px] uppercase tracking-widest border-b border-slate-100">
+                <tr className="text-muted-foreground font-black text-[10px] uppercase tracking-widest border-b border-muted">
                   <th className="text-end pb-4">{t("inventoryLowStock.colCode", { namespace: "reports",  })}</th>
                   <th className="text-end pb-4">{t("inventoryLowStock.colItem", { namespace: "reports",  })}</th>
                   <th className="text-end pb-4">{t("inventoryLowStock.colCategory", { namespace: "reports",  })}</th>
@@ -88,30 +88,30 @@ export default function InventoryLowStockReport() {
               <tbody className="divide-y divide-slate-50">
                 {rows.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="py-12 text-center text-slate-300 font-bold text-sm">
+                    <td colSpan={7} className="py-12 text-center text-muted-foreground font-bold text-sm">
                       <PackageCheck className="mx-auto mb-2 h-8 w-8" />
                       {t("inventoryLowStock.empty", { namespace: "reports",  })}
                     </td>
                   </tr>
                 )}
                 {rows.map(({ material, available, minimum, shortage, category }) => (
-                  <tr key={material.id} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="py-3 font-mono text-xs font-black text-blue-600" dir="ltr">
+                  <tr key={material.id} className="hover:bg-muted/50 transition-colors">
+                    <td className="py-3 font-mono text-xs font-black text-primary" dir="ltr">
                       {material.code}
                     </td>
-                    <td className="py-3 font-bold text-slate-700">{material.name}</td>
-                    <td className="py-3 text-sm text-slate-500">{category}</td>
-                    <td className="py-3 text-start font-mono text-xs text-slate-400" dir="ltr">
+                    <td className="py-3 font-bold text-foreground">{material.name}</td>
+                    <td className="py-3 text-sm text-muted-foreground">{category}</td>
+                    <td className="py-3 text-start font-mono text-xs text-muted-foreground" dir="ltr">
                       {material.barcode || "—"}
                     </td>
-                    <td className="py-3 text-start tabular-nums font-bold text-rose-600">
+                    <td className="py-3 text-start tabular-nums font-bold text-destructive">
                       {formatNumber(available)}
                     </td>
-                    <td className="py-3 text-start tabular-nums text-slate-500">
+                    <td className="py-3 text-start tabular-nums text-muted-foreground">
                       {formatNumber(minimum)}
                     </td>
                     <td className="py-3 text-start">
-                      <span className="inline-flex items-center gap-1 rounded-md bg-rose-50 px-2 py-1 text-xs font-black tabular-nums text-rose-600">
+                      <span className="inline-flex items-center gap-1 rounded-md bg-destructive/10 px-2 py-1 text-xs font-black tabular-nums text-destructive">
                         {formatNumber(shortage)}
                       </span>
                     </td>

@@ -56,39 +56,39 @@ export function UnitCard({
     return (
       <div className={cn(
         "p-4 rounded-2xl border relative transition-all shadow-sm bg-white group",
-        isBase ? "border-blue-200 bg-blue-50/20" : "border-slate-200/80"
+        isBase ? "border-primary/20 bg-primary/10" : "border-muted/80"
       )}>
         {deleteBtn}
         <div className="flex items-center gap-3">
-          <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center shrink-0", isBase ? "bg-blue-600 text-white shadow-md shadow-blue-200" : "bg-slate-100 text-slate-500")}>
+          <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center shrink-0", isBase ? "bg-primary text-white shadow-md shadow-primary/20" : "bg-muted text-muted-foreground")}>
             {isBase ? <Package className="w-4 h-4" /> : <Boxes className="w-4 h-4" />}
           </div>
           <div className="flex-1 min-w-0">
-            <span className="font-bold text-sm text-slate-700">{unit.name}</span>
-            {isBase && <span className="text-blue-600 font-bold text-xs mr-1">({t("materials.detail.base", { namespace: "inventory",  })})</span>}
-            <span className="text-[11px] text-slate-500 block truncate">1 {unit.name} = {unit.conversion_factor} {baseUnitName || unit.name}</span>
+            <span className="font-bold text-sm text-foreground">{unit.name}</span>
+            {isBase && <span className="text-primary font-bold text-xs mr-1">({t("materials.detail.base", { namespace: "inventory",  })})</span>}
+            <span className="text-[11px] text-muted-foreground block truncate">1 {unit.name} = {unit.conversion_factor} {baseUnitName || unit.name}</span>
           </div>
           {unit.barcode && mode === "view" && (
-            <span className="text-[9px] font-mono text-slate-400 shrink-0 hidden sm:inline">{unit.barcode}</span>
+            <span className="text-[9px] font-mono text-muted-foreground shrink-0 hidden sm:inline">{unit.barcode}</span>
           )}
           <div className="flex items-center gap-1 shrink-0">
             {mode === "edit" && !onCancelEdit && (
               <button
                 type="button"
                 onClick={() => setCollapsed(false)}
-                className="w-6 h-6 rounded-full bg-slate-100/70 flex items-center justify-center hover:bg-slate-200/70 transition-colors"
+                className="w-6 h-6 rounded-full bg-muted/70 flex items-center justify-center hover:bg-muted transition-colors"
               >
-                <ChevronDown className="w-3.5 h-3.5 text-slate-400 -rotate-90" />
+                <ChevronDown className="w-3.5 h-3.5 text-muted-foreground -rotate-90" />
               </button>
             )}
             {mode === "view" && onEdit && (
               <button
                 type="button"
                 onClick={onEdit}
-                className="w-6 h-6 rounded-full bg-blue-50/70 flex items-center justify-center hover:bg-blue-100/70 transition-colors"
+                className="w-6 h-6 rounded-full bg-primary/70 flex items-center justify-center hover:bg-primary/10 transition-colors"
                 title={t("labels.edit", { namespace: "inventory",  })}
               >
-                <Pencil className="w-3 h-3 text-blue-500" />
+                <Pencil className="w-3 h-3 text-primary" />
               </button>
             )}
           </div>
@@ -100,18 +100,18 @@ export function UnitCard({
   // Expanded — view mode
   if (mode === "view") {
     return (
-      <div className="p-4 rounded-2xl border border-slate-200/80 relative transition-all shadow-sm space-y-3 text-right bg-white group">
+      <div className="p-4 rounded-2xl border border-muted/80 relative transition-all shadow-sm space-y-3 text-right bg-white group">
         {deleteBtn}
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-slate-100 text-slate-500 flex items-center justify-center shrink-0">
+          <div className="w-9 h-9 rounded-xl bg-muted text-muted-foreground flex items-center justify-center shrink-0">
             <Boxes className="w-4 h-4" />
           </div>
           <div className="flex-1">
-            <span className="font-bold text-sm text-slate-700 block">{unit.name}</span>
-            <span className="text-[11px] text-slate-500">1 {unit.name} = {unit.conversion_factor} {baseUnitName || unit.name}</span>
+            <span className="font-bold text-sm text-foreground block">{unit.name}</span>
+            <span className="text-[11px] text-muted-foreground">1 {unit.name} = {unit.conversion_factor} {baseUnitName || unit.name}</span>
           </div>
           {unit.barcode && (
-            <span className="text-[9px] font-mono text-slate-400 shrink-0">{unit.barcode}</span>
+            <span className="text-[9px] font-mono text-muted-foreground shrink-0">{unit.barcode}</span>
           )}
         </div>
       </div>
@@ -122,7 +122,7 @@ export function UnitCard({
   return (
     <div className={cn(
       "p-4 rounded-2xl border relative transition-all shadow-sm space-y-3 text-right bg-white group",
-      isBase ? "border-blue-200 bg-blue-50/20" : "border-slate-200/80"
+      isBase ? "border-primary/20 bg-primary/10" : "border-muted/80"
     )}>
       {deleteBtn}
 
@@ -139,20 +139,20 @@ export function UnitCard({
         <button
           type="button"
           onClick={() => setCollapsed(true)}
-          className="absolute left-3 top-3 w-6 h-6 rounded-full bg-slate-100/70 flex items-center justify-center hover:bg-slate-200/70 transition-colors z-10"
+          className="absolute left-3 top-3 w-6 h-6 rounded-full bg-muted/70 flex items-center justify-center hover:bg-muted transition-colors z-10"
         >
-          <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+          <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
         </button>
       )}
 
       <div className="flex items-center gap-3">
-        <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center shrink-0", isBase ? "bg-blue-600 text-white shadow-md shadow-blue-200" : "bg-slate-100 text-slate-500")}>
+        <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center shrink-0", isBase ? "bg-primary text-white shadow-md shadow-primary/20" : "bg-muted text-muted-foreground")}>
           {isBase ? <Package className="w-4 h-4" /> : <Boxes className="w-4 h-4" />}
         </div>
         <div className="flex-1">
           <p className="text-[10px] font-bold mb-1">
-            <span className="text-slate-500">{t("materials.addUnit.name", { namespace: "inventory",  })} </span>
-            {isBase && <span className="text-blue-600 font-bold">({t("materials.detail.base", { namespace: "inventory",  })})</span>}
+            <span className="text-muted-foreground">{t("materials.addUnit.name", { namespace: "inventory",  })} </span>
+            {isBase && <span className="text-primary font-bold">({t("materials.detail.base", { namespace: "inventory",  })})</span>}
           </p>
           <Input
             value={unit.name}
@@ -166,7 +166,7 @@ export function UnitCard({
 
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-1.5">
-          <p className="text-[10px] font-bold text-slate-500">{t("materials.form.manageUnits", { namespace: "inventory",  })}</p>
+          <p className="text-[10px] font-bold text-muted-foreground">{t("materials.form.manageUnits", { namespace: "inventory",  })}</p>
           <Input
             type="number"
             value={unit.conversion_factor}
@@ -176,10 +176,10 @@ export function UnitCard({
             min="0"
             step="any"
           />
-          {isBase && <p className="text-[8px] text-blue-500 font-bold mt-0.5">{t("materials.form.unitsNotice", { namespace: "inventory",  })}</p>}
+          {isBase && <p className="text-[8px] text-primary font-bold mt-0.5">{t("materials.form.unitsNotice", { namespace: "inventory",  })}</p>}
         </div>
         <div className="space-y-1.5">
-          <p className="text-[10px] font-bold text-slate-500">{t("materials.addUnit.barcodeOptional", { namespace: "inventory",  })}</p>
+          <p className="text-[10px] font-bold text-muted-foreground">{t("materials.addUnit.barcodeOptional", { namespace: "inventory",  })}</p>
           <Input
             value={unit.barcode}
             onChange={e => onUpdate?.("barcode", e.target.value)}

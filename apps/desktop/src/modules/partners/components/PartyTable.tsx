@@ -28,8 +28,8 @@ interface PartyTableProps<T extends { id: string; name: string; code?: string; p
 const ENTITY_CONFIG = {
   customer: {
     icon: User,
-    avatarBg: "bg-blue-50",
-    avatarText: "text-blue-600",
+    avatarBg: "bg-primary/10",
+    avatarText: "text-primary",
     tableId: "customers",
     unifiedId: "customers-unified",
     title: "سجل العملاء",
@@ -42,8 +42,8 @@ const ENTITY_CONFIG = {
   },
   supplier: {
     icon: Truck,
-    avatarBg: "bg-slate-50",
-    avatarText: "text-slate-600",
+    avatarBg: "bg-muted",
+    avatarText: "text-muted-foreground",
     tableId: "suppliers",
     unifiedId: "suppliers-unified",
     title: "سجل الموردين",
@@ -112,7 +112,7 @@ export function PartyTable<T extends { id: string; name: string; code?: string; 
         header: "#",
         label: t("columns.accountNumber", { namespace: "partners",  }),
         accessor: (item) => formatNumber(parseInt(item.code) || 0),
-        className: "font-black text-slate-900 text-center",
+        className: "font-black text-foreground text-center",
       },
       {
         id: "name",
@@ -123,7 +123,7 @@ export function PartyTable<T extends { id: string; name: string; code?: string; 
             <div className={`w-8 h-8 rounded-full ${cfg.avatarBg} flex items-center justify-center ${cfg.avatarText} shrink-0`}>
               <Icon className="w-4 h-4" />
             </div>
-            <span className="font-bold text-slate-800">{resolvePartnerDisplayName(item.name, item.code || "", entityName, language, t)}</span>
+            <span className="font-bold text-foreground">{resolvePartnerDisplayName(item.name, item.code || "", entityName, language, t)}</span>
           </div>
         ),
       },
@@ -132,7 +132,7 @@ export function PartyTable<T extends { id: string; name: string; code?: string; 
         header: t("columns.phone", { namespace: "partners",  }),
         label: t("columns.phone", { namespace: "partners",  }),
         accessor: (item) => item.phone || "",
-        className: "tabular-nums text-slate-500",
+        className: "tabular-nums text-muted-foreground",
       },
     ];
 
@@ -143,7 +143,7 @@ export function PartyTable<T extends { id: string; name: string; code?: string; 
       if (m && !isBaseCurrency(m[1])) {
         return {
           ...c,
-          className: "tabular-nums font-medium text-slate-400",
+          className: "tabular-nums font-medium text-muted-foreground",
           label: `${c.label}`,
         };
       }
@@ -156,7 +156,7 @@ export function PartyTable<T extends { id: string; name: string; code?: string; 
       header: t("columns.notes", { namespace: "partners",  }),
       label: t("columns.notes", { namespace: "partners",  }),
       accessor: (item) => (
-        <span className="text-slate-500 text-xs truncate max-w-[200px] block" title={item.notes || ""}>
+        <span className="text-muted-foreground text-xs truncate max-w-[200px] block" title={item.notes || ""}>
           {item.notes || ""}
         </span>
       ),

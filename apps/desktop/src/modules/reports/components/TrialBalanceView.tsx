@@ -67,7 +67,7 @@ export function TrialBalanceView({ data, loading }: TrialBalanceViewProps) {
   }, [treeTotals, maxDepth]);
 
   const rootClass = (c: string) => `tabular-nums font-black ${c}`;
-  const secClass = "tabular-nums font-medium text-slate-400";
+  const secClass = "tabular-nums font-medium text-muted-foreground";
 
   const allColumns = useMemo<UnifiedColumn<TrialBalanceTreeRow>[]>(() => {
     const cols: UnifiedColumn<TrialBalanceTreeRow>[] = [
@@ -78,12 +78,12 @@ export function TrialBalanceView({ data, loading }: TrialBalanceViewProps) {
         accessor: (row) => {
           const padClass = row.depth === 0 ? "" : row.depth === 1 ? "ps-6" : row.depth === 2 ? "ps-12" : "ps-16";
           const fontClass = row.depth === 0
-            ? "font-extrabold text-sm text-slate-900"
+            ? "font-extrabold text-sm text-foreground"
             : row.depth === 1
-            ? "font-bold text-xs text-slate-800"
+            ? "font-bold text-xs text-foreground"
             : row.depth === 2
-            ? "font-semibold text-xs text-slate-700"
-            : "font-normal text-xs text-slate-600";
+            ? "font-semibold text-xs text-foreground"
+            : "font-normal text-xs text-muted-foreground";
           return (
             <div className={cn("w-full leading-snug break-words", padClass, fontClass)}>
               {row.name}
@@ -103,13 +103,13 @@ export function TrialBalanceView({ data, loading }: TrialBalanceViewProps) {
         label: t("trialBalance.openingHeader", { namespace: "reports", vars: { suffix: ` ${cs(symbol)}` } }),
         accessor: (row) => {
           const netOpening = row.openingDebit - row.openingCredit;
-          if (netOpening === 0) return <div className={cellWrap}><span className="text-slate-300">—</span></div>;
+          if (netOpening === 0) return <div className={cellWrap}><span className="text-muted-foreground">—</span></div>;
           const status = netOpening > 0 ? "debit" : "credit";
           const statusLabel = t("trialBalance.sign." + status, { namespace: "reports"});
           return (
             <div className={cellWrap}>
               <span className={cn(
-                isBase ? rootClass("text-amber-700") : secClass,
+                isBase ? rootClass("text-warning") : secClass,
                 "text-xs",
                 status === "debit" ? "" : ""
               )}>
@@ -132,15 +132,15 @@ export function TrialBalanceView({ data, loading }: TrialBalanceViewProps) {
         accessor: (row) => (
           <div className={cellWrap}>
             {row.periodDebit > 0 ? (
-              <span className={cn(isBase ? rootClass("text-blue-700") : secClass, "text-xs")}>
+              <span className={cn(isBase ? rootClass("text-primary") : secClass, "text-xs")}>
                 {formatAmount(row.periodDebit, { currencyCode: curr.code })}
               </span>
             ) : (
-              <span className="text-slate-300 text-xs">—</span>
+              <span className="text-muted-foreground text-xs">—</span>
             )}
           </div>
         ),
-        className: isBase ? rootClass("text-blue-700") : secClass,
+        className: isBase ? rootClass("text-primary") : secClass,
       });
     });
 
@@ -154,15 +154,15 @@ export function TrialBalanceView({ data, loading }: TrialBalanceViewProps) {
         accessor: (row) => (
           <div className={cellWrap}>
             {row.periodCredit > 0 ? (
-              <span className={cn(isBase ? rootClass("text-emerald-700") : secClass, "text-xs")}>
+              <span className={cn(isBase ? rootClass("text-success") : secClass, "text-xs")}>
                 {formatAmount(row.periodCredit, { currencyCode: curr.code })}
               </span>
             ) : (
-              <span className="text-slate-300 text-xs">—</span>
+              <span className="text-muted-foreground text-xs">—</span>
             )}
           </div>
         ),
-        className: isBase ? rootClass("text-emerald-700") : secClass,
+        className: isBase ? rootClass("text-success") : secClass,
       });
     });
 
@@ -179,7 +179,7 @@ export function TrialBalanceView({ data, loading }: TrialBalanceViewProps) {
             <div className={cellWrap}>
               <span className={cn(
                 isBase
-                  ? rootClass(val > 0 ? "text-red-700" : val < 0 ? "text-emerald-700" : "text-slate-400")
+                  ? rootClass(val > 0 ? "text-destructive" : val < 0 ? "text-success" : "text-muted-foreground")
                   : secClass,
                 "text-xs"
               )}>
@@ -198,12 +198,12 @@ export function TrialBalanceView({ data, loading }: TrialBalanceViewProps) {
       label: t("trialBalance.colStatus", { namespace: "reports",  }),
       accessor: (row) => {
         const status = isBalanceDebit(row.balance);
-        if (!status) return <div className={cellWrap}><span className="text-slate-300">—</span></div>;
+        if (!status) return <div className={cellWrap}><span className="text-muted-foreground">—</span></div>;
         return (
           <div className={cellWrap}>
               <span className={cn(
               "font-bold text-xs",
-              status === "debit" ? "text-red-600" : "text-emerald-600",
+              status === "debit" ? "text-destructive" : "text-success",
             )}>
               {t("trialBalance.sign." + status, { namespace: "reports"})}
             </span>
@@ -257,7 +257,7 @@ export function TrialBalanceView({ data, loading }: TrialBalanceViewProps) {
       if (id === "name") {
         return {
           id: "count", columnId: "name", label: "", value: t("trialBalance.countAccounts", { namespace: "reports", vars: { count: totals.count } }),
-          className: "text-slate-500 font-medium",
+          className: "text-muted-foreground font-medium",
         };
       }
 
@@ -280,7 +280,7 @@ export function TrialBalanceView({ data, loading }: TrialBalanceViewProps) {
           value: totals.openingNet !== 0
             ? `${formatAmount(Math.abs(totals.openingNet), { currencyCode: currCode })} (${sign})`
             : "—",
-          className: "text-amber-700 font-bold",
+          className: "text-warning font-bold",
         };
       }
 
@@ -291,7 +291,7 @@ export function TrialBalanceView({ data, loading }: TrialBalanceViewProps) {
           id: `${id}_summary`, columnId: id,
           label: t("trialBalance.summaryDebit", { namespace: "reports",  }),
           value: totals.periodDebit > 0 ? formatAmount(totals.periodDebit, { currencyCode: currCode }) : "—",
-          className: "text-blue-700 font-black",
+          className: "text-primary font-black",
         };
       }
 
@@ -302,7 +302,7 @@ export function TrialBalanceView({ data, loading }: TrialBalanceViewProps) {
           id: `${id}_summary`, columnId: id,
           label: t("trialBalance.summaryCredit", { namespace: "reports",  }),
           value: totals.periodCredit > 0 ? formatAmount(totals.periodCredit, { currencyCode: currCode }) : "—",
-          className: "text-emerald-700 font-black",
+          className: "text-success font-black",
         };
       }
 
@@ -311,15 +311,15 @@ export function TrialBalanceView({ data, loading }: TrialBalanceViewProps) {
         const currCode = balanceMatch[1];
         const isBase = isBaseCurrency(currCode);
         const valClass = totals.balance > 0
-          ? "text-red-700 font-black"
+          ? "text-destructive font-black"
           : totals.balance < 0
-          ? "text-emerald-700 font-black"
-          : "text-slate-500 font-bold";
+          ? "text-success font-black"
+          : "text-muted-foreground font-bold";
         return {
           id: `${id}_summary`, columnId: id,
           label: t("trialBalance.summaryClosing", { namespace: "reports",  }),
           value: totals.balance !== 0 ? formatAmount(Math.abs(totals.balance), { currencyCode: currCode }) : "—",
-          className: isBase ? valClass : "text-slate-500 font-extrabold",
+          className: isBase ? valClass : "text-muted-foreground font-extrabold",
         };
       }
 
@@ -343,7 +343,7 @@ export function TrialBalanceView({ data, loading }: TrialBalanceViewProps) {
             <div className="flex items-center gap-2 w-full">
               <div className="flex items-center gap-1.5 shrink-0">
                 <button
-                  className="w-7 h-7 rounded-lg border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                  className="w-7 h-7 rounded-lg border border-muted flex items-center justify-center text-muted-foreground hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                   disabled={detailLevel === 1}
                   onClick={() => setDetailLevel((p) => Math.max(1, p - 1))}
                 >
@@ -357,8 +357,8 @@ export function TrialBalanceView({ data, loading }: TrialBalanceViewProps) {
                       className={cn(
                         "h-1.5 rounded-full transition-all duration-200 cursor-pointer",
                         level <= detailLevel
-                          ? "bg-slate-900"
-                          : "bg-slate-200 hover:bg-slate-300",
+                          ? "bg-background"
+                          : "bg-muted hover:bg-muted",
                         level === detailLevel ? "w-6" : "w-1.5",
                       )}
                       onClick={() => setDetailLevel(level)}
@@ -368,7 +368,7 @@ export function TrialBalanceView({ data, loading }: TrialBalanceViewProps) {
                 </div>
 
                 <button
-                  className="w-7 h-7 rounded-lg border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                  className="w-7 h-7 rounded-lg border border-muted flex items-center justify-center text-muted-foreground hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                   disabled={detailLevel === 4}
                   onClick={() => setDetailLevel((p) => Math.min(4, p + 1))}
                 >
@@ -376,7 +376,7 @@ export function TrialBalanceView({ data, loading }: TrialBalanceViewProps) {
                 </button>
               </div>
 
-              <span className="flex-1 text-center text-[11px] font-bold text-slate-400 tracking-wider">
+              <span className="flex-1 text-center text-[11px] font-bold text-muted-foreground tracking-wider">
                 {detailLevel === 1 ? t("trialBalance.detailSummary", { namespace: "reports",  }) : detailLevel === 4 ? t("trialBalance.detailFull", { namespace: "reports",  }) : t("trialBalance.detailLevel", { namespace: "reports", vars: { level: detailLevel } })}
               </span>
             </div>

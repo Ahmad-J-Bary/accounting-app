@@ -35,7 +35,7 @@ export function WarehouseSelector({
 
   return (
     <Select dir="rtl" value={effectiveValue} onValueChange={onValueChange} disabled={disabled || warehouses.length === 0}>
-      <SelectTrigger className={cn("w-[200px] bg-white border-slate-200 h-9", className)}>
+      <SelectTrigger className={cn("w-[200px] bg-white border-muted h-9", className)}>
         <SelectValue placeholder={effectivePlaceholder} />
       </SelectTrigger>
       <SelectContent sideOffset={4} align="start">

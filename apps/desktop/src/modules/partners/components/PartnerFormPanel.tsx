@@ -206,11 +206,11 @@ export function PartnerFormPanel({
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
                     <FieldLabel>{t("form.accountNumber", { namespace: "partners",  })}</FieldLabel>
-                    <Input value={accountInfo.code} readOnly className="h-9 bg-slate-50 border-slate-200 cursor-not-allowed" />
+                    <Input value={accountInfo.code} readOnly className="h-9 bg-muted border-muted cursor-not-allowed" />
                   </div>
                   <div className="space-y-1.5">
                     <FieldLabel>{t("form.parentOf", { namespace: "partners",  })}</FieldLabel>
-                    <Input value={accountInfo.parentName} readOnly className="h-9 bg-slate-50 border-slate-200 cursor-not-allowed" />
+                    <Input value={accountInfo.parentName} readOnly className="h-9 bg-muted border-muted cursor-not-allowed" />
                   </div>
                 </div>
               )}
@@ -257,8 +257,8 @@ export function PartnerFormPanel({
                     className={cn(
                       "flex-1 rounded-md text-sm font-bold transition-colors border",
                       balanceDirection === "debit"
-                        ? "bg-blue-100 text-blue-700 border-blue-300"
-                        : "bg-slate-50 text-slate-400 border-slate-200 hover:bg-slate-100"
+                        ? "bg-primary/20 text-blue-700 border-blue-300"
+                        : "bg-muted text-muted-foreground border-muted hover:bg-muted"
                     )}
                     onClick={() => setBalanceDirection("debit")}
                   >
@@ -269,8 +269,8 @@ export function PartnerFormPanel({
                     className={cn(
                       "flex-1 rounded-md text-sm font-bold transition-colors border",
                       balanceDirection === "credit"
-                        ? "bg-emerald-100 text-emerald-700 border-emerald-300"
-                        : "bg-slate-50 text-slate-400 border-slate-200 hover:bg-slate-100"
+                        ? "bg-success/20 text-success border-success/30"
+                        : "bg-muted text-muted-foreground border-muted hover:bg-muted"
                     )}
                     onClick={() => setBalanceDirection("credit")}
                   >
@@ -284,7 +284,7 @@ export function PartnerFormPanel({
 
           <div className="space-y-1.5">
             <FieldLabel>{t("form.notes", { namespace: "partners",  })}</FieldLabel>
-            <Textarea value={form.notes} onChange={(e) => setForm({...form, notes: e.target.value})} className="min-h-[60px] bg-white border-slate-200" placeholder={t("form.notesPlaceholder", { namespace: "partners",  })} />
+            <Textarea value={form.notes} onChange={(e) => setForm({...form, notes: e.target.value})} className="min-h-[60px] bg-white border-muted" placeholder={t("form.notesPlaceholder", { namespace: "partners",  })} />
           </div>
         </div>
       </FormPanel>

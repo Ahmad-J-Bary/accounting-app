@@ -91,11 +91,11 @@ export default function Warehouses() {
       title={t("warehouses.title", { namespace: "inventory",  })}
       toolbar={
         <div className="flex items-center gap-2">
-          <Button size="sm" onClick={() => { setWarehouseEditItem(null); setWarehouseFormOpen(true); }} className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-100 font-bold">
+          <Button size="sm" onClick={() => { setWarehouseEditItem(null); setWarehouseFormOpen(true); }} className="bg-primary hover:bg-primary/80 text-white shadow-lg shadow-primary/20 font-bold">
             <Plus className="w-4 h-4 ml-2" />{t("warehouses.new", { namespace: "inventory",  })}
           </Button>
-          <Button variant="outline" size="sm" onClick={handleExport} className="border-slate-200 hover:bg-slate-50 font-bold">
-            <Download className="w-4 h-4 ml-2 text-slate-500" /> {t("labels.exportExcel", { namespace: "inventory",  })}
+          <Button variant="outline" size="sm" onClick={handleExport} className="border-muted hover:bg-muted font-bold">
+            <Download className="w-4 h-4 ml-2 text-muted-foreground" /> {t("labels.exportExcel", { namespace: "inventory",  })}
           </Button>
         </div>
       }
@@ -103,23 +103,23 @@ export default function Warehouses() {
         <div className="flex flex-col h-full">
           <div className="flex items-start gap-3 px-6 pt-4 pb-2 shrink-0">
             <div className="relative flex-1">
-              <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
                 placeholder={t("warehouses.searchPlaceholder", { namespace: "inventory",  })}
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                className="pr-10 h-9 bg-white border-slate-200"
+                className="pr-10 h-9 bg-white border-muted"
               />
               {search && (
-                <div className="text-[11px] text-slate-400 mt-1.5 px-1">
+                <div className="text-[11px] text-muted-foreground mt-1.5 px-1">
                   {t("warehouses.countOf", { namespace: "inventory", vars: { count: filteredWarehouses.length, total: warehouses.length },  })}
                 </div>
               )}
             </div>
             <div className="shrink-0" style={{ minWidth: '150px' }}>
               <Select value={displayStyle} onValueChange={(v) => setDisplayStyle(v as DisplayStyle)}>
-                <SelectTrigger className="h-9 bg-white border-slate-200 text-xs">
-                  <LayoutGrid className="w-3.5 h-3.5 ml-2 text-slate-400" />
+                <SelectTrigger className="h-9 bg-white border-muted text-xs">
+                  <LayoutGrid className="w-3.5 h-3.5 ml-2 text-muted-foreground" />
                   <SelectValue placeholder={t("warehouses.viewPlaceholder", { namespace: "inventory",  })} />
                 </SelectTrigger>
                 <SelectContent>

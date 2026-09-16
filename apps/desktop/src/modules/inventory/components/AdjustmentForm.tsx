@@ -198,7 +198,7 @@ export function AdjustmentForm({ onClose, products, onSave, saving, initialValue
           <div className="space-y-2">
             <FieldLabel required>{t("adjustments.form.material", { namespace: "inventory",  })}</FieldLabel>
             <Select value={form.material_id ?? ""} onValueChange={handleMaterialChange}>
-              <SelectTrigger className="w-full bg-white border-slate-200"><SelectValue placeholder={t("adjustments.form.materialPlaceholder", { namespace: "inventory",  })} /></SelectTrigger>
+              <SelectTrigger className="w-full bg-white border-muted"><SelectValue placeholder={t("adjustments.form.materialPlaceholder", { namespace: "inventory",  })} /></SelectTrigger>
               <SelectContent>
                 {products.map(p => (
                   <SelectItem key={p.id} value={p.id}>{p.name} ({p.code})</SelectItem>
@@ -207,11 +207,11 @@ export function AdjustmentForm({ onClose, products, onSave, saving, initialValue
             </Select>
           </div>
           {form.material_id && (
-            <div className="flex items-center gap-2 p-2 rounded-lg bg-slate-50 border border-slate-100 text-xs text-slate-600">
-              <Calculator className="w-3.5 h-3.5 text-slate-400" />
-              <span>{t("adjustments.form.systemBalance", { namespace: "inventory",  })}: <strong className="text-slate-800">{systemQuantity.toFixed(2)}</strong></span>
-              <span className="text-slate-300">|</span>
-              <span>{t("adjustments.form.unitCost", { namespace: "inventory",  })}: <strong className="text-slate-800">{unitCostPerUnit.toFixed(2)} {currencyField.symbol}</strong></span>
+            <div className="flex items-center gap-2 p-2 rounded-lg bg-muted border border-muted text-xs text-foreground">
+              <Calculator className="w-3.5 h-3.5 text-muted-foreground" />
+              <span>{t("adjustments.form.systemBalance", { namespace: "inventory",  })}: <strong className="text-foreground">{systemQuantity.toFixed(2)}</strong></span>
+              <span className="text-muted-foreground">|</span>
+              <span>{t("adjustments.form.unitCost", { namespace: "inventory",  })}: <strong className="text-foreground">{unitCostPerUnit.toFixed(2)} {currencyField.symbol}</strong></span>
             </div>
           )}
           <div className="space-y-2">
@@ -219,7 +219,7 @@ export function AdjustmentForm({ onClose, products, onSave, saving, initialValue
             <Input type="number" min="0" step="1"
               value={form.actual_quantity ?? ""}
               onChange={e => handleActualQuantityChange(parseFloat(e.target.value))}
-              className="bg-white border-slate-200 h-9 text-xs tabular-nums"
+              className="bg-white border-muted h-9 text-xs tabular-nums"
               placeholder={t("adjustments.form.countedQtyPlaceholder", { namespace: "inventory",  })} />
           </div>
           <CurrencyField
@@ -247,11 +247,11 @@ export function AdjustmentForm({ onClose, products, onSave, saving, initialValue
             <Input type="date"
               value={form.adjustment_date?.slice(0, 10) ?? ""}
               onChange={e => setForm(p => ({ ...p, adjustment_date: new Date(e.target.value).toISOString() }))}
-              className="bg-white border-slate-200" />
+              className="bg-white border-muted" />
           </div>
           <div className="space-y-2">
             <FieldLabel>{t("adjustments.form.note", { namespace: "inventory",  })}</FieldLabel>
-            <Textarea value={form.notes ?? ""} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))} className="bg-white border-slate-200 min-h-[60px]" placeholder={t("adjustments.form.notePlaceholder", { namespace: "inventory",  })} />
+            <Textarea value={form.notes ?? ""} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))} className="bg-white border-muted min-h-[60px]" placeholder={t("adjustments.form.notePlaceholder", { namespace: "inventory",  })} />
           </div>
         </div>
       </SidebarSection>

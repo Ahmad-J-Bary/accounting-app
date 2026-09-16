@@ -232,7 +232,7 @@ export function AccountMovementTable({
               ? "bg-amber-100/70 text-amber-700"
               : r.isOpening
               ? "bg-indigo-100/60 text-indigo-700"
-              : "bg-slate-100 text-slate-600"
+              : "bg-muted text-slate-600"
           )}>
             {r.journal_type_display}
           </span>
@@ -271,8 +271,8 @@ export function AccountMovementTable({
           return r.amount_base > 0 ? formatAmount(r.amount_base, { currencyCode: curr.code }) : "";
         },
         className: isBase
-          ? "tabular-nums font-black text-emerald-700"
-          : "tabular-nums font-medium text-emerald-300"
+          ? "tabular-nums font-black text-success"
+          : "tabular-nums font-medium text-success/60"
       });
     });
 
@@ -289,7 +289,7 @@ export function AccountMovementTable({
           const formatted = formatAmount(Math.abs(b), { currencyCode: baseCurrency?.code || "" });
           return b > 0
             ? <span className="tabular-nums font-black text-blue-700">{formatted}</span>
-            : <span className="tabular-nums font-black text-emerald-700">−{formatted}</span>;
+            : <span className="tabular-nums font-black text-success">−{formatted}</span>;
         },
         className: "tabular-nums font-black",
       },
@@ -298,14 +298,14 @@ export function AccountMovementTable({
         header: t("ledger.table.colDescription", { namespace: "accounting",  }),
         label: t("ledger.table.colDescription", { namespace: "accounting",  }),
         accessor: (r) => r.description,
-        className: "text-slate-700 font-bold"
+        className: "text-foreground font-bold"
       },
       {
         id: "date",
         header: t("ledger.table.colDate", { namespace: "accounting",  }),
         label: t("ledger.table.colDate", { namespace: "accounting",  }),
         accessor: (r) => formatDateTime(r.date),
-        className: "text-slate-500 tabular-nums"
+        className: "text-muted-foreground tabular-nums"
       },
     );
     return cols;
@@ -474,7 +474,7 @@ export function AccountMovementTable({
     return enrichedColumns.map((col) => {
       const id = col.id;
       if (id === "entry_number") {
-        return { id: "count", columnId: "entry_number", label: "", value: t("ledger.table.count", { namespace: "accounting", vars: { count: rowCount },  }), className: "text-slate-500 font-medium" };
+        return { id: "count", columnId: "entry_number", label: "", value: t("ledger.table.count", { namespace: "accounting", vars: { count: rowCount },  }), className: "text-muted-foreground font-medium" };
       }
       if (id === "journal_type" || id === "description") {
         return { id: `${id}_spacer`, columnId: id, label: "", value: "" };
@@ -486,8 +486,8 @@ export function AccountMovementTable({
         const valueClass = closingSign === "مدين"
           ? "text-blue-700 font-black"
           : closingSign === "دائن"
-          ? "text-emerald-700 font-black"
-          : "text-slate-500 font-bold";
+          ? "text-success font-black"
+          : "text-muted-foreground font-bold";
         return { id: "closing", columnId: "date", label, value, className: valueClass };
       }
 
@@ -518,8 +518,8 @@ export function AccountMovementTable({
           label,
           value: totalCredit > 0 ? formatAmount(totalCredit, { currencyCode: currCode }) : "—",
           className: isB
-            ? "text-emerald-700 font-black"
-            : "text-emerald-300 font-extrabold"
+            ? "text-success font-black"
+            : "text-success/60 font-extrabold"
         };
       }
 
@@ -694,10 +694,10 @@ export function AccountMovementTable({
         <Button
           size="sm"
           variant="outline"
-          className="h-8 border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+          className="h-8 border-muted bg-white text-foreground hover:bg-muted/50"
           onClick={handleExport}
         >
-          <Download className="w-3.5 h-3.5 ms-1.5 text-slate-500" />
+          <Download className="w-3.5 h-3.5 ms-1.5 text-muted-foreground" />
           {t("ledger.table.export", { namespace: "accounting",  })}
         </Button>
       )}

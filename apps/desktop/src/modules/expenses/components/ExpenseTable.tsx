@@ -73,7 +73,7 @@ export function ExpenseTable({ expenses, loading, search, onSearchChange, onView
         header: t("expense.itemName", { namespace: "invoicing",  }),
         label: t("expense.itemName", { namespace: "invoicing",  }),
         accessor: (c) => language === "ar" ? (c.name_ar || "") : (c.name_en || c.name_ar || ""),
-        className: "font-bold text-slate-800"
+        className: "font-bold text-foreground"
       },
     ];
 
@@ -94,7 +94,7 @@ export function ExpenseTable({ expenses, loading, search, onSearchChange, onView
         },
         className: isBase
           ? "tabular-nums font-black text-slate-900"
-          : "tabular-nums font-medium text-slate-400"
+          : "tabular-nums font-medium text-muted-foreground"
       });
     });
 
@@ -143,7 +143,7 @@ export function ExpenseTable({ expenses, loading, search, onSearchChange, onView
 
   const summaryColumns = useMemo<SummaryColumn[]>(() => {
     const totalBal = sortedExpenses.reduce((sum, e) => sum + Number(e.balance || 0), 0);
-    const overallColor = totalBal > 0 ? 'text-red-600' : totalBal < 0 ? 'text-emerald-600' : 'text-slate-400';
+    const overallColor = totalBal > 0 ? 'text-red-600' : totalBal < 0 ? 'text-success' : 'text-muted-foreground';
 
     const baseTotal = sortedExpenses.reduce((sum, e) => {
       const effBal = (e.debit !== undefined && e.credit !== undefined)
@@ -173,7 +173,7 @@ export function ExpenseTable({ expenses, loading, search, onSearchChange, onView
           value: baseTotal !== 0 ? formatAmount(baseTotal, { currencyCode: currCode }) : "—",
           className: isBase
             ? `${overallColor} font-black`
-            : 'text-slate-500 font-extrabold',
+            : 'text-muted-foreground font-extrabold',
         };
       }
       return { id: `${id}_spacer`, columnId: id, label: '', value: '' };

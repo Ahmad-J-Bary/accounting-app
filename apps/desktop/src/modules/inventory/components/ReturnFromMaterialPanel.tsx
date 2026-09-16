@@ -441,7 +441,7 @@ export function ReturnFromMaterialPanel({
   return (
     <FormPanel
       title={t("returns.title", { namespace: "inventory", vars: { type: isSales ? t("return.salesSheetTitle", { namespace: "invoicing" }) : t("return.purchaseSheetTitle", { namespace: "invoicing" }), sub: isSales ? t("returns.fromCustomer", { namespace: "inventory" }) : t("returns.toSupplier", { namespace: "inventory" }) }})}
-      icon={<Undo2 className={`w-5 h-5 ${isSales ? "text-blue-600" : "text-amber-600"}`} />}
+      icon={<Undo2 className={`w-5 h-5 ${isSales ? "text-primary" : "text-amber-600"}`} />}
       onClose={onClose}
       onSave={handleSave}
       isSaving={saving}
@@ -454,22 +454,22 @@ export function ReturnFromMaterialPanel({
         <div className="space-y-4 text-right">
           <div className="space-y-1.5">
             <FieldLabel className="flex items-center gap-1.5">
-              <Undo2 className="w-3.5 h-3.5 text-slate-400" /> {t("returns.type", { namespace: "inventory" })}
+              <Undo2 className="w-3.5 h-3.5 text-muted-foreground" /> {t("returns.type", { namespace: "inventory" })}
             </FieldLabel>
             
             {/* Premium Segmented Control */}
-            <div className="flex p-1 bg-slate-100 rounded-xl border border-slate-200/50">
+            <div className="flex p-1 bg-muted rounded-xl border border-muted/50">
               <button
                 type="button"
                 onClick={() => handleReturnTypeChange("purchase")}
                 className={cn(
                   "flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-bold transition-all duration-200",
                   !isSales
-                    ? "bg-white text-amber-700 shadow-sm border border-slate-200/40"
-                    : "text-slate-500 hover:text-slate-800"
+                    ? "bg-white text-amber-700 shadow-sm border border-muted/40"
+                    : "text-muted-foreground hover:text-foreground"
                 )}
               >
-                <ShoppingBag className={cn("w-3.5 h-3.5", !isSales ? "text-amber-600" : "text-slate-400")} />
+                <ShoppingBag className={cn("w-3.5 h-3.5", !isSales ? "text-amber-600" : "text-muted-foreground")} />
                 {t("returns.toSupplier", { namespace: "inventory" })}
               </button>
               <button
@@ -478,11 +478,11 @@ export function ReturnFromMaterialPanel({
                 className={cn(
                   "flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-bold transition-all duration-200",
                   isSales
-                    ? "bg-white text-blue-700 shadow-sm border border-slate-200/40"
-                    : "text-slate-500 hover:text-slate-800"
+                    ? "bg-white text-primary shadow-sm border border-muted/40"
+                    : "text-muted-foreground hover:text-foreground"
                 )}
               >
-                <ShoppingCart className={cn("w-3.5 h-3.5", isSales ? "text-blue-600" : "text-slate-400")} />
+                <ShoppingCart className={cn("w-3.5 h-3.5", isSales ? "text-primary" : "text-muted-foreground")} />
                 {t("returns.fromCustomer", { namespace: "inventory" })}
               </button>
             </div>
@@ -490,10 +490,10 @@ export function ReturnFromMaterialPanel({
 
           <div className="space-y-1.5">
             <FieldLabel className="flex items-center gap-1.5" required>
-              <Building2 className="w-3.5 h-3.5 text-slate-400" /> {isSales ? t("returns.customer", { namespace: "inventory" }) : t("returns.supplier", { namespace: "inventory" })}
+              <Building2 className="w-3.5 h-3.5 text-muted-foreground" /> {isSales ? t("returns.customer", { namespace: "inventory" }) : t("returns.supplier", { namespace: "inventory" })}
             </FieldLabel>
             <Select value={form.partyId} onValueChange={val => setForm(p => ({ ...p, partyId: val }))}>
-              <SelectTrigger className="w-full bg-white border-slate-200 h-9 rounded-lg">
+              <SelectTrigger className="w-full bg-white border-muted h-9 rounded-lg">
                 <SelectValue placeholder={loadingParties ? t("labels.loading", { namespace: "inventory" }) : t("returns.partyPlaceholder", { namespace: "inventory", vars: { party: isSales ? t("returns.customer", { namespace: "inventory" }) : t("returns.supplier", { namespace: "inventory" }) } })} />
               </SelectTrigger>
               <SelectContent>
@@ -506,11 +506,11 @@ export function ReturnFromMaterialPanel({
 
           <div className="space-y-1.5">
             <FieldLabel className="flex items-center gap-1.5">
-              <Calendar className="w-3.5 h-3.5 text-slate-400" /> {t("returns.date", { namespace: "inventory" })}
+              <Calendar className="w-3.5 h-3.5 text-muted-foreground" /> {t("returns.date", { namespace: "inventory" })}
             </FieldLabel>
             <Input type="date" value={form.returnDate}
               onChange={e => setForm(p => ({ ...p, returnDate: e.target.value }))}
-              className="bg-white border-slate-200 h-9 rounded-lg" />
+              className="bg-white border-muted h-9 rounded-lg" />
           </div>
         </div>
       </SidebarSection>
@@ -521,21 +521,21 @@ export function ReturnFromMaterialPanel({
           <div className="space-y-3">
             {!initialMaterialId && (
               <div className="relative">
-                <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
                   placeholder={t("returns.searchPlaceholder", { namespace: "inventory" })}
-                  className="bg-white border-slate-200 h-9 pr-9 transition-all duration-200 focus:border-blue-300 rounded-lg" />
+                  className="bg-white border-muted h-9 pr-9 transition-all duration-200 focus:border-primary rounded-lg" />
               </div>
             )}
 
-            <div className="max-h-60 overflow-y-auto space-y-1.5 border border-slate-200/60 rounded-xl p-2.5 bg-slate-50/50 custom-scrollbar">
+            <div className="max-h-60 overflow-y-auto space-y-1.5 border border-muted/60 rounded-xl p-2.5 bg-muted/50 custom-scrollbar">
               {loadingInvoices ? (
                 <div className="space-y-2 py-3">
-                  {[1, 2, 3].map(i => <div key={i} className="h-12 rounded-md bg-slate-200 animate-pulse" />)}
+                  {[1, 2, 3].map(i => <div key={i} className="h-12 rounded-md bg-muted animate-pulse" />)}
                 </div>
               ) : searchResults.length === 0 ? (
-                <div className="flex flex-col items-center gap-1.5 py-8 text-slate-400">
+                <div className="flex flex-col items-center gap-1.5 py-8 text-muted-foreground">
                   <Package className="w-9 h-9 opacity-30" />
                   <p className="text-xs font-semibold">
                     {searchQuery ? t("labels.noResults", { namespace: "inventory" }) : invoices.length === 0 ? t("returns.noInvoices", { namespace: "inventory" }) : t("returns.allReturned", { namespace: "inventory" })}
@@ -553,30 +553,30 @@ export function ReturnFromMaterialPanel({
                         className={cn(
                           "flex items-center gap-3 p-3 rounded-lg border text-xs transition-all duration-200",
                           isAdded
-                            ? "bg-slate-100 border-slate-200/60 opacity-60 cursor-not-allowed text-slate-400"
-                            : "bg-white border-slate-200 hover:bg-blue-50/45 hover:border-blue-200 hover:shadow-sm cursor-pointer"
+                            ? "bg-muted border-muted/60 opacity-60 cursor-not-allowed text-muted-foreground"
+                            : "bg-white border-muted hover:bg-primary/10 hover:border-primary/20 hover:shadow-sm cursor-pointer"
                         )}
                         onClick={() => !isAdded && handleAddInstance(inst)}
                       >
                         <div className={cn(
                           "w-6.5 h-6.5 rounded-md flex items-center justify-center shrink-0 border transition-colors",
                           isAdded
-                            ? "bg-slate-50 border-slate-200 text-slate-400"
-                            : "bg-blue-50/60 border-blue-100/80 text-blue-600"
+                            ? "bg-muted border-muted text-muted-foreground"
+                            : "bg-primary/10 border-primary/20 text-primary"
                         )}>
-                          {isAdded ? <CheckCircle2 className="w-3 h-3 text-slate-400" /> : <Plus className="w-3.5 h-3.5" />}
+                          {isAdded ? <CheckCircle2 className="w-3 h-3 text-muted-foreground" /> : <Plus className="w-3.5 h-3.5" />}
                         </div>
                         <div className="flex-1 min-w-0 text-right">
-                          <span className="font-bold block truncate text-slate-800">{name}</span>
-                          <span className="text-[10px] text-slate-400 mt-0.5 block">
+                          <span className="font-bold block truncate text-foreground">{name}</span>
+                          <span className="text-[10px] text-muted-foreground mt-0.5 block">
                              {t("returns.invoiceNumber", { namespace: "inventory", vars: { number: inst.invoiceNumber } })} • {new Date(inst.invoiceDate).toLocaleDateString("ar-SA")}
                           </span>
                         </div>
                         <div className="flex flex-col items-end gap-0.5 shrink-0 pl-1">
-                          <span className="font-mono font-black text-slate-700">
+                          <span className="font-mono font-black text-foreground">
                             {inst.availableQty.toFixed(2)}
                           </span>
-                          <span className="text-[9px] text-slate-400">{inst.unitName}</span>
+                          <span className="text-[9px] text-muted-foreground">{inst.unitName}</span>
                         </div>
                       </div>
                     );
@@ -586,11 +586,11 @@ export function ReturnFromMaterialPanel({
             </div>
 
             {!loadingInvoices && invoices.length > 0 && (
-              <div className="flex items-center justify-between px-2 text-[10px] text-slate-400 font-semibold">
+              <div className="flex items-center justify-between px-2 text-[10px] text-muted-foreground font-semibold">
                 <div className="flex items-center gap-2">
                   <Package className="w-3 h-3" />
                   <span>{t("returns.availableMaterials", { namespace: "inventory", vars: { count: searchResults.length } })}</span>
-                  <span className="text-slate-300">•</span>
+                  <span className="text-muted-foreground">•</span>
                   <span>{t("returns.invoicesCount", { namespace: "inventory", vars: { count: invoices.length } })}</span>
                 </div>
                 <span>{t("returns.selectedCount", { namespace: "inventory", vars: { count: selectedLines.length } })}</span>
@@ -612,32 +612,32 @@ export function ReturnFromMaterialPanel({
                 return (
                   <div
                     key={line.key}
-                    className="border border-slate-200 rounded-xl p-4 space-y-3.5 bg-white shadow-sm hover:border-slate-300 transition-all text-right"
+                    className="border border-muted rounded-xl p-4 space-y-3.5 bg-white shadow-sm hover:border-muted transition-all text-right"
                   >
                     {/* Header */}
-                    <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
+                    <div className="flex items-center justify-between border-b border-muted pb-2.5">
                       <div className="flex items-center gap-2 min-w-0">
-                        <Package className="w-4 h-4 text-blue-500 shrink-0" />
-                        <span className="text-xs font-bold text-slate-800 truncate">{line.materialName}</span>
+                        <Package className="w-4 h-4 text-primary shrink-0" />
+                        <span className="text-xs font-bold text-foreground truncate">{line.materialName}</span>
                       </div>
                       <Button size="sm" variant="ghost"
-                        className="text-rose-500 hover:text-rose-700 hover:bg-rose-50 h-7 px-2.5 rounded-lg text-[11px] font-bold"
+                        className="text-destructive hover:text-destructive hover:bg-destructive/10 h-7 px-2.5 rounded-lg text-[11px] font-bold"
                         onClick={() => removeSelectedLine(line.key)}>
                         <X className="w-3 h-3 ml-1" /> {t("returns.removeLine", { namespace: "inventory" })}
                       </Button>
                     </div>
 
                     {/* Original stats grid */}
-                    <div className="grid grid-cols-2 gap-3 bg-slate-50/60 p-3 rounded-lg border border-slate-100/70 text-xs">
+                    <div className="grid grid-cols-2 gap-3 bg-muted/60 p-3 rounded-lg border border-muted/70 text-xs">
                       <div className="space-y-1">
-                        <span className="text-slate-400 text-[10px] font-bold">{t("returns.originalAvailable", { namespace: "inventory" })}</span>
-                        <div className="font-mono font-bold text-slate-800" dir="ltr">
+                        <span className="text-muted-foreground text-[10px] font-bold">{t("returns.originalAvailable", { namespace: "inventory" })}</span>
+                        <div className="font-mono font-bold text-foreground" dir="ltr">
                           {parseFloat(line.originalQuantity).toFixed(2)} {line.unitName || ""}
                         </div>
                       </div>
                       <div className="space-y-1">
-                        <span className="text-slate-400 text-[10px] font-bold">{t("returns.originalPrice", { namespace: "inventory" })}</span>
-                        <div className="font-mono font-bold text-slate-800" dir="ltr">
+                        <span className="text-muted-foreground text-[10px] font-bold">{t("returns.originalPrice", { namespace: "inventory" })}</span>
+                        <div className="font-mono font-bold text-foreground" dir="ltr">
                           {parseFloat(line.originalPrice).toFixed(2)}
                         </div>
                       </div>
@@ -648,11 +648,11 @@ export function ReturnFromMaterialPanel({
                       {/* Unit select */}
                       <div className="space-y-1.5 col-span-2">
                         <FieldLabel className="flex items-center gap-1.5 text-[11px]">
-                          <Ruler className="w-3.5 h-3.5 text-slate-400" /> {t("returns.returnUnit", { namespace: "inventory" })}
+                          <Ruler className="w-3.5 h-3.5 text-muted-foreground" /> {t("returns.returnUnit", { namespace: "inventory" })}
                         </FieldLabel>
                         {units.length > 0 ? (
                           <Select value={line.unitId} onValueChange={val => handleUnitChange(line.key, val)}>
-                            <SelectTrigger className="bg-white border-slate-200 h-9 text-xs w-full rounded-lg">
+                            <SelectTrigger className="bg-white border-muted h-9 text-xs w-full rounded-lg">
                               <SelectValue placeholder={t("returns.chooseUnit", { namespace: "inventory" })} />
                             </SelectTrigger>
                             <SelectContent>
@@ -664,7 +664,7 @@ export function ReturnFromMaterialPanel({
                             </SelectContent>
                           </Select>
                         ) : (
-                          <div className="h-9 rounded-lg px-3 bg-slate-50 border border-slate-150 flex items-center text-xs text-slate-600">
+                          <div className="h-9 rounded-lg px-3 bg-muted border border-muted flex items-center text-xs text-foreground">
                             {line.unitName || "—"}
                           </div>
                         )}
@@ -672,32 +672,32 @@ export function ReturnFromMaterialPanel({
 
                       {/* Return Qty */}
                       <div className="space-y-1.5">
-                        <FieldLabel className="text-[11px] font-bold text-slate-600">{t("returns.returnQty", { namespace: "inventory" })}</FieldLabel>
+                        <FieldLabel className="text-[11px] font-bold text-foreground">{t("returns.returnQty", { namespace: "inventory" })}</FieldLabel>
                         <Input type="number" min="0" step="any"
                           value={line.returnQuantity}
                           onChange={e => handleReturnQuantityChange(line.key, e.target.value)}
-                          className="bg-white border-slate-200 h-9 text-xs text-left font-mono" dir="ltr" />
-                        <div className="text-[9px] text-slate-400 px-0.5 mt-0.5">
+                          className="bg-white border-muted h-9 text-xs text-left font-mono" dir="ltr" />
+                        <div className="text-[9px] text-muted-foreground px-0.5 mt-0.5">
                           {t("returns.maxQty", { namespace: "inventory", vars: { max: parseFloat(line.originalQuantity).toFixed(2), unit: line.unitName } })}
                         </div>
                       </div>
 
                       {/* Return Price */}
                       <div className="space-y-1.5">
-                        <FieldLabel className="text-[11px] font-bold text-slate-600">{t("returns.returnPrice", { namespace: "inventory" })}</FieldLabel>
+                        <FieldLabel className="text-[11px] font-bold text-foreground">{t("returns.returnPrice", { namespace: "inventory" })}</FieldLabel>
                         <Input type="number" min="0" step="0.01"
                           value={line.returnPrice}
                           onChange={e => updateSelectedLine(line.key, { returnPrice: e.target.value })}
-                          className="bg-white border-slate-200 h-9 text-xs text-left font-mono" dir="ltr" />
+                          className="bg-white border-muted h-9 text-xs text-left font-mono" dir="ltr" />
                       </div>
                     </div>
 
                     {/* Notes */}
                     <div className="space-y-1.5">
-                      <FieldLabel className="text-[11px] font-bold text-slate-600">{t("returns.lineNotes", { namespace: "inventory" })}</FieldLabel>
+                      <FieldLabel className="text-[11px] font-bold text-foreground">{t("returns.lineNotes", { namespace: "inventory" })}</FieldLabel>
                       <Input value={line.notes}
                         onChange={e => updateSelectedLine(line.key, { notes: e.target.value })}
-                        placeholder={t("returns.lineNotesPlaceholder", { namespace: "inventory" })} className="bg-white border-slate-200 h-8.5 text-xs rounded-lg" />
+                        placeholder={t("returns.lineNotesPlaceholder", { namespace: "inventory" })} className="bg-white border-muted h-8.5 text-xs rounded-lg" />
                     </div>
                   </div>
                 );
@@ -707,25 +707,25 @@ export function ReturnFromMaterialPanel({
             {/* General notes */}
             <div className="space-y-1.5 text-right">
               <FieldLabel className="flex items-center gap-1.5">
-                <FileText className="w-3.5 h-3.5 text-slate-400" /> {t("returns.generalNotes", { namespace: "inventory" })}
+                <FileText className="w-3.5 h-3.5 text-muted-foreground" /> {t("returns.generalNotes", { namespace: "inventory" })}
               </FieldLabel>
               <Input value={form.generalNotes}
                 onChange={e => setForm(p => ({ ...p, generalNotes: e.target.value }))}
-                placeholder={t("returns.generalNotesPlaceholder", { namespace: "inventory" })} className="bg-white border-slate-200 h-9.5 rounded-lg" />
+                placeholder={t("returns.generalNotesPlaceholder", { namespace: "inventory" })} className="bg-white border-muted h-9.5 rounded-lg" />
             </div>
 
             {/* Premium Summary bar */}
-            <div className="rounded-xl border border-slate-150 bg-gradient-to-l from-slate-50 to-white p-4 space-y-3 text-right">
-              <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-wider">{t("returns.summaryTitle", { namespace: "inventory" })}</h4>
-              <div className="flex items-center justify-between text-xs pt-1 border-t border-slate-200/50">
-                <span className="text-slate-500 font-semibold">{t("returns.selectedMaterials", { namespace: "inventory" })}</span>
-                <span className="font-bold text-slate-800">{t("returns.itemsCount", { namespace: "inventory", vars: { count: selectedLines.length } })}</span>
+            <div className="rounded-xl border border-muted bg-gradient-to-l from-muted to-white p-4 space-y-3 text-right">
+              <h4 className="text-[11px] font-black text-muted-foreground uppercase tracking-wider">{t("returns.summaryTitle", { namespace: "inventory" })}</h4>
+              <div className="flex items-center justify-between text-xs pt-1 border-t border-muted/50">
+                <span className="text-muted-foreground font-semibold">{t("returns.selectedMaterials", { namespace: "inventory" })}</span>
+                <span className="font-bold text-foreground">{t("returns.itemsCount", { namespace: "inventory", vars: { count: selectedLines.length } })}</span>
               </div>
               <div className="flex items-center justify-between text-xs pt-1">
-                <span className="text-slate-500 font-semibold">{t("returns.total", { namespace: "inventory" })}</span>
+                <span className="text-muted-foreground font-semibold">{t("returns.total", { namespace: "inventory" })}</span>
                 <span className={cn(
                   "text-sm font-black tabular-nums",
-                  isSales ? "text-blue-700" : "text-amber-700"
+                  isSales ? "text-primary" : "text-amber-700"
                 )}>
                   {sumTotal.toFixed(2)} ر.س
                 </span>

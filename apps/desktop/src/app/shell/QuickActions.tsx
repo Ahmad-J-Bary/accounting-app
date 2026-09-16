@@ -40,7 +40,7 @@ export function QuickActions({ actions, columns = 4 }: QuickActionsProps) {
       icon: Receipt,
       description: t("quickActionsList.newSalesInvoiceDesc", { namespace: "shell",  }),
       onClick: handleNewInvoice,
-      color: 'bg-blue-50 text-blue-600 hover:bg-blue-100',
+      color: 'bg-primary/10 text-primary hover:bg-primary/20',
     },
     {
       label: t("quickActionsList.newPurchaseInvoice", { namespace: "shell",  }),

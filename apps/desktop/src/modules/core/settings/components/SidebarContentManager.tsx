@@ -114,20 +114,20 @@ export const SidebarContentManager: React.FC = () => {
     <SettingsManagerLayout resetAction={resetToDefault}>
       <div className="space-y-6" dir="rtl">
         {/* Title */}
-        <div className="flex flex-col gap-1 border-r-4 border-blue-600 pr-3 pb-1 mb-2">
-          <h2 className="text-xl font-black text-slate-800 font-sans">{t("sidebarContent.title", { namespace: "settings",  })}</h2>
+        <div className="flex flex-col gap-1 border-r-4 border-primary pr-3 pb-1 mb-2">
+          <h2 className="text-xl font-black text-foreground font-sans">{t("sidebarContent.title", { namespace: "settings",  })}</h2>
           <p className="text-xs text-muted-foreground font-sans">{t("sidebarContent.description", { namespace: "settings",  })}</p>
         </div>
 
         {/* ── 1. إدارة المجموعات ── */}
-        <SettingsGroup title={t("sidebarContent.groupsTitle", { namespace: "settings",  })} icon={Settings2} color="text-blue-600">
+        <SettingsGroup title={t("sidebarContent.groupsTitle", { namespace: "settings",  })} icon={Settings2} color="text-primary">
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <span className="text-xs text-muted-foreground font-medium">{t("sidebarContent.groupsHint", { namespace: "settings",  })}</span>
               <Button
                 size="sm"
                 onClick={() => setShowAddGroup(prev => !prev)}
-                className="bg-blue-600 hover:bg-blue-700 h-9 font-bold text-xs gap-1.5 rounded-lg"
+                className="bg-primary hover:bg-primary/80 h-9 font-bold text-xs gap-1.5 rounded-lg"
               >
                 {showAddGroup ? <X className="w-4 h-4" /> : <FolderPlus className="w-4 h-4" />}
                 {showAddGroup ? t("sidebarContent.cancel", { namespace: "settings",  }) : t("sidebarContent.addCustomGroup", { namespace: "settings",  })}
@@ -135,17 +135,17 @@ export const SidebarContentManager: React.FC = () => {
             </div>
 
             {showAddGroup && (
-              <div className="p-3 bg-blue-50/50 border border-blue-100 rounded-xl animate-in fade-in slide-in-from-top-2 duration-200 space-y-3">
+              <div className="p-3 bg-primary/10 border border-primary/20 rounded-xl animate-in fade-in slide-in-from-top-2 duration-200 space-y-3">
                 <div className="flex items-center gap-2">
                   <input
                     type="text"
                     placeholder={t("sidebarContent.groupNamePlaceholder", { namespace: "settings",  })}
                     value={newGroupTitle}
                     onChange={(e) => setNewGroupTitle(e.target.value)}
-                    className="flex-1 px-3 py-1.5 text-xs border border-border rounded-lg outline-none focus:border-blue-500 font-bold"
+                    className="flex-1 px-3 py-1.5 text-xs border border-border rounded-lg outline-none focus:border-primary font-bold"
                     onKeyDown={(e) => e.key === 'Enter' && handleAddGroup()}
                   />
-                  <Button size="sm" onClick={handleAddGroup} className="bg-blue-600 hover:bg-blue-700 text-xs font-bold rounded-lg h-8 shrink-0">
+                  <Button size="sm" onClick={handleAddGroup} className="bg-primary hover:bg-primary/80 text-xs font-bold rounded-lg h-8 shrink-0">
                     <Plus className="w-3.5 h-3.5 ml-1" />
                     {t("sidebarContent.add", { namespace: "settings",  })}
                   </Button>
@@ -189,11 +189,11 @@ export const SidebarContentManager: React.FC = () => {
                             type="text"
                             value={editGroupTitle}
                             onChange={(e) => setEditGroupTitle(e.target.value)}
-                            className="w-full px-2 py-1 text-xs border border-border rounded outline-none focus:border-blue-500 font-bold"
+                            className="w-full px-2 py-1 text-xs border border-border rounded outline-none focus:border-primary font-bold"
                             onKeyDown={(e) => e.key === 'Enter' && handleSaveRenameGroup(group.id)}
                             autoFocus
                           />
-                          <button onClick={() => handleSaveRenameGroup(group.id)} className="p-1 rounded text-emerald-600 hover:bg-emerald-50">
+                          <button onClick={() => handleSaveRenameGroup(group.id)} className="p-1 rounded text-success hover:bg-success/10">
                             <Save className="w-3.5 h-3.5" />
                           </button>
                           <button onClick={() => setEditingGroupId(null)} className="p-1 rounded text-red-500 hover:bg-red-50">
@@ -202,13 +202,13 @@ export const SidebarContentManager: React.FC = () => {
                         </div>
                       ) : (
                         <div className="flex items-center gap-2 min-w-0">
-                          <span className="font-black text-xs text-slate-800 truncate">{displayTitle}</span>
+                          <span className="font-black text-xs text-foreground truncate">{displayTitle}</span>
                           {group.isCustom && (
-                            <span className="bg-blue-50 text-blue-600 text-[8px] font-black px-1.5 py-0.5 rounded-full">{t("sidebarContent.customBadge", { namespace: "settings",  })}</span>
+                            <span className="bg-primary/10 text-primary text-[8px] font-black px-1.5 py-0.5 rounded-full">{t("sidebarContent.customBadge", { namespace: "settings",  })}</span>
                           )}
                           <button
                             onClick={() => handleStartRenameGroup(group.id, displayTitle)}
-                            className="p-1 rounded text-muted-foreground hover:text-blue-500 transition-colors"
+                            className="p-1 rounded text-muted-foreground hover:text-primary transition-colors"
                           >
                             <Edit2 className="w-3 h-3" />
                           </button>
@@ -225,7 +225,7 @@ export const SidebarContentManager: React.FC = () => {
                       {/* إخفاء / إظهار */}
                       <button
                         onClick={() => toggleGroupVisible(group.id)}
-                        className={cn("p-1.5 rounded-lg border transition-colors", group.visible ? "text-blue-600 bg-blue-50/50 border-blue-100 hover:bg-blue-100/60" : "text-muted-foreground border-border hover:bg-accent")}
+                        className={cn("p-1.5 rounded-lg border transition-colors", group.visible ? "text-primary bg-primary/10 border-primary/20 hover:bg-primary/20" : "text-muted-foreground border-border hover:bg-accent")}
                         title={group.visible ? t("sidebarContent.hideGroup", { namespace: "settings",  }) : t("sidebarContent.showGroup", { namespace: "settings",  })}
                       >
                         {group.visible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
@@ -254,7 +254,7 @@ export const SidebarContentManager: React.FC = () => {
         </SettingsGroup>
 
         {/* ── 2. إدارة عناصر المجموعات وتخطيطها ── */}
-        <SettingsGroup title={t("sidebarContent.itemsTitle", { namespace: "settings",  })} icon={Link} color="text-indigo-600">
+        <SettingsGroup title={t("sidebarContent.itemsTitle", { namespace: "settings",  })} icon={Link} color="text-primary">
           <div className="space-y-6">
             {layout.groups.map((group) => {
               const displayGroupTitle = groupTitle(group);
@@ -263,8 +263,8 @@ export const SidebarContentManager: React.FC = () => {
                   {/* ترويسة المجموعة */}
                   <div className="flex items-center justify-between px-4 py-2.5 bg-muted border-b border-border">
                     <div className="flex items-center gap-2">
-                      <span className="text-xs font-black text-slate-800">{displayGroupTitle}</span>
-                      {group.isCustom && <span className="bg-blue-100 text-blue-700 text-[8px] font-black px-1.5 py-0.5 rounded-full">{t("sidebarContent.customGroupBadge", { namespace: "settings",  })}</span>}
+                      <span className="text-xs font-black text-foreground">{displayGroupTitle}</span>
+                      {group.isCustom && <span className="bg-primary/20 text-primary text-[8px] font-black px-1.5 py-0.5 rounded-full">{t("sidebarContent.customGroupBadge", { namespace: "settings",  })}</span>}
                     </div>
                     <span className="text-[10px] text-muted-foreground font-bold">{t("sidebarContent.activeItems", { namespace: "settings", vars: { count: group.items.filter(i => i.visible).length } })}</span>
                   </div>
@@ -311,11 +311,11 @@ export const SidebarContentManager: React.FC = () => {
                                     type="text"
                                     value={editItemLabel}
                                     onChange={(e) => setEditItemLabel(e.target.value)}
-                                    className="w-full px-2 py-0.5 text-xs border border-border rounded outline-none focus:border-blue-500 font-bold"
+                                    className="w-full px-2 py-0.5 text-xs border border-border rounded outline-none focus:border-primary font-bold"
                                     onKeyDown={(e) => e.key === 'Enter' && handleSaveRenameItem(item.id)}
                                     autoFocus
                                   />
-                                  <button onClick={() => handleSaveRenameItem(item.id)} className="p-0.5 rounded text-emerald-600 hover:bg-emerald-50">
+                                  <button onClick={() => handleSaveRenameItem(item.id)} className="p-0.5 rounded text-success hover:bg-success/10">
                                     <Save className="w-3 h-3" />
                                   </button>
                                   <button onClick={() => setEditingItemId(null)} className="p-0.5 rounded text-red-500 hover:bg-red-50">
@@ -324,12 +324,12 @@ export const SidebarContentManager: React.FC = () => {
                                 </div>
                               ) : (
                                 <div className="flex items-center gap-1.5 min-w-0">
-                                  <span className="text-xs font-bold text-slate-700 truncate">{displayItemLabel}</span>
+                                  <span className="text-xs font-bold text-foreground truncate">{displayItemLabel}</span>
                                   <span className="text-[9px] text-muted-foreground truncate direction-ltr">({item.to})</span>
-                                  {item.isCustom && <span className="bg-emerald-50 text-emerald-600 text-[8px] font-black px-1 rounded-full">{t("sidebarContent.customItemBadge", { namespace: "settings",  })}</span>}
+                                  {item.isCustom && <span className="bg-success/10 text-success text-[8px] font-black px-1 rounded-full">{t("sidebarContent.customItemBadge", { namespace: "settings",  })}</span>}
                                   <button
                                     onClick={() => handleStartRenameItem(item.id, displayItemLabel)}
-                                    className="p-0.5 rounded text-muted-foreground hover:text-blue-500 transition-colors"
+                                    className="p-0.5 rounded text-muted-foreground hover:text-primary transition-colors"
                                   >
                                     <Edit2 className="w-2.5 h-2.5" />
                                   </button>
@@ -343,7 +343,7 @@ export const SidebarContentManager: React.FC = () => {
                               <select
                                 value={group.id}
                                 onChange={(e) => moveItemToGroup(item.id, e.target.value)}
-                                className="text-[10px] bg-muted border border-border rounded px-1.5 py-1 outline-none text-muted-foreground font-bold focus:border-blue-500"
+                                className="text-[10px] bg-muted border border-border rounded px-1.5 py-1 outline-none text-muted-foreground font-bold focus:border-primary"
                               >
                                 {layout.groups.map(g => (
                                   <option key={g.id} value={g.id}>{groupTitle(g)}</option>
@@ -353,7 +353,7 @@ export const SidebarContentManager: React.FC = () => {
                               {/* إظهار / إخفاء */}
                               <button
                                 onClick={() => toggleItemVisible(item.id)}
-                                className={cn("p-1 rounded transition-colors", item.visible ? "text-emerald-500 hover:bg-emerald-50/50" : "text-slate-350 hover:bg-accent")}
+                                className={cn("p-1 rounded transition-colors", item.visible ? "text-success hover:bg-success/10" : "text-muted-foreground hover:bg-accent")}
                                 title={item.visible ? t("sidebarContent.hideItem", { namespace: "settings",  }) : t("sidebarContent.showItem", { namespace: "settings",  })}
                               >
                                 {item.visible ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
@@ -362,10 +362,10 @@ export const SidebarContentManager: React.FC = () => {
                               {/* تثبيت */}
                               <button
                                 onClick={() => toggleItemPinned(item.id)}
-                                className={cn("p-1 rounded transition-colors", item.pinned ? "text-amber-500 hover:bg-amber-50/50" : "text-slate-350 hover:bg-accent")}
+                                className={cn("p-1 rounded transition-colors", item.pinned ? "text-warning hover:bg-warning/10" : "text-muted-foreground hover:bg-accent")}
                                 title={item.pinned ? t("sidebarContent.unpin", { namespace: "settings",  }) : t("sidebarContent.pin", { namespace: "settings",  })}
                               >
-                                {item.pinned ? <Pin className="w-3.5 h-3.5 fill-amber-500" /> : <PinOff className="w-3.5 h-3.5" />}
+                                {item.pinned ? <Pin className="w-3.5 h-3.5 fill-warning" /> : <PinOff className="w-3.5 h-3.5" />}
                               </button>
 
                               {/* حذف إذا كان مخصصاً */}
@@ -395,14 +395,14 @@ export const SidebarContentManager: React.FC = () => {
         </SettingsGroup>
 
         {/* ── 3. إضافة عناصر جديدة من المسارات المتاحة ── */}
-        <SettingsGroup title={t("sidebarContent.addRouteTitle", { namespace: "settings",  })} icon={Plus} color="text-emerald-600">
+        <SettingsGroup title={t("sidebarContent.addRouteTitle", { namespace: "settings",  })} icon={Plus} color="text-success">
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <span className="text-xs text-muted-foreground font-medium">{t("sidebarContent.addRouteHint", { namespace: "settings",  })}</span>
               <Button
                 size="sm"
                 onClick={() => setShowAddItem(prev => !prev)}
-                className="bg-emerald-600 hover:bg-emerald-700 h-9 font-bold text-xs gap-1.5 rounded-lg"
+                className="bg-success hover:bg-success/80 h-9 font-bold text-xs gap-1.5 rounded-lg"
               >
                 {showAddItem ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
                 {showAddItem ? t("sidebarContent.cancel", { namespace: "settings",  }) : t("sidebarContent.addItem", { namespace: "settings",  })}
@@ -410,7 +410,7 @@ export const SidebarContentManager: React.FC = () => {
             </div>
 
             {showAddItem && (
-              <div className="p-4 bg-emerald-50/40 border border-emerald-100 rounded-xl space-y-3 animate-in fade-in slide-in-from-top-2 duration-200">
+              <div className="p-4 bg-success/10 border border-success/20 rounded-xl space-y-3 animate-in fade-in slide-in-from-top-2 duration-200">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div className="space-y-1.5">
                     <span className="text-[10px] text-muted-foreground font-bold">{t("sidebarContent.routeField", { namespace: "settings",  })}</span>
@@ -428,7 +428,7 @@ export const SidebarContentManager: React.FC = () => {
                           }
                         }
                       }}
-                      className="w-full h-10 px-3 text-xs border border-border rounded-lg outline-none bg-card focus:border-emerald-500 font-bold"
+                      className="w-full h-10 px-3 text-xs border border-border rounded-lg outline-none bg-card focus:border-success font-bold"
                     >
                       <option value="">{t("sidebarContent.selectRoute", { namespace: "settings",  })}</option>
                       {ALL_SYSTEM_ROUTES
@@ -440,7 +440,7 @@ export const SidebarContentManager: React.FC = () => {
                         ))}
                     </select>
                     {addItemRouteId && (
-                      <p className="text-[9px] text-emerald-600 font-bold flex items-center gap-1">
+                      <p className="text-[9px] text-success font-bold flex items-center gap-1">
                         <span>{t("sidebarContent.pathLabel", { namespace: "settings",  })}</span>
                         <span className="direction-ltr" dir="ltr">
                           {findRouteById(addItemRouteId)?.to}
@@ -454,7 +454,7 @@ export const SidebarContentManager: React.FC = () => {
                     <select
                       value={addItemGroupId}
                       onChange={(e) => setAddItemGroupId(e.target.value)}
-                      className="w-full h-10 px-3 text-xs border border-border rounded-lg outline-none bg-card focus:border-emerald-500 font-bold"
+                      className="w-full h-10 px-3 text-xs border border-border rounded-lg outline-none bg-card focus:border-success font-bold"
                     >
                       <option value="">{t("sidebarContent.selectGroup", { namespace: "settings",  })}</option>
                       {layout.groups.filter(g => g.visible).map(g => (
@@ -472,7 +472,7 @@ export const SidebarContentManager: React.FC = () => {
                       value={addItemLabel}
                       onChange={(e) => setAddItemLabel(e.target.value)}
                       placeholder={t("sidebarContent.customLabelPlaceholder", { namespace: "settings",  })}
-                      className="w-full h-10 px-3 text-xs border border-border rounded-lg outline-none focus:border-emerald-500 font-bold"
+                      className="w-full h-10 px-3 text-xs border border-border rounded-lg outline-none focus:border-success font-bold"
                     />
                   </div>
 
@@ -495,7 +495,7 @@ export const SidebarContentManager: React.FC = () => {
                       setAddItemIcon('Layers');
                       setAddItemLabel('');
                     }}
-                    className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed text-xs font-bold rounded-lg h-9 gap-1.5"
+                    className="bg-success hover:bg-success/80 disabled:opacity-40 disabled:cursor-not-allowed text-xs font-bold rounded-lg h-9 gap-1.5"
                   >
                     <Plus className="w-4 h-4" />
                     {t("sidebarContent.addToGroup", { namespace: "settings",  })}
@@ -506,7 +506,7 @@ export const SidebarContentManager: React.FC = () => {
 
             {/* لائحة بجميع مسارات النظام */}
             <div className="border border-border rounded-xl overflow-hidden bg-card shadow-sm">
-              <div className="px-3 py-2 bg-muted border-b border-slate-100">
+              <div className="px-3 py-2 bg-muted border-b border-primary/20">
                 <span className="text-[10px] text-muted-foreground font-bold">{t("sidebarContent.allRoutes", { namespace: "settings",  })}</span>
               </div>
               <div className="divide-y divide-border">
@@ -517,12 +517,12 @@ export const SidebarContentManager: React.FC = () => {
                     <div key={item.id} className="flex items-center justify-between px-3 py-2 hover:bg-accent/50 transition-colors">
                       <div className="flex items-center gap-2.5 min-w-0">
                         <IconComp className={cn("w-4 h-4 shrink-0", isInSidebar ? "text-muted-foreground" : "text-muted-foreground")} />
-                          <span className={cn("text-xs font-bold truncate", isInSidebar ? "text-slate-800" : "text-muted-foreground")}>{routeLabel(item.id, item.label)}</span>
+                          <span className={cn("text-xs font-bold truncate", isInSidebar ? "text-foreground" : "text-muted-foreground")}>{routeLabel(item.id, item.label)}</span>
                         <span className="text-[9px] text-muted-foreground direction-ltr" dir="ltr">{item.to}</span>
                         {item.groupId && <span className="text-[8px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full">{t(`nav.groups.${item.groupId}`, { namespace: "shell", fallback: item.groupLabel, })}</span>}
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
-                        <span className={cn("text-[9px] font-bold px-1.5 py-0.5 rounded-full", isInSidebar ? "bg-emerald-50 text-emerald-600" : "bg-muted text-muted-foreground")}>
+                        <span className={cn("text-[9px] font-bold px-1.5 py-0.5 rounded-full", isInSidebar ? "bg-success/10 text-success" : "bg-muted text-muted-foreground")}>
                           {isInSidebar ? t("sidebarContent.added", { namespace: "settings",  }) : t("sidebarContent.notAdded", { namespace: "settings",  })}
                         </span>
                       </div>

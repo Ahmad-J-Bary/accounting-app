@@ -48,11 +48,11 @@ export function AboutSettings() {
           </div>
 
           {phase === "ready" && (
-            <div className="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-xl p-3 sm:p-4 space-y-3">
-              <p className="text-sm font-bold text-emerald-700 dark:text-emerald-300 text-center">{t("about.readyToInstall", { namespace: "settings" })}</p>
+            <div className="bg-success/10 dark:bg-success/30 border border-success/20 dark:border-success rounded-xl p-3 sm:p-4 space-y-3">
+              <p className="text-sm font-bold text-success dark:text-success/60 text-center">{t("about.readyToInstall", { namespace: "settings" })}</p>
               <Button
                 size="sm"
-                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl h-9 text-xs font-bold gap-1.5"
+                className="w-full bg-success hover:bg-success/80 text-white rounded-xl h-9 text-xs font-bold gap-1.5"
                 onClick={restartToUpdate}
               >
                 <RotateCcw className="w-3.5 h-3.5" />
@@ -64,13 +64,13 @@ export function AboutSettings() {
           {phase === "failed" && (
             <div className="space-y-2">
               {updateError && (
-                <div className="text-xs text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800 rounded-xl p-3 sm:p-3.5 font-bold">
+                <div className="text-xs text-destructive dark:text-destructive/80 bg-destructive/10 dark:bg-destructive/30 border border-destructive/20 dark:border-destructive rounded-xl p-3 sm:p-3.5 font-bold">
                   {t("about.updateError", { namespace: "settings", vars: { error: updateError } })}
                 </div>
               )}
               <Button
                 size="sm"
-                className="w-full bg-rose-600 hover:bg-rose-700 text-white rounded-xl h-9 text-xs font-bold gap-1.5"
+                className="w-full bg-destructive hover:bg-destructive/80 text-white rounded-xl h-9 text-xs font-bold gap-1.5"
                 onClick={retry}
               >
                 <RefreshCw className="w-3.5 h-3.5" />
@@ -80,7 +80,7 @@ export function AboutSettings() {
           )}
 
           {updateError && phase !== "failed" && (
-            <div className="text-xs text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800 rounded-xl p-3 sm:p-3.5 font-bold">
+            <div className="text-xs text-destructive dark:text-destructive/80 bg-destructive/10 dark:bg-destructive/30 border border-destructive/20 dark:border-destructive rounded-xl p-3 sm:p-3.5 font-bold">
               {t("about.updateError", { namespace: "settings", vars: { error: updateError } })}
             </div>
           )}
@@ -104,20 +104,20 @@ export function AboutSettings() {
           {isUpdating && <UpdateProgress progress={updateProgress} phase={phase} />}
 
           {updateInfo && updateInfo.has_update && phase === "available" && (
-            <div className="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-xl p-3 sm:p-4 space-y-3">
-              <p className="text-sm font-bold text-emerald-700 dark:text-emerald-300 flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+            <div className="bg-success/10 dark:bg-success/30 border border-success/20 dark:border-success rounded-xl p-3 sm:p-4 space-y-3">
+              <p className="text-sm font-bold text-success dark:text-success/60 flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-success animate-pulse shrink-0" />
                 {t("about.updateAvailable", { namespace: "settings", vars: { version: updateInfo.latest_version } })}
               </p>
               {updateInfo.release_body && (
-                <div className="text-xs text-emerald-700 dark:text-emerald-400 bg-card rounded-lg p-3 max-h-32 overflow-y-auto whitespace-pre-wrap font-mono">
+                <div className="text-xs text-success dark:text-success/80 bg-card rounded-lg p-3 max-h-32 overflow-y-auto whitespace-pre-wrap font-mono">
                   {updateInfo.release_body}
                 </div>
               )}
               <div className="flex gap-2">
                 <Button
                   size="sm"
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl h-9 text-xs font-bold gap-1.5"
+                  className="bg-success hover:bg-success/80 text-white rounded-xl h-9 text-xs font-bold gap-1.5"
                   onClick={installUpdate}
                 >
                   <Download className="w-3.5 h-3.5" />

@@ -140,9 +140,9 @@ export function PaymentsTable({
         accessor: (p) => (
           <div className="flex items-center gap-2">
             {isIncomingPayment(p.payment_type) ? (
-              <ArrowDownCircle className="w-3.5 h-3.5 text-emerald-500" />
+              <ArrowDownCircle className="w-3.5 h-3.5 text-success" />
             ) : (
-              <ArrowUpCircle className="w-3.5 h-3.5 text-rose-500" />
+              <ArrowUpCircle className="w-3.5 h-3.5 text-destructive" />
             )}
             <span className="font-bold text-[11px]">
               {t(`paymentTypeLabel.${p.payment_type as string}`, {
@@ -189,7 +189,7 @@ export function PaymentsTable({
           }
           return "";
         },
-        className: "font-medium text-slate-800 text-sm",
+        className: "font-medium text-foreground text-sm",
       },
       {
         id: "debit_account",
@@ -202,7 +202,7 @@ export function PaymentsTable({
           }
           return "";
         },
-        className: "font-medium text-slate-800 text-sm",
+        className: "font-medium text-foreground text-sm",
       },
       {
         id: "payment_date",
@@ -372,8 +372,8 @@ export function PaymentsTable({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all" className="text-xs font-bold">{t("actions.all", { namespace: "common",  })}</SelectItem>
-            <SelectItem value="incoming" className="text-xs font-bold text-emerald-600">{t("payment.filterReceipt", { namespace: "invoicing",  })}</SelectItem>
-            <SelectItem value="outgoing" className="text-xs font-bold text-rose-600">{t("payment.filterPayment", { namespace: "invoicing",  })}</SelectItem>
+            <SelectItem value="incoming" className="text-xs font-bold text-success">{t("payment.filterReceipt", { namespace: "invoicing",  })}</SelectItem>
+            <SelectItem value="outgoing" className="text-xs font-bold text-destructive">{t("payment.filterPayment", { namespace: "invoicing",  })}</SelectItem>
           </SelectContent>
         </Select>
       }

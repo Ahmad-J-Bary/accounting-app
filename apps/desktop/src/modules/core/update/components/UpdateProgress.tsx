@@ -84,14 +84,14 @@ export function UpdateProgress({
           <div className="flex items-center gap-1.5 font-mono">
             {phase === 'downloading' && (
               <>
-                <Loader2 className="w-3 h-3 animate-spin text-blue-500" />
+                <Loader2 className="w-3 h-3 animate-spin text-primary" />
                 <span>{formatMB(dlBytes)} / {formatMB(tlBytes)} MB</span>
                 {speed > 0 && <span className="opacity-60">({formatSpeed(speed)})</span>}
               </>
             )}
             {phase === 'preparing' && (
               <>
-                <Loader2 className="w-3 h-3 animate-spin text-amber-500" />
+                <Loader2 className="w-3 h-3 animate-spin text-warning" />
                 <span>جاري استخراج وتحضير ملفات التثبيت...</span>
               </>
             )}
@@ -104,7 +104,7 @@ export function UpdateProgress({
           <div 
             className={cn(
               "h-full rounded-full transition-all duration-300 ease-out",
-              phase === 'preparing' ? "bg-amber-500 animate-pulse w-full" : "bg-blue-600"
+              phase === 'preparing' ? "bg-warning animate-pulse w-full" : "bg-primary"
             )} 
             style={{ width: phase === 'preparing' ? '100%' : `${pct}%` }} 
           />
@@ -125,9 +125,9 @@ export function UpdateProgress({
               {/* Step indicator circle */}
               <div className={cn(
                 "w-8 h-8 rounded-full flex items-center justify-center border-2 transition-all duration-350 shadow-sm",
-                status === 'done' && "bg-emerald-500 border-emerald-500 text-white",
-                status === 'active' && "bg-blue-600 border-blue-600 text-white ring-4 ring-blue-100 dark:ring-blue-900/30",
-                status === 'failed' && "bg-rose-500 border-rose-500 text-white",
+                status === 'done' && "bg-success border-success text-white",
+                status === 'active' && "bg-primary border-primary text-white ring-4 ring-primary/20 dark:ring-primary/10",
+                status === 'failed' && "bg-destructive border-destructive text-white",
                 status === 'pending' && "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-400"
               )}>
                 {status === 'done' && <Check className="w-4 h-4 stroke-[3]" />}
@@ -139,9 +139,9 @@ export function UpdateProgress({
               {/* Label */}
               <span className={cn(
                 "text-xs font-semibold mt-2 transition-colors duration-300",
-                status === 'done' && "text-emerald-600 dark:text-emerald-400",
-                status === 'active' && "text-blue-600 dark:text-blue-400",
-                status === 'failed' && "text-rose-600 dark:text-rose-400",
+                status === 'done' && "text-success dark:text-success/80",
+                status === 'active' && "text-primary dark:text-primary/80",
+                status === 'failed' && "text-destructive dark:text-destructive/80",
                 status === 'pending' && "text-slate-400 dark:text-slate-500",
               )}>
                 {s.label}
@@ -159,15 +159,15 @@ export function UpdateProgress({
         <div className="space-y-2 bg-slate-50 dark:bg-slate-900/50 p-4 border border-slate-100 dark:border-slate-800 rounded-xl">
           <div className="flex justify-between items-center text-xs font-medium text-slate-700 dark:text-slate-300">
             <span className="flex items-center gap-1">
-              <HardDrive className="w-3.5 h-3.5 text-blue-500" />
+              <HardDrive className="w-3.5 h-3.5 text-primary" />
               تم تحميل {formatMB(dlBytes)} ميجابايت من أصل {formatMB(tlBytes)} ميجابايت
             </span>
-            <span className="font-bold text-blue-600 dark:text-blue-400">{pct}%</span>
+            <span className="font-bold text-primary dark:text-primary/80">{pct}%</span>
           </div>
 
           <div className="w-full bg-slate-200 dark:bg-slate-800 rounded-full h-2.5 overflow-hidden">
             <div 
-              className="bg-blue-600 h-full rounded-full transition-all duration-200 ease-out" 
+              className="bg-primary h-full rounded-full transition-all duration-200 ease-out" 
               style={{ width: `${pct}%` }} 
             />
           </div>
@@ -184,24 +184,24 @@ export function UpdateProgress({
 
       {/* Phase status messages */}
       {phase === 'preparing' && (
-        <div className="p-4 bg-amber-50/50 dark:bg-amber-950/10 border border-amber-100 dark:border-amber-900/20 rounded-xl text-center text-sm text-amber-700 dark:text-amber-400 flex items-center justify-center gap-2">
-          <Loader2 className="w-4 h-4 animate-spin text-amber-500" />
+        <div className="p-4 bg-warning/10 dark:bg-warning/5 border border-warning/20 dark:border-warning/10 rounded-xl text-center text-sm text-warning dark:text-warning/80 flex items-center justify-center gap-2">
+              <Loader2 className="w-4 h-4 animate-spin text-warning" />
           <span>جاري استخراج الملفات وتحضير الحزمة لتثبيت التحديث...</span>
         </div>
       )}
 
       {phase === 'ready' && (
-        <div className="p-4 bg-emerald-50/50 dark:bg-emerald-950/10 border border-emerald-100 dark:border-emerald-900/20 rounded-xl text-center text-sm text-emerald-700 dark:text-emerald-400 flex items-center justify-center gap-2 font-medium">
-          <Check className="w-4 h-4 text-emerald-500 stroke-[3]" />
+        <div className="p-4 bg-success/10 dark:bg-success/5 border border-success/20 dark:border-success/10 rounded-xl text-center text-sm text-success dark:text-success/80 flex items-center justify-center gap-2 font-medium">
+          <Check className="w-4 h-4 text-success stroke-[3]" />
           <span>جاهز لتطبيق التحديث! انقر فوق "إعادة التشغيل" للمتابعة.</span>
         </div>
       )}
 
       {/* Error container */}
       {phase === 'failed' && error && (
-        <div className="text-sm text-rose-700 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/10 border border-rose-200 dark:border-rose-900/20 rounded-xl px-4 py-3">
+        <div className="text-sm text-destructive dark:text-destructive/80 bg-destructive/10 dark:bg-destructive/5 border border-destructive/20 dark:border-destructive/10 rounded-xl px-4 py-3">
           <div className="font-bold mb-1 flex items-center gap-1.5">
-            <X className="w-4 h-4 text-rose-500" />
+            <X className="w-4 h-4 text-destructive" />
             فشلت عملية التحديث
           </div>
           <div className="text-xs opacity-90 leading-relaxed">{error}</div>

@@ -75,21 +75,21 @@ export function PartnerDetailView({
       <SidebarActionBar actions={actions} />
       <SidebarBody>
         <div className="text-right space-y-6">
-          <div className="p-5 border border-slate-100 rounded-2xl bg-slate-50/30">
-            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-2 mb-4">
+          <div className="p-5 border border-muted rounded-2xl bg-muted/30">
+            <h4 className="text-[10px] font-black text-muted-foreground uppercase tracking-widest border-b border-muted pb-2 mb-4">
               {t("view.investmentSection", { namespace: "partners",  })}
             </h4>
             <div className="grid grid-cols-2 gap-3">
-              <div className="p-3 bg-white rounded-xl border border-slate-100">
-                <div className="text-[10px] text-slate-400 font-bold uppercase mb-1">
+              <div className="p-3 bg-white rounded-xl border border-muted">
+                <div className="text-[10px] text-muted-foreground font-bold uppercase mb-1">
                   {t("view.fields.originalAmount", { namespace: "partners",  })}
                 </div>
                 <div className="text-lg font-black text-slate-900 tabular-nums">
                   {formatWithLocale(parseFloat(partner.amount_original || "0"), partnerCurrency?.decimals ?? 2)} {partnerCurrency?.symbol || partner.currency || ""}
                 </div>
               </div>
-              <div className="p-3 bg-white rounded-xl border border-slate-100">
-                <div className="text-[10px] text-slate-400 font-bold uppercase mb-1">
+              <div className="p-3 bg-white rounded-xl border border-muted">
+                <div className="text-[10px] text-muted-foreground font-bold uppercase mb-1">
                   {t("view.fields.baseEquivalent", { namespace: "partners", vars: { currency: baseCurrency?.symbol || baseCurrency?.code || "" },  })}
                 </div>
                 <div className="text-lg font-black text-slate-900 tabular-nums">
@@ -98,30 +98,30 @@ export function PartnerDetailView({
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3 mt-4">
-              <div className="p-3 bg-white rounded-xl border border-slate-100">
-                <div className="text-[10px] text-slate-400 font-bold uppercase mb-1">
+              <div className="p-3 bg-white rounded-xl border border-muted">
+                <div className="text-[10px] text-muted-foreground font-bold uppercase mb-1">
                   {t("view.fields.capitalRatio", { namespace: "partners",  })}
                 </div>
                 <div className="text-sm font-black text-blue-700 tabular-nums">
                   {toFixed(partner.calculatedCapitalRatio, 2) || "0.00"}%
                 </div>
               </div>
-              <div className="p-3 bg-white rounded-xl border border-slate-100">
-                <div className="text-[10px] text-slate-400 font-bold uppercase mb-1">
+              <div className="p-3 bg-white rounded-xl border border-muted">
+                <div className="text-[10px] text-muted-foreground font-bold uppercase mb-1">
                   {t("view.fields.profitRatio", { namespace: "partners",  })}
                 </div>
-                <div className="text-sm font-black text-emerald-700 tabular-nums">
+                <div className="text-sm font-black text-success tabular-nums">
                   {toFixed(actualProfitRatio, 2)}%
                 </div>
               </div>
             </div>
           </div>
           {partner.notes && (
-            <div className="p-5 border border-slate-100 rounded-2xl bg-slate-50/30">
-              <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-2 mb-4">
+            <div className="p-5 border border-muted rounded-2xl bg-muted/30">
+              <h4 className="text-[10px] font-black text-muted-foreground uppercase tracking-widest border-b border-muted pb-2 mb-4">
                 {t("view.fields.notes", { namespace: "partners",  })}
               </h4>
-              <p className="text-sm text-slate-700 whitespace-pre-wrap">{partner.notes}</p>
+              <p className="text-sm text-foreground whitespace-pre-wrap">{partner.notes}</p>
             </div>
           )}
         </div>

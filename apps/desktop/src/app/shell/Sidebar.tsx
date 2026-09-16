@@ -95,18 +95,18 @@ export function Sidebar({ collapsed: _collapsed, onClose }: SidebarProps) {
   const sectionSpacing = navDensity === 'compact' ? 'space-y-3' : navDensity === 'spacious' ? 'space-y-7' : 'space-y-5';
   const actualWidth = getNavWidth();
 
-  const isBgLight = navBackground === 'bg-white' || navBackground === 'bg-slate-50';
+  const isBgLight = navBackground === 'bg-white' || navBackground === 'bg-muted';
   const isVerticalLight = verticalNavbarAppearance === 'light';
-  const effectiveBg = isVerticalLight ? 'bg-slate-50' : navBackground;
+  const effectiveBg = isVerticalLight ? 'bg-muted' : navBackground;
   const effectiveTextClass = isVerticalLight
-    ? 'text-slate-800'
-    : isBgLight ? 'text-slate-800' : 'text-white';
+    ? 'text-foreground'
+    : isBgLight ? 'text-foreground' : 'text-white';
   const effectiveBorderClass = isVerticalLight
-    ? 'border-slate-200'
-    : isBgLight ? 'border-slate-200' : 'border-slate-800/50';
+    ? 'border-muted'
+    : isBgLight ? 'border-muted' : 'border-slate-800/50';
   const effectiveActiveBg = isVerticalLight ? 'bg-primary/10' : navActiveBg;
   const effectiveHoverBg = isVerticalLight
-    ? 'hover:bg-slate-100 hover:text-slate-700'
+    ? 'hover:bg-muted hover:text-foreground'
     : navHoverBg;
 
   const handleToggleCollapse = () => {
@@ -126,10 +126,10 @@ export function Sidebar({ collapsed: _collapsed, onClose }: SidebarProps) {
     const selectedGroup = visibleGroups.find(g => g.id === selectedStackedGroupId) ?? visibleGroups[0] ?? null;
     const isRailDark = verticalNavbarAppearance === 'dark';
     const railBg = isRailDark ? 'bg-slate-950' : 'bg-white';
-    const railBorder = isRailDark ? 'border-slate-800' : 'border-slate-200';
-    const railIconBase = isRailDark ? 'text-slate-500' : 'text-slate-400';
-    const railIconHover = isRailDark ? 'hover:bg-slate-800 hover:text-white' : 'hover:bg-slate-100 hover:text-slate-700';
-    const railIconActive = isRailDark ? 'bg-blue-500/20 text-blue-400' : 'bg-primary/10 text-primary';
+    const railBorder = isRailDark ? 'border-slate-800' : 'border-muted';
+    const railIconBase = isRailDark ? 'text-muted-foreground' : 'text-muted-foreground';
+    const railIconHover = isRailDark ? 'hover:bg-slate-800 hover:text-white' : 'hover:bg-muted hover:text-foreground';
+    const railIconActive = isRailDark ? 'bg-primary/100/20 text-primary' : 'bg-primary/10 text-primary';
 
     return (
       <div className="flex h-full overflow-hidden sidebar-root" dir="rtl">
@@ -185,7 +185,7 @@ export function Sidebar({ collapsed: _collapsed, onClose }: SidebarProps) {
               <div className={cn("flex items-center gap-1.5 px-3 py-2 border-b shrink-0", effectiveBorderClass)}>
                 <div className={cn(
                   "w-5 h-5 rounded flex items-center justify-center shrink-0",
-                  isRailDark ? 'bg-blue-500/20 text-blue-400' : 'bg-primary/10 text-primary',
+                  isRailDark ? 'bg-primary/100/20 text-primary' : 'bg-primary/10 text-primary',
                 )}>
                   {(() => {
                     const GI = ICON_MAP[selectedGroup.icon ?? ''] ?? FolderPlus;

@@ -21,14 +21,14 @@ export function RoleTable({ roles, loading, onEdit, onDelete }: RoleTableProps) 
       header: t("columns.roleName", { namespace: "users",  }),
       label: t("columns.roleNameLabel", { namespace: "users",  }),
       accessor: "name",
-      className: "font-bold text-slate-800"
+      className: "font-bold text-foreground"
     },
     {
       id: "description",
       header: t("columns.description", { namespace: "users",  }),
       label: t("columns.description", { namespace: "users",  }),
       accessor: (r) => r.description || "",
-      className: "text-slate-500"
+      className: "text-muted-foreground"
     },
     {
       id: "permissions_count",
@@ -36,8 +36,8 @@ export function RoleTable({ roles, loading, onEdit, onDelete }: RoleTableProps) 
       label: t("columns.permissionsCountLabel", { namespace: "users",  }),
       accessor: (r) => (
         <div className="flex items-center gap-2">
-          <Shield className="w-3 h-3 text-blue-600" />
-          <span className="font-bold tabular-nums text-blue-600">{r.permissions.length}</span>
+          <Shield className="w-3 h-3 text-primary" />
+          <span className="font-bold tabular-nums text-primary">{r.permissions.length}</span>
         </div>
       ),
       className: ""
@@ -47,11 +47,11 @@ export function RoleTable({ roles, loading, onEdit, onDelete }: RoleTableProps) 
       header: t("columns.roleType", { namespace: "users",  }),
       label: t("columns.roleTypeLabel", { namespace: "users",  }),
       accessor: (r) => r.is_system_role ? (
-        <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full text-[10px] font-bold ring-1 ring-amber-100">
+        <span className="inline-flex items-center gap-1 bg-warning/10 text-warning px-2 py-0.5 rounded-full text-[10px] font-bold ring-1 ring-warning/20">
           <ShieldAlert className="w-3 h-3" /> {t("roleType.system", { namespace: "users",  })}
         </span>
       ) : (
-        <span className="inline-flex items-center gap-1 bg-slate-50 text-slate-600 px-2 py-0.5 rounded-full text-[10px] font-medium ring-1 ring-slate-100">
+        <span className="inline-flex items-center gap-1 bg-muted text-muted-foreground px-2 py-0.5 rounded-full text-[10px] font-medium ring-1 ring-muted">
            {t("roleType.custom", { namespace: "users",  })}
         </span>
       ),

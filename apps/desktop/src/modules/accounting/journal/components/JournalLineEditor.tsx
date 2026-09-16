@@ -50,7 +50,7 @@ export function JournalLineEditor({
   return (
     <div className="space-y-2">
       {lines.length === 0 && (
-        <p className="text-xs text-slate-400 text-center py-3">
+        <p className="text-xs text-muted-foreground text-center py-3">
           {t("journal.lineEditor.empty", { namespace: "accounting",  })}
         </p>
       )}
@@ -74,7 +74,7 @@ export function JournalLineEditor({
         variant="outline"
         size="sm"
         onClick={handleAdd}
-        className="h-8 shrink-0 rounded-full border-emerald-300 bg-emerald-50 px-3 text-xs font-bold text-emerald-700 hover:bg-emerald-100 hover:border-emerald-400 transition-all"
+        className="h-8 shrink-0 rounded-full border-success/30 bg-success/10 px-3 text-xs font-bold text-success hover:bg-success/20 hover:border-success/40 transition-all"
       >
         <Plus className="h-3.5 w-3.5 ms-1" />
         {t("journal.lineEditor.add", { namespace: "accounting",  })}

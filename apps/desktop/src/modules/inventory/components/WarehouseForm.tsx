@@ -81,7 +81,7 @@ export function WarehouseForm({ open, onClose, onSaved, editItem }: WarehouseFor
   return (
     <FormPanel
       title={editItem ? t('warehouses.form.editTitle', { namespace: 'inventory',  }) : t('warehouses.form.createTitle', { namespace: 'inventory',  })}
-      icon={<Warehouse className="w-5 h-5 text-blue-600" />}
+      icon={<Warehouse className="w-5 h-5 text-primary" />}
       onClose={onClose}
       onSave={handleSave}
       isSaving={saving}
@@ -91,12 +91,12 @@ export function WarehouseForm({ open, onClose, onSaved, editItem }: WarehouseFor
       <SidebarSection icon={<Warehouse className="w-3.5 h-3.5" />} title={t('warehouses.form.section', { namespace: 'inventory',  })} defaultOpen={true}>
         <div className="space-y-2.5 text-right">
           <div className="space-y-1.5">
-            <FieldLabel className="flex items-center gap-1.5" required><Warehouse className="w-3.5 h-3.5 text-slate-400" /> {t('labels.name', { namespace: 'inventory',  })}</FieldLabel>
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={t('warehouses.form.namePlaceholder', { namespace: 'inventory',  })} className="bg-white border-slate-200 h-9" />
+            <FieldLabel className="flex items-center gap-1.5" required><Warehouse className="w-3.5 h-3.5 text-muted-foreground" /> {t('labels.name', { namespace: 'inventory',  })}</FieldLabel>
+            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={t('warehouses.form.namePlaceholder', { namespace: 'inventory',  })} className="bg-white border-muted h-9" />
           </div>
           <div className="space-y-1.5">
-            <FieldLabel className="flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5 text-slate-400" /> {t('warehouses.form.location', { namespace: 'inventory',  })}</FieldLabel>
-            <Input value={address} onChange={(e) => setAddress(e.target.value)} placeholder={t('warehouses.form.locationPlaceholder', { namespace: 'inventory',  })} className="bg-white border-slate-200 h-9" />
+            <FieldLabel className="flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5 text-muted-foreground" /> {t('warehouses.form.location', { namespace: 'inventory',  })}</FieldLabel>
+            <Input value={address} onChange={(e) => setAddress(e.target.value)} placeholder={t('warehouses.form.locationPlaceholder', { namespace: 'inventory',  })} className="bg-white border-muted h-9" />
           </div>
           <div className="flex items-center gap-6 pt-2">
             <div className="flex items-center gap-3">

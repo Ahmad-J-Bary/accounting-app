@@ -20,16 +20,16 @@ import { useTabs } from "@app/providers/TabContext";
 function StatusBadge({ status }: { status: string }) {
   const { t } = useLocalization();
   const styles: Record<string, string> = {
-    Draft: "bg-slate-200 text-slate-600",
-    Posted: "bg-emerald-100 text-emerald-700",
+    Draft: "bg-slate-200 text-muted-foreground",
+    Posted: "bg-success/20 text-success",
     Reversed: "bg-red-100 text-red-600",
-    Cancelled: "bg-slate-300 text-slate-700",
+    Cancelled: "bg-slate-300 text-foreground",
   };
   return (
     <span
       className={cn(
         "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold",
-        styles[status] || "bg-slate-100 text-slate-600",
+        styles[status] || "bg-muted text-muted-foreground",
       )}
     >
       {t(`journal.detail.status.${status}`, { namespace: "accounting"})}
@@ -103,7 +103,7 @@ export default function JournalEntryDetailPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-full">
-        <p className="text-sm text-slate-500">{t("journal.loading", { namespace: "accounting",  })}</p>
+        <p className="text-sm text-muted-foreground">{t("journal.loading", { namespace: "accounting",  })}</p>
       </div>
     );
   }
@@ -122,7 +122,7 @@ export default function JournalEntryDetailPage() {
   return (
     <ErrorBoundary>
       <div className="flex flex-col h-full">
-        <header className="flex items-center justify-between px-4 py-3 border-b border-slate-200 bg-white shrink-0">
+        <header className="flex items-center justify-between px-4 py-3 border-b border-muted bg-white shrink-0">
           <div className="flex items-center gap-3">
             <Button
               type="button"
@@ -136,12 +136,12 @@ export default function JournalEntryDetailPage() {
             </Button>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-lg font-bold text-slate-800">
+                <h1 className="text-lg font-bold text-foreground">
                   {t("journal.detail.title", { namespace: "accounting", vars: { number: entry.entry_number },  })}
                 </h1>
                 <StatusBadge status={entry.status} />
               </div>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-muted-foreground">
                 {t(journalTypeKey(entry.journal_type), { namespace: "accounting"})}
               </p>
             </div>
@@ -153,7 +153,7 @@ export default function JournalEntryDetailPage() {
                 <Button
                   type="button"
                   onClick={() => setConfirmAction("post")}
-                  className="h-9 px-4 font-bold bg-emerald-600 hover:bg-emerald-700 text-white"
+                  className="h-9 px-4 font-bold bg-success hover:bg-success/80 text-white"
                 >
                   {t("journal.detail.post", { namespace: "accounting",  })}
                 </Button>
@@ -181,42 +181,42 @@ export default function JournalEntryDetailPage() {
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                 <div>
-                  <p className="text-slate-500 text-xs mb-0.5">{t("journal.detail.entryNumber", { namespace: "accounting",  })}</p>
-                  <p className="font-bold text-slate-800">{entry.entry_number}</p>
+                  <p className="text-muted-foreground text-xs mb-0.5">{t("journal.detail.entryNumber", { namespace: "accounting",  })}</p>
+                  <p className="font-bold text-foreground">{entry.entry_number}</p>
                 </div>
                 <div>
-                  <p className="text-slate-500 text-xs mb-0.5">{t("journal.detail.journalType", { namespace: "accounting",  })}</p>
-                  <p className="font-bold text-slate-800">
+                  <p className="text-muted-foreground text-xs mb-0.5">{t("journal.detail.journalType", { namespace: "accounting",  })}</p>
+                  <p className="font-bold text-foreground">
                     {t(journalTypeKey(entry.journal_type), { namespace: "accounting"})}
                   </p>
                 </div>
                 <div>
-                  <p className="text-slate-500 text-xs mb-0.5">{t("journal.detail.date", { namespace: "accounting",  })}</p>
-                  <p className="font-bold text-slate-800">{formatDateTime(entry.entry_date)}</p>
+                  <p className="text-muted-foreground text-xs mb-0.5">{t("journal.detail.date", { namespace: "accounting",  })}</p>
+                  <p className="font-bold text-foreground">{formatDateTime(entry.entry_date)}</p>
                 </div>
                 <div>
-                  <p className="text-slate-500 text-xs mb-0.5">{t("journal.detail.statusLabel", { namespace: "accounting",  })}</p>
+                  <p className="text-muted-foreground text-xs mb-0.5">{t("journal.detail.statusLabel", { namespace: "accounting",  })}</p>
                   <StatusBadge status={entry.status} />
                 </div>
                 <div className="md:col-span-4">
-                  <p className="text-slate-500 text-xs mb-0.5">{t("journal.detail.description", { namespace: "accounting",  })}</p>
-                  <p className="font-bold text-slate-800">{entry.description}</p>
+                  <p className="text-muted-foreground text-xs mb-0.5">{t("journal.detail.description", { namespace: "accounting",  })}</p>
+                  <p className="font-bold text-foreground">{entry.description}</p>
                 </div>
                 {entry.source_id && (
                   <div>
-                    <p className="text-slate-500 text-xs mb-0.5">{t("journal.detail.source", { namespace: "accounting",  })}</p>
-                    <p className="font-bold text-slate-800">{entry.source_id}</p>
+                    <p className="text-muted-foreground text-xs mb-0.5">{t("journal.detail.source", { namespace: "accounting",  })}</p>
+                    <p className="font-bold text-foreground">{entry.source_id}</p>
                   </div>
                 )}
                 {entry.reversal_of_entry_id && (
                   <div>
-                    <p className="text-slate-500 text-xs mb-0.5">{t("journal.detail.reverses", { namespace: "accounting",  })}</p>
-                    <p className="font-bold text-slate-800">{entry.reversal_of_entry_id}</p>
+                    <p className="text-muted-foreground text-xs mb-0.5">{t("journal.detail.reverses", { namespace: "accounting",  })}</p>
+                    <p className="font-bold text-foreground">{entry.reversal_of_entry_id}</p>
                   </div>
                 )}
                 <div>
-                  <p className="text-slate-500 text-xs mb-0.5">{t("journal.detail.createdAt", { namespace: "accounting",  })}</p>
-                  <p className="font-bold text-slate-800">{formatDateTime(entry.created_at)}</p>
+                  <p className="text-muted-foreground text-xs mb-0.5">{t("journal.detail.createdAt", { namespace: "accounting",  })}</p>
+                  <p className="font-bold text-foreground">{formatDateTime(entry.created_at)}</p>
                 </div>
               </div>
             </CardContent>
@@ -230,55 +230,55 @@ export default function JournalEntryDetailPage() {
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-slate-200">
-                      <th className="text-end py-2 px-3 text-xs font-bold text-slate-500">#</th>
-                      <th className="text-end py-2 px-3 text-xs font-bold text-slate-500">{t("journal.detail.colAccount", { namespace: "accounting",  })}</th>
-                      <th className="text-end py-2 px-3 text-xs font-bold text-slate-500">{t("journal.detail.colDebit", { namespace: "accounting",  })}</th>
-                      <th className="text-end py-2 px-3 text-xs font-bold text-slate-500">{t("journal.detail.colCredit", { namespace: "accounting",  })}</th>
-                      <th className="text-end py-2 px-3 text-xs font-bold text-slate-500">{t("journal.detail.colDescription", { namespace: "accounting",  })}</th>
+                    <tr className="border-b border-muted">
+                      <th className="text-end py-2 px-3 text-xs font-bold text-muted-foreground">#</th>
+                      <th className="text-end py-2 px-3 text-xs font-bold text-muted-foreground">{t("journal.detail.colAccount", { namespace: "accounting",  })}</th>
+                      <th className="text-end py-2 px-3 text-xs font-bold text-muted-foreground">{t("journal.detail.colDebit", { namespace: "accounting",  })}</th>
+                      <th className="text-end py-2 px-3 text-xs font-bold text-muted-foreground">{t("journal.detail.colCredit", { namespace: "accounting",  })}</th>
+                      <th className="text-end py-2 px-3 text-xs font-bold text-muted-foreground">{t("journal.detail.colDescription", { namespace: "accounting",  })}</th>
                     </tr>
                   </thead>
                   <tbody>
                     {entry.lines.map((line, index) => (
-                      <tr key={index} className="border-b border-slate-100 last:border-0">
-                        <td className="py-2 px-3 text-xs text-slate-400 tabular-nums">{index + 1}</td>
+                      <tr key={index} className="border-b border-muted last:border-0">
+                        <td className="py-2 px-3 text-xs text-muted-foreground tabular-nums">{index + 1}</td>
                         <td className="py-2 px-3">
                           <span className="flex items-center gap-2">
-                            <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[11px] font-bold tabular-nums text-slate-600">
+                            <span className="rounded bg-muted px-1.5 py-0.5 text-[11px] font-bold tabular-nums text-muted-foreground">
                               {line.account_code}
                             </span>
-                            <span className="font-bold text-slate-800">{line.account_name}</span>
+                            <span className="font-bold text-foreground">{line.account_name}</span>
                           </span>
                         </td>
                         <td className="py-2 px-3 text-end">
                           {parseFloat(line.debit) > 0 ? (
-                            <span className="tabular-nums font-bold text-blue-700">
+                            <span className="tabular-nums font-bold text-primary">
                               {fmtMoney(line.debit)}
                             </span>
                           ) : (
-                            <span className="text-slate-300">—</span>
+                            <span className="text-muted-foreground">—</span>
                           )}
                         </td>
                         <td className="py-2 px-3 text-end">
                           {parseFloat(line.credit) > 0 ? (
-                            <span className="tabular-nums font-bold text-emerald-700">
+                            <span className="tabular-nums font-bold text-success">
                               {fmtMoney(line.credit)}
                             </span>
                           ) : (
-                            <span className="text-slate-300">—</span>
+                            <span className="text-muted-foreground">—</span>
                           )}
                         </td>
-                        <td className="py-2 px-3 text-xs text-slate-600">{line.description}</td>
+                        <td className="py-2 px-3 text-xs text-muted-foreground">{line.description}</td>
                       </tr>
                     ))}
                   </tbody>
                   <tfoot>
-                    <tr className="border-t-2 border-slate-200 font-bold">
+                    <tr className="border-t-2 border-muted font-bold">
                       <td colSpan={2} className="py-2 px-3 text-end text-xs">{t("journal.detail.total", { namespace: "accounting",  })}</td>
-                      <td className="py-2 px-3 text-end tabular-nums text-blue-700">
+                      <td className="py-2 px-3 text-end tabular-nums text-primary">
                         {fmtMoney(totalDebit)}
                       </td>
-                      <td className="py-2 px-3 text-end tabular-nums text-emerald-700">
+                      <td className="py-2 px-3 text-end tabular-nums text-success">
                         {fmtMoney(totalCredit)}
                       </td>
                       <td></td>

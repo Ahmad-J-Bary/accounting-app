@@ -62,19 +62,19 @@ export function ReturnMaterialSearchPanel({
   return (
     <div
       style={style}
-      className="bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in-95 duration-150 origin-top-right"
+      className="bg-white rounded-xl shadow-2xl border border-muted overflow-hidden animate-in fade-in zoom-in-95 duration-150 origin-top-right"
     >
-      <div className="flex items-center gap-2.5 px-5 py-3 bg-white border-b border-slate-100">
-        <span className="text-[11px] font-black text-slate-500 tracking-wider">
+      <div className="flex items-center gap-2.5 px-5 py-3 bg-white border-b border-muted">
+        <span className="text-[11px] font-black text-muted-foreground tracking-wider">
           {t("returnMaterial.searchResultsTitle", { namespace: "invoicing",  })}
         </span>
-        <span className="text-[10px] tabular-nums font-bold px-1.5 py-0.5 rounded bg-blue-50 text-blue-600">
+        <span className="text-[10px] tabular-nums font-bold px-1.5 py-0.5 rounded bg-primary/10 text-primary">
           {filtered.length}
         </span>
-        <span className="text-[10px] text-slate-400 font-semibold">{t("returnMaterial.itemLabel", { namespace: "invoicing",  })}</span>
+        <span className="text-[10px] text-muted-foreground font-semibold">{t("returnMaterial.itemLabel", { namespace: "invoicing",  })}</span>
         <button
           onClick={onClose}
-          className="mr-auto p-1 rounded-lg text-slate-300 hover:text-slate-500 hover:bg-slate-100 transition-all"
+          className="mr-auto p-1 rounded-lg text-slate-300 hover:text-muted-foreground hover:bg-muted transition-all"
         >
           <X className="w-3.5 h-3.5" />
         </button>
@@ -84,7 +84,7 @@ export function ReturnMaterialSearchPanel({
         {filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-10 px-4 text-center">
             <Search className="w-8 h-8 text-slate-200 mb-2" />
-            <p className="text-xs text-slate-400 font-semibold">
+            <p className="text-xs text-muted-foreground font-semibold">
               {search ? t("returnMaterial.noMatchingResults", { namespace: "invoicing",  }) : t("returnMaterial.startTyping", { namespace: "invoicing",  })}
             </p>
           </div>
@@ -94,18 +94,18 @@ export function ReturnMaterialSearchPanel({
               <button
                 key={`${occ.material.id}_${occ.invoice_id}_${idx}`}
                 onMouseDown={(e) => { e.preventDefault(); onSelect(occ); }}
-                className="w-full text-right block px-5 py-3 transition-all duration-75 hover:bg-blue-50/60 active:bg-blue-100/40"
+                className="w-full text-right block px-5 py-3 transition-all duration-75 hover:bg-primary/10/60 active:bg-primary/20/40"
               >
                 <div className="flex items-center gap-3 flex-wrap">
-                  <span className="font-bold text-[13px] text-slate-800 min-w-0 leading-snug">
+                  <span className="font-bold text-[13px] text-foreground min-w-0 leading-snug">
                     {occ.material.name}
                   </span>
                   {occ.material.name_en && (
-                    <span className="text-[10px] text-slate-400 font-medium dir-ltr">
+                    <span className="text-[10px] text-muted-foreground font-medium dir-ltr">
                       {occ.material.name_en}
                     </span>
                   )}
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-50 border border-slate-100/80 font-mono text-[11px] font-bold text-slate-500 leading-relaxed shrink-0">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-muted border border-muted/80 font-mono text-[11px] font-bold text-muted-foreground leading-relaxed shrink-0">
                     <Hash className="w-3 h-3 text-slate-300" />
                     {occ.material.code}
                   </span>
@@ -115,14 +115,14 @@ export function ReturnMaterialSearchPanel({
                     <FileText className="w-2.5 h-2.5 opacity-60" />
                     {t("returnMaterial.countPrefix", { namespace: "invoicing",  })}{occ.original_quantity}
                   </span>
-                  <span className="flex items-center gap-1 text-[10px] tabular-nums text-blue-600 font-bold" title={t("returnMaterial.titlePrice", { namespace: "invoicing",  })}>
+                  <span className="flex items-center gap-1 text-[10px] tabular-nums text-primary font-bold" title={t("returnMaterial.titlePrice", { namespace: "invoicing",  })}>
                     {occ.original_price} ر.س
                   </span>
-                  <span className="flex items-center gap-1 text-[10px] tabular-nums text-slate-500 font-bold" title={t("returnMaterial.titleDate", { namespace: "invoicing",  })}>
+                  <span className="flex items-center gap-1 text-[10px] tabular-nums text-muted-foreground font-bold" title={t("returnMaterial.titleDate", { namespace: "invoicing",  })}>
                     <Calendar className="w-2.5 h-2.5 opacity-60" />
                     {formatDate(occ.invoice_date)}
                   </span>
-                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 border border-slate-200">
+                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-muted text-muted-foreground border border-muted">
                     {occ.invoice_number}
                   </span>
                 </div>

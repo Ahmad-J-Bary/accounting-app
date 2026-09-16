@@ -108,12 +108,12 @@ export function TransferTable({ movements, warehouses, className, onView, onEdit
     {
       id: 'material_name', header: t('labels.material', { namespace: 'inventory',  }), label: t('labels.material', { namespace: 'inventory',  }),
       accessor: (r) => r.material_name || '—',
-      className: 'font-bold text-slate-900'
+      className: 'font-bold text-foreground'
     },
     {
       id: 'source', header: t('transfers.fromWarehouse', { namespace: 'inventory',  }), label: t('transfers.fromWarehouse', { namespace: 'inventory',  }),
       accessor: (r) => (
-        <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-blue-50 text-blue-700 border border-blue-100">
+        <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-primary/10 text-primary border-primary/20">
           {r.source_warehouse_name}
         </span>
       ),
@@ -121,7 +121,7 @@ export function TransferTable({ movements, warehouses, className, onView, onEdit
     {
       id: 'dest', header: t('transfers.toWarehouse', { namespace: 'inventory',  }), label: t('transfers.toWarehouse', { namespace: 'inventory',  }),
       accessor: (r) => (
-        <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-100">
+        <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-success/10 text-success border-success/20">
           {r.dest_warehouse_name}
         </span>
       ),
@@ -137,7 +137,7 @@ export function TransferTable({ movements, warehouses, className, onView, onEdit
     {
       id: 'reference', header: t('labels.reference', { namespace: 'inventory',  }), label: t('labels.reference', { namespace: 'inventory',  }),
       accessor: (r) => (
-        <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold font-mono bg-slate-100 text-slate-700 border border-slate-200">
+        <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold font-mono bg-muted text-foreground border-muted">
           {formatNumber(parseInt(r.reference) || 0)}
         </span>
       ),
@@ -145,12 +145,12 @@ export function TransferTable({ movements, warehouses, className, onView, onEdit
     {
       id: 'notes', header: t('labels.note', { namespace: 'inventory',  }), label: t('labels.note', { namespace: 'inventory',  }),
       accessor: (r) => r.notes || '—',
-      className: 'text-slate-600 text-xs max-w-[200px] truncate',
+      className: 'text-foreground text-xs max-w-[200px] truncate',
     },
     {
       id: 'date', header: t('labels.date', { namespace: 'inventory',  }), label: t('labels.date', { namespace: 'inventory',  }),
       accessor: (r) => formatDateTime(r.transfer_date),
-      className: 'tabular-nums text-slate-500 font-medium'
+      className: 'tabular-nums text-muted-foreground font-medium'
     },
     ];
     if (onView || onEdit || onDelete) {
@@ -190,7 +190,7 @@ export function TransferTable({ movements, warehouses, className, onView, onEdit
     return enrichedColumns.map(col => {
       const id = col.id;
       if (id === "material_name") {
-        return { id: "count", columnId: id, label: "", value: `${sortedData.length} تحويل`, className: "text-slate-500 font-medium" };
+        return { id: "count", columnId: id, label: "", value: `${sortedData.length} تحويل`, className: "text-muted-foreground font-medium" };
       }
       return { id: `${id}_spacer`, columnId: id, label: "", value: "" };
     });

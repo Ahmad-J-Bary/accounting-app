@@ -55,7 +55,7 @@ export const TableSettingsManager: React.FC = () => {
       header: t("tables.columns.name", { namespace: "settings",  }),
       label: t("tables.columns.name", { namespace: "settings",  }),
       accessor: "name",
-      className: "font-bold text-slate-800"
+      className: "font-bold text-foreground"
     },
     {
       id: "debit",
@@ -69,14 +69,14 @@ export const TableSettingsManager: React.FC = () => {
       header: t("tables.columns.credit", { namespace: "settings", vars: { sym: currSym } }),
       label: t("tables.columns.credit", { namespace: "settings", vars: { sym: currSym } }),
       accessor: (r) => r.credit > 0 ? formatAmount(r.credit, { currencyCode: baseCurrency?.code || "" }) : "—",
-      className: "tabular-nums font-black text-emerald-700",
+      className: "tabular-nums font-black text-success",
     },
     {
       id: "date",
       header: t("tables.columns.date", { namespace: "settings",  }),
       label: t("tables.columns.date", { namespace: "settings",  }),
       accessor: "date",
-      className: "tabular-nums text-slate-500"
+      className: "tabular-nums text-muted-foreground"
     },
     {
       id: "status",
@@ -84,7 +84,7 @@ export const TableSettingsManager: React.FC = () => {
       label: t("tables.columns.status", { namespace: "settings",  }),
       accessor: (r) => (
         <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-          r.status === activeLabel ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"
+          r.status === activeLabel ? "bg-success/10 text-success" : "bg-muted text-muted-foreground"
         }`}>
           {r.status}
         </span>
@@ -101,8 +101,8 @@ export const TableSettingsManager: React.FC = () => {
     const totalLabel = t("tables.summaryTotal", { namespace: "settings",  });
     return colIds.map(id => {
       if (id === "debit") return { id: "debit_total", columnId: "debit", label: totalLabel, value: totalDebit > 0 ? formatAmount(totalDebit, { currencyCode: baseCurrency?.code || "" }) : "—", className: "text-blue-700 font-black" };
-      if (id === "credit") return { id: "credit_total", columnId: "credit", label: totalLabel, value: totalCredit > 0 ? formatAmount(totalCredit, { currencyCode: baseCurrency?.code || "" }) : "—", className: "text-emerald-700 font-black" };
-      if (id === "code") return { id: "code_count", columnId: "code", label: "", value: t("tables.summaryAccounts", { namespace: "settings", vars: { count: PREVIEW_DATA.length } }), className: "text-slate-500 font-medium" };
+      if (id === "credit") return { id: "credit_total", columnId: "credit", label: totalLabel, value: totalCredit > 0 ? formatAmount(totalCredit, { currencyCode: baseCurrency?.code || "" }) : "—", className: "text-success font-black" };
+      if (id === "code") return { id: "code_count", columnId: "code", label: "", value: t("tables.summaryAccounts", { namespace: "settings", vars: { count: PREVIEW_DATA.length } }), className: "text-muted-foreground font-medium" };
       return { id: `${id}_spacer`, columnId: id, label: "", value: "" };
     });
   }, [previewColumnIds, formatAmount, baseCurrency, t, PREVIEW_DATA]);
@@ -118,7 +118,7 @@ export const TableSettingsManager: React.FC = () => {
               value={settings.density} 
               onValueChange={(v) => updateSetting('density', v as TableDensity)}
             >
-              <SelectTrigger className="h-10 rounded-lg border-slate-200">
+              <SelectTrigger className="h-10 rounded-lg border-muted">
                 <SelectValue placeholder={t("tables.densityPlaceholder", { namespace: "settings",  })} />
               </SelectTrigger>
               <SelectContent>
@@ -135,7 +135,7 @@ export const TableSettingsManager: React.FC = () => {
               value={settings.borderStyle} 
               onValueChange={(v) => updateSetting('borderStyle', v as TableBorderStyle)}
             >
-              <SelectTrigger className="h-10 rounded-lg border-slate-200">
+              <SelectTrigger className="h-10 rounded-lg border-muted">
                 <SelectValue placeholder={t("tables.borderPlaceholder", { namespace: "settings",  })} />
               </SelectTrigger>
               <SelectContent>
@@ -171,7 +171,7 @@ export const TableSettingsManager: React.FC = () => {
               value={settings.fontFamily} 
               onValueChange={(v) => updateSetting('fontFamily', v)}
             >
-              <SelectTrigger className="h-10 rounded-lg border-slate-200 font-mono">
+              <SelectTrigger className="h-10 rounded-lg border-muted font-mono">
                 <SelectValue placeholder={t("tables.fontPlaceholder", { namespace: "settings",  })} />
               </SelectTrigger>
               <SelectContent>
@@ -186,11 +186,11 @@ export const TableSettingsManager: React.FC = () => {
       </SettingsGroup>
 
       {/* Behavior */}
-      <SettingsGroup title={t("tables.behaviorTitle", { namespace: "settings",  })} icon={Monitor} color="text-emerald-600">
+      <SettingsGroup title={t("tables.behaviorTitle", { namespace: "settings",  })} icon={Monitor} color="text-success">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="flex items-center justify-between p-3 rounded-xl border border-slate-100 bg-slate-50/30">
+          <div className="flex items-center justify-between p-3 rounded-xl border border-muted bg-muted/30">
             <div className="space-y-0.5">
-              <Label className="text-slate-700 font-semibold">{t("tables.rowHover", { namespace: "settings",  })}</Label>
+              <Label className="text-foreground font-semibold">{t("tables.rowHover", { namespace: "settings",  })}</Label>
             </div>
             <Switch 
               checked={settings.rowHoverEffect} 
@@ -198,9 +198,9 @@ export const TableSettingsManager: React.FC = () => {
             />
           </div>
 
-          <div className="flex items-center justify-between p-3 rounded-xl border border-slate-100 bg-slate-50/30">
+          <div className="flex items-center justify-between p-3 rounded-xl border border-muted bg-muted/30">
             <div className="space-y-0.5">
-              <Label className="text-slate-700 font-semibold">{t("tables.zebra", { namespace: "settings",  })}</Label>
+              <Label className="text-foreground font-semibold">{t("tables.zebra", { namespace: "settings",  })}</Label>
             </div>
             <Switch 
               checked={settings.zebraRows} 
@@ -208,9 +208,9 @@ export const TableSettingsManager: React.FC = () => {
             />
           </div>
 
-          <div className="flex items-center justify-between p-3 rounded-xl border border-slate-100 bg-slate-50/30">
+          <div className="flex items-center justify-between p-3 rounded-xl border border-muted bg-muted/30">
             <div className="space-y-0.5">
-              <Label className="text-slate-700 font-semibold">{t("tables.stickyHeader", { namespace: "settings",  })}</Label>
+              <Label className="text-foreground font-semibold">{t("tables.stickyHeader", { namespace: "settings",  })}</Label>
             </div>
             <Switch 
               checked={settings.stickyHeader} 
@@ -218,9 +218,9 @@ export const TableSettingsManager: React.FC = () => {
             />
           </div>
 
-          <div className="flex items-center justify-between p-3 rounded-xl border border-slate-100 bg-slate-50/30">
+          <div className="flex items-center justify-between p-3 rounded-xl border border-muted bg-muted/30">
             <div className="space-y-0.5">
-              <Label className="text-slate-700 font-semibold">{t("tables.toolbar", { namespace: "settings",  })}</Label>
+              <Label className="text-foreground font-semibold">{t("tables.toolbar", { namespace: "settings",  })}</Label>
             </div>
             <Switch 
               checked={settings.showToolbar} 
@@ -228,9 +228,9 @@ export const TableSettingsManager: React.FC = () => {
             />
           </div>
 
-          <div className="flex items-center justify-between p-3 rounded-xl border border-slate-100 bg-slate-50/30">
+          <div className="flex items-center justify-between p-3 rounded-xl border border-muted bg-muted/30">
             <div className="space-y-0.5">
-              <Label className="text-slate-700 font-semibold">{t("tables.summary", { namespace: "settings",  })}</Label>
+              <Label className="text-foreground font-semibold">{t("tables.summary", { namespace: "settings",  })}</Label>
             </div>
             <Switch 
               checked={settings.showSummary} 
@@ -238,9 +238,9 @@ export const TableSettingsManager: React.FC = () => {
             />
           </div>
 
-          <div className="flex items-center justify-between p-3 rounded-xl border border-slate-100 bg-slate-50/30">
+          <div className="flex items-center justify-between p-3 rounded-xl border border-muted bg-muted/30">
             <div className="space-y-0.5">
-              <Label className="text-slate-700 font-semibold">{t("tables.pagination", { namespace: "settings",  })}</Label>
+              <Label className="text-foreground font-semibold">{t("tables.pagination", { namespace: "settings",  })}</Label>
             </div>
             <Switch 
               checked={settings.showPagination} 
@@ -252,7 +252,7 @@ export const TableSettingsManager: React.FC = () => {
 
       {/* Live Preview */}
       <SettingsGroup title={t("tables.previewTitle", { namespace: "settings",  })} icon={Eye} color="text-violet-600">
-        <div className="border border-slate-200 rounded-xl overflow-hidden">
+        <div className="border border-muted rounded-xl overflow-hidden">
           <UnifiedTable
             data={PREVIEW_DATA}
             columns={previewColumns}

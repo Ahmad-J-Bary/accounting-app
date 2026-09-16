@@ -40,9 +40,9 @@ export function SidebarGroup({
 
   const isBgLight = verticalAppearance
     ? verticalAppearance === 'light'
-    : settings.navBackground === 'bg-white' || settings.navBackground === 'bg-slate-50';
-  const sectionHeaderClass = isBgLight ? 'text-slate-400' : 'text-slate-500';
-  const borderClass = isBgLight ? 'border-slate-200' : 'border-white/5';
+    : settings.navBackground === 'bg-white' || settings.navBackground === 'bg-muted';
+  const sectionHeaderClass = isBgLight ? 'text-muted-foreground' : 'text-muted-foreground';
+  const borderClass = isBgLight ? 'border-muted' : 'border-white/5';
 
   const GroupIcon = ICON_MAP[group.icon || ''] ?? FolderPlus;
   const displayTitle = groupTitle(group);
@@ -68,7 +68,7 @@ export function SidebarGroup({
   };
 
   // أيقونة المجموعة مع لون الخلفية حسب الوضع
-  const iconBgClass = isBgLight ? 'bg-slate-200/60 text-slate-500' : 'bg-white/10 text-slate-400';
+  const iconBgClass = isBgLight ? 'bg-slate-200/60 text-muted-foreground' : 'bg-white/10 text-muted-foreground';
 
   // نمط ترويسة المجموعة
   const renderHeaderTitle = () => {
@@ -91,15 +91,15 @@ export function SidebarGroup({
         <div className="flex items-center gap-2 flex-1 min-w-0">
           <span className={cn(
             "w-5 h-5 rounded-lg flex items-center justify-center shrink-0 transition-colors",
-            isCollapsed ? iconBgClass : isBgLight ? "bg-blue-100 text-blue-600" : "bg-blue-500/20 text-blue-400"
+            isCollapsed ? iconBgClass : isBgLight ? "bg-primary/20 text-primary" : "bg-primary/100/20 text-primary"
           )}>
             <GroupIcon className="w-3 h-3" />
           </span>
           <span className={cn(
             "text-[10px] font-black truncate",
             isCollapsed
-              ? isBgLight ? "text-slate-600" : "text-slate-400"
-              : isBgLight ? "text-slate-800" : "text-white"
+              ? isBgLight ? "text-slate-600" : "text-muted-foreground"
+              : isBgLight ? "text-foreground" : "text-white"
           )}>
             {displayTitle}
           </span>
@@ -114,7 +114,7 @@ export function SidebarGroup({
           "w-4 h-4 rounded flex items-center justify-center shrink-0 transition-colors group-hover/group:scale-110",
           iconBgClass,
           isBgLight
-            ? "group-hover/group:bg-slate-200/80 group-hover/group:text-slate-700"
+            ? "group-hover/group:bg-slate-200/80 group-hover/group:text-foreground"
             : "group-hover/group:bg-white/15 group-hover/group:text-white"
         )}>
           <GroupIcon className="w-2.5 h-2.5" />
@@ -142,10 +142,10 @@ export function SidebarGroup({
                   "flex items-center justify-between px-3 py-2 rounded-xl text-[10px] font-black cursor-pointer border",
                   isCollapsed
                     ? isBgLight
-                      ? "text-slate-600 hover:bg-slate-100 hover:border-slate-300 border-slate-200/40"
-                      : "text-slate-400 hover:bg-white/8 hover:border-white/15 border-white/5"
+                      ? "text-slate-600 hover:bg-muted hover:border-slate-300 border-muted/40"
+                      : "text-muted-foreground hover:bg-white/8 hover:border-white/15 border-white/5"
                     : isBgLight
-                    ? "bg-gradient-to-r from-slate-100 to-slate-50 text-slate-800 border-slate-200/80 shadow-sm hover:shadow-md"
+                    ? "bg-gradient-to-r from-slate-100 to-slate-50 text-foreground border-muted/80 shadow-sm hover:shadow-md"
                     : "bg-gradient-to-r from-white/[0.07] to-white/[0.03] text-white border-white/10 shadow-sm hover:shadow-md"
                 )
               : "flex items-center justify-between px-3 mb-1.5 mt-1 cursor-pointer rounded-lg hover:bg-white/[0.02] -mx-1 transition-colors"
@@ -163,7 +163,7 @@ export function SidebarGroup({
                 "p-0.5 rounded transition-all duration-200",
                 isCardStyle ? "opacity-60 hover:opacity-100" : "opacity-0 group-hover/group:opacity-100",
                 sectionHeaderClass,
-                isBgLight ? "hover:bg-slate-200 hover:text-slate-700" : "hover:bg-white/10 hover:text-white"
+                isBgLight ? "hover:bg-slate-200 hover:text-foreground" : "hover:bg-white/10 hover:text-white"
               )}
               title={isCollapsed ? t("expand", { namespace: "shell",  }) : t("collapse", { namespace: "shell",  })}
             >
@@ -181,7 +181,7 @@ export function SidebarGroup({
         )}
       >
         <div className="overflow-hidden">
-          <ul className={cn("space-y-0.5", showHeader && !isCardStyle && "mt-1", isCardStyle && "py-1 px-1 bg-slate-50/20 dark:bg-white/[0.01] rounded-xl mt-1 border border-slate-100 dark:border-white/[0.02]")}>
+          <ul className={cn("space-y-0.5", showHeader && !isCardStyle && "mt-1", isCardStyle && "py-1 px-1 bg-muted/20 dark:bg-white/[0.01] rounded-xl mt-1 border border-muted dark:border-white/[0.02]")}>
             {visibleItems.map(item => (
               <SidebarItem
                 key={item.id}

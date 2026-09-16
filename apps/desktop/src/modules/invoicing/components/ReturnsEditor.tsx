@@ -531,7 +531,7 @@ export function ReturnsEditor({ returnType, partyType, parties, materials, wareh
             </Button>
           </div>
         }
-        headerFields={<div className="flex items-center gap-2 text-slate-400 py-8"><Loader2 className="w-5 h-5 animate-spin" /> {t("return.loadingReturn", { namespace: "invoicing",  })}</div>}
+        headerFields={<div className="flex items-center gap-2 text-muted-foreground py-8"><Loader2 className="w-5 h-5 animate-spin" /> {t("return.loadingReturn", { namespace: "invoicing",  })}</div>}
         lineItemsGrid={null}
         summaryPanel={null}
         sidebar={null}
@@ -548,7 +548,7 @@ export function ReturnsEditor({ returnType, partyType, parties, materials, wareh
             <X className="w-4 h-4 ml-2" /> {readOnly ? t("actions.close", { namespace: "invoicing",  }) : t("actions.cancel", { namespace: "invoicing",  })}
           </Button>
           {!readOnly && (
-            <Button size="sm" onClick={handleSave} disabled={saving} className="h-9 bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100">
+            <Button size="sm" onClick={handleSave} disabled={saving} className="h-9 bg-primary hover:bg-primary/80 shadow-lg shadow-primary/20">
               <Save className="w-4 h-4 ml-2" /> {saving ? t("return.saving", { namespace: "invoicing",  }) : t("return.saveReturn", { namespace: "invoicing",  })}
             </Button>
           )}

@@ -33,7 +33,7 @@ export function JournalEntrySummary({ lines }: JournalEntrySummaryProps) {
       className={cn(
         "rounded-lg border px-4 py-3 text-sm",
         isBalanced
-          ? "bg-emerald-50 border-emerald-200 text-emerald-800"
+          ? "bg-success/10 border-success/20 text-success"
           : "bg-amber-50 border-amber-200 text-amber-800",
       )}
     >
@@ -51,7 +51,7 @@ export function JournalEntrySummary({ lines }: JournalEntrySummaryProps) {
 
         <div className="flex items-center gap-2">
           {isBalanced ? (
-            <span className="font-bold text-emerald-700">{t("journal.summary.balanced", { namespace: "accounting",  })}</span>
+            <span className="font-bold text-success">{t("journal.summary.balanced", { namespace: "accounting",  })}</span>
           ) : (
             <span className="font-bold text-amber-700">
               {t("journal.summary.unbalanced", { namespace: "accounting", vars: { difference: toFixed(difference, 2) },  })}

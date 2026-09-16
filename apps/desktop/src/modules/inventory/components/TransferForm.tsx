@@ -228,7 +228,7 @@ export function TransferForm({
   return (
     <FormPanel
       title={formTitle}
-      icon={<ArrowRightLeft className="w-5 h-5 text-blue-600" />}
+      icon={<ArrowRightLeft className="w-5 h-5 text-primary" />}
       onClose={onClose}
       onSave={readOnly ? undefined : handleSave}
       isSaving={saving}
@@ -239,10 +239,10 @@ export function TransferForm({
         <div className="flex gap-2 items-end text-right">
           <div className="flex-1 space-y-1.5">
             <FieldLabel className="flex items-center gap-1.5" required>
-              <Warehouse className="w-3.5 h-3.5 text-slate-400" /> {t("transfers.fromWarehouse", { namespace: "inventory",  })}
+              <Warehouse className="w-3.5 h-3.5 text-muted-foreground" /> {t("transfers.fromWarehouse", { namespace: "inventory",  })}
             </FieldLabel>
             <Select value={form.source_warehouse_id} onValueChange={handleSrcWhChange} disabled={readOnly}>
-              <SelectTrigger className="bg-white border-slate-200 h-9"><SelectValue placeholder={t("transfers.form.sourcePlaceholder", { namespace: "inventory",  })} /></SelectTrigger>
+              <SelectTrigger className="bg-white border-muted h-9"><SelectValue placeholder={t("transfers.form.sourcePlaceholder", { namespace: "inventory",  })} /></SelectTrigger>
               <SelectContent>
                 {sourceWarehouses.map(w => (
                   <SelectItem key={w.id} value={w.id} disabled={w.id === form.dest_warehouse_id}>{w.name}</SelectItem>
@@ -252,10 +252,10 @@ export function TransferForm({
           </div>
           <div className="flex-1 space-y-1.5">
             <FieldLabel className="flex items-center gap-1.5" required>
-              <Warehouse className="w-3.5 h-3.5 text-slate-400" /> {t("transfers.toWarehouse", { namespace: "inventory",  })}
+              <Warehouse className="w-3.5 h-3.5 text-muted-foreground" /> {t("transfers.toWarehouse", { namespace: "inventory",  })}
             </FieldLabel>
             <Select value={form.dest_warehouse_id} onValueChange={val => setForm(p => ({ ...p, dest_warehouse_id: val }))} disabled={readOnly}>
-              <SelectTrigger className="bg-white border-slate-200 h-9"><SelectValue placeholder={t("transfers.form.destPlaceholder", { namespace: "inventory",  })} /></SelectTrigger>
+              <SelectTrigger className="bg-white border-muted h-9"><SelectValue placeholder={t("transfers.form.destPlaceholder", { namespace: "inventory",  })} /></SelectTrigger>
               <SelectContent>
                 {activeWarehouses.map(w => (
                   <SelectItem key={w.id} value={w.id} disabled={w.id === form.source_warehouse_id}>{w.name}</SelectItem>
@@ -270,20 +270,20 @@ export function TransferForm({
         <div className="space-y-2.5 text-right">
           <div className="space-y-1.5">
             <FieldLabel className="flex items-center gap-1.5" required>
-              <Package className="w-3.5 h-3.5 text-slate-400" /> {t("labels.material", { namespace: "inventory",  })}
+              <Package className="w-3.5 h-3.5 text-muted-foreground" /> {t("labels.material", { namespace: "inventory",  })}
             </FieldLabel>
             {lockMaterial || readOnly ? (
-              <div className="h-9 px-3 rounded-lg border border-slate-200 bg-slate-50 flex items-center text-xs font-bold text-slate-700">
+              <div className="h-9 px-3 rounded-lg border border-muted bg-muted flex items-center text-xs font-bold text-foreground">
                 {selectedMaterial?.name || "—"}
               </div>
             ) : (
               <Select value={form.material_id} onValueChange={handleMatChange} disabled={!form.source_warehouse_id}>
-                <SelectTrigger className="bg-white border-slate-200 h-9">
+                <SelectTrigger className="bg-white border-muted h-9">
                   <SelectValue placeholder={form.source_warehouse_id ? t("transfers.form.materialPlaceholder", { namespace: "inventory",  }) : t("transfers.form.chooseWarehouseFirst", { namespace: "inventory",  })} />
                 </SelectTrigger>
                 <SelectContent>
                   {materialsInSource.length === 0 ? (
-                    <div className="px-2 py-4 text-center text-sm text-slate-400">{t("transfers.form.noMaterials", { namespace: "inventory",  })}</div>
+                    <div className="px-2 py-4 text-center text-sm text-muted-foreground">{t("transfers.form.noMaterials", { namespace: "inventory",  })}</div>
                   ) : (
                     materialsInSource.map(p => (
                       <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
@@ -295,7 +295,7 @@ export function TransferForm({
           </div>
           <div>
             <FieldLabel className="flex items-center gap-1.5 mb-1.5" required>
-              <ArrowRightLeft className="w-3.5 h-3.5 text-slate-400" /> {t("transfers.form.qtyUnitLabel", { namespace: "inventory",  })}
+              <ArrowRightLeft className="w-3.5 h-3.5 text-muted-foreground" /> {t("transfers.form.qtyUnitLabel", { namespace: "inventory",  })}
             </FieldLabel>
             {isBaseSelected ? (
               <div className="flex gap-2 items-center">
@@ -310,11 +310,11 @@ export function TransferForm({
                     }}
                     disabled={readOnly}
                     placeholder="0"
-                    className="bg-white border-slate-200 h-9" />
+                    className="bg-white border-muted h-9" />
                 </div>
                 <div className="shrink-0" style={{ width: "110px" }}>
                   <Select value={selectedUnitId} onValueChange={handleUnitChange} disabled={!selectedMaterial || readOnly}>
-                    <SelectTrigger className="bg-white border-slate-200 h-9 text-xs">
+                    <SelectTrigger className="bg-white border-muted h-9 text-xs">
                       <SelectValue placeholder="الوحدة" />
                     </SelectTrigger>
                     <SelectContent>
@@ -336,13 +336,13 @@ export function TransferForm({
                       onChange={e => handleUnitQtyChange(e.target.value)}
                       disabled={readOnly}
                       placeholder="0"
-                      className="bg-white border-slate-200 h-9" />
+                      className="bg-white border-muted h-9" />
                   </div>
-                  <div className="shrink-0 text-sm text-slate-500 font-medium px-1" style={{ minWidth: "70px", textAlign: "center" }}>
+                  <div className="shrink-0 text-sm text-muted-foreground font-medium px-1" style={{ minWidth: "70px", textAlign: "center" }}>
                     {selectedUnit?.name}
                   </div>
                   <div className="shrink-0 flex items-center justify-center px-1">
-                    <span className="text-slate-300 text-lg font-light">+</span>
+                    <span className="text-muted-foreground text-lg font-light">+</span>
                   </div>
                   <div className="flex-1">
                     <Input type="number" min="0" max={remainderMax || undefined} step="any"
@@ -350,14 +350,14 @@ export function TransferForm({
                       onChange={e => handleRemainderChange(e.target.value)}
                       disabled={readOnly}
                       placeholder="0"
-                      className="bg-white border-slate-200 h-9" />
+                      className="bg-white border-muted h-9" />
                   </div>
-                  <div className="shrink-0 text-sm text-slate-500 font-medium px-1" style={{ minWidth: "70px", textAlign: "center" }}>
+                  <div className="shrink-0 text-sm text-muted-foreground font-medium px-1" style={{ minWidth: "70px", textAlign: "center" }}>
                     {baseUnit?.name}
                   </div>
                   <div className="shrink-0" style={{ width: "110px" }}>
                     <Select value={selectedUnitId} onValueChange={handleUnitChange} disabled={readOnly}>
-                      <SelectTrigger className="bg-white border-slate-200 h-9 text-xs">
+                      <SelectTrigger className="bg-white border-muted h-9 text-xs">
                         <SelectValue placeholder="الوحدة" />
                       </SelectTrigger>
                       <SelectContent>
@@ -371,14 +371,14 @@ export function TransferForm({
                   </div>
                 </div>
                 {qtyInUnitNum > 0 && convFactor > 1 && (
-                    <div className="text-[11px] text-slate-400 font-medium px-1">
+                    <div className="text-[11px] text-muted-foreground font-medium px-1">
                     {t("transfers.form.equation", { namespace: "inventory", vars: { x: String(qtyInUnitNum), unit: selectedUnit?.name || '', conv: String(convFactor), rem: String(qtyRemainderNum), baseUnit: baseUnit?.name || '', total: String(totalBase) },  })}
                   </div>
                 )}
               </div>
             )}
             {form.material_id && form.source_warehouse_id && availableQtyBase > 0 && (
-              <div className="text-[11px] text-slate-500 font-medium mt-1 px-1">
+              <div className="text-[11px] text-muted-foreground font-medium mt-1 px-1">
                 {t("transfers.form.available", { namespace: "inventory", vars: { value: availableText },  })}
               </div>
             )}
@@ -390,17 +390,17 @@ export function TransferForm({
         <div className="space-y-2.5 text-right">
           <div className="space-y-1.5">
             <FieldLabel className="flex items-center gap-1.5">
-              <Calendar className="w-3.5 h-3.5 text-slate-400" /> {t("transfers.form.transferDate", { namespace: "inventory",  })}
+              <Calendar className="w-3.5 h-3.5 text-muted-foreground" /> {t("transfers.form.transferDate", { namespace: "inventory",  })}
             </FieldLabel>
             <Input type="date"
               value={form.transfer_date?.slice(0, 10) ?? ""}
               onChange={e => setForm(p => ({ ...p, transfer_date: new Date(e.target.value).toISOString() }))}
               disabled={readOnly}
-              className="bg-white border-slate-200 h-9" />
+              className="bg-white border-muted h-9" />
           </div>
           <div className="space-y-1.5">
             <FieldLabel className="flex items-center gap-1.5">
-              <FileText className="w-3.5 h-3.5 text-slate-400" /> {t("labels.notes", { namespace: "inventory",  })}
+              <FileText className="w-3.5 h-3.5 text-muted-foreground" /> {t("labels.notes", { namespace: "inventory",  })}
             </FieldLabel>
             <Textarea value={form.notes ?? ""}
               onChange={e => setForm(p => ({ ...p, notes: e.target.value || null }))}

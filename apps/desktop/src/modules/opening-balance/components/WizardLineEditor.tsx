@@ -101,7 +101,7 @@ export function WizardLineEditor({
   return (
     <div className="space-y-1.5">
       {rows.length === 0 && (
-        <p className="text-xs text-slate-400 text-center py-2">{t("openingBalance.noItemsYet", { namespace: "accounting",  })}</p>
+        <p className="text-xs text-muted-foreground text-center py-2">{t("openingBalance.noItemsYet", { namespace: "accounting",  })}</p>
       )}
       {rows.map((l) => {
         const isEditing = editingKeys.has(l.key);
@@ -136,14 +136,14 @@ export function WizardLineEditor({
                   )}
                 />
                 {nature && (
-                  <span className="text-2xs text-slate-400 shrink-0">{nature === "debit" ? t("lineEditor.debit", { namespace: "openingBalance" }) : t("lineEditor.credit", { namespace: "openingBalance" })}</span>
+                  <span className="text-2xs text-muted-foreground shrink-0">{nature === "debit" ? t("lineEditor.debit", { namespace: "openingBalance" }) : t("lineEditor.credit", { namespace: "openingBalance" })}</span>
                 )}
                 <Button
                   type="button"
                   size="sm"
                   onClick={() => saveEdit(l.key, l.account_id, l.amount)}
                   disabled={amountInvalid || !l.account_id}
-                  className="h-8 px-2 text-xs font-bold shrink-0 bg-emerald-600 hover:bg-emerald-700 text-white"
+                  className="h-8 px-2 text-xs font-bold shrink-0 bg-success hover:bg-success/80 text-white"
                 >
                   <Check className="w-3.5 h-3.5 ms-1" />
                   {t("lineEditor.save", { namespace: "openingBalance" })}
@@ -153,7 +153,7 @@ export function WizardLineEditor({
                   size="sm"
                   variant="ghost"
                   onClick={() => cancelEdit(l.key)}
-                  className="h-8 w-8 p-0 text-slate-400 hover:text-slate-600 shrink-0"
+                  className="h-8 w-8 p-0 text-muted-foreground hover:text-muted-foreground shrink-0"
                   aria-label={newKeys.has(l.key) ? t("lineEditor.cancelAdd", { namespace: "openingBalance" }) : t("lineEditor.cancelEdit", { namespace: "openingBalance" })}
                 >
                   <X className="w-3.5 h-3.5" />
@@ -162,23 +162,23 @@ export function WizardLineEditor({
             ) : (
               <div className="flex items-center gap-2 rounded-lg border border-border bg-card px-2 py-1.5">
                 <div className="flex-1 min-w-0 flex items-center gap-2">
-                  <span className="text-2xs font-bold text-slate-400 tabular-nums shrink-0">
+                  <span className="text-2xs font-bold text-muted-foreground tabular-nums shrink-0">
                     {account?.code || "—"}
                   </span>
-                  <span className="truncate text-slate-700">{account?.name_ar || placeholder}</span>
+                  <span className="truncate text-foreground">{account?.name_ar || placeholder}</span>
                 </div>
                 <div className="w-32 shrink-0 rounded-lg border border-border bg-card px-2 py-1.5 flex items-center justify-end">
-                  <span className="tabular-nums text-xs font-bold text-slate-700">{l.amount || "0.00"}</span>
+                  <span className="tabular-nums text-xs font-bold text-foreground">{l.amount || "0.00"}</span>
                 </div>
                 {nature && (
-                  <span className="text-2xs text-slate-400 shrink-0">{nature === "debit" ? t("lineEditor.debit", { namespace: "openingBalance" }) : t("lineEditor.credit", { namespace: "openingBalance" })}</span>
+                  <span className="text-2xs text-muted-foreground shrink-0">{nature === "debit" ? t("lineEditor.debit", { namespace: "openingBalance" }) : t("lineEditor.credit", { namespace: "openingBalance" })}</span>
                 )}
                 <Button
                   type="button"
                   size="sm"
                   variant="outline"
                   onClick={() => startEdit(l.key)}
-                  className="h-8 px-2 text-xs font-bold shrink-0 border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+                  className="h-8 px-2 text-xs font-bold shrink-0 border-success/20 text-success hover:bg-success/10"
                 >
                   <Pencil className="w-3.5 h-3.5" />
                   {t("lineEditor.edit", { namespace: "openingBalance" })}
@@ -206,13 +206,13 @@ export function WizardLineEditor({
         variant="outline"
         size="sm"
         onClick={handleAdd}
-        className="h-8 shrink-0 rounded-full border-emerald-300 bg-emerald-50 px-3 text-xs font-bold text-emerald-700 hover:bg-emerald-100 hover:border-emerald-400 transition-all"
+        className="h-8 shrink-0 rounded-full border-success/20 bg-success/10 px-3 text-xs font-bold text-success hover:bg-success/20 hover:border-success/40 transition-all"
       >
         <Plus className="h-3.5 w-3.5 ms-1" />
         {t("lineEditor.addLine", { namespace: "openingBalance" })}
       </Button>
       {rows.some((l) => parseFloat(l.amount) > 0) && (
-        <div className="flex items-center justify-between border-t border-slate-100 pt-1.5 text-xs font-semibold text-slate-600">
+        <div className="flex items-center justify-between border-t border-slate-100 pt-1.5 text-xs font-semibold text-muted-foreground">
           <span>{t("lineEditor.total", { namespace: "openingBalance" })}</span>
           <span className="tabular-nums font-bold">
             {toFixed(

@@ -124,7 +124,7 @@ export function InventoryWarehouses({
           <Package className="w-3.5 h-3.5 ml-1.5 shrink-0" />{t("warehouses.materials", { namespace: "inventory",  })}
         </Button>
       )}
-      <Button variant="outline" size="sm" className={cn("flex-1", w.is_default ? "text-muted-foreground border-border cursor-not-allowed" : "text-rose-600 hover:bg-rose-50 border-rose-200 hover:border-rose-300")} onClick={() => handleDelete(w.id, w.name)} disabled={w.is_default} title={w.is_default ? t('warehouses.deleteMainDisabled', { namespace: 'inventory',  }) : ''}>
+      <Button variant="outline" size="sm" className={cn("flex-1", w.is_default ? "text-muted-foreground border-border cursor-not-allowed" : "text-destructive hover:bg-destructive/10 border-destructive/20 hover:border-destructive/30")} onClick={() => handleDelete(w.id, w.name)} disabled={w.is_default} title={w.is_default ? t('warehouses.deleteMainDisabled', { namespace: 'inventory',  }) : ''}>
         <Trash2 className="w-3.5 h-3.5 ml-1.5 shrink-0" />{t("labels.delete", { namespace: "inventory",  })}
       </Button>
     </div>
@@ -168,33 +168,33 @@ export function InventoryWarehouses({
               <tr key={w.id} className="hover:bg-accent/50 transition-colors border-b border-border">
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-2.5">
-                    <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center shrink-0", w.is_default ? "bg-emerald-100" : "bg-blue-100")}>
-                      <Warehouse className={cn("w-4 h-4", w.is_default ? "text-emerald-600" : "text-blue-600")} />
+                    <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center shrink-0", w.is_default ? "bg-success" : "bg-primary/10")}>
+                      <Warehouse className={cn("w-4 h-4", w.is_default ? "text-success" : "text-primary")} />
                     </div>
                     <div>
                       <span className="font-bold text-foreground text-sm">{w.name}</span>
-                      {w.is_default && <span className="mr-2 text-[9px] font-black text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">{t("labels.main", { namespace: "inventory",  })}</span>}
+                      {w.is_default && <span className="mr-2 text-[9px] font-black text-success bg-success/10 px-1.5 py-0.5 rounded">{t("labels.main", { namespace: "inventory",  })}</span>}
                     </div>
                   </div>
                   {renderMatchedItems(w)}
                 </td>
                 <td className="px-4 py-3 text-sm text-muted-foreground">{w.address || '—'}</td>
                 <td className="px-4 py-3 text-center">
-                  <span className={cn("inline-block px-2 py-0.5 rounded-full text-[10px] font-bold", w.is_active ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600")}>
+                  <span className={cn("inline-block px-2 py-0.5 rounded-full text-[10px] font-bold", w.is_active ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive")}>
                     {w.is_active ? t('labels.active', { namespace: 'inventory',  }) : t('labels.inactive', { namespace: 'inventory',  })}
                   </span>
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex gap-1.5 justify-center">
-                    <Button variant="ghost" size="sm" className="h-8 px-2 text-muted-foreground hover:text-blue-600 hover:bg-blue-50" onClick={() => onEdit(w)}>
+                    <Button variant="ghost" size="sm" className="h-8 px-2 text-muted-foreground hover:text-primary hover:bg-primary/10" onClick={() => onEdit(w)}>
                       <Pencil className="w-3.5 h-3.5" />
                     </Button>
                     {onViewMaterials && (
-                      <Button variant="ghost" size="sm" className="h-8 px-2 text-muted-foreground hover:text-emerald-600 hover:bg-emerald-50" onClick={() => onViewMaterials(w)}>
+                      <Button variant="ghost" size="sm" className="h-8 px-2 text-muted-foreground hover:text-success hover:bg-success/10" onClick={() => onViewMaterials(w)}>
                         <Package className="w-3.5 h-3.5" />
                       </Button>
                     )}
-                    <Button variant="ghost" size="sm" className={cn("h-8 px-2", w.is_default ? "text-muted-foreground cursor-not-allowed" : "text-muted-foreground hover:text-rose-600 hover:bg-rose-50")} onClick={() => handleDelete(w.id, w.name)} disabled={w.is_default}>
+                    <Button variant="ghost" size="sm" className={cn("h-8 px-2", w.is_default ? "text-muted-foreground cursor-not-allowed" : "text-muted-foreground hover:text-destructive hover:bg-destructive/10")} onClick={() => handleDelete(w.id, w.name)} disabled={w.is_default}>
                       <Trash2 className="w-3.5 h-3.5" />
                     </Button>
                   </div>
@@ -212,33 +212,33 @@ export function InventoryWarehouses({
     return (
       <div className="flex flex-col gap-2">
         {warehouses.map((w) => (
-          <div key={w.id} className="group bg-card p-4 rounded-2xl border border-border shadow-sm hover:shadow-md hover:border-blue-200 transition-all duration-200">
+          <div key={w.id} className="group bg-card p-4 rounded-2xl border border-border shadow-sm hover:shadow-md hover:border-primary/20 transition-all duration-200">
             <div className="flex items-center justify-between gap-4">
               <div className="flex items-center gap-3 min-w-0">
-                <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center shrink-0", w.is_default ? "bg-emerald-100" : "bg-blue-100")}>
-                  <Warehouse className={cn("w-5 h-5", w.is_default ? "text-emerald-600" : "text-blue-600")} />
+                <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center shrink-0", w.is_default ? "bg-success" : "bg-primary/10")}>
+                  <Warehouse className={cn("w-5 h-5", w.is_default ? "text-success" : "text-primary")} />
                 </div>
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
                     <span className="font-bold text-foreground">{w.name}</span>
-                    <span className={cn("text-[9px] font-bold px-1.5 py-0.5 rounded-full", w.is_active ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600")}>
+                    <span className={cn("text-[9px] font-bold px-1.5 py-0.5 rounded-full", w.is_active ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive")}>
                       {w.is_active ? t('labels.active', { namespace: 'inventory',  }) : t('labels.inactive', { namespace: 'inventory',  })}
                     </span>
-                    {w.is_default && <span className="text-[9px] font-black text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">{t("labels.main", { namespace: "inventory",  })}</span>}
+                    {w.is_default && <span className="text-[9px] font-black text-success bg-success/10 px-1.5 py-0.5 rounded">{t("labels.main", { namespace: "inventory",  })}</span>}
                   </div>
                   {w.address && <p className="text-xs text-muted-foreground mt-0.5 truncate">{w.address}</p>}
                 </div>
               </div>
               <div className="flex items-center gap-1.5 shrink-0">
-                <Button variant="ghost" size="sm" className="h-8 text-muted-foreground hover:text-blue-600 hover:bg-blue-50" onClick={() => onEdit(w)}>
+                <Button variant="ghost" size="sm" className="h-8 text-muted-foreground hover:text-primary hover:bg-primary/10" onClick={() => onEdit(w)}>
                   <Pencil className="w-3.5 h-3.5 ml-1" />{t("labels.edit", { namespace: "inventory",  })}
                 </Button>
                 {onViewMaterials && (
-                  <Button variant="ghost" size="sm" className="h-8 text-muted-foreground hover:text-emerald-600 hover:bg-emerald-50" onClick={() => onViewMaterials(w)}>
+                  <Button variant="ghost" size="sm" className="h-8 text-muted-foreground hover:text-success hover:bg-success/10" onClick={() => onViewMaterials(w)}>
                     <Package className="w-3.5 h-3.5 ml-1" />{t("warehouses.materials", { namespace: "inventory",  })}
                   </Button>
                 )}
-                <Button variant="ghost" size="sm" className={cn("h-8", w.is_default ? "text-muted-foreground cursor-not-allowed" : "text-rose-600 hover:bg-rose-50")} onClick={() => handleDelete(w.id, w.name)} disabled={w.is_default}>
+                <Button variant="ghost" size="sm" className={cn("h-8", w.is_default ? "text-muted-foreground cursor-not-allowed" : "text-destructive hover:bg-destructive/10")} onClick={() => handleDelete(w.id, w.name)} disabled={w.is_default}>
                   <Trash2 className="w-3.5 h-3.5 ml-1" />{t("labels.delete", { namespace: "inventory",  })}
                 </Button>
               </div>
@@ -264,7 +264,7 @@ export function InventoryWarehouses({
         <div
           key={w.id}
           className={cn(
-            "group relative bg-card border border-border shadow-sm hover:shadow-xl hover:border-blue-200 transition-all duration-300",
+            "group relative bg-card border border-border shadow-sm hover:shadow-xl hover:border-primary/20 transition-all duration-300",
             isSmall ? "p-5 rounded-2xl" : isLarge ? "p-10 rounded-3xl" : "p-8 rounded-3xl"
           )}
         >
@@ -273,14 +273,14 @@ export function InventoryWarehouses({
             <div className={cn(
               "rounded-2xl flex items-center justify-center shadow-inner shrink-0",
               isSmall ? "w-12 h-12" : isLarge ? "w-20 h-20" : "w-16 h-16",
-              w.is_default ? "bg-emerald-600" : "bg-blue-600"
+              w.is_default ? "bg-success" : "bg-primary"
             )}>
               <Warehouse className={cn("text-white", isSmall ? "w-6 h-6" : isLarge ? "w-10 h-10" : "w-8 h-8")} />
             </div>
             <span className={cn(
               "rounded-full text-[10px] font-black uppercase tracking-wider border shrink-0",
               isSmall ? "px-2 py-0.5" : isLarge ? "px-4 py-1.5" : "px-3 py-1",
-              w.is_active ? "bg-emerald-50 text-emerald-600 border-emerald-100" : "bg-rose-50 text-rose-600 border-rose-100"
+              w.is_active ? "bg-success/10 text-success border-success/10" : "bg-destructive/10 text-destructive border-destructive/10"
             )}>
               {w.is_active ? t('labels.active', { namespace: 'inventory',  }) : t('labels.inactive', { namespace: 'inventory',  })}
             </span>
@@ -303,7 +303,7 @@ export function InventoryWarehouses({
           {/* Default badge */}
           {w.is_default && (
             <div className={cn(
-              "inline-flex items-center rounded-lg text-[10px] font-black bg-emerald-50 text-emerald-700 border border-emerald-100",
+              "inline-flex items-center rounded-lg text-[10px] font-black bg-success/10 text-success border border-success/10",
               isSmall ? "px-2 py-0.5 mb-3" : isLarge ? "px-3 py-1.5 mb-5" : "px-2.5 py-1 mb-4"
             )}>
               {t("labels.main", { namespace: "inventory",  })}

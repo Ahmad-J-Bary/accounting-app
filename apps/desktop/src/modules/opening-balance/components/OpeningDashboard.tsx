@@ -23,7 +23,7 @@ export function OpeningDashboard({ snapshot, onOpenSection, loading = false, foo
   const { t } = useLocalization();
   if (loading) {
     return (
-      <div className="rounded-xl border border-slate-200 bg-white p-6 text-center text-xs text-slate-400 font-semibold">
+      <div className="rounded-xl border border-muted bg-white p-6 text-center text-xs text-muted-foreground font-semibold">
         {t("openingBalance.loadingPosition", { namespace: "accounting",  })}
       </div>
     );
@@ -31,9 +31,9 @@ export function OpeningDashboard({ snapshot, onOpenSection, loading = false, foo
 
   if (!snapshot.hasData) {
     return (
-      <div className="rounded-xl border border-slate-200 bg-white p-6 space-y-2">
-        <p className="text-sm font-bold text-slate-700">{t("openingBalance.noOpenBalances", { namespace: "accounting",  })}</p>
-        <p className="text-xs text-slate-500">
+      <div className="rounded-xl border border-muted bg-white p-6 space-y-2">
+        <p className="text-sm font-bold text-foreground">{t("openingBalance.noOpenBalances", { namespace: "accounting",  })}</p>
+        <p className="text-xs text-muted-foreground">
           {t("openingBalance.noOpenBalancesDesc", { namespace: "accounting",  })}
         </p>
         {footer}
@@ -46,7 +46,7 @@ export function OpeningDashboard({ snapshot, onOpenSection, loading = false, foo
       {/* Accounting-equation summary strip */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <SummaryTile label={t("openingBalance.totalAssets", { namespace: "accounting",  })} value={snapshot.totalAssets} tone="text-blue-700" />
-        <SummaryTile label={t("openingBalance.totalLiabilities", { namespace: "accounting",  })} value={snapshot.totalLiabilities} tone="text-emerald-700" />
+        <SummaryTile label={t("openingBalance.totalLiabilities", { namespace: "accounting",  })} value={snapshot.totalLiabilities} tone="text-success" />
         <SummaryTile label={t("openingBalance.totalEquity", { namespace: "accounting",  })} value={snapshot.totalEquity} tone="text-indigo-700" />
       </div>
 
@@ -87,8 +87,8 @@ export function OpeningDashboard({ snapshot, onOpenSection, loading = false, foo
 
 function SummaryTile({ label, value, tone }: { label: string; value: number; tone: string }) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-3 space-y-1">
-      <div className="text-xs font-semibold text-slate-500">{label}</div>
+    <div className="rounded-xl border border-muted bg-white p-3 space-y-1">
+      <div className="text-xs font-semibold text-muted-foreground">{label}</div>
       <div className={cn("text-xl font-black tabular-nums", tone)}>{toFixed(value, 2)}</div>
     </div>
   );
@@ -103,22 +103,22 @@ function SectionCard({ section, onOpen }: { section: OpeningSection; onOpen?: ()
       className={cn(
         "w-full text-end rounded-xl border bg-white p-3 space-y-1.5 transition-all",
         section.done
-          ? "border-emerald-200 hover:border-emerald-300"
-          : "border-slate-200 hover:border-slate-300",
+          ? "border-success/20 hover:border-success/30"
+          : "border-muted hover:border-slate-300",
       )}
     >
       <div className="flex items-center justify-between gap-2">
-        <span className="text-xs font-bold text-slate-700">{section.label}</span>
+        <span className="text-xs font-bold text-foreground">{section.label}</span>
         {section.done ? (
-          <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+          <CheckCircle2 className="w-4 h-4 text-success shrink-0" />
         ) : (
           <Circle className="w-4 h-4 text-slate-300 shrink-0" />
         )}
       </div>
-      <div className={cn("text-base font-black tabular-nums", section.done ? "text-slate-800" : "text-slate-300")}>
+      <div className={cn("text-base font-black tabular-nums", section.done ? "text-foreground" : "text-slate-300")}>
         {section.done ? toFixed(section.amount, 2) : "—"}
       </div>
-      <div className="text-2xs font-semibold text-slate-400 truncate">
+      <div className="text-2xs font-semibold text-muted-foreground truncate">
         {section.done
           ? section.lines.slice(0, 2).map((l) => `${l.code} ${l.name_ar}`).join(" · ")
           : t("openingBalance.waitingForData", { namespace: "accounting",  })}

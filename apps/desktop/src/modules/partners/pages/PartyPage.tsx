@@ -285,7 +285,7 @@ export default function PartyPage({ entityName }: PartyPageProps) {
       <Button
         size="sm"
         variant="outline"
-        className="bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
+        className="bg-white border-muted text-foreground hover:bg-muted"
         disabled={!selectedId}
         onClick={() => {
           const party = selectedItem as CustomerDto | SupplierDto;
@@ -299,61 +299,61 @@ export default function PartyPage({ entityName }: PartyPageProps) {
           }
         }}
       >
-        <History className="w-4 h-4 ml-2 text-slate-500" /> {t("partyPage.toolbar.ledger", { namespace: "partners",  })}
+        <History className="w-4 h-4 ml-2 text-muted-foreground" /> {t("partyPage.toolbar.ledger", { namespace: "partners",  })}
       </Button>
 
       <Button
         size="sm"
         variant="outline"
-        className="bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
+        className="bg-white border-muted text-foreground hover:bg-muted"
         disabled={!selectedId}
         onClick={() => {
           const tab = cfg.invoicesTab(selectedId!, selectedItem?.name || "");
           openTab({ ...tab, title: t(entityName === "customer" ? "partyPage.salesTabCustomer" : "partyPage.purchasesTabSupplier", { namespace: "partners", vars: { name: selectedItem?.name || "" }}) });
         }}
       >
-        <ShoppingBag className="w-4 h-4 ml-2 text-blue-500" />
+        <ShoppingBag className="w-4 h-4 ml-2 text-primary" />
         {entityName === "customer" ? t("partyPage.toolbar.customerSales", { namespace: "partners",  }) : t("partyPage.toolbar.supplierPurchases", { namespace: "partners",  })}
       </Button>
 
       <Button
         size="sm"
         variant="outline"
-        className="bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
+        className="bg-white border-muted text-foreground hover:bg-muted"
         disabled={!selectedId}
         onClick={() => {
           const tab = cfg.statementPath(selectedId!, selectedItem?.name || "");
           openTab({ ...tab, title: t("detail.statementTab", { namespace: "partners", vars: { name: selectedItem?.name || "" },  }) });
         }}
       >
-        <Printer className="w-4 h-4 ml-2 text-emerald-500" /> {t("partyPage.toolbar.printStatement", { namespace: "partners",  })}
+        <Printer className="w-4 h-4 ml-2 text-success" /> {t("partyPage.toolbar.printStatement", { namespace: "partners",  })}
       </Button>
 
       <Button
         size="sm"
         variant="outline"
-        className="bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
+        className="bg-white border-muted text-foreground hover:bg-muted"
         disabled={!selectedId}
         onClick={() => {
           setPanelMode('return');
         }}
       >
-        <Undo2 className="w-4 h-4 ml-2 text-amber-500" />
+        <Undo2 className="w-4 h-4 ml-2 text-warning" />
         {entityName === "customer" ? t("partyPage.toolbar.salesReturn", { namespace: "partners",  }) : t("partyPage.toolbar.purchaseReturn", { namespace: "partners",  })}
       </Button>
 
       <Button
         size="sm"
         variant="outline"
-        className="bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
+        className="bg-white border-muted text-foreground hover:bg-muted"
         disabled={!selectedId}
         onClick={() => {
           setPanelMode('payment');
         }}
       >
         {entityName === "customer"
-          ? <Receipt className="w-4 h-4 ml-2 text-amber-500" />
-          : <DollarSign className="w-4 h-4 ml-2 text-rose-500" />
+          ? <Receipt className="w-4 h-4 ml-2 text-warning" />
+          : <DollarSign className="w-4 h-4 ml-2 text-destructive" />
         }
         {entityName === "customer" ? t("partyPage.toolbar.createReceipt", { namespace: "partners",  }) : t("partyPage.toolbar.createPayment", { namespace: "partners",  })}
       </Button>
@@ -361,15 +361,15 @@ export default function PartyPage({ entityName }: PartyPageProps) {
       <Button
         size="sm"
         variant="outline"
-        className="bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
+        className="bg-white border-muted text-foreground hover:bg-muted"
         onClick={handleExport}
       >
-        <Download className="w-4 h-4 ml-2 text-slate-500" /> {t("partyPage.toolbar.exportExcel", { namespace: "partners",  })}
+        <Download className="w-4 h-4 ml-2 text-muted-foreground" /> {t("partyPage.toolbar.exportExcel", { namespace: "partners",  })}
       </Button>
 
-      <div className="h-6 w-px bg-slate-200 mx-1" />
+      <div className="h-6 w-px bg-muted mx-1" />
 
-      <Button size="sm" onClick={handleOpenAddWithAccounts} className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100">
+      <Button size="sm" onClick={handleOpenAddWithAccounts} className="bg-primary hover:bg-primary/80 shadow-lg shadow-primary/20">
         <Plus className="w-4 h-4 ml-2" /> {t(entityName === "customer" ? "partyPage.addLabelCustomer" : "partyPage.addLabelSupplier", { namespace: "partners"})}
       </Button>
     </div>

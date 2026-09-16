@@ -26,7 +26,7 @@ export default function ProductionPage() {
     <OperationalTableTemplate
       title={t("production.title", { namespace: "inventory",  })}
       toolbar={
-        <Button size="sm" onClick={() => toast.info(t("production.newOrderComingSoon", { namespace: "inventory",  }))} className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100 font-bold">
+        <Button size="sm" onClick={() => toast.info(t("production.newOrderComingSoon", { namespace: "inventory",  }))} className="bg-primary hover:bg-primary/80 shadow-lg shadow-primary/20 font-bold">
           <Plus className="w-4 h-4 ml-2" /> {t("production.newOrder", { namespace: "inventory",  })}
         </Button>
       }

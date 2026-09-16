@@ -38,9 +38,9 @@ export function PartnersToolbar({
             selectedPartner.name
           );
         }}
-        className="border-slate-200 text-slate-700 hover:bg-slate-50"
+        className="border-muted text-foreground hover:bg-muted"
       >
-        <HistoryIcon className="w-4 h-4 ml-2 text-slate-500" /> {t("toolbar.drawings", { namespace: "partners",  })}
+        <HistoryIcon className="w-4 h-4 ml-2 text-muted-foreground" /> {t("toolbar.drawings", { namespace: "partners",  })}
       </Button>
 
       <Button
@@ -54,44 +54,44 @@ export function PartnersToolbar({
           }
           onOpenDrawingsForm(selectedPartner.id);
         }}
-        className="border-slate-200 text-slate-700 hover:bg-slate-50"
+        className="border-muted text-foreground hover:bg-muted"
       >
-        <PlusCircle className="w-4 h-4 ml-2 text-amber-500" /> {t("toolbar.drawingsVoucher", { namespace: "partners",  })}
+        <PlusCircle className="w-4 h-4 ml-2 text-warning" /> {t("toolbar.drawingsVoucher", { namespace: "partners",  })}
       </Button>
 
       <Button
         size="sm"
         variant="outline"
         onClick={() => toast.info(t("toolbar.exporting", { namespace: "partners",  }))}
-        className="border-slate-200 text-slate-700 hover:bg-slate-50"
+        className="border-muted text-foreground hover:bg-muted"
       >
-        <Download className="w-4 h-4 ml-2 text-emerald-500" /> {t("toolbar.exportExcel", { namespace: "partners",  })}
+        <Download className="w-4 h-4 ml-2 text-success" /> {t("toolbar.exportExcel", { namespace: "partners",  })}
       </Button>
 
       <Button
         size="sm"
         variant="outline"
         onClick={onOpenPartnerStatement}
-        className="border-slate-200 text-slate-700 hover:bg-slate-50"
+        className="border-muted text-foreground hover:bg-muted"
       >
-        <TrendingUp className="w-4 h-4 ml-2 text-emerald-500" /> {t("toolbar.statement", { namespace: "partners",  })}
+        <TrendingUp className="w-4 h-4 ml-2 text-success" /> {t("toolbar.statement", { namespace: "partners",  })}
       </Button>
 
       <Button
         size="sm"
         variant="outline"
         onClick={onOpenProfitDistribution}
-        className="border-slate-200 text-slate-700 hover:bg-slate-50"
+        className="border-muted text-foreground hover:bg-muted"
       >
-        <Coins className="w-4 h-4 ml-2 text-amber-500" /> {t("toolbar.profitDistribution", { namespace: "partners",  })}
+        <Coins className="w-4 h-4 ml-2 text-warning" /> {t("toolbar.profitDistribution", { namespace: "partners",  })}
       </Button>
 
-      <div className="w-px h-6 bg-slate-200 mx-1" />
+      <div className="w-px h-6 bg-muted mx-1" />
 
       <Button
         size="sm"
         onClick={onAddPartner}
-        className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100 font-bold"
+        className="bg-primary hover:bg-primary/80 shadow-lg shadow-primary/20 font-bold"
       >
         <Plus className="w-4 h-4 ml-2" /> {t("toolbar.addPartner", { namespace: "partners",  })}
       </Button>

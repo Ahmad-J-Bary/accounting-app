@@ -84,8 +84,8 @@ export function BackupSettingsPanel({ config, operating, onConfigChange, onApply
       <div>
         <div className="flex items-center justify-between gap-3">
           <div className="space-y-0.5">
-            <p className="font-bold text-slate-800 text-sm">{t("backups.autoBackup", { namespace: "settings",  })}</p>
-            <p className="text-xs text-slate-400">{t("backups.autoBackupDesc", { namespace: "settings",  })}</p>
+            <p className="font-bold text-foreground text-sm">{t("backups.autoBackup", { namespace: "settings",  })}</p>
+            <p className="text-xs text-muted-foreground">{t("backups.autoBackupDesc", { namespace: "settings",  })}</p>
           </div>
           <Switch
             checked={config.auto_backup_enabled}
@@ -96,14 +96,14 @@ export function BackupSettingsPanel({ config, operating, onConfigChange, onApply
       </div>
 
       {/* Retention */}
-      <div className="border-t border-slate-100 pt-5">
-        <label className="font-bold text-slate-800 text-sm block mb-1">{t("backups.retention", { namespace: "settings",  })}</label>
-        <p className="text-xs text-slate-400 mb-3">{t("backups.retentionDesc", { namespace: "settings",  })}</p>
+      <div className="border-t border-muted pt-5">
+        <label className="font-bold text-foreground text-sm block mb-1">{t("backups.retention", { namespace: "settings",  })}</label>
+        <p className="text-xs text-muted-foreground mb-3">{t("backups.retentionDesc", { namespace: "settings",  })}</p>
         <select
           value={currentPreset}
           disabled={operating}
           onChange={(e) => void handleRetentionChange(e.target.value)}
-          className="h-11 rounded-lg border border-slate-200 bg-white px-3 text-sm font-bold text-slate-700 focus:ring-blue-500 focus:border-blue-500 w-full md:w-auto"
+          className="h-11 rounded-lg border border-muted bg-white px-3 text-sm font-bold text-foreground focus:ring-primary focus:border-primary w-full md:w-auto"
         >
           {RETENTION_PRESETS.map((p) => (
             <option key={p.value} value={p.value}>
@@ -114,15 +114,15 @@ export function BackupSettingsPanel({ config, operating, onConfigChange, onApply
       </div>
 
       {/* Backup location */}
-      <div className="border-t border-slate-100 pt-5 space-y-3">
-        <label className="font-bold text-slate-800 text-sm block">{t("backups.location", { namespace: "settings",  })}</label>
+      <div className="border-t border-muted pt-5 space-y-3">
+        <label className="font-bold text-foreground text-sm block">{t("backups.location", { namespace: "settings",  })}</label>
 
         <label
           className={cn(
             "flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all duration-200",
             !custom
-              ? "bg-blue-50 border-blue-500/30 shadow-inner"
-              : "bg-white/40 border-slate-200 hover:border-blue-500/20",
+              ? "bg-primary/10 border-primary/20 shadow-inner"
+              : "bg-white/40 border-muted hover:border-primary/20",
           )}
         >
           <input
@@ -131,11 +131,11 @@ export function BackupSettingsPanel({ config, operating, onConfigChange, onApply
             checked={!custom}
             disabled={operating}
             onChange={() => void onConfigChange({ use_same_location: true, custom_path: "" })}
-            className="h-4 w-4 accent-blue-600"
+            className="h-4 w-4 accent-primary"
           />
           <div className="space-y-0.5">
-            <div className="text-sm font-bold text-slate-700">{t("backups.nextToProgram", { namespace: "settings",  })}</div>
-            <div className="text-[10px] text-slate-400">{t("backups.nextToProgramDesc", { namespace: "settings",  })}</div>
+            <div className="text-sm font-bold text-foreground">{t("backups.nextToProgram", { namespace: "settings",  })}</div>
+            <div className="text-[10px] text-muted-foreground">{t("backups.nextToProgramDesc", { namespace: "settings",  })}</div>
           </div>
         </label>
 
@@ -143,8 +143,8 @@ export function BackupSettingsPanel({ config, operating, onConfigChange, onApply
           className={cn(
             "flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all duration-200",
             custom
-              ? "bg-blue-50 border-blue-500/30 shadow-inner"
-              : "bg-white/40 border-slate-200 hover:border-blue-500/20",
+              ? "bg-primary/10 border-primary/20 shadow-inner"
+              : "bg-white/40 border-muted hover:border-primary/20",
           )}
         >
           <input
@@ -153,17 +153,17 @@ export function BackupSettingsPanel({ config, operating, onConfigChange, onApply
             checked={custom}
             disabled={operating}
             onChange={() => void onConfigChange({ use_same_location: false })}
-            className="h-4 w-4 accent-blue-600"
+            className="h-4 w-4 accent-primary"
           />
           <div className="space-y-0.5 flex-1">
-            <div className="text-sm font-bold text-slate-700">{t("backups.customFolder", { namespace: "settings",  })}</div>
-            <div className="text-[10px] text-slate-400">{t("backups.customFolderDesc", { namespace: "settings",  })}</div>
+            <div className="text-sm font-bold text-foreground">{t("backups.customFolder", { namespace: "settings",  })}</div>
+            <div className="text-[10px] text-muted-foreground">{t("backups.customFolderDesc", { namespace: "settings",  })}</div>
           </div>
         </label>
 
         {custom && (
           <div className="flex items-center gap-2 pr-8">
-            <div className="flex-1 px-3 py-2 rounded-xl bg-white/40 border border-slate-200 text-xs text-slate-500 truncate" dir="ltr">
+            <div className="flex-1 px-3 py-2 rounded-xl bg-white/40 border border-muted text-xs text-muted-foreground truncate" dir="ltr">
               {config.custom_path || t("backups.noFolderSelected", { namespace: "settings",  })}
             </div>
             <Button variant="outline" size="sm" disabled={operating} onClick={() => void pickCustomFolder()} className="shrink-0 h-9 rounded-xl">
@@ -179,7 +179,7 @@ export function BackupSettingsPanel({ config, operating, onConfigChange, onApply
           <Button
             size="sm"
             variant="outline"
-            className="text-rose-600 hover:text-rose-700 border-rose-200 hover:border-rose-300 hover:bg-rose-50"
+            className="text-destructive hover:text-destructive/80 border-destructive/20 hover:border-destructive/30 hover:bg-destructive/10"
             disabled={operating}
             onClick={() => void onApplyRetention()}
           >

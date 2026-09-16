@@ -408,18 +408,18 @@ export function FixedAssetForm({
       <SidebarSection title={t("form.basicSection", { namespace: "fixedAssets",  })} icon={<FileText className="w-3.5 h-3.5" />} defaultOpen>
         <FormField label={t("form.assetType", { namespace: "fixedAssets",  })} required>
           {isTypeLocked && displayAssetType ? (
-            <div className="flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs">
+            <div className="flex items-center gap-2 rounded-lg border-primary/20 bg-primary/10 px-3 py-2 text-xs">
               {getAssetTypeIcon(displayAssetType)}
-              <span className="font-bold text-blue-800">
+              <span className="font-bold text-primary">
                 {t("assetTypes." + displayAssetType, { namespace: "fixedAssets"})}
               </span>
-              <span className="mr-auto text-[10px] font-normal text-blue-500">
+              <span className="mr-auto text-[10px] font-normal text-primary">
                 {t("form.typeLockedHint", { namespace: "fixedAssets",  })}
               </span>
             </div>
           ) : (
             <Select dir="rtl" value={assetType} onValueChange={(v) => setAssetType(v as FixedAssetType)}>
-              <SelectTrigger className="bg-white border-slate-200 h-9 w-full text-right text-xs font-bold text-slate-800">
+              <SelectTrigger className="bg-white border-muted h-9 w-full text-right text-xs font-bold text-foreground">
                 <SelectValue placeholder={t("form.assetTypePlaceholder", { namespace: "fixedAssets",  })} />
               </SelectTrigger>
               <SelectContent>
@@ -438,7 +438,7 @@ export function FixedAssetForm({
               <Input
                 value={code}
                 readOnly
-                className="bg-slate-50 border-slate-200 h-9 text-xs font-mono cursor-not-allowed"
+                className="bg-muted border-muted h-9 text-xs font-mono cursor-not-allowed"
               />
             </FormField>
 
@@ -447,7 +447,7 @@ export function FixedAssetForm({
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder={t("form.namePlaceholder", { namespace: "fixedAssets",  })}
-                className="bg-white border-slate-200 h-9 text-xs"
+                className="bg-white border-muted h-9 text-xs"
               />
             </FormField>
           </div>
@@ -457,7 +457,7 @@ export function FixedAssetForm({
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder={t("form.namePlaceholder", { namespace: "fixedAssets",  })}
-              className="bg-white border-slate-200 h-9 text-xs"
+              className="bg-white border-muted h-9 text-xs"
             />
           </FormField>
         )}
@@ -466,7 +466,7 @@ export function FixedAssetForm({
           <div className="grid grid-cols-2 gap-3">
             <FormField label={t("form.warehouse", { namespace: "fixedAssets",  })}>
               <Select dir="rtl" value={warehouseId} onValueChange={setWarehouseId}>
-                <SelectTrigger className="bg-white border-slate-200 h-9 w-full text-right text-xs">
+                <SelectTrigger className="bg-white border-muted h-9 w-full text-right text-xs">
                   <SelectValue placeholder={t("form.warehousePlaceholder", { namespace: "fixedAssets",  })} />
                 </SelectTrigger>
                 <SelectContent>
@@ -488,7 +488,7 @@ export function FixedAssetForm({
                 placeholder={isNonDepreciable
                   ? t("form.locationAddressPlaceholder", { namespace: "fixedAssets",  })
                   : t("form.locationRoomPlaceholder", { namespace: "fixedAssets",  })}
-                className="bg-white border-slate-200 h-9 text-xs"
+                className="bg-white border-muted h-9 text-xs"
               />
             </FormField>
           </div>
@@ -502,7 +502,7 @@ export function FixedAssetForm({
               placeholder={isNonDepreciable
                 ? t("form.locationAddressPlaceholder", { namespace: "fixedAssets",  })
                 : t("form.locationRoomPlaceholderWide", { namespace: "fixedAssets",  })}
-              className="bg-white border-slate-200 h-9 text-xs"
+              className="bg-white border-muted h-9 text-xs"
             />
           </FormField>
         )}
@@ -516,7 +516,7 @@ export function FixedAssetForm({
           <div className="grid grid-cols-2 gap-3">
             <FormField label={t("form.currency", { namespace: "fixedAssets",  })} required>
               <Select dir="rtl" value={currency} onValueChange={setCurrency}>
-                <SelectTrigger className="bg-white border-slate-200 h-9 w-full text-right text-xs">
+                <SelectTrigger className="bg-white border-muted h-9 w-full text-right text-xs">
                   <SelectValue placeholder={t("form.currencyPlaceholder", { namespace: "fixedAssets",  })} />
                 </SelectTrigger>
                 <SelectContent>
@@ -541,7 +541,7 @@ export function FixedAssetForm({
                 placeholder="0.00"
                 step="0.01"
                 min="0"
-                className="bg-white border-slate-200 h-9 text-xs"
+                className="bg-white border-muted h-9 text-xs"
               />
             </FormField>
           </div>
@@ -556,7 +556,7 @@ export function FixedAssetForm({
               placeholder="0.00"
               step="0.01"
               min="0"
-              className="bg-white border-slate-200 h-9 text-xs"
+              className="bg-white border-muted h-9 text-xs"
             />
           </FormField>
         )}
@@ -568,7 +568,7 @@ export function FixedAssetForm({
             type="date"
             value={purchaseDate}
             onChange={(e) => setPurchaseDate(e.target.value)}
-            className="bg-white border-slate-200 h-9 text-xs"
+            className="bg-white border-muted h-9 text-xs"
           />
         </FormField>
 
@@ -577,7 +577,7 @@ export function FixedAssetForm({
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder={t("form.notesPlaceholder", { namespace: "fixedAssets",  })}
-            className="bg-white border-slate-200 min-h-[60px] text-xs"
+            className="bg-white border-muted min-h-[60px] text-xs"
           />
         </FormField>
       </SidebarSection>

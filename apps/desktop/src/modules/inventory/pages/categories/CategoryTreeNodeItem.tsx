@@ -37,22 +37,22 @@ export function CategoryTreeNodeItem({
 
   const renderIcon = (n: CategoryTreeNode, expanded: boolean) => {
     if (n.isMaterial) {
-      return <Package className="w-3.5 h-3.5 text-emerald-500/70" />;
+      return <Package className="w-3.5 h-3.5 text-success" />;
     }
 
     if (isVirtualRoot) return <Folders className="w-4 h-4 text-primary" />;
-    if (isDefault) return <Lock className="w-4 h-4 text-blue-400" />;
+    if (isDefault) return <Lock className="w-4 h-4 text-primary" />;
     if (n.is_hybrid) return <Shuffle className="w-4 h-4 text-purple-400" />;
     if (isRoot) return expanded ? <FolderOpen className="w-4 h-4 text-amber-500" /> : <Folder className="w-4 h-4 text-amber-500" />;
-    return <Folder className="w-4 h-4 text-slate-300" />;
+    return <Folder className="w-4 h-4 text-muted-foreground" />;
   };
 
   const renderLabel = (n: CategoryTreeNode) => {
     if (n.isMaterial) {
       return (
         <div className="flex items-center gap-2 overflow-hidden">
-          <span className="text-xs text-slate-500 truncate font-medium">{n.name}</span>
-          <span className="text-[10px] font-mono bg-emerald-50 text-emerald-600 px-1.5 py-0.5 rounded border border-emerald-100/50">
+          <span className="text-xs text-muted-foreground truncate font-medium">{n.name}</span>
+          <span className="text-[10px] font-mono bg-success/10 text-success px-1.5 py-0.5 rounded border border-primary/10">
             {n.code_prefix} {/* code was passed as code_prefix in buildTree */}
           </span>
         </div>
@@ -64,14 +64,14 @@ export function CategoryTreeNodeItem({
         <span className={cn(
           "text-sm font-medium truncate",
           isVirtualRoot && "text-primary font-bold",
-          isDefault && "text-blue-700",
-          !isRoot && !isVirtualRoot && "text-slate-600",
-          isRoot && !isDefault && "text-slate-800"
+          isDefault && "text-primary",
+          !isRoot && !isVirtualRoot && "text-foreground",
+          isRoot && !isDefault && "text-foreground"
         )}>
           {n.name}
         </span>
         {n.code_prefix && (
-          <Badge variant="outline" className="text-[10px] py-0 px-1.5 border-blue-200 bg-blue-50 text-blue-600 font-mono gap-1">
+          <Badge variant="outline" className="text-[10px] py-0 px-1.5 border-primary/20 bg-primary/10 text-primary font-mono gap-1">
             <Type className="w-3 h-3" />
             {n.code_prefix}
           </Badge>
@@ -91,9 +91,9 @@ export function CategoryTreeNodeItem({
         </Badge>
         <div className="w-[80px]">
           {n.is_active ? (
-            <span className="text-[10px] text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">{t("labels.active", { namespace: "inventory",  })}</span>
+            <span className="text-[10px] text-success bg-success/10 px-2 py-0.5 rounded-full border border-success/10">{t("labels.active", { namespace: "inventory",  })}</span>
           ) : (
-            <span className="text-[10px] text-slate-400 bg-slate-50 px-2 py-0.5 rounded-full border border-slate-100">{t("states.disabled", { namespace: "common",  })}</span>
+            <span className="text-[10px] text-muted-foreground bg-muted px-2 py-0.5 rounded-full border border-muted">{t("states.disabled", { namespace: "common",  })}</span>
           )}
         </div>
       </>

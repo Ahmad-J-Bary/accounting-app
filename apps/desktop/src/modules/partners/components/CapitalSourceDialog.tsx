@@ -123,14 +123,14 @@ export function CapitalSourceDialog({
                 className={
                   'text-right rounded-xl border p-3 flex items-start gap-2 transition ' +
                   (source === opt.id
-                    ? 'border-blue-500 bg-blue-50'
-                    : 'border-slate-200 bg-white hover:bg-slate-50')
+                    ? 'border-primary bg-primary/10'
+                    : 'border-muted bg-white hover:bg-muted/50')
                 }
               >
-                <opt.icon className={'w-4 h-4 mt-0.5 ' + (source === opt.id ? 'text-blue-600' : 'text-slate-500')} />
+                <opt.icon className={'w-4 h-4 mt-0.5 ' + (source === opt.id ? 'text-primary' : 'text-muted-foreground')} />
                 <span className="space-y-0.5">
-                  <span className="block text-xs font-bold text-slate-800">{sourceLabels[opt.id].label}</span>
-                  <span className="block text-[10px] leading-tight text-slate-500">{sourceLabels[opt.id].hint}</span>
+                  <span className="block text-xs font-bold text-foreground">{sourceLabels[opt.id].label}</span>
+                  <span className="block text-[10px] leading-tight text-muted-foreground">{sourceLabels[opt.id].hint}</span>
                 </span>
               </button>
             ))}
@@ -142,7 +142,7 @@ export function CapitalSourceDialog({
               <p className="text-[11px] text-amber-600">{t("capitalSource.noAccounts", { namespace: "partners",  })}</p>
             ) : (
               <Select value={fundingAccountId} onValueChange={setFundingAccountId}>
-                <SelectTrigger className="h-9 bg-white border-slate-200 text-xs">
+                <SelectTrigger className="h-9 bg-white border-muted text-xs">
                   <SelectValue placeholder={t("capitalSource.selectPlaceholder", { namespace: "partners",  })} />
                 </SelectTrigger>
                 <SelectContent>
@@ -162,7 +162,7 @@ export function CapitalSourceDialog({
           <Button
             onClick={() => onConfirm(source, fundingAccountId)}
             disabled={!canSubmit || submitting}
-            className="bg-blue-600 hover:bg-blue-700 text-white font-bold"
+            className="bg-primary hover:bg-primary/80 text-white font-bold"
           >
             {submitting ? t("capitalSource.submitting", { namespace: "partners",  }) : t("capitalSource.confirm", { namespace: "partners",  })}
           </Button>

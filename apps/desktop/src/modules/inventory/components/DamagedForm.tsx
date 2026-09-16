@@ -164,7 +164,7 @@ export function DamagedForm({ onClose, products, onSave, saving, initialMaterial
   return (
     <FormPanel
       title={isEditMode ? t("damaged.form.editTitle", { namespace: "inventory",  }) : t("damaged.form.createTitle", { namespace: "inventory",  })}
-      icon={<AlertTriangle className="w-5 h-5 text-rose-600" />}
+      icon={<AlertTriangle className="w-5 h-5 text-destructive" />}
       onClose={onClose}
       onSave={handleSave}
       isSaving={saving}
@@ -176,7 +176,7 @@ export function DamagedForm({ onClose, products, onSave, saving, initialMaterial
           <div className="space-y-2">
             <FieldLabel required>{t("damaged.form.material", { namespace: "inventory",  })}</FieldLabel>
             <Select value={form.material_id ?? ""} onValueChange={handleMaterialChange}>
-              <SelectTrigger className="w-full bg-white border-slate-200">
+              <SelectTrigger className="w-full bg-white border-muted">
                 <SelectValue placeholder={t("damaged.form.materialPlaceholder", { namespace: "inventory",  })} />
               </SelectTrigger>
               <SelectContent>
@@ -197,7 +197,7 @@ export function DamagedForm({ onClose, products, onSave, saving, initialMaterial
               step="1"
               value={form.quantity || ""}
               onChange={(e) => handleQuantityChange(e.target.value)}
-              className="bg-white border-slate-200 h-9 text-xs tabular-nums"
+              className="bg-white border-muted h-9 text-xs tabular-nums"
               placeholder={t("damaged.form.quantityPlaceholder", { namespace: "inventory",  })}
             />
           </div>
@@ -228,7 +228,7 @@ export function DamagedForm({ onClose, products, onSave, saving, initialMaterial
               type="date"
               value={form.damage_date?.slice(0, 10) ?? ""}
               onChange={(e) => setForm((p) => ({ ...p, damage_date: new Date(e.target.value).toISOString() }))}
-              className="bg-white border-slate-200"
+              className="bg-white border-muted"
             />
           </div>
 
@@ -238,7 +238,7 @@ export function DamagedForm({ onClose, products, onSave, saving, initialMaterial
               value={form.reason ?? ""}
               onChange={(e) => setForm((p) => ({ ...p, reason: e.target.value }))}
               placeholder={t("damaged.form.reasonPlaceholder", { namespace: "inventory",  })}
-              className="min-h-[60px] bg-white border-slate-200"
+              className="min-h-[60px] bg-white border-muted"
             />
           </div>
         </div>

@@ -18,8 +18,8 @@ export function MobileNav() {
 
   const isLight = settings.verticalNavbarAppearance === 'light';
   const bgClass = isLight ? 'bg-white border-gray-200' : 'bg-slate-900 border-slate-700';
-  const activeClass = isLight ? 'text-blue-600' : 'text-blue-400';
-  const inactiveClass = isLight ? 'text-gray-500' : 'text-slate-400';
+  const activeClass = isLight ? 'text-primary' : 'text-primary';
+  const inactiveClass = isLight ? 'text-gray-500' : 'text-muted-foreground';
   const overflowBgClass = isLight ? 'bg-white' : 'bg-slate-900';
   const overflowBorderClass = isLight ? 'border-gray-200' : 'border-slate-700';
 

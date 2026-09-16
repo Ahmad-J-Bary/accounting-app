@@ -77,7 +77,7 @@ export default function InventoryValuationReport() {
       toolbar={
         <div className="flex items-center gap-2">
           {busy ? (
-            <span className="flex h-9 items-center gap-1.5 rounded-lg bg-white px-2.5 text-xs text-slate-500 border border-slate-200">
+            <span className="flex h-9 items-center gap-1.5 rounded-lg bg-white px-2.5 text-xs text-muted-foreground border border-muted">
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
               {t("inventoryValuation.updating", { namespace: "reports",  })}
             </span>
@@ -86,14 +86,14 @@ export default function InventoryValuationReport() {
               type="button"
               variant="outline"
               size="sm"
-              className="h-9 gap-1.5 rounded-lg border-slate-200 bg-white text-xs text-slate-600"
+              className="h-9 gap-1.5 rounded-lg border-muted bg-white text-xs text-slate-600"
               onClick={() => void refetch()}
             >
               <RefreshCw className="h-3.5 w-3.5" />
               {t("inventoryValuation.refresh", { namespace: "reports",  })}
             </Button>
           )}
-          <span className="text-xs text-slate-400">
+          <span className="text-xs text-muted-foreground">
             {t("inventoryValuation.hint", { namespace: "reports",  })}
           </span>
         </div>
@@ -105,7 +105,7 @@ export default function InventoryValuationReport() {
           <div className="overflow-x-auto p-2">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-slate-400 font-black text-[10px] uppercase tracking-widest border-b border-slate-100">
+                <tr className="text-muted-foreground font-black text-[10px] uppercase tracking-widest border-b border-muted">
                   <th className="text-end pb-4">{t("inventoryValuation.colCode", { namespace: "reports",  })}</th>
                   <th className="text-end pb-4">{t("inventoryValuation.colItem", { namespace: "reports",  })}</th>
                   <th className="text-start pb-4">{t("inventoryValuation.colQuantity", { namespace: "reports",  })}</th>
@@ -123,15 +123,15 @@ export default function InventoryValuationReport() {
                   </tr>
                 )}
                 {rows.items.map(({ material, value }) => (
-                  <tr key={material.id} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="py-3 font-mono text-xs font-black text-blue-600" dir="ltr">
+                  <tr key={material.id} className="hover:bg-muted/50/50 transition-colors">
+                    <td className="py-3 font-mono text-xs font-black text-primary" dir="ltr">
                       {material.code}
                     </td>
-                    <td className="py-3 font-bold text-slate-700">{material.name}</td>
-                    <td className="py-3 text-start tabular-nums font-bold text-slate-700">
+                    <td className="py-3 font-bold text-foreground">{material.name}</td>
+                    <td className="py-3 text-start tabular-nums font-bold text-foreground">
                       {formatNumber(toQty(material.total_available))}
                     </td>
-                    <td className="py-3 text-start tabular-nums text-slate-500">
+                    <td className="py-3 text-start tabular-nums text-muted-foreground">
                       {material.average_cost_base
                         ? formatAmount(toQty(material.average_cost_base), {
                             currencyCode: baseCurrency?.code,
@@ -145,8 +145,8 @@ export default function InventoryValuationReport() {
                 ))}
               </tbody>
               <tfoot>
-                <tr className="border-t-2 border-slate-200">
-                  <td colSpan={2} className="py-4 font-black text-slate-700">
+                <tr className="border-t-2 border-muted">
+                  <td colSpan={2} className="py-4 font-black text-foreground">
                     {t("inventoryValuation.totalBeforeAdjustments", { namespace: "reports",  })}
                   </td>
                   <td className="py-4" />
@@ -155,18 +155,18 @@ export default function InventoryValuationReport() {
                     {formatAmount(rows.subtotal, { currencyCode: baseCurrency?.code })}
                   </td>
                 </tr>
-                <tr className="border-t border-slate-100">
-                  <td colSpan={2} className="py-4 font-bold text-slate-500">
+                <tr className="border-t border-muted">
+                  <td colSpan={2} className="py-4 font-bold text-muted-foreground">
                     {t("inventoryValuation.adjustments", { namespace: "reports",  })}
                   </td>
                   <td className="py-4" />
                   <td className="py-4" />
-                  <td className="py-4 text-start tabular-nums font-bold text-emerald-700">
+                  <td className="py-4 text-start tabular-nums font-bold text-success">
                     {formatAmount(rows.netAdjustments, { currencyCode: baseCurrency?.code })}
                   </td>
                 </tr>
-                <tr className="border-t-2 border-slate-200 bg-slate-50/60">
-                  <td colSpan={2} className="py-4 text-base font-black text-slate-800">
+                <tr className="border-t-2 border-muted bg-muted/60">
+                  <td colSpan={2} className="py-4 text-base font-black text-foreground">
                     {t("inventoryValuation.totalValue", { namespace: "reports",  })}
                   </td>
                   <td className="py-4" />

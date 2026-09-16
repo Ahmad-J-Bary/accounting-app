@@ -412,14 +412,14 @@ export default function Materials() {
         title={t("materials.title", { namespace: "inventory",  })}
         toolbar={
           <>
-            <Button size="sm" onClick={handleOpenAdd} className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100">
+            <Button size="sm" onClick={handleOpenAdd} className="bg-primary hover:bg-primary/80 shadow-lg shadow-primary/20">
               <Plus className="w-4 h-4 ml-2" /> {t("materials.new", { namespace: "inventory",  })}
             </Button>
 
             <Button
               size="sm"
               variant="outline"
-              className="bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
+              className="bg-white border-muted text-foreground hover:bg-muted"
               disabled={!selectedId}
               onClick={() => {
                 if (selectedId) {
@@ -438,7 +438,7 @@ export default function Materials() {
               {t("materials.lots", { namespace: "inventory",  })}
             </Button>
 
-            <div className="h-6 w-px bg-slate-200 mx-1" />
+            <div className="h-6 w-px bg-muted mx-1" />
 
             <Button
               size="sm"
@@ -451,12 +451,12 @@ export default function Materials() {
               {t("materials.transferStock", { namespace: "inventory",  })}
             </Button>
 
-            <div className="h-6 w-px bg-slate-200 mx-1" />
+            <div className="h-6 w-px bg-muted mx-1" />
 
             <Button
               size="sm"
               variant="outline"
-              className="bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
+              className="bg-white border-muted text-foreground hover:bg-muted"
               disabled={!selectedId}
               onClick={() => selectedMaterial && openTab({
                 id: `purchases-${selectedId}`,
@@ -465,14 +465,14 @@ export default function Materials() {
                 closable: true,
               })}
             >
-              <ShoppingCart className="w-4 h-4 ml-2 text-emerald-600" />
+              <ShoppingCart className="w-4 h-4 ml-2 text-success" />
               {t("materials.purchasesAction", { namespace: "inventory",  })}
             </Button>
 
             <Button
               size="sm"
               variant="outline"
-              className="bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
+              className="bg-white border-muted text-foreground hover:bg-muted"
               disabled={!selectedId}
               onClick={() => selectedMaterial && openTab({
                 id: `sales-${selectedId}`,
@@ -481,14 +481,14 @@ export default function Materials() {
                 closable: true,
               })}
             >
-              <TrendingUp className="w-4 h-4 ml-2 text-blue-600" />
+              <TrendingUp className="w-4 h-4 ml-2 text-primary" />
               {t("materials.salesAction", { namespace: "inventory",  })}
             </Button>
 
             <Button
               size="sm"
               variant="outline"
-              className="bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
+              className="bg-white border-muted text-foreground hover:bg-muted"
               disabled={!selectedId}
               onClick={handleOpenReturn}
             >
@@ -499,7 +499,7 @@ export default function Materials() {
             <Button
               size="sm"
               variant="outline"
-              className="bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
+              className="bg-white border-muted text-foreground hover:bg-muted"
               disabled={!selectedId}
               onClick={() => {
                 setManagingUnitsMaterial(selectedMaterial);
@@ -513,7 +513,7 @@ export default function Materials() {
             <Button
               size="sm"
               variant="outline"
-              className="bg-white border-rose-200 text-rose-700 hover:bg-rose-50"
+              className="bg-white border-destructive/20 text-destructive hover:bg-destructive/10"
               disabled={!selectedId}
               onClick={() => {
                 setShowDamagedPanel(true);
@@ -521,7 +521,7 @@ export default function Materials() {
                 setManagingUnitsMaterial(null);
               }}
             >
-              <AlertTriangle className="w-4 h-4 ml-2 text-rose-600" />
+              <AlertTriangle className="w-4 h-4 ml-2 text-destructive" />
               {t("damaged.register", { namespace: "inventory",  })}
             </Button>
 
@@ -544,15 +544,15 @@ export default function Materials() {
               {t("movementTypes.Adjustment", { namespace: "inventory",  })}
             </Button>
 
-            <div className="h-6 w-px bg-slate-200 mx-1" />
+            <div className="h-6 w-px bg-muted mx-1" />
 
             <Button
               size="sm"
               variant="outline"
-              className="bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
+              className="bg-white border-muted text-foreground hover:bg-muted"
               onClick={handleExport}
             >
-              <Download className="w-4 h-4 ml-2 text-slate-500" /> {t("labels.exportExcel", { namespace: "inventory",  })}
+              <Download className="w-4 h-4 ml-2 text-muted-foreground" /> {t("labels.exportExcel", { namespace: "inventory",  })}
             </Button>
           </>
         }

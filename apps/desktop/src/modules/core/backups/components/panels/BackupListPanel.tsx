@@ -1,4 +1,4 @@
-﻿import { Database, Trash2, Save, ShieldCheck, Lock, FolderOpen } from "lucide-react";
+import { Database, Trash2, Save, ShieldCheck, Lock, FolderOpen } from "lucide-react";
 import { save } from "@tauri-apps/plugin-dialog";
 import { Button } from "@shared/ui/button";
 import {
@@ -93,7 +93,7 @@ export function BackupListPanel({ backups, pending, operating, onRestore, onDone
     return (
       <div className="py-12 text-center">
         <Database className="w-12 h-12 mx-auto mb-3 text-slate-300" />
-        <p className="font-bold text-slate-400">{t("backups.empty", { namespace: "widgets",  })}</p>
+        <p className="font-bold text-muted-foreground">{t("backups.empty", { namespace: "widgets",  })}</p>
       </div>
     );
   }
@@ -108,10 +108,10 @@ export function BackupListPanel({ backups, pending, operating, onRestore, onDone
       )}
 
       {/* Desktop: responsive table */}
-      <div className="hidden md:block rounded-xl border border-slate-100 overflow-hidden">
+      <div className="hidden md:block rounded-xl border border-muted overflow-hidden">
         <table className="w-full text-sm">
           <thead>
-            <tr className="bg-slate-50 text-xs font-bold text-slate-400">
+            <tr className="bg-muted text-xs font-bold text-muted-foreground">
               <th className="text-right px-4 py-2.5">{t("backups.columns.date", { namespace: "widgets",  })}</th>
               <th className="text-right px-4 py-2.5">{t("backups.columns.type", { namespace: "widgets",  })}</th>
               <th className="text-right px-4 py-2.5">{t("backups.columns.status", { namespace: "widgets",  })}</th>
@@ -122,8 +122,8 @@ export function BackupListPanel({ backups, pending, operating, onRestore, onDone
             {backups.map((b) => (
               <tr key={b.name} className="align-middle">
                 <td className="px-4 py-2.5">
-                  <p className="font-bold text-slate-700">{formatDate(b.timestamp)}</p>
-                  <p className="text-xs text-slate-400">{formatTime(b.timestamp)}</p>
+                  <p className="font-bold text-foreground">{formatDate(b.timestamp)}</p>
+                  <p className="text-xs text-muted-foreground">{formatTime(b.timestamp)}</p>
                 </td>
                 <td className="px-4 py-2.5">{typeBadge(b.backup_type)}</td>
                 <td className="px-4 py-2.5"><BackupStatusBadge backup={b} /></td>
@@ -162,9 +162,9 @@ export function BackupListPanel({ backups, pending, operating, onRestore, onDone
       {/* Mobile: stacked cards */}
       <div className="md:hidden space-y-2">
         {backups.map((b) => (
-          <div key={b.name} className="rounded-xl border border-slate-100 bg-white p-3 space-y-2.5">
+          <div key={b.name} className="rounded-xl border border-muted bg-white p-3 space-y-2.5">
             <div className="flex items-center justify-between gap-2">
-              <p className="font-bold text-sm text-slate-700">
+              <p className="font-bold text-sm text-foreground">
                 {formatTimestamp(b.timestamp)}
               </p>
               <BackupStatusBadge backup={b} />
@@ -188,8 +188,8 @@ export function BackupListPanel({ backups, pending, operating, onRestore, onDone
         ))}
       </div>
 
-      <p className="text-xs text-slate-400 flex items-center gap-1.5 pt-2">
-        <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
+      <p className="text-xs text-muted-foreground flex items-center gap-1.5 pt-2">
+        <ShieldCheck className="w-3.5 h-3.5 text-success" />
         {t("backups.cannotDeleteCurrentDb", { namespace: "widgets",  })}
       </p>
     </div>

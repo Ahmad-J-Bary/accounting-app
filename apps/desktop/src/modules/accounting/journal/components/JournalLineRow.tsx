@@ -43,8 +43,8 @@ export function JournalLineRow({
 
   return (
     <div className="space-y-1.5">
-      <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-2 py-2">
-        <span className="text-xs font-bold text-slate-400 tabular-nums shrink-0 w-7 text-center">
+      <div className="flex items-center gap-2 rounded-lg border border-muted bg-white px-2 py-2">
+        <span className="text-xs font-bold text-muted-foreground tabular-nums shrink-0 w-7 text-center">
           #{lineIndex}
         </span>
 
@@ -57,15 +57,15 @@ export function JournalLineRow({
           className="flex-1 min-w-0"
         />
 
-        <div className="flex items-center shrink-0 border border-slate-200 rounded-lg overflow-hidden">
+        <div className="flex items-center shrink-0 border border-muted rounded-lg overflow-hidden">
           <button
             type="button"
             onClick={() => onUpdate(line.key, { side: "debit" })}
             className={cn(
               "px-2.5 py-1.5 text-xs font-bold transition-colors",
               line.side === "debit"
-                ? "bg-blue-600 text-white"
-                : "text-slate-500 hover:bg-slate-100",
+                ? "bg-primary text-white"
+                : "text-muted-foreground hover:bg-muted",
             )}
           >
             {t("journal.lineRow.debit", { namespace: "accounting",  })}
@@ -76,8 +76,8 @@ export function JournalLineRow({
             className={cn(
               "px-2.5 py-1.5 text-xs font-bold transition-colors",
               line.side === "credit"
-                ? "bg-emerald-600 text-white"
-                : "text-slate-500 hover:bg-slate-100",
+                ? "bg-success text-white"
+                : "text-muted-foreground hover:bg-muted",
             )}
           >
             {t("journal.lineRow.credit", { namespace: "accounting",  })}
@@ -116,7 +116,7 @@ export function JournalLineRow({
         value={line.description}
         onChange={(e) => onUpdate(line.key, { description: e.target.value })}
         placeholder={t("journal.lineRow.lineDescriptionPlaceholder", { namespace: "accounting",  })}
-        className="w-full h-7 px-9 text-xs text-slate-600 placeholder:text-slate-400 border-0 bg-transparent focus:outline-none focus:ring-0"
+        className="w-full h-7 px-9 text-xs text-slate-600 placeholder:text-muted-foreground border-0 bg-transparent focus:outline-none focus:ring-0"
       />
 
       {amountInvalid && (

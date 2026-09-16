@@ -49,7 +49,7 @@ function LotRow({ lot, baseSym, onUpdate }: {
       <td className="p-2 text-muted-foreground">{lot.purchase_date?.slice(0, 10) || "—"}</td>
       <td className="p-2 text-center tabular-nums">{toLocalString(parseFloat(lot.quantity_original))}</td>
       <td className={cn("p-2 text-center tabular-nums font-bold",
-        parseFloat(lot.quantity_remaining) > 0 ? "text-emerald-600" : "text-red-400"
+        parseFloat(lot.quantity_remaining) > 0 ? "text-success" : "text-red-400"
       )}>{toLocalString(parseFloat(lot.quantity_remaining))}</td>
       <td className="p-2 text-left tabular-nums font-bold text-amber-600" title={t("materials.detail.rawCostTitle", { namespace: "inventory" })}>
         {formatCurrency(parseFloat(lot.raw_unit_cost_base || lot.unit_cost_base), baseSym || undefined)}
@@ -58,17 +58,17 @@ function LotRow({ lot, baseSym, onUpdate }: {
         {formatCurrency(parseFloat(lot.unit_cost_base), baseSym || undefined)}
       </td>
       <td className="p-1 text-center">
-        <input className={cn("w-full bg-transparent border border-transparent hover:border-border focus:border-blue-300 rounded px-1 py-0.5 text-center text-[10px] tabular-nums font-bold outline-none transition-colors",
+        <input className={cn("w-full bg-transparent border border-transparent hover:border-border focus:border-primary rounded px-1 py-0.5 text-center text-[10px] tabular-nums font-bold outline-none transition-colors",
           saving && "opacity-50"
         )} value={retail} onChange={e => setRetail(e.target.value)} onBlur={handleBlur} type="number" min="0" step="any" />
       </td>
       <td className="p-1 text-center">
-        <input className={cn("w-full bg-transparent border border-transparent hover:border-border focus:border-blue-300 rounded px-1 py-0.5 text-center text-[10px] tabular-nums font-bold outline-none transition-colors",
+        <input className={cn("w-full bg-transparent border border-transparent hover:border-border focus:border-primary rounded px-1 py-0.5 text-center text-[10px] tabular-nums font-bold outline-none transition-colors",
           saving && "opacity-50"
         )} value={semi} onChange={e => setSemi(e.target.value)} onBlur={handleBlur} type="number" min="0" step="any" />
       </td>
       <td className="p-1 text-center">
-        <input className={cn("w-full bg-transparent border border-transparent hover:border-border focus:border-blue-300 rounded px-1 py-0.5 text-center text-[10px] tabular-nums font-bold outline-none transition-colors",
+        <input className={cn("w-full bg-transparent border border-transparent hover:border-border focus:border-primary rounded px-1 py-0.5 text-center text-[10px] tabular-nums font-bold outline-none transition-colors",
           saving && "opacity-50"
         )} value={wholesale} onChange={e => setWholesale(e.target.value)} onBlur={handleBlur} type="number" min="0" step="any" />
       </td>
@@ -223,13 +223,13 @@ export function MaterialDetailPanel({
           <div className="grid grid-cols-2 gap-3">
             <div className={statCard}>
               <div className={statLabel}>{t("materials.detail.availableQty", { namespace: "inventory" })}</div>
-              <div className={statValue + " text-emerald-600"}>
+              <div className={statValue + " text-success"}>
                 {toLocalString(parseFloat(material.total_available))}
               </div>
             </div>
             <div className={statCard}>
               <div className={statLabel}>{t("materials.detail.averageCost", { namespace: "inventory" })}</div>
-              <div className={statValue + " text-blue-600"}>
+              <div className={statValue + " text-primary"}>
                 {formatCurrency(
                   parseFloat(material.average_cost),
                   baseSym || undefined
@@ -355,7 +355,7 @@ export function MaterialDetailPanel({
                         <td className="p-3 font-bold text-foreground">
                           {u.name}{" "}
                           {u.is_base && (
-                            <span className="text-[9px] text-blue-500 bg-blue-50 px-1 rounded mr-1">
+                            <span className="text-[9px] text-primary bg-primary/10 px-1 rounded mr-1">
                               {t("materials.detail.base", { namespace: "inventory" })}
                             </span>
                           )}
@@ -415,11 +415,11 @@ export function MaterialDetailPanel({
                               {tier.label}
                             </span>
                             <div className="flex flex-col items-end">
-                              <span className="text-[11px] font-bold text-emerald-600">
+                              <span className="text-[11px] font-bold text-success">
                                 {foreignSym}
                                 {price?.price || "0"}
                               </span>
-                              <span className="text-[10px] text-blue-600">
+                              <span className="text-[10px] text-primary">
                                 {formatCurrency(
                                   parseFloat(price?.price_base || "0"),
                                   baseSym || undefined
@@ -458,9 +458,9 @@ export function MaterialDetailPanel({
                       <div className="flex items-center justify-between">
                         <span className="font-bold text-foreground flex items-center gap-1.5">
                           {m.is_inflow ? (
-                            <ArrowDown className="w-3 h-3 text-emerald-600" />
+                            <ArrowDown className="w-3 h-3 text-success" />
                           ) : (
-                            <ArrowUp className="w-3 h-3 text-red-600" />
+                            <ArrowUp className="w-3 h-3 text-destructive" />
                           )}
                           {m.movement_type_label || (m.is_inflow ? 'وارد' : 'منصرف')}
                         </span>
@@ -503,7 +503,7 @@ export function MaterialDetailPanel({
                           <span className="font-bold text-foreground">{ws.warehouseName}</span>
                         </div>
                         <div className="flex items-center gap-3">
-                          <span className={cn("font-bold tabular-nums", ws.quantity > 0 ? "text-emerald-600" : "text-red-600")}>
+                          <span className={cn("font-bold tabular-nums", ws.quantity > 0 ? "text-success" : "text-destructive")}>
                             {toLocalString(ws.quantity)}
                           </span>
                           {onOpenTransfer && (

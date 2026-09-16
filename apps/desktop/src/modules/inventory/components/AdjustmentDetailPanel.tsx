@@ -78,7 +78,7 @@ export function AdjustmentDetailPanel({ item, materials: _materials, onClose, on
                 value: (
                   <span className={cn(
                     "inline-flex items-center gap-1 font-black",
-                    diff > 0 ? "text-emerald-600" : diff < 0 ? "text-rose-600" : "text-slate-400"
+                    diff > 0 ? "text-success" : diff < 0 ? "text-destructive" : "text-muted-foreground"
                   )}>
                     {diff > 0 ? <ArrowUpCircle className="w-4 h-4" /> : diff < 0 ? <ArrowDownCircle className="w-4 h-4" /> : null}
                     {diff > 0 ? "+" : ""}{toFixed(diff, 2)}

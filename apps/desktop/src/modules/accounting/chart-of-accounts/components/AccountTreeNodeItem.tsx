@@ -34,9 +34,9 @@ export function AccountTreeNodeItem({
 
   const renderIcon = (node: AccountTreeNode, isExpanded: boolean) => {
     if (isVirtualRoot) return <FolderOpen className="w-4 h-4 text-primary" />;
-    if (node.is_final) return <FileText className="w-4 h-4 text-emerald-500" />;
+    if (node.is_final) return <FileText className="w-4 h-4 text-success" />;
     if (isSummaryAccount(node)) return isExpanded ? <FolderOpen className="w-4 h-4 text-amber-500" /> : <Folder className="w-4 h-4 text-amber-500" />;
-    return <FileText className="w-4 h-4 text-slate-400" />;
+    return <FileText className="w-4 h-4 text-muted-foreground" />;
   };
 
   const renderLabel = (node: AccountTreeNode) => {
@@ -53,8 +53,8 @@ export function AccountTreeNodeItem({
       <div className="flex items-center gap-2 overflow-hidden">
         {!isVirtualRoot && (
           <div className="flex items-center gap-1.5 flex-shrink-0" style={{ minWidth: `${codeWidth}px` }}>
-            <Hash className="w-3 h-3 text-slate-400" />
-            <span className={cn("tabular-nums text-xs font-medium", isSummary ? "text-slate-600" : "text-slate-500")}>
+            <Hash className="w-3 h-3 text-muted-foreground" />
+            <span className={cn("tabular-nums text-xs font-medium", isSummary ? "text-slate-600" : "text-muted-foreground")}>
               {displayCode}
             </span>
           </div>
@@ -64,13 +64,13 @@ export function AccountTreeNodeItem({
         </span>
         <div className="flex items-center gap-1 flex-shrink-0">
           {node.is_default && (
-            <span className="inline-flex p-0.5 rounded-full bg-blue-50">
-              <ShieldCheck className="w-3.5 h-3.5 text-blue-500" />
+            <span className="inline-flex p-0.5 rounded-full bg-primary/10">
+              <ShieldCheck className="w-3.5 h-3.5 text-primary" />
             </span>
           )}
           {!node.is_active && (
-            <span className="inline-flex p-0.5 rounded-full bg-slate-100">
-              <Lock className="w-3.5 h-3.5 text-slate-500" />
+            <span className="inline-flex p-0.5 rounded-full bg-muted">
+              <Lock className="w-3.5 h-3.5 text-muted-foreground" />
             </span>
           )}
         </div>
@@ -86,7 +86,7 @@ export function AccountTreeNodeItem({
           <div className="w-[90px]" />
           <div className="w-[100px]" />
           <div className="w-[120px] text-start tabular-nums">
-            <span className={cn("text-sm font-black", bal >= 0 ? "text-slate-700" : "text-red-600")}>
+            <span className={cn("text-sm font-black", bal >= 0 ? "text-foreground" : "text-red-600")}>
               {formatCurrency(bal)}
             </span>
           </div>
@@ -98,23 +98,23 @@ export function AccountTreeNodeItem({
       <>
         <div className="w-[90px]">
           {node.is_final ? (
-            <span className="text-[10px] px-2 py-0.5 rounded-md font-medium bg-emerald-50 text-emerald-700">{t("chartOfAccounts.badges.leaf", { namespace: "accounting",  })}</span>
+            <span className="text-[10px] px-2 py-0.5 rounded-md font-medium bg-success/10 text-success">{t("chartOfAccounts.badges.leaf", { namespace: "accounting",  })}</span>
           ) : (
-            <span className={cn("text-[10px] px-2 py-0.5 rounded-md font-medium", isSummaryAccount(node) ? "bg-amber-50 text-amber-700" : "bg-slate-100 text-slate-600")}>
+            <span className={cn("text-[10px] px-2 py-0.5 rounded-md font-medium", isSummaryAccount(node) ? "bg-amber-50 text-amber-700" : "bg-muted text-slate-600")}>
               {isSummaryAccount(node) ? t("chartOfAccounts.badges.summary", { namespace: "accounting",  }) : t("chartOfAccounts.badges.sub", { namespace: "accounting",  })}
             </span>
           )}
         </div>
         <div className="w-[100px]">
-          <span className={cn("text-[10px] px-2 py-0.5 rounded-md font-medium border", TYPE_LABELS[node.account_type]?.color || "bg-slate-50 text-slate-600 border-slate-200")}>
+          <span className={cn("text-[10px] px-2 py-0.5 rounded-md font-medium border", TYPE_LABELS[node.account_type]?.color || "bg-muted text-slate-600 border-muted")}>
             {t(`chartOfAccounts.typeLabels.${node.account_type}`, { namespace: "accounting"})}
           </span>
         </div>
         <div className="w-[120px] text-start tabular-nums">
           {isOpeningStockAccount(node.name_ar) ? (
-            <span className="text-sm font-medium text-slate-400">({formatCurrency(parseSafeNumber(node.balance))})</span>
+            <span className="text-sm font-medium text-muted-foreground">({formatCurrency(parseSafeNumber(node.balance))})</span>
           ) : (
-            <span className={cn("text-sm font-medium", parseSafeNumber(node.balance) >= 0 ? "text-slate-700" : "text-red-600")}>
+            <span className={cn("text-sm font-medium", parseSafeNumber(node.balance) >= 0 ? "text-foreground" : "text-red-600")}>
               {formatCurrency(parseSafeNumber(node.balance))}
             </span>
           )}

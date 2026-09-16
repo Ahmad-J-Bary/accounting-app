@@ -188,28 +188,28 @@ export default function AdjustmentsPage() {
       title={t("adjustments.title", { namespace: "inventory",  })}
       toolbar={
         <div className="flex items-center gap-2">
-          <Button size="sm" onClick={handleNewClick} className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100 font-bold">
+          <Button size="sm" onClick={handleNewClick} className="bg-primary hover:bg-primary/80 shadow-lg shadow-primary/20 font-bold">
             <Plus className="w-4 h-4 ml-2" /> {t("adjustments.new", { namespace: "inventory",  })}
           </Button>
-          <div className="h-6 w-px bg-slate-200 mx-1" />
+          <div className="h-6 w-px bg-muted mx-1" />
           <Button variant="outline" size="sm" disabled={!selectedItem}
             onClick={() => selectedItem && handleView(selectedItem)}
-            className="h-9 border-slate-200 hover:bg-slate-50 font-bold">
-            <Eye className="w-4 h-4 ml-2 text-blue-500" /> {t("actions.view", { namespace: "common",  })}
+            className="h-9 border-muted hover:bg-muted font-bold">
+            <Eye className="w-4 h-4 ml-2 text-primary" /> {t("actions.view", { namespace: "common",  })}
           </Button>
           <Button variant="outline" size="sm" disabled={!selectedItem}
             onClick={() => selectedItem && handleEditClick(selectedItem)}
-            className="h-9 border-slate-200 hover:bg-slate-50 font-bold">
+            className="h-9 border-muted hover:bg-muted font-bold">
             <Settings2 className="w-4 h-4 ml-2 text-amber-500" /> {t("actions.edit", { namespace: "common",  })}
           </Button>
           <Button variant="outline" size="sm" disabled={!selectedItem}
             onClick={() => selectedItem && handleDelete(selectedItem.id)}
-            className="h-9 border-slate-200 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 font-bold transition-all">
-            <Trash2 className="w-4 h-4 ml-2 text-rose-500" /> {t("actions.delete", { namespace: "common",  })}
+            className="h-9 border-muted hover:bg-destructive/10 hover:text-destructive hover:border-destructive/20 font-bold transition-all">
+            <Trash2 className="w-4 h-4 ml-2 text-destructive" /> {t("actions.delete", { namespace: "common",  })}
           </Button>
-          <div className="h-6 w-px bg-slate-200 mx-1" />
-          <Button variant="outline" size="sm" onClick={handleExport} className="h-9 border-slate-200 hover:bg-slate-50 font-bold">
-            <Download className="w-4 h-4 ml-2 text-slate-500" /> {t("labels.exportExcel", { namespace: "inventory",  })}
+          <div className="h-6 w-px bg-muted mx-1" />
+          <Button variant="outline" size="sm" onClick={handleExport} className="h-9 border-muted hover:bg-muted font-bold">
+            <Download className="w-4 h-4 ml-2 text-muted-foreground" /> {t("labels.exportExcel", { namespace: "inventory",  })}
           </Button>
         </div>
       }

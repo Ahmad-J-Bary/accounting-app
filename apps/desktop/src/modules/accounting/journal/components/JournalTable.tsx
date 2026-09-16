@@ -169,7 +169,7 @@ export function JournalTable({
             <button
               type="button"
               onClick={() => onEntryClick(e.id)}
-              className="font-black text-center text-blue-600 hover:text-blue-800 hover:underline cursor-pointer bg-transparent border-0 p-0"
+              className="font-black text-center text-primary hover:text-primary hover:underline cursor-pointer bg-transparent border-0 p-0"
             >
               {formatNumber(parseInt(e.entry_number) || 0)}
             </button>
@@ -186,7 +186,7 @@ export function JournalTable({
         accessor: (e) => e.isFirstInGroup ? (
           <span className="inline-flex flex-col items-start gap-0.5">
             <span className="inline-flex items-center gap-1">
-              <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black bg-slate-100 text-slate-600 uppercase tracking-tighter">
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black bg-muted text-slate-600 uppercase tracking-tighter">
                 {e.journal_type_display}
               </span>
               {e.is_contra && (
@@ -205,7 +205,7 @@ export function JournalTable({
                 </span>
               )}
               {e.status === "Cancelled" && (
-                <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black bg-slate-300 text-slate-700">
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black bg-slate-300 text-foreground">
                   {t("journal.table.badgeCancelled", { namespace: "accounting",  })}
                 </span>
               )}
@@ -223,7 +223,7 @@ export function JournalTable({
               )}
             </span>
             {e.reversal_entry_number && (
-              <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-slate-50 text-slate-500">
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-muted text-muted-foreground">
                 {e.is_contra
                   ? t("journal.table.reversalOf", { namespace: "accounting", vars: { number: e.reversal_entry_number },  })
                   : t("journal.table.reversedBy", { namespace: "accounting", vars: { number: e.reversal_entry_number },  })}
@@ -263,8 +263,8 @@ export function JournalTable({
           return e.amount_base > 0 ? formatAmount(e.amount_base, { currencyCode: curr.code }) : "";
         },
         className: isBase
-          ? "tabular-nums font-black text-emerald-700"
-          : "tabular-nums font-medium text-emerald-300"
+          ? "tabular-nums font-black text-success"
+          : "tabular-nums font-medium text-success/60"
       });
     });
 
@@ -274,14 +274,14 @@ export function JournalTable({
         header: t("journal.table.colDescription", { namespace: "accounting",  }),
         label: t("journal.table.colDescription", { namespace: "accounting",  }),
         accessor: (e) => e.isFirstInGroup ? e.description : "",
-        className: "text-slate-700 font-bold"
+        className: "text-foreground font-bold"
       },
       {
         id: "account",
         header: t("journal.table.colAccount", { namespace: "accounting",  }),
         label: t("journal.table.colAccount", { namespace: "accounting",  }),
         accessor: (e: JournalTableRow) => (
-          <span className={e.side === "debit" ? "text-blue-600 font-bold" : "text-emerald-600 font-bold"}>
+          <span className={e.side === "debit" ? "text-primary font-bold" : "text-success font-bold"}>
             {e.account_name}
           </span>
         ),
@@ -291,7 +291,7 @@ export function JournalTable({
         header: t("journal.table.colDate", { namespace: "accounting",  }),
         label: t("journal.table.colDate", { namespace: "accounting",  }),
         accessor: (e) => e.isFirstInGroup ? formatDateTime(e.entry_date) : "",
-        className: "text-slate-500 tabular-nums"
+        className: "text-muted-foreground tabular-nums"
       },
     );
     return cols;
@@ -307,7 +307,7 @@ export function JournalTable({
           <button
             type="button"
             onClick={() => onEntryClick(e.id)}
-            className="font-black text-center text-blue-600 hover:text-blue-800 hover:underline cursor-pointer bg-transparent border-0 p-0"
+            className="font-black text-center text-primary hover:text-primary hover:underline cursor-pointer bg-transparent border-0 p-0"
           >
             {formatNumber(parseInt(e.entry_number) || 0)}
           </button>
@@ -323,7 +323,7 @@ export function JournalTable({
         accessor: (e) => (
           <span className="inline-flex flex-col items-start gap-0.5">
             <span className="inline-flex items-center gap-1">
-              <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black bg-slate-100 text-slate-600 uppercase tracking-tighter">
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black bg-muted text-slate-600 uppercase tracking-tighter">
                 {e.journal_type_display}
               </span>
               {e.is_contra && (
@@ -342,7 +342,7 @@ export function JournalTable({
                 </span>
               )}
               {e.status === "Cancelled" && (
-                <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black bg-slate-300 text-slate-700">
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black bg-slate-300 text-foreground">
                   {t("journal.table.badgeCancelled", { namespace: "accounting",  })}
                 </span>
               )}
@@ -360,7 +360,7 @@ export function JournalTable({
               )}
             </span>
             {e.reversal_entry_number && (
-              <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-slate-50 text-slate-500">
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-muted text-muted-foreground">
                 {e.is_contra
                   ? t("journal.table.reversalOf", { namespace: "accounting", vars: { number: e.reversal_entry_number },  })
                   : t("journal.table.reversedBy", { namespace: "accounting", vars: { number: e.reversal_entry_number },  })}
@@ -396,8 +396,8 @@ export function JournalTable({
         accessor: (e: JournalSingleLineTableRow) =>
           e.credit_amount_base > 0 ? formatAmount(e.credit_amount_base, { currencyCode: curr.code }) : "",
         className: isBase
-          ? "tabular-nums font-black text-emerald-700"
-          : "tabular-nums font-medium text-emerald-300"
+          ? "tabular-nums font-black text-success"
+          : "tabular-nums font-medium text-success/60"
       });
     });
 
@@ -406,14 +406,14 @@ export function JournalTable({
         header: t("journal.table.colDescription", { namespace: "accounting",  }),
         label: t("journal.table.colDescription", { namespace: "accounting",  }),
         accessor: (e) => e.description,
-        className: "text-slate-700 font-bold"
+        className: "text-foreground font-bold"
       },
       {
         id: "debit_accounts",
         header: t("journal.table.colDebitAccounts", { namespace: "accounting",  }),
         label: t("journal.table.colDebitAccounts", { namespace: "accounting",  }),
         accessor: (e: JournalSingleLineTableRow) => (
-          <span className="text-blue-600 font-bold">{e.debit_account_names}</span>
+          <span className="text-primary font-bold">{e.debit_account_names}</span>
         ),
       },
       {
@@ -421,7 +421,7 @@ export function JournalTable({
         header: t("journal.table.colCreditAccounts", { namespace: "accounting",  }),
         label: t("journal.table.colCreditAccounts", { namespace: "accounting",  }),
         accessor: (e: JournalSingleLineTableRow) => (
-          <span className="text-emerald-600 font-bold">{e.credit_account_names}</span>
+          <span className="text-success font-bold">{e.credit_account_names}</span>
         ),
       },
       {
@@ -429,7 +429,7 @@ export function JournalTable({
         header: t("journal.table.colDate", { namespace: "accounting",  }),
         label: t("journal.table.colDate", { namespace: "accounting",  }),
         accessor: (e) => formatDateTime(e.entry_date),
-        className: "text-slate-500 tabular-nums"
+        className: "text-muted-foreground tabular-nums"
       },
     );
     return cols;
@@ -662,7 +662,7 @@ export function JournalTable({
     return enrichedColumns.map((col) => {
       const id = col.id;
       if (id === "entry_number") {
-        return { id: "count", columnId: "entry_number", label: "", value: t("journal.table.count", { namespace: "accounting", vars: { count: sortedData.length },  }), className: "text-slate-500 font-medium" };
+        return { id: "count", columnId: "entry_number", label: "", value: t("journal.table.count", { namespace: "accounting", vars: { count: sortedData.length },  }), className: "text-muted-foreground font-medium" };
       }
       if (id === "journal_type" || id === "description") {
         return { id: `${id}_spacer`, columnId: id, label: "", value: "" };
@@ -677,8 +677,8 @@ export function JournalTable({
           const valueClass = baseBalance > 0
             ? "text-blue-700 font-black"
             : baseBalance < 0
-            ? "text-emerald-700 font-black"
-            : "text-slate-500 font-bold";
+            ? "text-success font-black"
+            : "text-muted-foreground font-bold";
           return { id: `${id}_balance`, columnId: id, label, value, className: valueClass };
         }
         if (id === "entry_date") {
@@ -693,8 +693,8 @@ export function JournalTable({
           const valueClass = baseBalance > 0
             ? "text-blue-700 font-black"
             : baseBalance < 0
-            ? "text-emerald-700 font-black"
-            : "text-slate-500 font-bold";
+            ? "text-success font-black"
+            : "text-muted-foreground font-bold";
           return { id: `${id}_balance`, columnId: id, label, value, className: valueClass };
         }
       }
@@ -726,8 +726,8 @@ export function JournalTable({
           label,
           value: baseCreditTotal > 0 ? formatAmount(-baseCreditTotal, { currencyCode: currCode }) : "—",
           className: isB
-            ? "text-emerald-700 font-black"
-            : "text-emerald-300 font-extrabold"
+            ? "text-success font-black"
+            : "text-success/60 font-extrabold"
         };
       }
 
@@ -1048,10 +1048,10 @@ export function JournalTable({
         <Button
           size="sm"
           variant="outline"
-          className="h-8 border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+          className="h-8 border-muted bg-white text-foreground hover:bg-muted/50"
           onClick={handleExport}
         >
-          <Download className="w-3.5 h-3.5 ms-1.5 text-slate-500" />
+          <Download className="w-3.5 h-3.5 ms-1.5 text-muted-foreground" />
           {t("journal.table.export", { namespace: "accounting",  })}
         </Button>
       )}

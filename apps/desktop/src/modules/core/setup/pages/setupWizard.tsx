@@ -145,7 +145,7 @@ export default function SetupWizard() {
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100">
         <Card className="w-full max-w-md text-center">
           <CardHeader>
-            <CheckCircle2 className="w-16 h-16 text-emerald-500 mx-auto mb-2" />
+            <CheckCircle2 className="w-16 h-16 text-success mx-auto mb-2" />
             <CardTitle className="text-2xl">{t("done.title", { namespace: "setup" })}</CardTitle>
             <CardDescription>{t("done.loading", { namespace: "setup" })}</CardDescription>
           </CardHeader>
@@ -168,9 +168,9 @@ export default function SetupWizard() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="text-right">
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">{t("welcome.companyName", { namespace: "setup" })}</label>
+              <label className="block text-sm font-medium text-foreground mb-1.5">{t("welcome.companyName", { namespace: "setup" })}</label>
               <div className="relative">
-                <Building2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <Building2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
                   value={companyName}
                   onChange={(e) => setCompanyName(e.target.value)}
@@ -181,25 +181,25 @@ export default function SetupWizard() {
             </div>
 
             <div className="text-right space-y-2">
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">{t("welcome.companyType", { namespace: "setup" })}</label>
+              <label className="block text-sm font-medium text-foreground mb-1.5">{t("welcome.companyType", { namespace: "setup" })}</label>
               <RadioGroup value={companyType} onValueChange={setCompanyType} className="gap-2">
                 <label
                   htmlFor="company-type-existing"
                   className={`flex items-start gap-3 border rounded-lg p-3 cursor-pointer transition-all ${
                     companyType === COMPANY_TYPE_EXISTING
-                      ? "border-emerald-400 bg-emerald-50 ring-2 ring-emerald-200"
-                      : "border-slate-200 bg-white hover:border-slate-300"
+                      ? "border-success/80 bg-success/10 ring-2 ring-success/20"
+                      : "border-muted bg-white hover:border-muted/80"
                   }`}
                 >
                   <RadioGroupItem value={COMPANY_TYPE_EXISTING} id="company-type-existing" aria-label={t("welcome.existingCompany", { namespace: "setup" })} className="mt-1" />
                   <span className="flex-1">
                     <span className="flex items-center justify-between gap-2">
-                      <span className="text-sm font-bold text-slate-800">{t("welcome.existingCompany", { namespace: "setup" })}</span>
+                      <span className="text-sm font-bold text-foreground">{t("welcome.existingCompany", { namespace: "setup" })}</span>
                       {companyType === COMPANY_TYPE_EXISTING && (
-                        <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />
+                        <CheckCircle2 className="w-5 h-5 text-success shrink-0" />
                       )}
                     </span>
-                    <span className="block text-xs text-slate-500 mt-0.5">
+                    <span className="block text-xs text-muted-foreground mt-0.5">
                       {t("welcome.existingCompanyDesc", { namespace: "setup" })}
                     </span>
                   </span>
@@ -208,19 +208,19 @@ export default function SetupWizard() {
                   htmlFor="company-type-new"
                   className={`flex items-start gap-3 border rounded-lg p-3 cursor-pointer transition-all ${
                     companyType === COMPANY_TYPE_NEW
-                      ? "border-emerald-400 bg-emerald-50 ring-2 ring-emerald-200"
-                      : "border-slate-200 bg-white hover:border-slate-300"
+                      ? "border-success/80 bg-success/10 ring-2 ring-success/20"
+                      : "border-muted bg-white hover:border-muted/80"
                   }`}
                 >
                   <RadioGroupItem value={COMPANY_TYPE_NEW} id="company-type-new" aria-label={t("welcome.newCompany", { namespace: "setup" })} className="mt-1" />
                   <span className="flex-1">
                     <span className="flex items-center justify-between gap-2">
-                      <span className="text-sm font-bold text-slate-800">{t("welcome.newCompany", { namespace: "setup" })}</span>
+                      <span className="text-sm font-bold text-foreground">{t("welcome.newCompany", { namespace: "setup" })}</span>
                       {companyType === COMPANY_TYPE_NEW && (
-                        <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />
+                        <CheckCircle2 className="w-5 h-5 text-success shrink-0" />
                       )}
                     </span>
-                    <span className="block text-xs text-slate-500 mt-0.5">
+                    <span className="block text-xs text-muted-foreground mt-0.5">
                       {t("welcome.newCompanyDesc", { namespace: "setup" })}
                     </span>
                   </span>
@@ -228,7 +228,7 @@ export default function SetupWizard() {
               </RadioGroup>
             </div>
             {!currenciesReady && (
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-right text-sm text-amber-800">
+              <div className="bg-warning/10 border border-warning/20 rounded-lg p-4 text-right text-sm text-warning">
                 <p className="font-bold mb-1">{t("welcome.baseCurrencyInfo", { namespace: "setup" })}</p>
                 <p>{t("welcome.baseCurrencyDesc", { namespace: "setup" })}</p>
               </div>
@@ -259,7 +259,7 @@ export default function SetupWizard() {
             {t("currency.desc", { namespace: "setup" })}
           </CardDescription>
           <div className="relative mt-2">
-            <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
               placeholder={t("currency.searchPlaceholder", { namespace: "setup" })}
               value={search}
@@ -278,29 +278,29 @@ export default function SetupWizard() {
                   key={wc.code}
                   className={`relative border rounded-lg p-3 cursor-pointer transition-all ${
                     isBase
-                      ? "border-emerald-400 bg-emerald-50 ring-2 ring-emerald-200"
+                      ? "border-success/80 bg-success/10 ring-2 ring-success/20"
                       : isSecondary
-                      ? "border-blue-400 bg-blue-50 ring-2 ring-blue-200"
-                      : "border-slate-200 hover:border-slate-300 hover:shadow-sm"
+                      ? "border-primary/80 bg-primary/10 ring-2 ring-primary/20"
+                      : "border-muted hover:border-muted/80 hover:shadow-sm"
                   }`}
                 >
                   <div className="flex items-start justify-between mb-1">
-                    <span className="text-lg font-bold text-slate-800">{wc.code}</span>
-                    <span className="text-xl text-slate-500">{wc.symbol}</span>
+                    <span className="text-lg font-bold text-foreground">{wc.code}</span>
+                    <span className="text-xl text-muted-foreground">{wc.symbol}</span>
                   </div>
-                  <div className="text-sm text-slate-600">{wc.name_ar}</div>
-                  <div className="text-xs text-slate-400">{wc.name_en}</div>
+                  <div className="text-sm text-foreground">{wc.name_ar}</div>
+                  <div className="text-xs text-muted-foreground">{wc.name_en}</div>
                   <div className="flex gap-1 mt-2">
                     <Badge
                       variant={isBase ? "default" : "outline"}
-                      className={`cursor-pointer text-xs ${isBase ? "bg-emerald-500" : ""}`}
+                      className={`cursor-pointer text-xs ${isBase ? "bg-success" : ""}`}
                       onClick={() => handleToggleBase(wc.code)}
                     >
                       {isBase ? `✓ ${t("currency.base", { namespace: "setup" })}` : t("currency.base", { namespace: "setup" })}
                     </Badge>
                     <Badge
                       variant={isSecondary ? "default" : "outline"}
-                      className={`cursor-pointer text-xs ${isSecondary ? "bg-blue-500" : ""}`}
+                      className={`cursor-pointer text-xs ${isSecondary ? "bg-primary" : ""}`}
                       onClick={() => handleToggleSecondary(wc.code)}
                     >
                       {isSecondary ? `✓ ${t("currency.secondary", { namespace: "setup" })}` : t("currency.secondary", { namespace: "setup" })}
@@ -312,11 +312,11 @@ export default function SetupWizard() {
           </div>
 
           <div className="mt-6 flex items-center justify-between border-t pt-4">
-            <div className="text-sm text-slate-500">
+            <div className="text-sm text-muted-foreground">
               {baseCode ? (
-                <span className="text-emerald-700 font-medium">
+                <span className="text-success font-medium">
                   ✓ {t("currency.baseSelected", { namespace: "setup" })} {baseCode}
-                  {secondaryCode && <span className="text-blue-700"> | {t("currency.secondarySelected", { namespace: "setup" })} {secondaryCode}</span>}
+                  {secondaryCode && <span className="text-primary font-medium"> | {t("currency.secondarySelected", { namespace: "setup" })} {secondaryCode}</span>}
                 </span>
               ) : (
                 t("currency.selectBase", { namespace: "setup" })

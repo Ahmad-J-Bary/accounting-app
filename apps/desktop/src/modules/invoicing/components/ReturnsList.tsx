@@ -82,7 +82,7 @@ export function ReturnsList({
       title={title}
       toolbar={
         <div className="no-print flex items-center gap-2">
-          <Button size="sm" onClick={onCreate} className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100 h-9 px-4 font-bold">
+          <Button size="sm" onClick={onCreate} className="bg-primary hover:bg-primary/80 shadow-lg shadow-primary/20 h-9 px-4 font-bold">
             <Plus className="w-4 h-4 ml-2" />{createLabel}
           </Button>
           <div className="w-[1px] h-6 bg-slate-200 mx-1" />
@@ -91,26 +91,26 @@ export function ReturnsList({
               const ret = returns.find(r => r.id === selectedId);
               if (ret) onView(ret);
             }}
-            className="h-9 border-slate-200 hover:bg-slate-50 font-bold">
-            <Eye className="w-4 h-4 ml-2 text-blue-500" /> {t("actions.view", { namespace: "invoicing",  })}
+            className="h-9 border-muted hover:bg-muted/50 font-bold">
+            <Eye className="w-4 h-4 ml-2 text-primary" /> {t("actions.view", { namespace: "invoicing",  })}
           </Button>
           <Button variant="outline" size="sm" disabled={!selectedId}
             onClick={() => {
               const ret = returns.find(r => r.id === selectedId);
               if (ret) onEdit(ret);
             }}
-            className="h-9 border-slate-200 hover:bg-slate-50 font-bold">
+            className="h-9 border-muted hover:bg-muted/50 font-bold">
             <Settings2 className="w-4 h-4 ml-2 text-amber-500" /> {t("actions.edit", { namespace: "invoicing",  })}
           </Button>
           <Button variant="outline" size="sm" disabled={!selectedId}
             onClick={handleDeleteSelected}
-            className="h-9 border-slate-200 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 font-bold transition-all">
-            <Trash2 className="w-4 h-4 ml-2 text-rose-500" /> {t("actions.delete", { namespace: "invoicing",  })}
+            className="h-9 border-muted hover:bg-destructive/10 hover:text-destructive hover:border-destructive/20 font-bold transition-all">
+            <Trash2 className="w-4 h-4 ml-2 text-destructive" /> {t("actions.delete", { namespace: "invoicing",  })}
           </Button>
           <Button variant="outline" size="sm" disabled={!selectedId}
             onClick={() => { window.dispatchEvent(new Event("app:prepare-print")); requestAnimationFrame(() => window.print()); }}
-            className="h-9 border-slate-200 hover:bg-slate-50 font-bold">
-            <Printer className="w-4 h-4 ml-2 text-slate-500" /> {t("actions.print", { namespace: "invoicing",  })}
+            className="h-9 border-muted hover:bg-muted/50 font-bold">
+            <Printer className="w-4 h-4 ml-2 text-muted-foreground" /> {t("actions.print", { namespace: "invoicing",  })}
           </Button>
         </div>
       }

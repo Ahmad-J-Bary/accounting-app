@@ -98,7 +98,7 @@ function NavSidebarPreview({
     return (
       <div className={cn("w-full flex flex-col rounded-lg overflow-hidden border", borderClass)}>
         <div className={cn("flex items-center gap-2 px-3 h-10 border-b shrink-0", background, borderClass)}>
-          <div className="w-6 h-6 rounded bg-blue-600 flex items-center justify-center shrink-0">
+          <div className="w-6 h-6 rounded bg-primary flex items-center justify-center shrink-0">
             <LayoutDashboard className="w-3.5 h-3.5 text-white" />
           </div>
           <span className={cn("text-[10px] font-bold", textClass)}>{t("navbar.preview.systemName", { namespace: "settings",  })}</span>
@@ -269,20 +269,20 @@ export const NavbarSettingsManager: React.FC = () => {
   return (
     <SettingsManagerLayout resetAction={resetNavSettings}>
       <div className="space-y-5">
-        <div className="flex flex-col gap-1 border-r-4 border-blue-600 pr-3 pb-1 mb-2">
-          <h2 className="text-xl font-black text-slate-800">{t("navbar.title", { namespace: "settings",  })}</h2>
-          <p className="text-xs text-slate-500">{t("navbar.description", { namespace: "settings",  })}</p>
+        <div className="flex flex-col gap-1 border-r-4 border-primary pr-3 pb-1 mb-2">
+          <h2 className="text-xl font-black text-foreground">{t("navbar.title", { namespace: "settings",  })}</h2>
+          <p className="text-xs text-muted-foreground">{t("navbar.description", { namespace: "settings",  })}</p>
         </div>
 
-        <SettingsGroup title={t("navbar.layoutTitle", { namespace: "settings",  })} icon={Menu} color="text-blue-600">
+        <SettingsGroup title={t("navbar.layoutTitle", { namespace: "settings",  })} icon={Menu} color="text-primary">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
-              <Label className="text-slate-600 font-semibold">{t("navbar.layoutType", { namespace: "settings",  })}</Label>
+              <Label className="text-muted-foreground font-semibold">{t("navbar.layoutType", { namespace: "settings",  })}</Label>
               <Select
                 value={navSettings.navLayoutType}
                 onValueChange={(v) => updateNavSetting('navLayoutType', v as NavLayoutType)}
               >
-                <SelectTrigger className="h-10 rounded-lg border-slate-200">
+                <SelectTrigger className="h-10 rounded-lg border-muted">
                   <SelectValue placeholder={t("navbar.layoutPlaceholder", { namespace: "settings",  })} />
                 </SelectTrigger>
                 <SelectContent>
@@ -294,7 +294,7 @@ export const NavbarSettingsManager: React.FC = () => {
 
             <div className="space-y-3">
               <div className="flex justify-between items-center">
-                <Label className="text-slate-600 font-semibold">{t("navbar.width", { namespace: "settings", vars: { width: navSettings.navWidth } })}</Label>
+                <Label className="text-muted-foreground font-semibold">{t("navbar.width", { namespace: "settings", vars: { width: navSettings.navWidth } })}</Label>
               </div>
               <Slider
                 value={[navSettings.navWidth]}
@@ -308,12 +308,12 @@ export const NavbarSettingsManager: React.FC = () => {
             </div>
 
             <div className="space-y-2">
-              <Label className="text-slate-600 font-semibold">{t("navbar.density", { namespace: "settings",  })}</Label>
+              <Label className="text-muted-foreground font-semibold">{t("navbar.density", { namespace: "settings",  })}</Label>
               <Select
                 value={navSettings.navDensity}
                 onValueChange={(v) => updateNavSetting('navDensity', v as SidebarDensityPreset)}
               >
-                <SelectTrigger className="h-10 rounded-lg border-slate-200">
+                <SelectTrigger className="h-10 rounded-lg border-muted">
                   <SelectValue placeholder={t("navbar.densityPlaceholder", { namespace: "settings",  })} />
                 </SelectTrigger>
                 <SelectContent>
@@ -326,7 +326,7 @@ export const NavbarSettingsManager: React.FC = () => {
 
             <div className="space-y-3">
               <div className="flex justify-between items-center">
-                <Label className="text-slate-600 font-semibold">{t("navbar.fontSize", { namespace: "settings", vars: { size: navSettings.navFontSize } })}</Label>
+                <Label className="text-muted-foreground font-semibold">{t("navbar.fontSize", { namespace: "settings", vars: { size: navSettings.navFontSize } })}</Label>
               </div>
               <Slider
                 value={[navSettings.navFontSize]}
@@ -340,15 +340,15 @@ export const NavbarSettingsManager: React.FC = () => {
           </div>
         </SettingsGroup>
 
-        <SettingsGroup title={t("navbar.colorsTitle", { namespace: "settings",  })} icon={LayoutGrid} color="text-indigo-600">
+        <SettingsGroup title={t("navbar.colorsTitle", { namespace: "settings",  })} icon={LayoutGrid} color="text-primary">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="space-y-2">
-              <Label className="text-slate-600 font-semibold">{t("navbar.background", { namespace: "settings",  })}</Label>
+              <Label className="text-muted-foreground font-semibold">{t("navbar.background", { namespace: "settings",  })}</Label>
               <Select
                 value={navSettings.navBackground}
                 onValueChange={(v) => updateNavSetting('navBackground', v)}
               >
-                <SelectTrigger className="h-10 rounded-lg border-slate-200">
+                <SelectTrigger className="h-10 rounded-lg border-muted">
                   <SelectValue placeholder={t("navbar.backgroundPlaceholder", { namespace: "settings",  })} />
                 </SelectTrigger>
                 <SelectContent>
@@ -362,12 +362,12 @@ export const NavbarSettingsManager: React.FC = () => {
             </div>
 
             <div className="space-y-2">
-              <Label className="text-slate-600 font-semibold">{t("navbar.activeBg", { namespace: "settings",  })}</Label>
+              <Label className="text-muted-foreground font-semibold">{t("navbar.activeBg", { namespace: "settings",  })}</Label>
               <Select
                 value={navSettings.navActiveBg}
                 onValueChange={(v) => updateNavSetting('navActiveBg', v)}
               >
-                <SelectTrigger className="h-10 rounded-lg border-slate-200">
+                <SelectTrigger className="h-10 rounded-lg border-muted">
                   <SelectValue placeholder={t("navbar.activePlaceholder", { namespace: "settings",  })} />
                 </SelectTrigger>
                 <SelectContent>
@@ -381,12 +381,12 @@ export const NavbarSettingsManager: React.FC = () => {
             </div>
 
             <div className="space-y-2">
-              <Label className="text-slate-600 font-semibold">{t("navbar.hover", { namespace: "settings",  })}</Label>
+              <Label className="text-muted-foreground font-semibold">{t("navbar.hover", { namespace: "settings",  })}</Label>
               <Select
                 value={navSettings.navHoverBg}
                 onValueChange={(v) => updateNavSetting('navHoverBg', v)}
               >
-                <SelectTrigger className="h-10 rounded-lg border-slate-200">
+                <SelectTrigger className="h-10 rounded-lg border-muted">
                   <SelectValue placeholder={t("navbar.hoverPlaceholder", { namespace: "settings",  })} />
                 </SelectTrigger>
                 <SelectContent>
@@ -402,32 +402,32 @@ export const NavbarSettingsManager: React.FC = () => {
 
         <SettingsGroup title={t("navbar.optionsTitle", { namespace: "settings",  })} icon={Sliders} color="text-cyan-600">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="flex items-center justify-between p-3 rounded-xl border border-slate-100 bg-slate-50/30">
-              <Label className="text-slate-700 font-semibold">{t("navbar.showLabels", { namespace: "settings",  })}</Label>
+            <div className="flex items-center justify-between p-3 rounded-xl border border-muted bg-muted/30">
+              <Label className="text-foreground font-semibold">{t("navbar.showLabels", { namespace: "settings",  })}</Label>
               <Switch
                 checked={navSettings.navShowLabels}
                 onCheckedChange={(v) => updateNavSetting('navShowLabels', v)}
               />
             </div>
 
-            <div className="flex items-center justify-between p-3 rounded-xl border border-slate-100 bg-slate-50/30">
-              <Label className="text-slate-700 font-semibold">{t("navbar.showSectionHeaders", { namespace: "settings",  })}</Label>
+            <div className="flex items-center justify-between p-3 rounded-xl border border-muted bg-muted/30">
+              <Label className="text-foreground font-semibold">{t("navbar.showSectionHeaders", { namespace: "settings",  })}</Label>
               <Switch
                 checked={navSettings.navShowSectionHeaders}
                 onCheckedChange={(v) => updateNavSetting('navShowSectionHeaders', v)}
               />
             </div>
 
-            <div className="flex items-center justify-between p-3 rounded-xl border border-slate-100 bg-slate-50/30">
-              <Label className="text-slate-700 font-semibold">{t("navbar.rememberState", { namespace: "settings",  })}</Label>
+            <div className="flex items-center justify-between p-3 rounded-xl border border-muted bg-muted/30">
+              <Label className="text-foreground font-semibold">{t("navbar.rememberState", { namespace: "settings",  })}</Label>
               <Switch
                 checked={navSettings.navRemembersState}
                 onCheckedChange={(v) => updateNavSetting('navRemembersState', v)}
               />
             </div>
 
-            <div className="flex items-center justify-between p-3 rounded-xl border border-slate-100 bg-slate-50/30">
-              <Label className="text-slate-700 font-semibold">{t("navbar.bordered", { namespace: "settings",  })}</Label>
+            <div className="flex items-center justify-between p-3 rounded-xl border border-muted bg-muted/30">
+              <Label className="text-foreground font-semibold">{t("navbar.bordered", { namespace: "settings",  })}</Label>
               <Switch
                 checked={navSettings.navBordered}
                 onCheckedChange={(v) => updateNavSetting('navBordered', v)}
@@ -439,7 +439,7 @@ export const NavbarSettingsManager: React.FC = () => {
         <SettingsGroup title={t("navbar.groupBehaviorTitle", { namespace: "settings",  })} icon={Sliders} color="text-teal-600">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
-              <Label className="text-slate-600 font-bold text-xs">{t("navbar.groupCollapseBehavior", { namespace: "settings",  })}</Label>
+              <Label className="text-muted-foreground font-bold text-xs">{t("navbar.groupCollapseBehavior", { namespace: "settings",  })}</Label>
               <Select
                 value={navSettings.navGroupCollapseBehavior}
                 onValueChange={(v) => updateNavSetting('navGroupCollapseBehavior', v as GroupCollapseBehavior)}
@@ -456,7 +456,7 @@ export const NavbarSettingsManager: React.FC = () => {
             </div>
 
             <div className="space-y-2">
-              <Label className="text-slate-600 font-bold text-xs">{t("navbar.groupHeaderStyle", { namespace: "settings",  })}</Label>
+              <Label className="text-muted-foreground font-bold text-xs">{t("navbar.groupHeaderStyle", { namespace: "settings",  })}</Label>
               <Select
                 value={navSettings.navGroupHeaderStyle}
                 onValueChange={(v) => updateNavSetting('navGroupHeaderStyle', v as GroupHeaderStyle)}
@@ -475,8 +475,8 @@ export const NavbarSettingsManager: React.FC = () => {
         </SettingsGroup>
 
         {/* ── Live Preview ── */}
-        <SettingsGroup title={t("navbar.previewTitle", { namespace: "settings",  })} icon={Eye} color="text-violet-600">
-          <p className="text-xs text-slate-400 mb-4 font-medium">
+        <SettingsGroup title={t("navbar.previewTitle", { namespace: "settings",  })} icon={Eye} color="text-primary">
+          <p className="text-xs text-muted-foreground mb-4 font-medium">
             {t("navbar.previewHint", { namespace: "settings",  })}
           </p>
           <NavSidebarPreview

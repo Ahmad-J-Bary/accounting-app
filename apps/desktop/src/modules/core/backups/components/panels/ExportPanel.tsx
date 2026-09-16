@@ -64,20 +64,20 @@ export function ExportPanel({ onDone }: { onDone: () => Promise<void> }) {
           <Progress
             value={backupProgressValue(phase)}
             aria-label={t("backups.exportProgress", { namespace: "settings",  })}
-            className="[&>div]:bg-blue-600"
+            className="[&>div]:bg-primary"
           />
-          <p className="text-xs font-bold text-slate-500">{BACKUP_PROGRESS_LABELS[phase]}</p>
+          <p className="text-xs font-bold text-muted-foreground">{BACKUP_PROGRESS_LABELS[phase]}</p>
         </div>
       )}
 
       {done && (
-        <div className="flex items-center gap-2 text-xs font-bold text-emerald-600">
+        <div className="flex items-center gap-2 text-xs font-bold text-success">
           <CheckCircle2 className="w-4 h-4" /> {t("backups.exportComplete", { namespace: "settings",  })}
         </div>
       )}
 
       {error && (
-        <div role="alert" className="rounded-lg bg-rose-50 border border-rose-200 p-3 text-rose-700">
+        <div role="alert" className="rounded-lg bg-destructive/10 border border-destructive/20 p-3 text-destructive">
           <p className="flex items-center gap-1.5 text-xs font-bold">
             <XCircle className="w-4 h-4 shrink-0" /> {error.friendly}
           </p>

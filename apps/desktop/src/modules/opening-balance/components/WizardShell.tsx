@@ -63,10 +63,10 @@ export function WizardShell({
 
   return (
     <div className="flex flex-col gap-4 w-full" dir="rtl">
-      <Card className="border-slate-200 shadow-sm">
+      <Card className="border-muted shadow-sm">
         <CardHeader className="py-3">
-          <CardTitle className="text-base font-bold text-slate-800">{title}</CardTitle>
-          {subtitle && <p className="text-xs text-slate-500 -mt-1">{subtitle}</p>}
+          <CardTitle className="text-base font-bold text-foreground">{title}</CardTitle>
+          {subtitle && <p className="text-xs text-muted-foreground -mt-1">{subtitle}</p>}
         </CardHeader>
 
         <CardContent className="pt-0">
@@ -82,7 +82,7 @@ export function WizardShell({
                   key={s.id}
                   className={cn(
                     "flex flex-1 flex-col items-center gap-1 min-w-[3.5rem] transition-colors",
-                    clickable && "cursor-pointer hover:bg-slate-50 rounded-lg",
+                    clickable && "cursor-pointer hover:bg-muted/50 rounded-lg",
                   )}
                   onClick={() => clickable && onStepClick?.(idx)}
                   disabled={!clickable}
@@ -93,10 +93,10 @@ export function WizardShell({
                     className={cn(
                       "flex items-center justify-center w-8 h-8 rounded-full border-2 shadow-sm transition-all",
                       active
-                        ? "bg-blue-600 border-blue-600 text-white ring-4 ring-blue-100"
+                        ? "bg-primary border-blue-600 text-white ring-4 ring-primary/20"
                         : passed
-                          ? "bg-emerald-500 border-emerald-500 text-white"
-                          : "bg-white border-slate-200 text-slate-400",
+                          ? "bg-success/100 border-success text-white"
+                          : "bg-white border-muted text-muted-foreground",
                     )}
                     title={s.label}
                     aria-current={active ? "step" : undefined}
@@ -106,7 +106,7 @@ export function WizardShell({
                   <span
                     className={cn(
                       "text-2xs font-semibold truncate max-w-full",
-                      active ? "text-blue-600" : passed ? "text-emerald-600" : "text-slate-400",
+                      active ? "text-primary" : passed ? "text-success" : "text-muted-foreground",
                     )}
                   >
                     {s.label}
@@ -118,28 +118,28 @@ export function WizardShell({
 
           <div className="mt-3 h-1.5 bg-slate-200 rounded-full overflow-hidden">
             <div
-              className="h-full bg-blue-600 transition-all"
+              className="h-full bg-primary transition-all"
               style={{ width: `${progress}%` }}
             />
           </div>
         </CardContent>
       </Card>
 
-      <Card className="border-slate-200 shadow-sm">
+      <Card className="border-muted shadow-sm">
         <CardContent className="pt-4">{children}</CardContent>
       </Card>
 
-      <div className="flex items-center justify-between border-t border-slate-100 pt-3">
+      <div className="flex items-center justify-between border-t border-muted pt-3">
         <Button
           variant="outline"
           size="sm"
           onClick={onPrev}
           disabled={!canPrev || stepIndex === 0}
-          className="border-slate-200 text-slate-700 font-bold"
+          className="border-muted text-foreground font-bold"
         >
                <ChevronRight className="w-4 h-4 ms-1.5" /> {t("openingBalance.prevButton", { namespace: "accounting",  })}
         </Button>
-        <span className="text-xs font-semibold text-slate-500 tabular-nums">
+        <span className="text-xs font-semibold text-muted-foreground tabular-nums">
           {t("openingBalance.progressStep", { namespace: "accounting", vars: { current: currentVisualPos + 1, total: steps.length },  })}
         </span>
         {!canNext && canNextHint && (
@@ -152,7 +152,7 @@ export function WizardShell({
           onClick={onNext}
           disabled={!canNext || isNexting}
           title={!canNext ? canNextHint : undefined}
-          className="bg-blue-600 hover:bg-blue-700 text-white font-bold"
+          className="bg-primary hover:bg-primary/80 text-white font-bold"
         >
           {isNexting ? t("openingBalance.executingShort", { namespace: "accounting",  }) : (nextLabel || (isFinal ? t("openingBalance.finishButton", { namespace: "accounting",  }) : t("openingBalance.nextButton", { namespace: "accounting",  })))}
           {!isFinal && <ChevronLeft className="w-4 h-4 me-1.5" />}
