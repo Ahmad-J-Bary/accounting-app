@@ -60,7 +60,7 @@ export function AccountCombobox({
           aria-expanded={open}
           disabled={disabled}
           className={cn(
-            "h-9 w-full justify-between gap-2 border-slate-200 bg-white px-3 font-normal text-slate-700 hover:bg-slate-50",
+            "h-9 w-full justify-between gap-2 border-border bg-card px-3 font-normal text-foreground hover:bg-accent",
             className,
           )}
         >
@@ -112,7 +112,7 @@ export function AccountCombobox({
                       <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[11px] font-bold tabular-nums text-slate-600">
                         {a.code}
                       </span>
-                      <span className="truncate text-slate-700">{a.name_ar}</span>
+                      <span className="truncate text-foreground">{a.name_ar}</span>
                       <span className="text-[11px] text-slate-400">({TYPE_LABEL[a.account_type]?.(t)})</span>
                       <span
                         className={cn(

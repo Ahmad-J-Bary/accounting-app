@@ -186,7 +186,7 @@ export default function Expenses() {
           <Button
             size="sm"
             variant="outline"
-            className="bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
+            className="bg-card border-border text-foreground hover:bg-accent"
             disabled={!selectedId || !selectedExpense?.id}
             onClick={() => selectedExpense?.id && openTab({
               id: `ledger-${selectedExpense.id}`,
@@ -201,7 +201,7 @@ export default function Expenses() {
           <Button
             size="sm"
             variant="outline"
-            className="bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
+            className="bg-card border-border text-foreground hover:bg-accent"
             disabled={!selectedId}
             onClick={() => {
               setIsVoucherOpen(true);
@@ -214,13 +214,13 @@ export default function Expenses() {
           <Button
             size="sm"
             variant="outline"
-            className="bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
+            className="bg-card border-border text-foreground hover:bg-accent"
             onClick={handleExport}
           >
             <Download className="w-4 h-4 ml-2 text-slate-500" /> {t("labels.exportExcel", { namespace: "common",  })}
           </Button>
 
-          <div className="h-6 w-px bg-slate-200 mx-1" />
+          <div className="h-6 w-px bg-muted mx-1" />
 
           <Button size="sm" onClick={handleOpenAdd} className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100 font-bold">
             <Plus className="w-4 h-4 ml-2" /> {t("expense.addItem", { namespace: "invoicing",  })}

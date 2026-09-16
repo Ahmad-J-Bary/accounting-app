@@ -168,7 +168,7 @@ export function PaymentsTable({
           },
           className: isBase
             ? "tabular-nums font-black text-slate-900"
-            : "tabular-nums font-medium text-slate-400"
+            : "tabular-nums font-medium text-muted-foreground"
         };
       }),
       {
@@ -176,7 +176,7 @@ export function PaymentsTable({
         header: t("payment.statement", { namespace: "invoicing",  }),
         label: t("payment.statement", { namespace: "invoicing",  }),
         accessor: (p) => p.notes || "",
-        className: "text-slate-500 italic",
+        className: "text-muted-foreground italic",
       },
       {
         id: "credit_account",
@@ -209,7 +209,7 @@ export function PaymentsTable({
         header: t("labels.date", { namespace: "common",  }),
         label: t("labels.date", { namespace: "common",  }),
         accessor: (p) => formatDateTime(p.payment_date),
-        className: "tabular-nums text-slate-500",
+        className: "tabular-nums text-muted-foreground",
       },
       {
         id: "actions",
@@ -320,7 +320,7 @@ export function PaymentsTable({
           columnId: "journal_entry_number",
           label: "",
           value: t("payment.countVouchers", { namespace: "invoicing", vars: { count: sortedData.length },  }),
-          className: "text-slate-500 font-medium",
+          className: "text-muted-foreground font-medium",
         };
       }
       const amountMatch = id.match(/^amount_(.+)$/);
@@ -336,7 +336,7 @@ export function PaymentsTable({
             : "—",
           className: isBase
             ? "text-slate-900 font-black"
-            : "text-slate-500 font-extrabold",
+            : "text-muted-foreground font-extrabold",
         };
       }
       return { id: `${id}_spacer`, columnId: id, label: "", value: "" };
@@ -357,17 +357,17 @@ export function PaymentsTable({
         <Button
           size="sm"
           variant="outline"
-          className="h-8 border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+          className="h-8 border-border bg-card text-foreground hover:bg-accent"
           onClick={handleExport}
         >
-          <Download className="w-3.5 h-3.5 ml-1.5 text-slate-500" />
+          <Download className="w-3.5 h-3.5 ml-1.5 text-muted-foreground" />
           {t("labels.exportExcel", { namespace: "common",  })}
         </Button>
       }
       filterBar={
         <Select value={typeFilter} onValueChange={onTypeFilterChange}>
-          <SelectTrigger className="w-[130px] h-8 bg-white font-bold shadow-sm border-slate-200 text-xs">
-            <Filter className="w-3.5 h-3.5 ml-1.5 text-slate-400" />
+          <SelectTrigger className="w-[130px] h-8 bg-card font-bold shadow-sm border-border text-xs">
+            <Filter className="w-3.5 h-3.5 ml-1.5 text-muted-foreground" />
             <SelectValue placeholder={t("payment.typeFilterPlaceholder", { namespace: "invoicing",  })} />
           </SelectTrigger>
           <SelectContent>

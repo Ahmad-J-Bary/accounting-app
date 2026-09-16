@@ -17,7 +17,7 @@ export function SidebarHeader({
   return (
     <div
       className={cn(
-        "flex items-center justify-between border-b border-slate-200/60 bg-slate-50/50 shrink-0",
+        "flex items-center justify-between border-b border-border bg-muted/50 shrink-0",
         settings.paddingPreset === "compact"
           ? "px-4 py-3"
           : settings.paddingPreset === "spacious"
@@ -27,13 +27,13 @@ export function SidebarHeader({
       )}
     >
       <div className="flex items-center gap-3 text-right">
-        {icon && <div className="text-slate-500 shrink-0">{icon}</div>}
+        {icon && <div className="text-muted-foreground shrink-0">{icon}</div>}
         <div className="flex flex-col">
-          <h2 className="text-base font-bold text-slate-800 leading-tight">
+          <h2 className="text-base font-bold text-foreground leading-tight">
             {title}
           </h2>
           {subtitle && (
-            <p className="text-2xs text-slate-400 font-medium mt-0.5">
+            <p className="text-[10px] text-muted-foreground font-medium mt-0.5">
               {subtitle}
             </p>
           )}
@@ -48,7 +48,7 @@ export function SidebarHeader({
             variant="ghost"
             size="icon"
             onClick={onClose}
-            className="rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 w-8 h-8"
+            className="rounded-full text-muted-foreground hover:text-foreground hover:bg-accent w-8 h-8"
           >
             <X className="w-4 h-4" />
           </Button>

@@ -90,7 +90,7 @@ export function ReturnSettlementPanel({
           ) : null}
 
           <div className="flex items-center gap-2 text-2xs font-bold text-slate-500 bg-muted px-2.5 py-1 rounded-md border border-border h-7 shrink-0">
-            <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+            <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground" />
             <span>{t("labels.returnValue", { namespace: "common" })}</span>
             <span className="font-black text-slate-800 tabular-nums">{totalAmount.toFixed(2)}</span>
           </div>
@@ -219,7 +219,7 @@ export function ReturnSettlementPanel({
                     const clamped = Math.max(minCash, Math.min(totalAmount, v));
                     onSettlementCashChange(clamped.toFixed(2));
                   }}
-                  className="h-5 w-16 font-black text-2xs border-blue-200 focus:ring-blue-500 bg-white py-0 px-1 rounded-md border outline-none text-center"
+                  className="h-5 w-16 font-black text-2xs border-blue-200 focus:ring-blue-500 bg-card py-0 px-1 rounded-md border outline-none text-center"
                   min={minCash}
                   max={totalAmount}
                   step="0.01"
@@ -277,7 +277,7 @@ export function ReturnSettlementPanel({
             min={minCash}
             max={totalAmount}
             step={0.01}
-            className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-500"
+            className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-blue-500"
           />
           <div className="flex justify-between text-2xs text-muted-foreground">
             <span className="text-blue-600 font-bold">{t("labels.cashLabel", { namespace: "common" })} {parseFloat(settlementCash || "0").toFixed(2)}</span>

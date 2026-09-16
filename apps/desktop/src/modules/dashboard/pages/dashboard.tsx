@@ -150,7 +150,7 @@ export default function Dashboard() {
             <div className="flex bg-slate-100 p-1 rounded-xl">
               <button
                 onClick={() => setLocalDisplayMode("base")}
-                className={`px-3 py-1.5 text-xs rounded-lg font-bold transition-all ${localDisplayMode === "base" ? "bg-white shadow-sm" : "text-slate-500"}`}
+                className={`px-3 py-1.5 text-xs rounded-lg font-bold transition-all ${localDisplayMode === "base" ? "bg-card shadow-sm" : "text-muted-foreground"}`}
               >
                 {baseCurrency?.symbol || baseCurrency?.code || t("currencyButtons.base", { namespace: "dashboard",  })}
               </button>
@@ -158,21 +158,21 @@ export default function Dashboard() {
                 <button
                   key={c.code}
                   onClick={() => setLocalDisplayMode("selected")}
-                  className={`px-3 py-1.5 text-xs rounded-lg font-bold transition-all ${localDisplayMode === "selected" ? "bg-white shadow-sm" : "text-slate-500"}`}
+                  className={`px-3 py-1.5 text-xs rounded-lg font-bold transition-all ${localDisplayMode === "selected" ? "bg-card shadow-sm" : "text-muted-foreground"}`}
                 >
                   {c.symbol || c.code}
                 </button>
               ))}
               <button
                 onClick={() => setLocalDisplayMode("both")}
-                className={`px-3 py-1.5 text-xs rounded-lg font-bold transition-all ${localDisplayMode === "both" ? "bg-white shadow-sm" : "text-slate-500"}`}
+                className={`px-3 py-1.5 text-xs rounded-lg font-bold transition-all ${localDisplayMode === "both" ? "bg-card shadow-sm" : "text-muted-foreground"}`}
               >
                 <DollarSign className="w-3 h-3 inline ml-1" />
                 {t("currencyButtons.both", { namespace: "dashboard",  })}
               </button>
             </div>
             <Select value={period} onValueChange={(v) => setPeriod(v as DashboardPeriod)}>
-              <SelectTrigger className="w-[180px] h-12 bg-white rounded-xl border-slate-200 shadow-sm">
+              <SelectTrigger className="w-[180px] h-12 bg-card rounded-xl border-border shadow-sm">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -182,7 +182,7 @@ export default function Dashboard() {
               </SelectContent>
             </Select>
             {refreshing && (
-              <span className="flex h-12 items-center gap-1.5 rounded-xl bg-white px-4 border border-slate-200 shadow-sm text-slate-500 text-xs">
+              <span className="flex h-12 items-center gap-1.5 rounded-xl bg-card px-4 border border-border shadow-sm text-muted-foreground text-xs">
                 <Loader2 className="h-4 w-4 animate-spin" />
                 {t("refreshing", { namespace: "dashboard",  })}
               </span>
@@ -233,8 +233,8 @@ export default function Dashboard() {
         subtitle={t("chart.subtitle", { namespace: "dashboard",  })}
         actions={
           <div className="flex bg-slate-100 p-1 rounded-xl">
-            <Button size="sm" variant="ghost" className="rounded-lg h-8 px-4 bg-white shadow-sm font-bold">{t("chart.buttons.area", { namespace: "dashboard",  })}</Button>
-            <Button size="sm" variant="ghost" className="rounded-lg h-8 px-4 text-slate-500 font-bold">{t("chart.buttons.bars", { namespace: "dashboard",  })}</Button>
+            <Button size="sm" variant="ghost" className="rounded-lg h-8 px-4 bg-card shadow-sm font-bold">{t("chart.buttons.area", { namespace: "dashboard",  })}</Button>
+            <Button size="sm" variant="ghost" className="rounded-lg h-8 px-4 text-muted-foreground font-bold">{t("chart.buttons.bars", { namespace: "dashboard",  })}</Button>
           </div>
         }
       >
@@ -343,8 +343,8 @@ export default function Dashboard() {
       <DashboardCard span={8} title={t("recent.title", { namespace: "dashboard",  })} subtitle={t("recent.subtitle", { namespace: "dashboard",  })}>
         <Tabs defaultValue="sales" className="w-full">
           <TabsList className="bg-slate-100 p-1 rounded-xl mb-6">
-            <TabsTrigger value="sales" className="rounded-lg font-bold data-[state=active]:bg-white">{t("recent.tabs.journals", { namespace: "dashboard",  })}</TabsTrigger>
-            <TabsTrigger value="payments" className="rounded-lg font-bold data-[state=active]:bg-white">{t("recent.tabs.payments", { namespace: "dashboard",  })}</TabsTrigger>
+            <TabsTrigger value="sales" className="rounded-lg font-bold data-[state=active]:bg-card">{t("recent.tabs.journals", { namespace: "dashboard",  })}</TabsTrigger>
+            <TabsTrigger value="payments" className="rounded-lg font-bold data-[state=active]:bg-card">{t("recent.tabs.payments", { namespace: "dashboard",  })}</TabsTrigger>
           </TabsList>
 
           <TabsContent value="sales" className="m-0">
@@ -402,7 +402,7 @@ export default function Dashboard() {
                         <td className="py-4 font-bold text-slate-700">{paymentTypeLabel[p.payment_type] || p.payment_type}</td>
                         <td className="py-4 font-bold text-slate-700">{p.customer_name || p.supplier_name || "—"}</td>
                         <td className="py-4 text-left tabular-nums font-black">{formatAmount(toNumber(p.amount), { mode: localDisplayMode })}</td>
-                        <td className="py-4 text-slate-500 tabular-nums font-mono text-xs">{formatDate(p.payment_date)}</td>
+                        <td className="py-4 text-muted-foreground tabular-nums font-mono text-xs">{formatDate(p.payment_date)}</td>
                       </tr>
                     ))}
                   </tbody>

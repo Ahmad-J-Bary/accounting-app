@@ -62,7 +62,7 @@ export function GridSummaryRow({
             label: t("document.summaryLabel", { namespace: "invoicing" }),
             value: formatRawAmount(total, currCode),
             align: col.align,
-            className: "tabular-nums font-black text-slate-900",
+            className: "tabular-nums font-black text-foreground",
           });
         } else {
           cols.push({ id: col.key, columnId: col.key, label: "", value: "" });
@@ -85,7 +85,7 @@ export function GridSummaryRow({
     <TableSummary
       columns={summaryColumns}
       gridTemplate={gridTemplate}
-      className={asPageFooter ? "" : "border-t-2 border-slate-300 bg-slate-50/80"}
+      className={asPageFooter ? "" : "border-t-2 border-border bg-muted/80"}
       sticky={!asPageFooter}
       asPageFooter={asPageFooter}
     />

@@ -163,6 +163,87 @@ export const durations = {
   slower: '500ms',
 } as const;
 
+// ── UI Scale Presets ────────────────────────────────────────
+export const uiScalePresets = {
+  small: {
+    multiplier: 0.875,
+    fontSize: {
+      xs: '0.6875rem',   // 11px
+      sm: '0.75rem',     // 12px
+      base: '0.8125rem', // 13px
+      lg: '1rem',        // 16px
+      xl: '1.125rem',    // 18px
+      '2xl': '1.375rem', // 22px
+      '3xl': '1.75rem',  // 28px
+    },
+    controlHeight: {
+      sm: 'h-7',   // 28px
+      md: 'h-8',   // 32px
+      lg: 'h-9',   // 36px
+    },
+    spacing: {
+      xs: '0.125rem',
+      sm: '0.25rem',
+      md: '0.5rem',
+      lg: '0.75rem',
+      xl: '1rem',
+      '2xl': '1.5rem',
+    },
+  },
+  default: {
+    multiplier: 1,
+    fontSize: {
+      xs: '0.75rem',    // 12px
+      sm: '0.875rem',   // 14px
+      base: '0.875rem', // 14px
+      lg: '1.125rem',   // 18px
+      xl: '1.25rem',    // 20px
+      '2xl': '1.5rem',  // 24px
+      '3xl': '2rem',    // 32px
+    },
+    controlHeight: {
+      sm: 'h-8',   // 32px
+      md: 'h-9',   // 36px
+      lg: 'h-10',  // 40px
+    },
+    spacing: {
+      xs: '0.25rem',
+      sm: '0.5rem',
+      md: '0.75rem',
+      lg: '1rem',
+      xl: '1.5rem',
+      '2xl': '2rem',
+    },
+  },
+  large: {
+    multiplier: 1.125,
+    fontSize: {
+      xs: '0.8125rem',  // 13px
+      sm: '0.9375rem',  // 15px
+      base: '1rem',     // 16px
+      lg: '1.25rem',    // 20px
+      xl: '1.375rem',   // 22px
+      '2xl': '1.75rem', // 28px
+      '3xl': '2.25rem', // 36px
+    },
+    controlHeight: {
+      sm: 'h-9',   // 36px
+      md: 'h-10',  // 40px
+      lg: 'h-11',  // 44px
+    },
+    spacing: {
+      xs: '0.375rem',
+      sm: '0.625rem',
+      md: '1rem',
+      lg: '1.25rem',
+      xl: '1.75rem',
+      '2xl': '2.5rem',
+    },
+  },
+} as const;
+
+export type UIScalePreset = keyof typeof uiScalePresets;
+
 // ── Sidebar Density Presets (matches CSS in index.css) ──────
 export const sidebarDensityPresets = {
   compact: {

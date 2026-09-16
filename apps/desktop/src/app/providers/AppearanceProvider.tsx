@@ -6,6 +6,7 @@ import type {
   ThemeId,
   ColorMode,
   DensityMode,
+  UIScale,
   VisibilitySettings,
 } from '@shared/types/appearance';
 import { DEFAULT_APPEARANCE } from '@shared/types/appearance';
@@ -98,6 +99,12 @@ export const AppearanceProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     root.setAttribute('data-density', settings.density);
   }, [settings.density]);
 
+  // ── Apply UI scale data attribute ──
+  useEffect(() => {
+    const root = document.documentElement;
+    root.setAttribute('data-scale', settings.uiScale);
+  }, [settings.uiScale]);
+
   useEffect(() => {
     const root = document.documentElement;
     root.setAttribute('data-tab-style', settings.tabStyle);
@@ -147,6 +154,10 @@ export const AppearanceProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     setSettings(prev => ({ ...prev, density }));
   }, []);
 
+  const setUIScale = useCallback((uiScale: UIScale) => {
+    setSettings(prev => ({ ...prev, uiScale }));
+  }, []);
+
   const updateVisibility = useCallback((key: keyof VisibilitySettings, value: boolean) => {
     setSettings(prev => ({
       ...prev,
@@ -177,13 +188,14 @@ export const AppearanceProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     setMode,
     setPrimaryColor,
     setDensity,
+    setUIScale,
     updateVisibility,
     updateSidebarSetting,
     updateSettings,
     resetSettings,
   }), [
     settings, activeLayout, activeTheme, isDark,
-    setLayoutType, setTheme, setMode, setPrimaryColor, setDensity,
+    setLayoutType, setTheme, setMode, setPrimaryColor, setDensity, setUIScale,
     updateVisibility, updateSidebarSetting, updateSettings, resetSettings,
   ]);
 

@@ -12,6 +12,7 @@ import type {
   SidenavShape,
   TabStyleMode,
   TopnavShape,
+  UIScale,
 } from '@shared/types/appearance';
 import { SettingsSection } from '@widgets/templates/SettingsLayout';
 import { Switch } from '@shared/ui/switch';
@@ -200,6 +201,41 @@ export function AppearanceSettings() {
               </div>
               <div className="text-center">
                 <span className={cn("font-bold text-[10px] block", settings.density === id ? "text-primary" : "text-slate-700")}>{label}</span>
+                <span className="text-[8px] text-slate-400 leading-tight">{desc}</span>
+              </div>
+            </button>
+          ))}
+        </div>
+      </SettingsSection>
+
+      {/* ── UI Scale ── */}
+      <SettingsSection title={t("appearance.uiScaleTitle", { namespace: "settings" })} description={t("appearance.uiScaleDescription", { namespace: "settings" })}>
+        <div className="flex gap-1.5">
+          {([
+            { id: 'small' as UIScale, label: t("appearance.uiScale.small", { namespace: "settings" }), desc: t("appearance.uiScaleDescriptions.small", { namespace: "settings" }), scale: 0.875 },
+            { id: 'default' as UIScale, label: t("appearance.uiScale.default", { namespace: "settings" }), desc: t("appearance.uiScaleDescriptions.default", { namespace: "settings" }), scale: 1 },
+            { id: 'large' as UIScale, label: t("appearance.uiScale.large", { namespace: "settings" }), desc: t("appearance.uiScaleDescriptions.large", { namespace: "settings" }), scale: 1.125 },
+          ]).map(({ id, label, desc, scale }) => (
+            <button
+              key={id}
+              onClick={() => updateSettings({ uiScale: id })}
+              className={cn(
+                "flex flex-col items-center gap-1.5 px-3 py-2 rounded-lg border transition-all flex-1",
+                settings.uiScale === id
+                  ? "border-primary bg-primary/5 shadow-sm"
+                  : "border-slate-200 hover:border-slate-300"
+              )}
+            >
+              <div className="flex items-center justify-center h-4">
+                <span
+                  className={cn("font-bold transition-all", settings.uiScale === id ? "text-primary" : "text-slate-700")}
+                  style={{ fontSize: `${14 * scale}px` }}
+                >
+                  Aa
+                </span>
+              </div>
+              <div className="text-center">
+                <span className={cn("font-bold text-[10px] block", settings.uiScale === id ? "text-primary" : "text-slate-700")}>{label}</span>
                 <span className="text-[8px] text-slate-400 leading-tight">{desc}</span>
               </div>
             </button>

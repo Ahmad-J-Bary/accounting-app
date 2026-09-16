@@ -111,9 +111,9 @@ export function TopBar({
   };
 
   const navItemClass = isHorizontalDark
-    ? "text-slate-400 hover:text-white hover:bg-slate-800/50"
-    : "text-slate-600 hover:text-slate-900 hover:bg-slate-100";
-  const btnHoverClass = isHorizontalDark ? "hover:bg-slate-800/50" : "hover:bg-slate-100";
+    ? "text-muted-foreground hover:text-foreground hover:bg-accent"
+    : "text-muted-foreground hover:text-foreground hover:bg-accent";
+  const btnHoverClass = isHorizontalDark ? "hover:bg-accent" : "hover:bg-accent";
 
   const renderNavItem = (item: SidebarItemConfig, slim: boolean) => {
     const isActive = activeTabId === item.to || location.pathname === item.to;
@@ -184,13 +184,13 @@ export function TopBar({
           className={cn(
             "absolute top-full right-0 mt-1 w-56 rounded-xl border p-1.5 shadow-xl opacity-0 translate-y-1 invisible",
             "group-hover:opacity-100 group-hover:translate-y-0 group-hover:visible transition-all duration-200 z-50",
-            isHorizontalDark ? "bg-slate-800 border-slate-700" : "bg-white border-slate-200"
+            isHorizontalDark ? "bg-popover border-border" : "bg-popover border-border"
           )}
         >
           <div className="space-y-0.5">
             {visibleItems.map((item: SidebarItemConfig, idx: number) => {
               if (item.isSeparator) {
-                return <div key={item.id || idx} className="h-px mx-2 my-1.5 bg-slate-200/50" />;
+                return <div key={item.id || idx} className="h-px mx-2 my-1.5 bg-border" />;
               }
 
               const isActive = activeTabId === item.to || location.pathname === item.to;
@@ -257,16 +257,16 @@ export function TopBar({
           size="icon"
           onClick={onToggleExchange}
           title={isExchangeVisible ? t("topbar.hideExchangeRate", { namespace: "shell",  }) : t("topbar.showExchangeRate", { namespace: "shell",  })}
-          className={cn(isExchangeVisible && "bg-blue-50 text-blue-600 hover:bg-blue-100")}
+          className={cn(isExchangeVisible && "bg-primary/10 text-primary hover:bg-primary/20")}
         >
           <DollarSign className="w-5 h-5" />
         </Button>
       )}
 
       {merged && showSearch && (
-        <Button variant="ghost" size="icon" onClick={openSearch} title={t("globalSearch", { namespace: "shell",  })}>
-          <Search className="w-5 h-5" />
-        </Button>
+          <Button variant="ghost" size="icon" onClick={openSearch} title={t("globalSearch", { namespace: "shell",  })}>
+            <Search className="w-5 h-5" />
+          </Button>
       )}
 
       <Button variant="ghost" size="icon" onClick={voice.open} title={t("voice", { namespace: "shell",  })}>
@@ -276,7 +276,7 @@ export function TopBar({
       {showNotifications && (
         <Button variant="ghost" size="icon" className="relative" onClick={() => setNotificationsOpen(true)}>
           <Bell className="w-5 h-5" />
-          <span className="absolute top-1.5 left-1.5 w-2 h-2 bg-red-500 rounded-full" />
+          <span className="absolute top-1.5 left-1.5 w-2 h-2 bg-destructive rounded-full" />
         </Button>
       )}
 
@@ -284,7 +284,7 @@ export function TopBar({
         <DropdownMenuTrigger asChild>
           {mergedSlim ? (
             <button className={cn("flex items-center gap-1 rounded-md px-1 py-0.5 transition", btnHoverClass)}>
-              <span className={cn("text-[10px] font-medium leading-tight", isHorizontalDark && "text-slate-200")}>{t("topbar.user", { namespace: "shell",  })}</span>
+              <span className={cn("text-[10px] font-medium leading-tight", isHorizontalDark && "text-foreground")}>{t("topbar.user", { namespace: "shell",  })}</span>
               <ChevronDown className="w-2.5 h-2.5 opacity-60" />
             </button>
           ) : (
@@ -293,7 +293,7 @@ export function TopBar({
                 <AvatarFallback className="bg-primary text-primary-foreground text-xs">أ</AvatarFallback>
               </Avatar>
               <div className="text-right hidden md:block">
-                <div className={cn("text-sm font-medium leading-tight", isHorizontalDark && "text-slate-200")}>{t("topbar.user", { namespace: "shell",  })}</div>
+                <div className={cn("text-sm font-medium leading-tight", isHorizontalDark && "text-foreground")}>{t("topbar.user", { namespace: "shell",  })}</div>
               </div>
             </button>
           )}
@@ -302,15 +302,15 @@ export function TopBar({
           <DropdownMenuLabel>{t("topbar.account", { namespace: "shell",  })}</DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => openTab({ id: '/settings', title: t("topbar.settings", { namespace: "shell",  }), path: '/settings', closable: true })}>
-            <SettingsIcon className="w-4 h-4 ml-2" />{t("topbar.settings", { namespace: "shell",  })}
+            <SettingsIcon className="w-4 h-4 ms-2" />{t("topbar.settings", { namespace: "shell",  })}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => setLanguage(language === "ar" ? "en" : "ar")}>
-            <SettingsIcon className="w-4 h-4 ml-2" />
+            <SettingsIcon className="w-4 h-4 ms-2" />
             {language === "ar" ? t("topbar.switchToEnglish", { namespace: "shell",  }) : t("topbar.switchToArabic", { namespace: "shell",  })}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem className="text-red-600"><LogOut className="w-4 h-4 ml-2" />{t("topbar.logout", { namespace: "shell",  })}</DropdownMenuItem>
+          <DropdownMenuItem className="text-destructive"><LogOut className="w-4 h-4 ms-2" />{t("topbar.logout", { namespace: "shell",  })}</DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
     </>
@@ -321,8 +321,8 @@ export function TopBar({
       <header className={cn(
         "flex items-center px-4 md:px-6 gap-2 sticky top-0 z-30 backdrop-blur-sm",
         isHorizontalDark
-          ? "bg-slate-900/95 text-slate-200 border-b border-slate-700/50 shadow-sm shadow-slate-900/10"
-          : "bg-white/95 border-b border-slate-200/70 shadow-sm shadow-slate-200/50",
+          ? "bg-background/95 text-foreground border-b border-border shadow-sm"
+          : "bg-background/95 border-b border-border shadow-sm",
         merged ? (mergedSlim ? "h-10" : "h-14") : "h-14"
       )}>
         {/* يسار: اسم الشركة */}
@@ -331,9 +331,9 @@ export function TopBar({
             <Building2 className="w-4 h-4 text-primary-foreground" />
           </div>
           <div className="min-w-0 hidden sm:flex items-center gap-1.5">
-            <span className={cn("text-sm font-extrabold leading-tight", isHorizontalDark ? "text-slate-100" : "text-slate-800")}>{t("topbar.brandName", { namespace: "shell",  })}</span>
-            <span className={cn("text-xs select-none", isHorizontalDark ? "text-slate-600" : "text-slate-300")}>|</span>
-            <span className={cn("text-sm font-semibold leading-tight truncate", isHorizontalDark ? "text-slate-400" : "text-slate-500")}>{settings?.company_name || t("topbar.companyFallback", { namespace: "shell",  })}</span>
+            <span className={cn("text-sm font-extrabold leading-tight", isHorizontalDark ? "text-foreground" : "text-foreground")}>{t("topbar.brandName", { namespace: "shell",  })}</span>
+            <span className={cn("text-xs select-none", isHorizontalDark ? "text-muted-foreground" : "text-muted-foreground")}>|</span>
+            <span className={cn("text-sm font-semibold leading-tight truncate", isHorizontalDark ? "text-muted-foreground" : "text-muted-foreground")}>{settings?.company_name || t("topbar.companyFallback", { namespace: "shell",  })}</span>
           </div>
           {merged && <UpdateBanner variant="slim" dark={isHorizontalDark} />}
         </div>
@@ -353,7 +353,7 @@ export function TopBar({
                 className="w-full max-w-md justify-start text-muted-foreground hover:shadow-sm active:scale-[0.98] transition-all"
                 onClick={openSearch}
               >
-                <Search className="w-4 h-4 ml-2" />
+                <Search className="w-4 h-4 ms-2" />
                 {t("topbar.searchInSystem", { namespace: "shell",  })}
               </Button>
             )}

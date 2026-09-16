@@ -22,22 +22,22 @@ export function PageHeader({
   return (
     <header
       className={cn(
-        "no-print flex items-center justify-between gap-3 px-4 md:px-6 py-2.5 bg-background/95 backdrop-blur-sm border-b border-border shrink-0",
+        "no-print flex items-center justify-between gap-3 px-4 sm:px-5 md:px-6 py-2.5 bg-background/95 backdrop-blur-sm border-b border-border shrink-0",
         sticky && "sticky top-0 z-20",
         className,
       )}
     >
       <div className="flex items-center gap-2 min-w-0">
-        <h1 className="text-lg font-bold text-foreground tracking-tight shrink-0">{title}</h1>
+        <h1 className="text-base sm:text-lg font-bold text-foreground tracking-tight shrink-0">{title}</h1>
         {badge && <div className="shrink-0">{badge}</div>}
         {pinAction && <SidebarAddAction label={pinLabel || title} />}
         {subtitle && (
-          <span className="text-[11px] text-muted-foreground font-medium hidden sm:inline border-s border-border ps-2 me-1">
+          <span className="text-[10px] sm:text-[11px] text-muted-foreground font-medium hidden sm:inline border-s border-border ps-2 me-1">
             {subtitle}
           </span>
         )}
       </div>
-      {actions && <div className="no-print flex items-center gap-2 shrink-0">{actions}</div>}
+      {actions && <div className="no-print flex items-center gap-1.5 sm:gap-2 shrink-0">{actions}</div>}
     </header>
   );
 }

@@ -183,7 +183,7 @@ export function CategoryForm({
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder={t("categories.form.namePlaceholder", { namespace: "inventory",  })}
-            className="bg-white"
+            className="bg-card"
             disabled={isUncategorized && mode === "edit_cat"}
           />
         </div>
@@ -194,7 +194,7 @@ export function CategoryForm({
               value={codePrefix}
               onChange={(e) => setCodePrefix(e.target.value.slice(0, 1).toUpperCase())}
               placeholder="A"
-              className="bg-white font-mono text-center"
+              className="bg-card font-mono text-center"
               maxLength={1}
             />
             <Button

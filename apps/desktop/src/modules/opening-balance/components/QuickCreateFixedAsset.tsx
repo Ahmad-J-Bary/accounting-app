@@ -93,7 +93,7 @@ export function QuickCreateFixedAsset({ warehouses, onCreate, navLink }: QuickCr
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder={t("fixedAssetLegacy.namePlaceholder", { namespace: "openingBalance" })}
-            className="h-8 flex-1 min-w-[120px] border-slate-200 text-xs bg-white"
+            className="h-8 flex-1 min-w-[120px] border-border text-xs bg-card"
             disabled={creating}
             autoFocus
             onKeyDown={(e) => {
@@ -111,7 +111,7 @@ export function QuickCreateFixedAsset({ warehouses, onCreate, navLink }: QuickCr
             value={cost}
             onChange={(e) => setCost(e.target.value)}
             placeholder={t("fixedAssetLegacy.costPlaceholder", { namespace: "openingBalance" })}
-            className="h-8 w-24 border-slate-200 text-xs text-end tabular-nums bg-white"
+            className="h-8 w-24 border-border text-xs text-end tabular-nums bg-card"
             disabled={creating}
             onKeyDown={(e) => {
               if (e.key === "Enter") {
@@ -127,7 +127,7 @@ export function QuickCreateFixedAsset({ warehouses, onCreate, navLink }: QuickCr
               value={purchaseDate}
               onChange={(e) => setPurchaseDate(e.target.value)}
               title={t("fixedAssetLegacy.purchaseDate", { namespace: "openingBalance" })}
-              className="h-8 w-36 ps-6 border-slate-200 text-xs bg-white"
+              className="h-8 w-36 ps-6 border-border text-xs bg-card"
               disabled={creating}
             />
           </div>
@@ -143,7 +143,7 @@ export function QuickCreateFixedAsset({ warehouses, onCreate, navLink }: QuickCr
         </div>
         <div className="flex items-center gap-2 px-3 pb-1.5">
           <Select value={assetType} onValueChange={(v) => setAssetType(v as AssetType)} disabled={creating}>
-            <SelectTrigger className="h-7 flex-1 border-slate-200 text-xs bg-white">
+            <SelectTrigger className="h-7 flex-1 border-border text-xs bg-card">
               <SelectValue placeholder={t("fixedAssetLegacy.typePlaceholder", { namespace: "openingBalance" })} />
             </SelectTrigger>
             <SelectContent>
@@ -156,7 +156,7 @@ export function QuickCreateFixedAsset({ warehouses, onCreate, navLink }: QuickCr
           </Select>
           {showWarehouse && activeWarehouses.length > 0 && (
             <Select value={warehouseId} onValueChange={setWarehouseId} disabled={creating}>
-              <SelectTrigger className="h-7 flex-1 border-slate-200 text-xs bg-white">
+              <SelectTrigger className="h-7 flex-1 border-border text-xs bg-card">
                 <SelectValue placeholder={t("fixedAssetLegacy.warehousePlaceholder", { namespace: "openingBalance" })} />
               </SelectTrigger>
               <SelectContent>

@@ -37,7 +37,7 @@ export default function AccountMovementsReport() {
       title={t("accountMovements.title", { namespace: "reports",  })}
       badge={
         <Select value={selectedAccountId} onValueChange={setSelectedAccountId}>
-          <SelectTrigger className="h-9 w-auto min-w-[160px] rounded-lg border-slate-200 bg-white text-xs font-bold">
+          <SelectTrigger className="h-9 w-auto min-w-[160px] rounded-lg border-border bg-card text-xs font-bold">
             <SelectValue placeholder={t("accountMovements.selectAccountPlaceholder", { namespace: "reports",  })} />
           </SelectTrigger>
           <SelectContent>

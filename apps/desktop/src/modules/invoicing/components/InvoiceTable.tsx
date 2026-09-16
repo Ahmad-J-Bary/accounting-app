@@ -123,7 +123,7 @@ export function InvoiceTable({
             return formatAmount(baseAmt, { currencyCode: curr.code });
           },
           className: isBase
-            ? "font-bold tabular-nums text-slate-700"
+            ? "font-bold tabular-nums text-foreground"
             : "font-medium tabular-nums text-slate-400"
         };
       }) : []),
@@ -589,7 +589,7 @@ export function InvoiceTable({
           label: `${t("invoice.baseSubtotal", { namespace: "invoicing",  })}${cs(sym)}`,
           value: baseSubtotalTotal > 0 ? formatAmount(baseSubtotalTotal, { currencyCode: currCode }) : "—",
           className: isBase
-            ? 'font-bold text-slate-700'
+            ? 'font-bold text-foreground'
             : 'font-extrabold text-slate-400',
         };
       }
@@ -708,7 +708,7 @@ export function InvoiceTable({
         <Button
           size="sm"
           variant="outline"
-          className="h-8 border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+          className="h-8 border-border bg-card text-foreground hover:bg-accent"
           onClick={handleExport}
         >
           <Download className="w-3.5 h-3.5 ml-1.5 text-emerald-600" />
@@ -717,7 +717,7 @@ export function InvoiceTable({
       )}
       filterBar={
         <Select value={statusFilter} onValueChange={onStatusFilterChange}>
-          <SelectTrigger className="w-[130px] h-8 bg-white font-bold shadow-sm border-slate-200 text-xs">
+          <SelectTrigger className="w-[130px] h-8 bg-card font-bold shadow-sm border-border text-xs">
             <Filter className="w-3.5 h-3.5 ml-1.5 text-slate-400" />
             <SelectValue placeholder={t("invoice.filterStatusPlaceholder", { namespace: "invoicing",  })} />
           </SelectTrigger>

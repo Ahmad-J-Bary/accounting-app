@@ -122,19 +122,19 @@ export function GuidedTransitionWizard() {
 
   const renderTotalsSummary = () => (
     <div className="space-y-3">
-      <p className="text-xs text-slate-500">
+      <p className="text-xs text-muted-foreground">
         {t("wizard.balanceEquation", { namespace: "openingBalance" })}
       </p>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <div className="border border-slate-100 rounded-lg p-3 space-y-1 bg-white">
+        <div className="border border-border rounded-lg p-3 space-y-1 bg-card">
           <div className="text-xs font-semibold text-blue-700">{t("wizard.assetsDebit", { namespace: "openingBalance" })}</div>
           <div className="text-xl font-black tabular-nums text-blue-700">{toFixed(w.totals.debit, 2)}</div>
         </div>
-        <div className="border border-slate-100 rounded-lg p-3 space-y-1 bg-white">
+        <div className="border border-border rounded-lg p-3 space-y-1 bg-card">
           <div className="text-xs font-semibold text-emerald-700">{t("wizard.liabilitiesCredit", { namespace: "openingBalance" })}</div>
           <div className="text-xl font-black tabular-nums text-emerald-700">{toFixed(w.totals.liabilities, 2)}</div>
         </div>
-        <div className="border border-slate-100 rounded-lg p-3 space-y-1 bg-white">
+        <div className="border border-border rounded-lg p-3 space-y-1 bg-card">
           <div className="text-xs font-semibold text-indigo-700">{t("wizard.equityCredit", { namespace: "openingBalance" })}</div>
           <div className="text-xl font-black tabular-nums text-indigo-700">
             {toFixed(w.totals.equity + w.totals.plugAmount, 2)}
@@ -397,9 +397,9 @@ export function GuidedTransitionWizard() {
         return (
           <div className="space-y-4">
             {renderTotalsSummary()}
-            <div className="rounded-lg border border-slate-200 bg-slate-50/60 p-3 space-y-2">
-              <p className="text-xs font-semibold text-slate-600">{t("wizard.reviewHint", { namespace: "openingBalance" })}</p>
-              <p className="text-xs text-slate-500">
+            <div className="rounded-lg border border-border bg-muted/60 p-3 space-y-2">
+              <p className="text-xs font-semibold text-muted-foreground">{t("wizard.reviewHint", { namespace: "openingBalance" })}</p>
+              <p className="text-xs text-muted-foreground">
                 {t("wizard.reviewDesc", { namespace: "openingBalance" })}
                 عدد البنود: {w.collectLines().length} ·
                 العملاء: {w.derivedAr.length} · الموردون: {w.derivedAp.length} ·
@@ -444,10 +444,10 @@ export function GuidedTransitionWizard() {
         return (
           <div className="space-y-3">
             <p className="text-sm font-bold text-slate-700">{t("wizard.actionTitle", { namespace: "openingBalance" })}</p>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-muted-foreground">
               {t("wizard.actionDesc", { namespace: "openingBalance" })}
             </p>
-            <div className="text-xs font-semibold text-slate-600 flex items-center">
+            <div className="text-xs font-semibold text-muted-foreground flex items-center">
               {t("wizard.currentStatus", { namespace: "openingBalance" })}
               {w.migration ? (
                 <StatusBadge status={w.migration.status} className="me-1.5" />
@@ -456,7 +456,7 @@ export function GuidedTransitionWizard() {
               )}
               {w.migration && w.migration.notes && <span> · {w.migration.notes}</span>}
             </div>
-            <div className="rounded-lg border border-slate-200 bg-slate-50/60 p-3 space-y-1.5">
+            <div className="rounded-lg border border-border bg-muted/60 p-3 space-y-1.5">
               {[
                 { label: t("wizard.validationCheck", { namespace: "openingBalance" }), done: ["Validated", "Posted", "Locked"].includes(w.migration?.status || "") },
                 { label: t("wizard.postingCheck", { namespace: "openingBalance" }), done: ["Posted", "Locked"].includes(w.migration?.status || "") },
@@ -466,7 +466,7 @@ export function GuidedTransitionWizard() {
                   <span className={cn("rounded-full p-0.5", item.done ? "bg-emerald-600 text-white" : "bg-slate-300 text-white")}>
                     <Check className="w-3 h-3" />
                   </span>
-                  <span className={item.done ? "text-emerald-700" : "text-slate-500"}>{item.label}</span>
+                  <span className={item.done ? "text-emerald-700" : "text-muted-foreground"}>{item.label}</span>
                 </div>
               ))}
             </div>
@@ -640,7 +640,7 @@ function InlineRows({
       {rows.length === 0 && !addForm ? (
         <p className="text-xs text-slate-400 py-1.5">{t("wizard.noDerivedLines", { namespace: "openingBalance" })}</p>
       ) : (
-        <div className="border border-slate-200 rounded-lg divide-y divide-slate-100 bg-slate-50/40">
+        <div className="border border-border rounded-lg divide-y divide-border bg-muted/40">
           {rows.map((r) => (
             <InlineBalanceRow
               key={r.key}
@@ -786,7 +786,7 @@ export function ResidualClassificationSection({
                     "flex items-center justify-between gap-2 rounded-lg border px-3 py-2 text-xs font-bold transition-colors",
                     selected
                       ? "border-blue-400 bg-blue-50 text-blue-700 ring-1 ring-blue-400"
-                      : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50",
+                      : "border-border bg-card text-muted-foreground hover:bg-accent",
                     !s.allows_posting && "text-red-600",
                   )}
                 >
@@ -809,19 +809,19 @@ export function ResidualClassificationSection({
           )}
 
           {value !== "" && value !== "UnresolvedDifference" && (
-            <div className="rounded-lg border border-blue-200 bg-white p-3 space-y-1.5">
+            <div className="rounded-lg border border-blue-200 bg-card p-3 space-y-1.5">
               <p className="text-xs font-semibold text-blue-700">{t("wizard.previewBeforeSave", { namespace: "openingBalance" })}</p>
               {plugAmount !== 0 && (
-                <p className="text-xs text-slate-600">
+                <p className="text-xs text-muted-foreground">
                   {t("wizard.previewValue", { namespace: "openingBalance", vars: { amount: toFixed(plugAmount, 2), type: spec?.label_ar ?? value } })}
                 </p>
               )}
-              <p className="text-xs text-slate-600">{spec?.treatment_ar ?? ""}</p>
+              <p className="text-xs text-muted-foreground">{spec?.treatment_ar ?? ""}</p>
               {(spec?.designated_account || effectiveAccount) && (
-                <p className="text-xs text-slate-600">
+                <p className="text-xs text-muted-foreground">
                   {t("wizard.designatedAccount", { namespace: "openingBalance" })}
                   <span className="inline-flex items-center gap-1.5">
-                    <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[11px] font-bold tabular-nums text-slate-600">
+                    <span className="rounded bg-muted px-1.5 py-0.5 text-[11px] font-bold tabular-nums text-muted-foreground">
                       {(spec?.designated_account ?? effectiveAccount)?.code ?? ""}
                     </span>
                     <span className="font-bold text-slate-800">
@@ -848,7 +848,7 @@ export function ResidualClassificationSection({
             <button
               type="button"
               onClick={() => setAdvanced((v) => !v)}
-              className="text-[11px] font-semibold text-slate-500 underline decoration-dotted hover:text-slate-700"
+              className="text-[11px] font-semibold text-muted-foreground underline decoration-dotted hover:text-slate-700"
               aria-expanded={advanced}
             >
               {advanced ? t("wizard.advancedModeClose", { namespace: "openingBalance" }) : t("wizard.advancedModeToggle", { namespace: "openingBalance" })}

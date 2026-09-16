@@ -614,7 +614,7 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
       saveLabel={material ? t("materials.form.saveEdit", { namespace: "inventory" }) : t("materials.form.saveCreate", { namespace: "inventory" })}
     >
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full animate-in fade-in duration-200" dir="rtl">
-        <TabsList className="grid w-full grid-cols-4 mb-5 p-1 bg-slate-100/80 rounded-xl">
+        <TabsList className="grid w-full grid-cols-4 mb-5 p-1 bg-muted rounded-xl">
           <TabsTrigger value="basic" className="gap-1.5 text-xs font-bold"><Package className="w-4 h-4" /> {t("materials.form.tabs.basic", { namespace: "inventory" })}</TabsTrigger>
           <TabsTrigger value="units" className="gap-1.5 text-xs font-bold"><Scale className="w-4 h-4" /> {t("materials.form.tabs.units", { namespace: "inventory" })}</TabsTrigger>
           <TabsTrigger value="prices" className="gap-1.5 text-xs font-bold"><DollarSign className="w-4 h-4" /> {t("materials.form.tabs.prices", { namespace: "inventory" })}</TabsTrigger>
@@ -628,21 +628,21 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
               {/* اسم المادة عربي + إنجليزي */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <FieldLabel className="flex items-center gap-1.5" required><Tag className="w-3.5 h-3.5 text-slate-400" /> {t("materials.form.nameAr", { namespace: "inventory" })}</FieldLabel>
+                  <FieldLabel className="flex items-center gap-1.5" required><Tag className="w-3.5 h-3.5 text-muted-foreground" /> {t("materials.form.nameAr", { namespace: "inventory" })}</FieldLabel>
                   <Input 
                     value={formData.name} 
                     onChange={e => setFormData({ ...formData, name: e.target.value })} 
                     placeholder={t("materials.form.nameArPlaceholder", { namespace: "inventory" })} 
-                    className="bg-white border-slate-200 h-9" 
+                    className="bg-card border-border h-9" 
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <FieldLabel className="flex items-center gap-1.5"><Globe className="w-3.5 h-3.5 text-slate-400" /> {t("materials.form.nameEn", { namespace: "inventory" })}</FieldLabel>
+                  <FieldLabel className="flex items-center gap-1.5"><Globe className="w-3.5 h-3.5 text-muted-foreground" /> {t("materials.form.nameEn", { namespace: "inventory" })}</FieldLabel>
                   <Input 
                     value={formData.name_en} 
                     onChange={e => setFormData({ ...formData, name_en: e.target.value })} 
                     placeholder="Example: Fine Sugar" 
-                    className="bg-white border-slate-200 h-9" 
+                    className="bg-card border-border h-9" 
                     dir="ltr" 
                   />
                 </div>
@@ -651,22 +651,22 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
               {/* الكود والباركود */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <FieldLabel className="flex items-center gap-1.5"><Hash className="w-3.5 h-3.5 text-slate-400" /> {t("labels.code", { namespace: "inventory" })}</FieldLabel>
+                  <FieldLabel className="flex items-center gap-1.5"><Hash className="w-3.5 h-3.5 text-muted-foreground" /> {t("labels.code", { namespace: "inventory" })}</FieldLabel>
                   <Input 
                     value={formData.code} 
                     onChange={e => setFormData({ ...formData, code: e.target.value.toUpperCase() })} 
-                    className="font-mono text-xs bg-white border-slate-200 h-9" 
+                    className="font-mono text-xs bg-card border-border h-9" 
                     placeholder={t("labels.code", { namespace: "inventory" })} 
                     dir="ltr" 
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <FieldLabel className="flex items-center gap-1.5"><Barcode className="w-3.5 h-3.5 text-slate-400" /> {t("materials.form.generalBarcode", { namespace: "inventory" })}</FieldLabel>
+                  <FieldLabel className="flex items-center gap-1.5"><Barcode className="w-3.5 h-3.5 text-muted-foreground" /> {t("materials.form.generalBarcode", { namespace: "inventory" })}</FieldLabel>
                   <div className="flex gap-2">
                     <Input
                       value={formData.barcode}
                       onChange={e => setFormData({ ...formData, barcode: e.target.value })}
-                      className="font-mono text-xs bg-white border-slate-200 h-9"
+                      className="font-mono text-xs bg-card border-border h-9"
                       placeholder={t("labels.barcode", { namespace: "inventory" })}
                       dir="ltr"
                     />
@@ -693,21 +693,21 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
               {/* حد الطلب + ملاحظات */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <FieldLabel className="flex items-center gap-1.5"><Package className="w-3.5 h-3.5 text-slate-400" /> {t("materials.columns.minimumStock", { namespace: "inventory" })}</FieldLabel>
+                  <FieldLabel className="flex items-center gap-1.5"><Package className="w-3.5 h-3.5 text-muted-foreground" /> {t("materials.columns.minimumStock", { namespace: "inventory" })}</FieldLabel>
                   <Input 
                     type="number" 
                     value={formData.minimum_stock} 
                     onChange={e => setFormData({ ...formData, minimum_stock: e.target.value })} 
-                    className="bg-white border-slate-200 h-9" 
+                    className="bg-card border-border h-9" 
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <FieldLabel className="flex items-center gap-1.5"><FileText className="w-3.5 h-3.5 text-slate-400" /> {t("labels.notes", { namespace: "inventory" })}</FieldLabel>
+                  <FieldLabel className="flex items-center gap-1.5"><FileText className="w-3.5 h-3.5 text-muted-foreground" /> {t("labels.notes", { namespace: "inventory" })}</FieldLabel>
                   <Textarea 
                     value={formData.notes} 
                     onChange={e => setFormData({ ...formData, notes: e.target.value })} 
                     placeholder={t("materials.form.notesPlaceholder", { namespace: "inventory" })} 
-                    className="min-h-[72px] resize-none bg-white border-slate-200 text-xs" 
+                    className="min-h-[72px] resize-none bg-card border-border text-xs" 
                   />
                 </div>
               </div>
@@ -719,27 +719,27 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
             <div className="space-y-2">
               {/* Search */}
               <div className="relative">
-                <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
+                <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
                 <Input
                   placeholder={t("materials.form.categorySearchPlaceholder", { namespace: "inventory" })}
                   value={categorySearch}
                   onChange={e => setCategorySearch(e.target.value)}
-                  className="pr-9 h-8 text-xs bg-white border-slate-200"
+                  className="pr-9 h-8 text-xs bg-card border-border"
                 />
               </div>
 
-              <div className="border border-slate-200/70 rounded-xl overflow-hidden bg-white shadow-sm">
+              <div className="border border-border rounded-xl overflow-hidden bg-card shadow-sm">
                 {/* Header */}
-                <div className="bg-slate-50 px-3 py-2 border-b text-[10px] font-black text-slate-400 grid grid-cols-[1fr_1fr_28px] gap-2 items-center">
+                <div className="bg-muted px-3 py-2 border-b text-[10px] font-black text-muted-foreground grid grid-cols-[1fr_1fr_28px] gap-2 items-center">
                   <div>{t("categories.form.mainCategory", { namespace: "inventory" })}</div>
                   <div>{t("categories.form.subCategories", { namespace: "inventory" })}</div>
                   <div></div>
                 </div>
 
                 {/* Content */}
-                <div className="divide-y divide-slate-100 text-right">
+                <div className="divide-y divide-border text-right">
                   {uncategorizedCat && (!categorySearch.trim() || uncategorizedCat.name.includes(categorySearch.trim())) && (
-                    <div className="grid grid-cols-[1fr_1fr_28px] items-center min-h-[36px] hover:bg-slate-50/50">
+                    <div className="grid grid-cols-[1fr_1fr_28px] items-center min-h-[36px] hover:bg-accent/50">
                       <div className="px-3 py-1.5 font-black text-blue-600 text-xs italic">{t("materials.uncategorized", { namespace: "inventory" })}</div>
                       <div className="px-3 py-1.5">
                         <div
@@ -747,7 +747,7 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
                           className={cn("inline-flex items-center justify-center gap-2 px-3 py-1 rounded-xl border cursor-pointer text-[10px] transition-all",
                             formData.selectedCategoryIds.includes(uncategorizedCat.id)
                               ? "bg-blue-50 border-blue-200 text-blue-700 font-bold"
-                              : "bg-white border-slate-200 text-slate-500 hover:bg-slate-50"
+                              : "bg-card border-border text-muted-foreground hover:bg-accent"
                           )}
                         >
                           {t("labels.default", { namespace: "inventory" })}
@@ -768,10 +768,10 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
                         {/* Main category row */}
                         <div
                           onClick={() => toggleMain(main.id)}
-                          className="grid grid-cols-[1fr_1fr_28px] items-center min-h-[36px] hover:bg-slate-50/50 cursor-pointer select-none"
+                          className="grid grid-cols-[1fr_1fr_28px] items-center min-h-[36px] hover:bg-accent/50 cursor-pointer select-none"
                         >
-                          <div className="px-3 py-1.5 font-bold text-slate-700 text-xs flex items-center gap-1.5">
-                            <ChevronDown className={cn("w-3 h-3 text-slate-400 transition-transform duration-200", !isExpanded && "-rotate-90")} />
+                          <div className="px-3 py-1.5 font-bold text-foreground text-xs flex items-center gap-1.5">
+                            <ChevronDown className={cn("w-3 h-3 text-muted-foreground transition-transform duration-200", !isExpanded && "-rotate-90")} />
                             {main.name}
                           </div>
                           <div className="px-3 py-1.5">
@@ -784,13 +784,13 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
                                     className={cn("inline-flex items-center gap-1 px-2 py-0.5 rounded-lg border cursor-pointer text-[9px] transition-all",
                                       formData.selectedCategoryIds.includes(sub.id)
                                         ? "bg-emerald-50 border-emerald-200 text-emerald-700 font-bold"
-                                        : "bg-white border-slate-200 text-slate-500 hover:bg-slate-50"
+                                        : "bg-card border-border text-muted-foreground hover:bg-accent"
                                     )}
                                   >
                                     <div className={cn("w-2 h-2 rounded-sm border flex items-center justify-center transition-colors",
                                       formData.selectedCategoryIds.includes(sub.id)
                                         ? "bg-emerald-600 border-emerald-600"
-                                        : "border-slate-300 bg-white"
+                                        : "border-border bg-card"
                                     )}>
                                       {formData.selectedCategoryIds.includes(sub.id) && <Check className="w-1.5 h-1.5 text-white" />}
                                     </div>
@@ -798,11 +798,11 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
                                   </div>
                                 ))}
                                 {visibleSubs.length === 0 && (
-                                  <span className="text-[9px] text-slate-400 italic">{t("categories.form.noSubCategories", { namespace: "inventory" })}</span>
+                                  <span className="text-[9px] text-muted-foreground italic">{t("categories.form.noSubCategories", { namespace: "inventory" })}</span>
                                 )}
                               </div>
                             ) : (
-                              <div className="text-[9px] text-slate-400 italic flex items-center gap-1">
+                              <div className="text-[9px] text-muted-foreground italic flex items-center gap-1">
                                 <span>{subs.length}</span>
                                 {subs.length === 1 ? t("categories.form.subCategory", { namespace: "inventory" }) : t("categories.form.subCategories", { namespace: "inventory" })}
                               </div>
@@ -813,7 +813,7 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
                               type="button"
                               onClick={(e) => { e.stopPropagation(); openInlineCreate({ type: "sub", parentId: main.id, parentName: main.name }); }}
                               title={t("materials.form.addSubFor", { namespace: "inventory", vars: { name: main.name } })}
-                              className="opacity-0 group-hover:opacity-100 w-6 h-6 rounded-lg border border-dashed border-slate-300 text-slate-400 hover:border-blue-500 hover:text-blue-600 hover:bg-blue-50 flex items-center justify-center transition-all"
+                              className="opacity-0 group-hover:opacity-100 w-6 h-6 rounded-lg border border-dashed border-border text-muted-foreground hover:border-blue-500 hover:text-blue-600 hover:bg-blue-50 flex items-center justify-center transition-all"
                             >
                               <Plus className="w-3 h-3" />
                             </button>
@@ -824,13 +824,13 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
                   })}
 
                   {/* "Add main" trigger row */}
-                  <div className="bg-slate-50/50 px-3 py-2">
+                  <div className="bg-muted/50 px-3 py-2">
                     <Button
                       type="button"
                       size="sm"
                       variant="outline"
                       onClick={() => openInlineCreate({ type: "main" })}
-                      className="w-full h-7 text-[10px] font-bold gap-1 border-dashed border-slate-300 hover:border-blue-500 hover:bg-blue-50 hover:text-blue-700"
+                      className="w-full h-7 text-[10px] font-bold gap-1 border-dashed border-border hover:border-blue-500 hover:bg-blue-50 hover:text-blue-700"
                     >
                       <Plus className="w-3 h-3" /> {t("materials.form.addMainCategory", { namespace: "inventory" })}
                     </Button>
@@ -853,13 +853,13 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
                       <Input autoFocus placeholder={t("materials.form.categoryName", { namespace: "inventory" })} value={newCatName}
                         onChange={e => setNewCatName(e.target.value)}
                         onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); submitInlineCreate(); } }}
-                        className="h-8 text-xs bg-white border-slate-200" />
+                        className="h-8 text-xs bg-card border-border" />
                       <Input placeholder="A" value={newCatPrefix}
                         onChange={e => setNewCatPrefix(e.target.value.slice(0, 1).toUpperCase())}
                         onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); submitInlineCreate(); } }}
-                        className="h-8 text-xs font-mono text-center bg-white border-slate-200" maxLength={1} dir="ltr" title={t("materials.form.prefixTitle", { namespace: "inventory" })} />
+                        className="h-8 text-xs font-mono text-center bg-card border-border" maxLength={1} dir="ltr" title={t("materials.form.prefixTitle", { namespace: "inventory" })} />
                     </div>
-                    <p className="text-[9px] text-slate-500 leading-relaxed">
+                    <p className="text-[9px] text-muted-foreground leading-relaxed">
                       {inlineCreate.type === "main"
                         ? t("materials.form.willCreateGeneralSub", { namespace: "inventory" })
                         : t("materials.form.autoSelectSub", { namespace: "inventory" })}
@@ -885,7 +885,7 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
               <div className="space-y-2">
                 <FieldLabel>{t("materials.form.defaultPurchaseUnit", { namespace: "inventory" })}</FieldLabel>
                 <Select value={formData.default_purchase_unit_id} onValueChange={v => setFormData({ ...formData, default_purchase_unit_id: v })}>
-                  <SelectTrigger className="w-full bg-white border-slate-200"><SelectValue placeholder={t("materials.form.chooseUnit", { namespace: "inventory" })} /></SelectTrigger>
+                  <SelectTrigger className="w-full bg-card border-border"><SelectValue placeholder={t("materials.form.chooseUnit", { namespace: "inventory" })} /></SelectTrigger>
                   <SelectContent>
                     {formData.units.map((u, i) => {
                       const unitLabel = u.name || t("materials.form.unitName", { namespace: "inventory", vars: { count: i + 1 } });
@@ -899,7 +899,7 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
               <div className="space-y-2">
                 <FieldLabel>{t("materials.form.defaultSaleUnit", { namespace: "inventory" })}</FieldLabel>
                 <Select value={formData.default_sale_unit_id} onValueChange={v => setFormData({ ...formData, default_sale_unit_id: v })}>
-                  <SelectTrigger className="w-full bg-white border-slate-200"><SelectValue placeholder={t("materials.form.chooseUnit", { namespace: "inventory" })} /></SelectTrigger>
+                  <SelectTrigger className="w-full bg-card border-border"><SelectValue placeholder={t("materials.form.chooseUnit", { namespace: "inventory" })} /></SelectTrigger>
                   <SelectContent>
                     {formData.units.map((u, i) => {
                       const unitLabel = u.name || t("materials.form.unitName", { namespace: "inventory", vars: { count: i + 1 } });
@@ -917,7 +917,7 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
           <div className="flex items-center justify-between border-b pb-2 pt-2">
             <div className="space-y-0.5 text-right">
               <h3 className="text-sm font-bold text-slate-800">{t("materials.form.manageUnits", { namespace: "inventory" })}</h3>
-              <p className="text-[10px] text-slate-400 italic">{t("materials.form.manageUnitsHint", { namespace: "inventory" })}</p>
+              <p className="text-[10px] text-muted-foreground italic">{t("materials.form.manageUnitsHint", { namespace: "inventory" })}</p>
             </div>
             <Button type="button" size="sm" onClick={() => setShowUnitForm(true)} className="bg-blue-600 hover:bg-blue-700 gap-1.5 h-8 text-xs font-bold rounded-lg shadow-sm"><Plus className="w-3.5 h-3.5" /> {t("materials.form.addUnit", { namespace: "inventory" })}</Button>
           </div>
@@ -966,27 +966,27 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
           <SidebarSection title={t("materials.form.purchasePrices", { namespace: "inventory" })} defaultOpen={true}>
             <div className="space-y-3">
               {formData.units.map((unit, uIdx) => (
-                <div key={uIdx} className="p-3 border border-slate-200/80 rounded-2xl bg-white shadow-sm space-y-2 text-right">
+                <div key={uIdx} className="p-3 border border-border rounded-2xl bg-card shadow-sm space-y-2 text-right">
                   <div className="border-b pb-1.5 flex justify-between items-center">
-                    <span className="font-bold text-[11px] text-slate-700">{t("materials.form.purchasingUnit", { namespace: "inventory", vars: { name: unit.name || t("materials.form.unitName", { namespace: "inventory", vars: { count: uIdx + 1 } }) } })}</span>
+                    <span className="font-bold text-[11px] text-foreground">{t("materials.form.purchasingUnit", { namespace: "inventory", vars: { name: unit.name || t("materials.form.unitName", { namespace: "inventory", vars: { count: uIdx + 1 } }) } })}</span>
                   </div>
                   <div className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${activeCurrencies.length}, 1fr)` }}>
                     {activeCurrencies.map(c => {
                       const sym = c.symbol || c.code;
                       return (
                         <div key={c.code} className="relative">
-                          <span className="absolute left-1 top-1/2 -translate-y-1/2 text-[8px] font-bold text-slate-400">{sym}</span>
+                          <span className="absolute left-1 top-1/2 -translate-y-1/2 text-[8px] font-bold text-muted-foreground">{sym}</span>
                           <Input
                             type="number"
                             value={getPurchasePrice(uIdx, c.code)}
                             onChange={e => handlePurchasePriceChange(uIdx, c.code, e.target.value)}
-                            className="h-8 pl-4 text-xs font-bold text-center bg-white border-slate-200"
+                            className="h-8 pl-4 text-xs font-bold text-center bg-card border-border"
                           />
                         </div>
                       );
                     })}
                   </div>
-                  <p className="text-[9px] text-slate-500 leading-relaxed">
+                  <p className="text-[9px] text-muted-foreground leading-relaxed">
                     {t("materials.form.purchasePriceHint", { namespace: "inventory" })}
                   </p>
                 </div>
@@ -1012,13 +1012,13 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
                     min="0"
                     value={getSaleMaxQuantity(tier.id)}
                     onChange={e => handleMaxQuantityChange(tier.id, e.target.value)}
-                    className="h-7 w-16 text-xs font-bold text-center bg-white border-slate-200"
+                    className="h-7 w-16 text-xs font-bold text-center bg-card border-border"
                   />
                   <Select
                     value={tierMaxQtyUnit[tier.id] || formData.units[0]?.name || t("materials.form.defaultUnit", { namespace: "inventory" })}
                     onValueChange={v => handleTierQtyUnitChange(tier.id, v)}
                   >
-                    <SelectTrigger className="h-7 w-20 text-[9px] font-bold border-slate-200 px-1.5 gap-0">
+                    <SelectTrigger className="h-7 w-20 text-[9px] font-bold border-border px-1.5 gap-0">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -1033,7 +1033,7 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
               ))}
               <div className="flex items-center gap-1.5">
                 <span className="text-[10px] font-bold text-slate-600 whitespace-nowrap">{t("saleTiers.wholesale", { namespace: "inventory" })}:</span>
-                <span className="text-[9px] text-slate-400 italic font-medium">{t("materials.form.unlimited", { namespace: "inventory" })}</span>
+                <span className="text-[9px] text-muted-foreground italic font-medium">{t("materials.form.unlimited", { namespace: "inventory" })}</span>
               </div>
             </div>
           </div>
@@ -1043,25 +1043,25 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
               <SidebarSection key={uIdx} title={t("materials.form.salePricingUnit", { namespace: "inventory", vars: { name: unit.name || t("materials.form.unitName", { namespace: "inventory", vars: { count: uIdx + 1 } }) } })} defaultOpen={uIdx === 0}>
                 <div className="space-y-3">
                   {saleTiers.map(tier => (
-                    <div key={tier.id} className="p-3 border border-slate-100/60 rounded-xl bg-slate-50/50 space-y-2 text-right">
-                      <div className="flex justify-between items-center border-b border-slate-200/40 pb-1">
-                        <span className="font-black text-[10px] text-slate-700 bg-slate-200/50 px-2 py-0.5 rounded-md">{tier.label}</span>
+                    <div key={tier.id} className="p-3 border border-border rounded-xl bg-muted/50 space-y-2 text-right">
+                      <div className="flex justify-between items-center border-b border-border/40 pb-1">
+                        <span className="font-black text-[10px] text-foreground bg-muted px-2 py-0.5 rounded-md">{tier.label}</span>
                       </div>
                       <div className="grid grid-cols-2 gap-3">
                         {/* سعر المبيع */}
                         <div className="space-y-1">
-                          <span className="text-[8px] font-black text-slate-400 block uppercase">{t("materials.form.salePrice", { namespace: "inventory" })}</span>
+                          <span className="text-[8px] font-black text-muted-foreground block uppercase">{t("materials.form.salePrice", { namespace: "inventory" })}</span>
                           <div className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${activeCurrencies.length}, 1fr)` }}>
                             {activeCurrencies.map(c => {
                               const sym = c.symbol || c.code;
                               return (
                                 <div key={c.code} className="relative">
-                                  <span className="absolute left-1 top-1/2 -translate-y-1/2 text-[8px] font-bold text-slate-400">{sym}</span>
+                                  <span className="absolute left-1 top-1/2 -translate-y-1/2 text-[8px] font-bold text-muted-foreground">{sym}</span>
                                   <Input
                                     type="number"
                                     value={getSalePrice(uIdx, tier.id, c.code)}
                                     onChange={e => handleSalePriceChange(uIdx, tier.id, c.code, 'price', e.target.value)}
-                                    className="h-8 pl-4 text-xs font-bold text-center bg-white border-slate-200"
+                                    className="h-8 pl-4 text-xs font-bold text-center bg-card border-border"
                                   />
                                 </div>
                               );
@@ -1076,7 +1076,7 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
                               const sym = c.symbol || c.code;
                               return (
                                 <div key={c.code} className="relative">
-                                  <span className="absolute left-1 top-1/2 -translate-y-1/2 text-[8px] font-bold text-slate-400">{sym}</span>
+                                  <span className="absolute left-1 top-1/2 -translate-y-1/2 text-[8px] font-bold text-muted-foreground">{sym}</span>
                                   <Input
                                     type="number"
                                     value={getSaleMinPrice(uIdx, tier.id, c.code)}
@@ -1103,12 +1103,12 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
             <div className="space-y-3 text-right">
               {/* الصورة */}
               <div className="space-y-2">
-                <FieldLabel className="flex items-center gap-1.5"><ImageIcon className="w-3.5 h-3.5 text-slate-400" /> {t("materials.form.imageField", { namespace: "inventory" })}</FieldLabel>
+                <FieldLabel className="flex items-center gap-1.5"><ImageIcon className="w-3.5 h-3.5 text-muted-foreground" /> {t("materials.form.imageField", { namespace: "inventory" })}</FieldLabel>
                 <div className="flex gap-2">
                   <Button 
                     type="button" 
                     variant="outline" 
-                    className="flex-1 h-9 border-dashed border-slate-300 hover:border-blue-400 hover:bg-blue-50/50 gap-2 text-xs font-bold"
+                    className="flex-1 h-9 border-dashed border-border hover:border-blue-400 hover:bg-blue-50/50 gap-2 text-xs font-bold"
                     onClick={() => document.getElementById('material-image-upload')?.click()}
                   >
                     <ImageIcon className="w-3.5 h-3.5 text-blue-500" />
@@ -1142,12 +1142,12 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
                     reader.readAsDataURL(file);
                   }}
                 />
-                <p className="text-[9px] text-slate-400 italic">{t("materials.form.imageHint", { namespace: "inventory" })}</p>
+                <p className="text-[9px] text-muted-foreground italic">{t("materials.form.imageHint", { namespace: "inventory" })}</p>
               </div>
 
               {/* معاينة الصورة */}
-              <div className="border border-dashed border-slate-200 rounded-2xl p-4 flex flex-col items-center justify-center text-center bg-slate-50/30 gap-2.5">
-                <div className="w-24 h-24 rounded-2xl bg-white border border-slate-100 shadow-inner flex items-center justify-center overflow-hidden">
+              <div className="border border-dashed border-border rounded-2xl p-4 flex flex-col items-center justify-center text-center bg-muted/30 gap-2.5">
+                <div className="w-24 h-24 rounded-2xl bg-card border border-border shadow-inner flex items-center justify-center overflow-hidden">
                   {formData.image_path ? (
                     <img src={formData.image_path} alt="Preview" className="w-full h-full object-contain animate-in zoom-in-75 duration-200" />
                   ) : (
@@ -1155,14 +1155,14 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
                   )}
                 </div>
                 <div className="space-y-0.5">
-                  <p className="text-[10px] font-bold text-slate-500">{t("materials.form.imagePreview", { namespace: "inventory" })}</p>
+                  <p className="text-[10px] font-bold text-muted-foreground">{t("materials.form.imagePreview", { namespace: "inventory" })}</p>
                 </div>
               </div>
 
-              <div className="border-t border-slate-100 pt-3 mt-3" />
+              <div className="border-t border-border pt-3 mt-3" />
 
               <div className="space-y-1.5">
-                <FieldLabel className="flex items-center gap-1.5"><Warehouse className="w-3.5 h-3.5 text-slate-400" /> {t("materials.form.defaultWarehouse", { namespace: "inventory" })}</FieldLabel>
+                <FieldLabel className="flex items-center gap-1.5"><Warehouse className="w-3.5 h-3.5 text-muted-foreground" /> {t("materials.form.defaultWarehouse", { namespace: "inventory" })}</FieldLabel>
                 <Select value={formData.default_warehouse_id} onValueChange={v => setFormData({ ...formData, default_warehouse_id: v })}>
                   <SelectTrigger className="h-8 text-xs"><SelectValue placeholder={t("materials.form.noDefaultWarehouse", { namespace: "inventory" })} /></SelectTrigger>
                   <SelectContent>
@@ -1177,18 +1177,18 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
                 <div className="flex items-center gap-2 pt-2">
                   <label className="flex items-center gap-2 cursor-pointer">
                     <div
-                      className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors ${formData.has_expiry ? 'bg-amber-500 border-amber-500' : 'border-slate-300'}`}
+                      className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors ${formData.has_expiry ? 'bg-amber-500 border-amber-500' : 'border-border'}`}
                       onClick={() => setFormData({ ...formData, has_expiry: !formData.has_expiry })}
                     >
                       {formData.has_expiry && <Check className="w-3 h-3 text-white" />}
                     </div>
-                    <span className="text-xs font-medium text-slate-700">{t("materials.form.hasExpiry", { namespace: "inventory" })}</span>
+                    <span className="text-xs font-medium text-foreground">{t("materials.form.hasExpiry", { namespace: "inventory" })}</span>
                   </label>
                 </div>
 
                 {formData.has_expiry && (
                   <div className="space-y-1.5 pr-6">
-                    <FieldLabel className="flex items-center gap-1.5 text-[11px]"><span className="text-slate-400">{t("materials.form.expiryAlertDays", { namespace: "inventory" })}</span></FieldLabel>
+                    <FieldLabel className="flex items-center gap-1.5 text-[11px]"><span className="text-muted-foreground">{t("materials.form.expiryAlertDays", { namespace: "inventory" })}</span></FieldLabel>
                     <Input
                       type="number"
                       min="0"
@@ -1200,11 +1200,11 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
                 )}
               </div>
 
-              <div className="border-t border-slate-100 pt-3 mt-1" />
+              <div className="border-t border-border pt-3 mt-1" />
               <div className="grid grid-cols-2 gap-3">
               {activeCurrencies && activeCurrencies.length > 1 && (
               <div className="space-y-1.5">
-                <FieldLabel className="flex items-center gap-1.5"><DollarSign className="w-3.5 h-3.5 text-slate-400" /> {t("materials.form.defaultPurchaseCurrency", { namespace: "inventory" })}</FieldLabel>
+                <FieldLabel className="flex items-center gap-1.5"><DollarSign className="w-3.5 h-3.5 text-muted-foreground" /> {t("materials.form.defaultPurchaseCurrency", { namespace: "inventory" })}</FieldLabel>
                 <Select value={formData.default_purchase_currency} onValueChange={v => setFormData({ ...formData, default_purchase_currency: v })}>
                   <SelectTrigger className="h-8 text-xs"><SelectValue placeholder={t("materials.form.auto", { namespace: "inventory" })} /></SelectTrigger>
                   <SelectContent>
@@ -1217,7 +1217,7 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
               )}
               {activeCurrencies && activeCurrencies.length > 1 && (
               <div className="space-y-1.5">
-                <FieldLabel className="flex items-center gap-1.5"><DollarSign className="w-3.5 h-3.5 text-slate-400" /> {t("materials.form.defaultSaleCurrency", { namespace: "inventory" })}</FieldLabel>
+                <FieldLabel className="flex items-center gap-1.5"><DollarSign className="w-3.5 h-3.5 text-muted-foreground" /> {t("materials.form.defaultSaleCurrency", { namespace: "inventory" })}</FieldLabel>
                 <Select value={formData.default_sale_currency} onValueChange={v => setFormData({ ...formData, default_sale_currency: v })}>
                   <SelectTrigger className="h-8 text-xs"><SelectValue placeholder={t("materials.form.auto", { namespace: "inventory" })} /></SelectTrigger>
                   <SelectContent>

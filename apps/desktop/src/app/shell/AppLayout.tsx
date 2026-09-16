@@ -73,7 +73,7 @@ export function AppLayout({ title, subtitle }: AppLayoutProps) {
   // Render content (tabs + routes) — memoized to preserve reference across shell switches
   const content = useMemo(() => (
     <>
-      <main className="flex-1 relative bg-slate-100 overflow-hidden">
+      <main className="flex-1 relative bg-muted overflow-hidden">
         {tabs.map((tab) => (
           <div 
             key={tab.id}

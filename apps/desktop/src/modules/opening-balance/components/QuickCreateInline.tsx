@@ -66,7 +66,7 @@ export function QuickCreateInline({ label, placeholder, amountLabel, direction, 
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder={placeholder}
-          className="h-8 flex-1 border-slate-200 text-xs bg-white"
+          className="h-8 flex-1 border-border text-xs bg-card"
           disabled={creating}
           autoFocus
           onKeyDown={(e) => {
@@ -84,7 +84,7 @@ export function QuickCreateInline({ label, placeholder, amountLabel, direction, 
           value={amount}
           onChange={(e) => setAmount(e.target.value)}
           placeholder={amountLabel}
-          className="h-8 w-32 border-slate-200 text-xs text-end tabular-nums bg-white"
+          className="h-8 w-32 border-border text-xs text-end tabular-nums bg-card"
           disabled={creating}
           onKeyDown={(e) => {
             if (e.key === "Enter") {

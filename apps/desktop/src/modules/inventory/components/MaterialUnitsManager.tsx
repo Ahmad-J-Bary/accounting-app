@@ -103,7 +103,7 @@ export function MaterialUnitsManager({ material, onClose, onUnitsUpdated }: Mate
   };
 
   return (
-    <div className="flex flex-col h-full bg-white" dir="rtl">
+    <div className="flex flex-col h-full bg-card" dir="rtl">
       {/* Header */}
       <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-slate-50/50 shrink-0">
         <div className="flex flex-col gap-1 text-right">

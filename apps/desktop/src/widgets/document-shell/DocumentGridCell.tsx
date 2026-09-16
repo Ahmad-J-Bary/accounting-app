@@ -71,7 +71,7 @@ function CellWrapper({
         cn(config.densityPadding, "flex items-center truncate text-center justify-center"),
         config.cellBorderClass,
         isInteractive && "relative",
-        !isInteractive && "text-slate-600 transition-colors group-hover:text-slate-900",
+        !isInteractive && "text-muted-foreground transition-colors group-hover:text-foreground",
         isReadonlyCell && "bg-gray-100/50",
         isCellActive && "ring-inset ring-2 ring-blue-400 z-20",
       )}
@@ -130,8 +130,8 @@ function EditableInput({
       min={isNum ? "0" : undefined}
       step={isNum ? "any" : undefined}
       className={cn(
-        "w-full bg-transparent border-none outline-none focus:bg-white transition-colors text-center",
-        isNum ? "tabular-nums font-bold [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" : "font-bold text-blue-800 placeholder:text-slate-400",
+        "w-full bg-transparent border-none outline-none focus:bg-card transition-colors text-center",
+        isNum ? "tabular-nums font-bold [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" : "font-bold text-blue-800 placeholder:text-muted-foreground",
       )}
       style={{ fontSize: `${fontSize}px`, fontFamily }}
       value={value}
@@ -191,7 +191,7 @@ export function DocumentGridCell({
               "text-3xs font-black px-2 py-0.5 rounded border uppercase tracking-tighter transition-all",
               line.material_id
                 ? "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100 cursor-pointer"
-                : "bg-slate-50 text-slate-400 border-slate-200 cursor-default",
+                : "bg-muted text-muted-foreground border-border cursor-default",
             )}>
               <span className="flex items-center gap-1">
                 <span>{line.material_id ? (tiers.find(t => t.id === currentTier)?.label || t("saleTiers.retail", { namespace: "inventory" })) : ""}</span>
@@ -200,7 +200,7 @@ export function DocumentGridCell({
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="center" className="min-w-[140px] shadow-xl">
-            <DropdownMenuLabel className="text-right text-3xs font-black text-slate-500 uppercase">نوع السعر</DropdownMenuLabel>
+            <DropdownMenuLabel className="text-right text-3xs font-black text-muted-foreground uppercase">نوع السعر</DropdownMenuLabel>
             <DropdownMenuSeparator />
             {tiers.map((t) => {
               const salePrice = material?.sale_prices?.find(
@@ -217,7 +217,7 @@ export function DocumentGridCell({
                 >
                   <span className="flex items-center gap-2 w-full">
                     <span>{t.label}</span>
-                    {priceStr && <span className="tabular-nums text-slate-400 font-medium">{priceStr}</span>}
+                    {priceStr && <span className="tabular-nums text-muted-foreground font-medium">{priceStr}</span>}
                     {maxQty > 0 && <span className="text-4xs text-purple-500 font-bold mr-auto">&le;{maxQty}</span>}
                   </span>
                 </DropdownMenuCheckboxItem>
@@ -242,9 +242,9 @@ export function DocumentGridCell({
     return (
       <CellWrapper column={col} config={config} isReadonlyCell>
         {src ? (
-          <img src={src} alt="" className="w-6 h-6 object-contain rounded bg-slate-50 border border-slate-200" />
+          <img src={src} alt="" className="w-6 h-6 object-contain rounded bg-muted border border-border" />
         ) : (
-          <div className="w-6 h-6 rounded bg-slate-50 border border-dashed border-slate-200" />
+          <div className="w-6 h-6 rounded bg-muted border border-dashed border-border" />
         )}
       </CellWrapper>
     );
@@ -279,13 +279,13 @@ export function DocumentGridCell({
               "text-3xs font-black px-2 py-0.5 rounded border uppercase tracking-tighter transition-all",
               line.material_id
                 ? "bg-blue-50 text-blue-600 border-blue-100 hover:bg-blue-100 cursor-pointer"
-                : "bg-slate-50 text-slate-400 border-slate-200 cursor-default",
+                : "bg-muted text-muted-foreground border-border cursor-default",
             )}>
               {line.material_id ? currentUnitName || t("grid.selectUnit", { namespace: "inventory" }) : ""}
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="center" className="min-w-[100px] shadow-xl">
-            <DropdownMenuLabel className="text-right text-3xs font-black text-slate-500 uppercase">{t("grid.availableUnits", { namespace: "inventory" })}</DropdownMenuLabel>
+            <DropdownMenuLabel className="text-right text-3xs font-black text-muted-foreground uppercase">{t("grid.availableUnits", { namespace: "inventory" })}</DropdownMenuLabel>
             <DropdownMenuSeparator />
             {units.map((u) => (
               <DropdownMenuCheckboxItem
@@ -314,13 +314,13 @@ export function DocumentGridCell({
               "text-3xs font-black px-2 py-0.5 rounded border tracking-tighter transition-all",
               currentWarehouseId
                 ? "bg-violet-50 text-violet-600 border-violet-100 hover:bg-violet-100 cursor-pointer"
-                : "bg-slate-50 text-slate-400 border-slate-200 cursor-default",
+                : "bg-muted text-muted-foreground border-border cursor-default",
             )}>
               {currentWarehouse?.name || t("grid.selectWarehouse", { namespace: "inventory" })}
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="center" className="min-w-[140px] shadow-xl">
-            <DropdownMenuLabel className="text-right text-3xs font-black text-slate-500 uppercase">{t("grid.warehouses", { namespace: "inventory" })}</DropdownMenuLabel>
+            <DropdownMenuLabel className="text-right text-3xs font-black text-muted-foreground uppercase">{t("grid.warehouses", { namespace: "inventory" })}</DropdownMenuLabel>
             <DropdownMenuSeparator />
             {warehouses.map((w) => (
               <DropdownMenuCheckboxItem
@@ -378,13 +378,13 @@ export function DocumentGridCell({
                 "text-4xs font-black px-1 py-0.5 rounded border uppercase tracking-tighter transition-all shrink-0",
                 line.material_id
                   ? "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100 cursor-pointer"
-                  : "bg-slate-50 text-slate-400 border-slate-200 cursor-default",
+                  : "bg-muted text-muted-foreground border-border cursor-default",
               )}>
                 {tierLabel}
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="center" className="min-w-[140px] shadow-xl">
-              <DropdownMenuLabel className="text-right text-3xs font-black text-slate-500 uppercase">نوع السعر</DropdownMenuLabel>
+              <DropdownMenuLabel className="text-right text-3xs font-black text-muted-foreground uppercase">نوع السعر</DropdownMenuLabel>
               <DropdownMenuSeparator />
               {tiers.map((t) => (
                 <DropdownMenuCheckboxItem
@@ -487,7 +487,7 @@ export function DocumentGridCell({
       <button
         tabIndex={-1}
         onClick={toggleLayout}
-        className="absolute -top-0.5 -left-0.5 opacity-0 group-hover:opacity-100 transition-opacity text-3xs p-0.5 rounded bg-white border border-slate-200 text-slate-400 hover:text-slate-700 hover:border-slate-300 shadow-sm z-10"
+        className="absolute -top-0.5 -left-0.5 opacity-0 group-hover:opacity-100 transition-opacity text-3xs p-0.5 rounded bg-card border border-border text-muted-foreground hover:text-foreground hover:border-border shadow-sm z-10"
         title={isRowLayout ? t("grid.layoutHorizontal", { namespace: "inventory" }) : t("grid.layoutVertical", { namespace: "inventory" })}
       >
         {isRowLayout ? "⊞" : "☰"}
@@ -501,7 +501,7 @@ export function DocumentGridCell({
             {toggleBtn}
             {tiers.map((t) => (
               <span key={t.key} className={cn("flex items-center gap-1", isRowLayout ? "justify-between" : "flex-col flex-1 min-w-0 text-center")}>
-                <span className="text-4xs font-bold text-slate-400 shrink-0">{t.label}</span>
+                <span className="text-4xs font-bold text-muted-foreground shrink-0">{t.label}</span>
                 <span className="tabular-nums">{getCellValue(line, t.key) || "-"}</span>
               </span>
             ))}
@@ -516,13 +516,13 @@ export function DocumentGridCell({
           {toggleBtn}
           {tiers.map((t, i) => (
             <div key={t.key} className={cn("flex", isRowLayout ? "items-center gap-1" : "flex-col flex-1 min-w-0 items-center gap-0")}>
-              <span className="text-4xs font-bold text-slate-400 shrink-0">{t.label}</span>
+              <span className="text-4xs font-bold text-muted-foreground shrink-0">{t.label}</span>
               <input
                 ref={(el) => { const refMapKey = i === 0 ? refKey : `${refKey}_${t.key}`; if (el) callbacks.inputRefs.current.set(refMapKey, el); else callbacks.inputRefs.current.delete(refMapKey); }}
                 type="number"
                 min="0"
                 step="any"
-                className="w-full bg-transparent border-none outline-none focus:bg-white transition-colors text-center tabular-nums font-bold [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                className="w-full bg-transparent border-none outline-none focus:bg-card transition-colors text-center tabular-nums font-bold [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 style={{ fontSize: `${isRowLayout ? fontSize : fontSize - 1}px`, fontFamily: config.fontFamily }}
                 value={getCellValue(line, t.key)}
                 autoComplete="off"
@@ -658,7 +658,7 @@ export function DocumentGridCell({
             readOnly
             onFocus={() => onActiveCellChange({ row: rowIdx, col: editColIdx })}
             onKeyDown={(e) => onKeyDown(e, rowIdx, editColIdx)}
-            className="w-full bg-transparent border-none outline-none text-[11px] text-slate-400 text-center cursor-default"
+            className="w-full bg-transparent border-none outline-none text-[11px] text-muted-foreground text-center cursor-default"
             tabIndex={-1}
           />
         </CellWrapper>
@@ -666,7 +666,7 @@ export function DocumentGridCell({
     }
 
     return readOnly ? (
-      <span className="text-[11px] text-slate-600">{dateVal}</span>
+      <span className="text-[11px] text-muted-foreground">{dateVal}</span>
     ) : (
       <input
         ref={(el) => { if (el) inputRefs.current.set(refKey, el); else inputRefs.current.delete(refKey); }}
@@ -675,7 +675,7 @@ export function DocumentGridCell({
         onChange={e => onCellChange(rowIdx, col.key, e.target.value)}
         onFocus={() => onActiveCellChange({ row: rowIdx, col: editColIdx })}
         onKeyDown={(e) => onKeyDown(e, rowIdx, editColIdx)}
-        className="w-full bg-transparent border-none outline-none text-[11px] text-slate-700 cursor-default"
+        className="w-full bg-transparent border-none outline-none text-[11px] text-foreground cursor-default"
         style={{ direction: "ltr" }}
         autoComplete="off"
       />

@@ -48,9 +48,9 @@ export function DocumentToolbar({
           size="sm"
           variant="outline"
           onClick={onNewMaterial}
-          className="bg-white border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+          className="bg-card border-emerald-200 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-400 dark:hover:bg-emerald-950"
         >
-          <Plus className="w-4 h-4 ml-2" /> {t('labels.newMaterial', )}
+          <Plus className="w-4 h-4 ms-2" /> {t('labels.newMaterial', )}
         </Button>
       )}
 
@@ -58,9 +58,9 @@ export function DocumentToolbar({
         <Button
           size="sm"
           onClick={onEdit}
-          className="bg-amber-500 hover:bg-amber-600 shadow-lg shadow-amber-100 font-bold"
+          className="bg-amber-500 hover:bg-amber-600 shadow-lg shadow-amber-100 dark:shadow-amber-900/30 font-bold"
         >
-          <Settings2 className="w-4 h-4 ml-2" /> {t('labels.editInvoice', )}
+          <Settings2 className="w-4 h-4 ms-2" /> {t('labels.editInvoice', )}
         </Button>
       )}
 
@@ -70,17 +70,17 @@ export function DocumentToolbar({
             size="sm"
             onClick={onSaveAndPost}
             disabled={saving}
-            className="bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-100 font-bold"
+            className="bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-100 dark:shadow-emerald-900/30 font-bold"
           >
-            <Send className="w-4 h-4 ml-2" /> {t('labels.saveAndPostEdits', )}
+            <Send className="w-4 h-4 ms-2" /> {t('labels.saveAndPostEdits', )}
           </Button>
           <Button
             variant="outline"
             size="sm"
             onClick={onReopen}
-            className="border-rose-200 text-rose-600 hover:bg-rose-50 font-bold"
+            className="border-rose-200 text-rose-600 hover:bg-rose-50 dark:border-rose-800 dark:text-rose-400 dark:hover:bg-rose-950 font-bold"
           >
-            <History className="w-4 h-4 ml-2" /> {t('actions.unpost', )}
+            <History className="w-4 h-4 ms-2" /> {t('actions.unpost', )}
           </Button>
         </>
       ) : !isReadOnly && status !== "Posted" ? (
@@ -90,29 +90,29 @@ export function DocumentToolbar({
             size="sm"
             onClick={onSaveDraft}
             disabled={saving}
-            className="bg-white border-slate-200 text-slate-700 font-bold"
+            className="bg-card border-border text-foreground font-bold"
           >
-            <Save className="w-4 h-4 ml-2" /> {saving ? t('states.saving', ) : t('actions.saveDraft', )}
+            <Save className="w-4 h-4 ms-2" /> {saving ? t('states.saving', ) : t('actions.saveDraft', )}
           </Button>
           <Button
             size="sm"
             onClick={onSaveAndPost}
             disabled={saving}
-            className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100 font-bold"
+            className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100 dark:shadow-blue-900/30 font-bold"
           >
-            <Send className="w-4 h-4 ml-2" /> {resolvedSaveAndPostLabel}
+            <Send className="w-4 h-4 ms-2" /> {resolvedSaveAndPostLabel}
           </Button>
         </>
       ) : null}
 
       {onExport && (
-        <Button variant="outline" size="sm" onClick={onExport} className="bg-white">
-          <Download className="w-4 h-4 ml-2" /> {t('actions.exportExcel', )}
+        <Button variant="outline" size="sm" onClick={onExport} className="bg-card">
+          <Download className="w-4 h-4 ms-2" /> {t('actions.exportExcel', )}
         </Button>
       )}
 
-      <Button variant="outline" size="sm" onClick={onPrint ?? defaultPrint} className="bg-white">
-        <Printer className="w-4 h-4 ml-2" /> {t('actions.print', )}
+      <Button variant="outline" size="sm" onClick={onPrint ?? defaultPrint} className="bg-card">
+        <Printer className="w-4 h-4 ms-2" /> {t('actions.print', )}
       </Button>
     </div>
   );

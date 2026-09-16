@@ -116,14 +116,14 @@ export const SidebarContentManager: React.FC = () => {
         {/* Title */}
         <div className="flex flex-col gap-1 border-r-4 border-blue-600 pr-3 pb-1 mb-2">
           <h2 className="text-xl font-black text-slate-800 font-sans">{t("sidebarContent.title", { namespace: "settings",  })}</h2>
-          <p className="text-xs text-slate-500 font-sans">{t("sidebarContent.description", { namespace: "settings",  })}</p>
+          <p className="text-xs text-muted-foreground font-sans">{t("sidebarContent.description", { namespace: "settings",  })}</p>
         </div>
 
         {/* ── 1. إدارة المجموعات ── */}
         <SettingsGroup title={t("sidebarContent.groupsTitle", { namespace: "settings",  })} icon={Settings2} color="text-blue-600">
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <span className="text-xs text-slate-500 font-medium">{t("sidebarContent.groupsHint", { namespace: "settings",  })}</span>
+              <span className="text-xs text-muted-foreground font-medium">{t("sidebarContent.groupsHint", { namespace: "settings",  })}</span>
               <Button
                 size="sm"
                 onClick={() => setShowAddGroup(prev => !prev)}
@@ -142,7 +142,7 @@ export const SidebarContentManager: React.FC = () => {
                     placeholder={t("sidebarContent.groupNamePlaceholder", { namespace: "settings",  })}
                     value={newGroupTitle}
                     onChange={(e) => setNewGroupTitle(e.target.value)}
-                    className="flex-1 px-3 py-1.5 text-xs border border-slate-200 rounded-lg outline-none focus:border-blue-500 font-bold"
+                    className="flex-1 px-3 py-1.5 text-xs border border-border rounded-lg outline-none focus:border-blue-500 font-bold"
                     onKeyDown={(e) => e.key === 'Enter' && handleAddGroup()}
                   />
                   <Button size="sm" onClick={handleAddGroup} className="bg-blue-600 hover:bg-blue-700 text-xs font-bold rounded-lg h-8 shrink-0">
@@ -151,32 +151,32 @@ export const SidebarContentManager: React.FC = () => {
                   </Button>
                 </div>
                 <div>
-                  <span className="text-[10px] text-slate-500 font-bold block mb-1.5">{t("sidebarContent.chooseIcon", { namespace: "settings",  })}</span>
+                  <span className="text-[10px] text-muted-foreground font-bold block mb-1.5">{t("sidebarContent.chooseIcon", { namespace: "settings",  })}</span>
                   <IconPicker value={newGroupIcon} onChange={setNewGroupIcon} />
                 </div>
               </div>
             )}
 
-            <div className="border border-slate-150 rounded-xl divide-y divide-slate-100 overflow-hidden bg-white shadow-sm">
+            <div className="border border-border rounded-xl divide-y divide-border overflow-hidden bg-card shadow-sm">
               {layout.groups.map((group, idx) => {
                 const isEditing = editingGroupId === group.id;
                 const displayTitle = groupTitle(group);
                 return (
-                  <div key={group.id} className={cn("flex items-center justify-between p-3 transition-colors hover:bg-slate-50/40", !group.visible && "bg-slate-50/50 opacity-60")}>
+                  <div key={group.id} className={cn("flex items-center justify-between p-3 transition-colors hover:bg-accent/40", !group.visible && "bg-muted/50 opacity-60")}>
                     <div className="flex items-center gap-3 flex-1 min-w-0">
                       {/* أزرار الترتيب */}
                       <div className="flex flex-col gap-0.5">
                         <button
                           disabled={idx === 0}
                           onClick={() => moveGroup(idx, 'up')}
-                          className="p-0.5 rounded hover:bg-slate-150 text-slate-400 disabled:opacity-30 disabled:hover:bg-transparent"
+                          className="p-0.5 rounded hover:bg-accent text-muted-foreground disabled:opacity-30 disabled:hover:bg-transparent"
                         >
                           <ArrowUp className="w-3 h-3" />
                         </button>
                         <button
                           disabled={idx === layout.groups.length - 1}
                           onClick={() => moveGroup(idx, 'down')}
-                          className="p-0.5 rounded hover:bg-slate-150 text-slate-400 disabled:opacity-30 disabled:hover:bg-transparent"
+                          className="p-0.5 rounded hover:bg-accent text-muted-foreground disabled:opacity-30 disabled:hover:bg-transparent"
                         >
                           <ArrowDown className="w-3 h-3" />
                         </button>
@@ -189,7 +189,7 @@ export const SidebarContentManager: React.FC = () => {
                             type="text"
                             value={editGroupTitle}
                             onChange={(e) => setEditGroupTitle(e.target.value)}
-                            className="w-full px-2 py-1 text-xs border border-slate-300 rounded outline-none focus:border-blue-500 font-bold"
+                            className="w-full px-2 py-1 text-xs border border-border rounded outline-none focus:border-blue-500 font-bold"
                             onKeyDown={(e) => e.key === 'Enter' && handleSaveRenameGroup(group.id)}
                             autoFocus
                           />
@@ -208,7 +208,7 @@ export const SidebarContentManager: React.FC = () => {
                           )}
                           <button
                             onClick={() => handleStartRenameGroup(group.id, displayTitle)}
-                            className="p-1 rounded text-slate-400 hover:text-blue-500 transition-colors"
+                            className="p-1 rounded text-muted-foreground hover:text-blue-500 transition-colors"
                           >
                             <Edit2 className="w-3 h-3" />
                           </button>
@@ -218,14 +218,14 @@ export const SidebarContentManager: React.FC = () => {
 
                     {/* الإجراءات */}
                     <div className="flex items-center gap-3">
-                      <span className="text-[10px] text-slate-400 font-black">
+                      <span className="text-[10px] text-muted-foreground font-black">
                         {t("sidebarContent.itemCount", { namespace: "settings", vars: { count: group.items.length } })}
                       </span>
 
                       {/* إخفاء / إظهار */}
                       <button
                         onClick={() => toggleGroupVisible(group.id)}
-                        className={cn("p-1.5 rounded-lg border transition-colors", group.visible ? "text-blue-600 bg-blue-50/50 border-blue-100 hover:bg-blue-100/60" : "text-slate-400 border-slate-200 hover:bg-slate-100")}
+                        className={cn("p-1.5 rounded-lg border transition-colors", group.visible ? "text-blue-600 bg-blue-50/50 border-blue-100 hover:bg-blue-100/60" : "text-muted-foreground border-border hover:bg-accent")}
                         title={group.visible ? t("sidebarContent.hideGroup", { namespace: "settings",  }) : t("sidebarContent.showGroup", { namespace: "settings",  })}
                       >
                         {group.visible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
@@ -259,30 +259,30 @@ export const SidebarContentManager: React.FC = () => {
             {layout.groups.map((group) => {
               const displayGroupTitle = groupTitle(group);
               return (
-                <div key={group.id} className="border border-slate-150 rounded-xl overflow-hidden bg-slate-50/30">
+                <div key={group.id} className="border border-border rounded-xl overflow-hidden bg-muted/30">
                   {/* ترويسة المجموعة */}
-                  <div className="flex items-center justify-between px-4 py-2.5 bg-slate-100 border-b border-slate-150">
+                  <div className="flex items-center justify-between px-4 py-2.5 bg-muted border-b border-border">
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-black text-slate-800">{displayGroupTitle}</span>
                       {group.isCustom && <span className="bg-blue-100 text-blue-700 text-[8px] font-black px-1.5 py-0.5 rounded-full">{t("sidebarContent.customGroupBadge", { namespace: "settings",  })}</span>}
                     </div>
-                    <span className="text-[10px] text-slate-400 font-bold">{t("sidebarContent.activeItems", { namespace: "settings", vars: { count: group.items.filter(i => i.visible).length } })}</span>
+                    <span className="text-[10px] text-muted-foreground font-bold">{t("sidebarContent.activeItems", { namespace: "settings", vars: { count: group.items.filter(i => i.visible).length } })}</span>
                   </div>
 
                   {/* قائمة العناصر */}
                   {group.items.length === 0 ? (
-                    <div className="p-4 text-center text-xs text-slate-400 font-bold bg-white">
+                    <div className="p-4 text-center text-xs text-muted-foreground font-bold bg-card">
                       {t("sidebarContent.emptyGroup", { namespace: "settings",  })}
                     </div>
                   ) : (
-                    <div className="divide-y divide-slate-100 bg-white">
+                    <div className="divide-y divide-border bg-card">
                       {group.items.map((item, itemIdx) => {
                         const isItemEditing = editingItemId === item.id;
                         const displayItemLabel = itemLabel(item);
                         const IconComp = ICON_MAP[item.icon] ?? ICON_MAP['Settings'];
 
                         return (
-                          <div key={item.id} className={cn("flex items-center justify-between p-2.5 hover:bg-slate-50/30 transition-colors", !item.visible && "bg-slate-50/30 opacity-60")}>
+                          <div key={item.id} className={cn("flex items-center justify-between p-2.5 hover:bg-accent/30 transition-colors", !item.visible && "bg-muted/30 opacity-60")}>
                             {/* الجانب الأيمن: الترتيب والأيقونة والتسمية */}
                             <div className="flex items-center gap-2.5 flex-1 min-w-0">
                               {/* أزرار الترتيب */}
@@ -290,20 +290,20 @@ export const SidebarContentManager: React.FC = () => {
                                 <button
                                   disabled={itemIdx === 0}
                                   onClick={() => moveItem(group.id, itemIdx, 'up')}
-                                  className="p-0.5 rounded hover:bg-slate-100 text-slate-400 disabled:opacity-20"
+                                  className="p-0.5 rounded hover:bg-accent text-muted-foreground disabled:opacity-20"
                                 >
                                   <ArrowUp className="w-3 h-3" />
                                 </button>
                                 <button
                                   disabled={itemIdx === group.items.length - 1}
                                   onClick={() => moveItem(group.id, itemIdx, 'down')}
-                                  className="p-0.5 rounded hover:bg-slate-100 text-slate-400 disabled:opacity-20"
+                                  className="p-0.5 rounded hover:bg-accent text-muted-foreground disabled:opacity-20"
                                 >
                                   <ArrowDown className="w-3 h-3" />
                                 </button>
                               </div>
 
-                              <IconComp className="w-4 h-4 text-slate-400 shrink-0" />
+                              <IconComp className="w-4 h-4 text-muted-foreground shrink-0" />
 
                               {isItemEditing ? (
                                 <div className="flex items-center gap-1 flex-1 max-w-xs">
@@ -311,7 +311,7 @@ export const SidebarContentManager: React.FC = () => {
                                     type="text"
                                     value={editItemLabel}
                                     onChange={(e) => setEditItemLabel(e.target.value)}
-                                    className="w-full px-2 py-0.5 text-xs border border-slate-350 rounded outline-none focus:border-blue-500 font-bold"
+                                    className="w-full px-2 py-0.5 text-xs border border-border rounded outline-none focus:border-blue-500 font-bold"
                                     onKeyDown={(e) => e.key === 'Enter' && handleSaveRenameItem(item.id)}
                                     autoFocus
                                   />
@@ -325,11 +325,11 @@ export const SidebarContentManager: React.FC = () => {
                               ) : (
                                 <div className="flex items-center gap-1.5 min-w-0">
                                   <span className="text-xs font-bold text-slate-700 truncate">{displayItemLabel}</span>
-                                  <span className="text-[9px] text-slate-400 truncate direction-ltr">({item.to})</span>
+                                  <span className="text-[9px] text-muted-foreground truncate direction-ltr">({item.to})</span>
                                   {item.isCustom && <span className="bg-emerald-50 text-emerald-600 text-[8px] font-black px-1 rounded-full">{t("sidebarContent.customItemBadge", { namespace: "settings",  })}</span>}
                                   <button
                                     onClick={() => handleStartRenameItem(item.id, displayItemLabel)}
-                                    className="p-0.5 rounded text-slate-400 hover:text-blue-500 transition-colors"
+                                    className="p-0.5 rounded text-muted-foreground hover:text-blue-500 transition-colors"
                                   >
                                     <Edit2 className="w-2.5 h-2.5" />
                                   </button>
@@ -343,7 +343,7 @@ export const SidebarContentManager: React.FC = () => {
                               <select
                                 value={group.id}
                                 onChange={(e) => moveItemToGroup(item.id, e.target.value)}
-                                className="text-[10px] bg-slate-50 border border-slate-200 rounded px-1.5 py-1 outline-none text-slate-600 font-bold focus:border-blue-500"
+                                className="text-[10px] bg-muted border border-border rounded px-1.5 py-1 outline-none text-muted-foreground font-bold focus:border-blue-500"
                               >
                                 {layout.groups.map(g => (
                                   <option key={g.id} value={g.id}>{groupTitle(g)}</option>
@@ -353,7 +353,7 @@ export const SidebarContentManager: React.FC = () => {
                               {/* إظهار / إخفاء */}
                               <button
                                 onClick={() => toggleItemVisible(item.id)}
-                                className={cn("p-1 rounded transition-colors", item.visible ? "text-emerald-500 hover:bg-emerald-50/50" : "text-slate-350 hover:bg-slate-50")}
+                                className={cn("p-1 rounded transition-colors", item.visible ? "text-emerald-500 hover:bg-emerald-50/50" : "text-slate-350 hover:bg-accent")}
                                 title={item.visible ? t("sidebarContent.hideItem", { namespace: "settings",  }) : t("sidebarContent.showItem", { namespace: "settings",  })}
                               >
                                 {item.visible ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
@@ -362,7 +362,7 @@ export const SidebarContentManager: React.FC = () => {
                               {/* تثبيت */}
                               <button
                                 onClick={() => toggleItemPinned(item.id)}
-                                className={cn("p-1 rounded transition-colors", item.pinned ? "text-amber-500 hover:bg-amber-50/50" : "text-slate-350 hover:bg-slate-50")}
+                                className={cn("p-1 rounded transition-colors", item.pinned ? "text-amber-500 hover:bg-amber-50/50" : "text-slate-350 hover:bg-accent")}
                                 title={item.pinned ? t("sidebarContent.unpin", { namespace: "settings",  }) : t("sidebarContent.pin", { namespace: "settings",  })}
                               >
                                 {item.pinned ? <Pin className="w-3.5 h-3.5 fill-amber-500" /> : <PinOff className="w-3.5 h-3.5" />}
@@ -398,7 +398,7 @@ export const SidebarContentManager: React.FC = () => {
         <SettingsGroup title={t("sidebarContent.addRouteTitle", { namespace: "settings",  })} icon={Plus} color="text-emerald-600">
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <span className="text-xs text-slate-500 font-medium">{t("sidebarContent.addRouteHint", { namespace: "settings",  })}</span>
+              <span className="text-xs text-muted-foreground font-medium">{t("sidebarContent.addRouteHint", { namespace: "settings",  })}</span>
               <Button
                 size="sm"
                 onClick={() => setShowAddItem(prev => !prev)}
@@ -413,7 +413,7 @@ export const SidebarContentManager: React.FC = () => {
               <div className="p-4 bg-emerald-50/40 border border-emerald-100 rounded-xl space-y-3 animate-in fade-in slide-in-from-top-2 duration-200">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div className="space-y-1.5">
-                    <span className="text-[10px] text-slate-600 font-bold">{t("sidebarContent.routeField", { namespace: "settings",  })}</span>
+                    <span className="text-[10px] text-muted-foreground font-bold">{t("sidebarContent.routeField", { namespace: "settings",  })}</span>
                     <select
                       value={addItemRouteId}
                       onChange={(e) => {
@@ -428,7 +428,7 @@ export const SidebarContentManager: React.FC = () => {
                           }
                         }
                       }}
-                      className="w-full h-10 px-3 text-xs border border-slate-200 rounded-lg outline-none bg-white focus:border-emerald-500 font-bold"
+                      className="w-full h-10 px-3 text-xs border border-border rounded-lg outline-none bg-card focus:border-emerald-500 font-bold"
                     >
                       <option value="">{t("sidebarContent.selectRoute", { namespace: "settings",  })}</option>
                       {ALL_SYSTEM_ROUTES
@@ -450,11 +450,11 @@ export const SidebarContentManager: React.FC = () => {
                   </div>
 
                   <div className="space-y-1.5">
-                    <span className="text-[10px] text-slate-600 font-bold">{t("sidebarContent.targetGroup", { namespace: "settings",  })}</span>
+                    <span className="text-[10px] text-muted-foreground font-bold">{t("sidebarContent.targetGroup", { namespace: "settings",  })}</span>
                     <select
                       value={addItemGroupId}
                       onChange={(e) => setAddItemGroupId(e.target.value)}
-                      className="w-full h-10 px-3 text-xs border border-slate-200 rounded-lg outline-none bg-white focus:border-emerald-500 font-bold"
+                      className="w-full h-10 px-3 text-xs border border-border rounded-lg outline-none bg-card focus:border-emerald-500 font-bold"
                     >
                       <option value="">{t("sidebarContent.selectGroup", { namespace: "settings",  })}</option>
                       {layout.groups.filter(g => g.visible).map(g => (
@@ -466,18 +466,18 @@ export const SidebarContentManager: React.FC = () => {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div className="space-y-1.5">
-                    <span className="text-[10px] text-slate-600 font-bold">{t("sidebarContent.customLabelField", { namespace: "settings",  })}</span>
+                    <span className="text-[10px] text-muted-foreground font-bold">{t("sidebarContent.customLabelField", { namespace: "settings",  })}</span>
                     <input
                       type="text"
                       value={addItemLabel}
                       onChange={(e) => setAddItemLabel(e.target.value)}
                       placeholder={t("sidebarContent.customLabelPlaceholder", { namespace: "settings",  })}
-                      className="w-full h-10 px-3 text-xs border border-slate-200 rounded-lg outline-none focus:border-emerald-500 font-bold"
+                      className="w-full h-10 px-3 text-xs border border-border rounded-lg outline-none focus:border-emerald-500 font-bold"
                     />
                   </div>
 
                   <div className="space-y-1.5">
-                    <span className="text-[10px] text-slate-600 font-bold">{t("sidebarContent.iconField", { namespace: "settings",  })}</span>
+                    <span className="text-[10px] text-muted-foreground font-bold">{t("sidebarContent.iconField", { namespace: "settings",  })}</span>
                     <IconPicker value={addItemIcon} onChange={setAddItemIcon} />
                   </div>
                 </div>
@@ -505,24 +505,24 @@ export const SidebarContentManager: React.FC = () => {
             )}
 
             {/* لائحة بجميع مسارات النظام */}
-            <div className="border border-slate-150 rounded-xl overflow-hidden bg-white shadow-sm">
-              <div className="px-3 py-2 bg-slate-50 border-b border-slate-100">
-                <span className="text-[10px] text-slate-500 font-bold">{t("sidebarContent.allRoutes", { namespace: "settings",  })}</span>
+            <div className="border border-border rounded-xl overflow-hidden bg-card shadow-sm">
+              <div className="px-3 py-2 bg-muted border-b border-slate-100">
+                <span className="text-[10px] text-muted-foreground font-bold">{t("sidebarContent.allRoutes", { namespace: "settings",  })}</span>
               </div>
-              <div className="divide-y divide-slate-100">
+              <div className="divide-y divide-border">
                 {ALL_SYSTEM_ROUTES.map(item => {
                   const isInSidebar = allItems.some(i => i.id === item.id);
                   const IconComp = ICON_MAP[item.icon] ?? FolderOpen;
                   return (
-                    <div key={item.id} className="flex items-center justify-between px-3 py-2 hover:bg-slate-50/50 transition-colors">
+                    <div key={item.id} className="flex items-center justify-between px-3 py-2 hover:bg-accent/50 transition-colors">
                       <div className="flex items-center gap-2.5 min-w-0">
-                        <IconComp className={cn("w-4 h-4 shrink-0", isInSidebar ? "text-slate-500" : "text-slate-400")} />
-                          <span className={cn("text-xs font-bold truncate", isInSidebar ? "text-slate-800" : "text-slate-500")}>{routeLabel(item.id, item.label)}</span>
-                        <span className="text-[9px] text-slate-400 direction-ltr" dir="ltr">{item.to}</span>
-                        {item.groupId && <span className="text-[8px] text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-full">{t(`nav.groups.${item.groupId}`, { namespace: "shell", fallback: item.groupLabel, })}</span>}
+                        <IconComp className={cn("w-4 h-4 shrink-0", isInSidebar ? "text-muted-foreground" : "text-muted-foreground")} />
+                          <span className={cn("text-xs font-bold truncate", isInSidebar ? "text-slate-800" : "text-muted-foreground")}>{routeLabel(item.id, item.label)}</span>
+                        <span className="text-[9px] text-muted-foreground direction-ltr" dir="ltr">{item.to}</span>
+                        {item.groupId && <span className="text-[8px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full">{t(`nav.groups.${item.groupId}`, { namespace: "shell", fallback: item.groupLabel, })}</span>}
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
-                        <span className={cn("text-[9px] font-bold px-1.5 py-0.5 rounded-full", isInSidebar ? "bg-emerald-50 text-emerald-600" : "bg-slate-100 text-slate-500")}>
+                        <span className={cn("text-[9px] font-bold px-1.5 py-0.5 rounded-full", isInSidebar ? "bg-emerald-50 text-emerald-600" : "bg-muted text-muted-foreground")}>
                           {isInSidebar ? t("sidebarContent.added", { namespace: "settings",  }) : t("sidebarContent.notAdded", { namespace: "settings",  })}
                         </span>
                       </div>

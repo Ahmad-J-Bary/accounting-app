@@ -79,16 +79,16 @@ export function InventoryWarehouses({
       })}>
         {displayStyle === 'rows' ? (
           Array.from({ length: skeletonCount }).map((_, i) => (
-            <div key={i} className="h-12 rounded-xl bg-slate-100 animate-pulse" />
+            <div key={i} className="h-12 rounded-xl bg-muted animate-pulse" />
           ))
         ) : (
           Array.from({ length: skeletonCount }).map((_, i) => (
-            <div key={i} className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+            <div key={i} className="bg-card p-6 rounded-3xl border border-border shadow-sm">
               <Skeleton className="w-14 h-14 rounded-2xl mb-6" />
               <Skeleton className="h-6 w-3/4 mb-2" />
               <Skeleton className="h-4 w-1/2 mb-4" />
               <Skeleton className="h-4 w-2/3 mb-4" />
-              <div className="flex gap-2 pt-3 border-t border-slate-100">
+              <div className="flex gap-2 pt-3 border-t border-border">
                 <Skeleton className="h-9 flex-1 rounded-lg" />
                 <Skeleton className="h-9 flex-1 rounded-lg" />
               </div>
@@ -101,11 +101,11 @@ export function InventoryWarehouses({
 
   if (warehouses.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 text-slate-400">
+      <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
         <Warehouse className="w-16 h-16 mb-4 opacity-30" />
-        <p className="font-bold text-slate-600">{t("warehouses.empty", { namespace: "inventory",  })}</p>
-        <p className="text-sm text-slate-400">{t("warehouses.emptyHint", { namespace: "inventory",  })}</p>
-        <Button size="sm" variant="outline" onClick={onAdd} className="mt-4 border-dashed border-slate-300">
+        <p className="font-bold text-muted-foreground">{t("warehouses.empty", { namespace: "inventory",  })}</p>
+        <p className="text-sm text-muted-foreground">{t("warehouses.emptyHint", { namespace: "inventory",  })}</p>
+        <Button size="sm" variant="outline" onClick={onAdd} className="mt-4 border-dashed border-border">
           <Plus className="w-4 h-4 ml-2 shrink-0" />{t("warehouses.addFirst", { namespace: "inventory",  })}
         </Button>
       </div>
@@ -115,16 +115,16 @@ export function InventoryWarehouses({
   // ── Render helpers ──
 
   const renderActions = (w: WarehouseDto) => (
-    <div className="flex gap-2 pt-4 border-t border-slate-100">
-      <Button variant="outline" size="sm" className="flex-1 border-slate-200 bg-white text-slate-700 hover:bg-slate-50" onClick={() => onEdit(w)}>
+    <div className="flex gap-2 pt-4 border-t border-border">
+      <Button variant="outline" size="sm" className="flex-1 border-border bg-card text-foreground hover:bg-accent" onClick={() => onEdit(w)}>
         <Pencil className="w-3.5 h-3.5 ml-1.5 shrink-0" />{t("labels.edit", { namespace: "inventory",  })}
       </Button>
       {onViewMaterials && (
-        <Button variant="outline" size="sm" className="flex-1 border-slate-200 bg-white text-slate-700 hover:bg-slate-50" onClick={() => onViewMaterials(w)}>
+        <Button variant="outline" size="sm" className="flex-1 border-border bg-card text-foreground hover:bg-accent" onClick={() => onViewMaterials(w)}>
           <Package className="w-3.5 h-3.5 ml-1.5 shrink-0" />{t("warehouses.materials", { namespace: "inventory",  })}
         </Button>
       )}
-      <Button variant="outline" size="sm" className={cn("flex-1", w.is_default ? "text-slate-300 border-slate-200 cursor-not-allowed" : "text-rose-600 hover:bg-rose-50 border-rose-200 hover:border-rose-300")} onClick={() => handleDelete(w.id, w.name)} disabled={w.is_default} title={w.is_default ? t('warehouses.deleteMainDisabled', { namespace: 'inventory',  }) : ''}>
+      <Button variant="outline" size="sm" className={cn("flex-1", w.is_default ? "text-muted-foreground border-border cursor-not-allowed" : "text-rose-600 hover:bg-rose-50 border-rose-200 hover:border-rose-300")} onClick={() => handleDelete(w.id, w.name)} disabled={w.is_default} title={w.is_default ? t('warehouses.deleteMainDisabled', { namespace: 'inventory',  }) : ''}>
         <Trash2 className="w-3.5 h-3.5 ml-1.5 shrink-0" />{t("labels.delete", { namespace: "inventory",  })}
       </Button>
     </div>
@@ -144,7 +144,7 @@ export function InventoryWarehouses({
           </span>
         ))}
         {items.length > 3 && (
-          <span className="text-[10px] text-slate-400 font-medium px-1 leading-6">+{items.length - 3}</span>
+          <span className="text-[10px] text-muted-foreground font-medium px-1 leading-6">+{items.length - 3}</span>
         )}
       </div>
     );
@@ -153,32 +153,32 @@ export function InventoryWarehouses({
   // ── Rows layout ──
   if (displayStyle === 'rows') {
     return (
-      <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div className="overflow-x-auto rounded-2xl border border-border bg-card shadow-sm">
         <table className="w-full">
           <thead>
-            <tr className="bg-slate-50/80">
-              <th className="whitespace-nowrap px-4 py-2.5 text-right text-[11px] font-black text-slate-500 border-b border-slate-200">{t("labels.name", { namespace: "inventory",  })}</th>
-              <th className="whitespace-nowrap px-4 py-2.5 text-right text-[11px] font-black text-slate-500 border-b border-slate-200">{t("labels.address", { namespace: "inventory",  })}</th>
-              <th className="whitespace-nowrap px-4 py-2.5 text-center text-[11px] font-black text-slate-500 border-b border-slate-200">{t("labels.status", { namespace: "inventory",  })}</th>
-              <th className="whitespace-nowrap px-4 py-2.5 text-center text-[11px] font-black text-slate-500 border-b border-slate-200">{t("labels.actions", { namespace: "inventory",  })}</th>
+            <tr className="bg-muted/80">
+              <th className="whitespace-nowrap px-4 py-2.5 text-right text-[11px] font-black text-muted-foreground border-b border-border">{t("labels.name", { namespace: "inventory",  })}</th>
+              <th className="whitespace-nowrap px-4 py-2.5 text-right text-[11px] font-black text-muted-foreground border-b border-border">{t("labels.address", { namespace: "inventory",  })}</th>
+              <th className="whitespace-nowrap px-4 py-2.5 text-center text-[11px] font-black text-muted-foreground border-b border-border">{t("labels.status", { namespace: "inventory",  })}</th>
+              <th className="whitespace-nowrap px-4 py-2.5 text-center text-[11px] font-black text-muted-foreground border-b border-border">{t("labels.actions", { namespace: "inventory",  })}</th>
             </tr>
           </thead>
           <tbody>
             {warehouses.map((w) => (
-              <tr key={w.id} className="hover:bg-slate-50/50 transition-colors border-b border-slate-100">
+              <tr key={w.id} className="hover:bg-accent/50 transition-colors border-b border-border">
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-2.5">
                     <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center shrink-0", w.is_default ? "bg-emerald-100" : "bg-blue-100")}>
                       <Warehouse className={cn("w-4 h-4", w.is_default ? "text-emerald-600" : "text-blue-600")} />
                     </div>
                     <div>
-                      <span className="font-bold text-slate-800 text-sm">{w.name}</span>
+                      <span className="font-bold text-foreground text-sm">{w.name}</span>
                       {w.is_default && <span className="mr-2 text-[9px] font-black text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">{t("labels.main", { namespace: "inventory",  })}</span>}
                     </div>
                   </div>
                   {renderMatchedItems(w)}
                 </td>
-                <td className="px-4 py-3 text-sm text-slate-500">{w.address || '—'}</td>
+                <td className="px-4 py-3 text-sm text-muted-foreground">{w.address || '—'}</td>
                 <td className="px-4 py-3 text-center">
                   <span className={cn("inline-block px-2 py-0.5 rounded-full text-[10px] font-bold", w.is_active ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600")}>
                     {w.is_active ? t('labels.active', { namespace: 'inventory',  }) : t('labels.inactive', { namespace: 'inventory',  })}
@@ -186,15 +186,15 @@ export function InventoryWarehouses({
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex gap-1.5 justify-center">
-                    <Button variant="ghost" size="sm" className="h-8 px-2 text-slate-600 hover:text-blue-600 hover:bg-blue-50" onClick={() => onEdit(w)}>
+                    <Button variant="ghost" size="sm" className="h-8 px-2 text-muted-foreground hover:text-blue-600 hover:bg-blue-50" onClick={() => onEdit(w)}>
                       <Pencil className="w-3.5 h-3.5" />
                     </Button>
                     {onViewMaterials && (
-                      <Button variant="ghost" size="sm" className="h-8 px-2 text-slate-600 hover:text-emerald-600 hover:bg-emerald-50" onClick={() => onViewMaterials(w)}>
+                      <Button variant="ghost" size="sm" className="h-8 px-2 text-muted-foreground hover:text-emerald-600 hover:bg-emerald-50" onClick={() => onViewMaterials(w)}>
                         <Package className="w-3.5 h-3.5" />
                       </Button>
                     )}
-                    <Button variant="ghost" size="sm" className={cn("h-8 px-2", w.is_default ? "text-slate-300 cursor-not-allowed" : "text-slate-600 hover:text-rose-600 hover:bg-rose-50")} onClick={() => handleDelete(w.id, w.name)} disabled={w.is_default}>
+                    <Button variant="ghost" size="sm" className={cn("h-8 px-2", w.is_default ? "text-muted-foreground cursor-not-allowed" : "text-muted-foreground hover:text-rose-600 hover:bg-rose-50")} onClick={() => handleDelete(w.id, w.name)} disabled={w.is_default}>
                       <Trash2 className="w-3.5 h-3.5" />
                     </Button>
                   </div>
@@ -212,7 +212,7 @@ export function InventoryWarehouses({
     return (
       <div className="flex flex-col gap-2">
         {warehouses.map((w) => (
-          <div key={w.id} className="group bg-white p-4 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md hover:border-blue-200 transition-all duration-200">
+          <div key={w.id} className="group bg-card p-4 rounded-2xl border border-border shadow-sm hover:shadow-md hover:border-blue-200 transition-all duration-200">
             <div className="flex items-center justify-between gap-4">
               <div className="flex items-center gap-3 min-w-0">
                 <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center shrink-0", w.is_default ? "bg-emerald-100" : "bg-blue-100")}>
@@ -220,25 +220,25 @@ export function InventoryWarehouses({
                 </div>
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="font-bold text-slate-800">{w.name}</span>
+                    <span className="font-bold text-foreground">{w.name}</span>
                     <span className={cn("text-[9px] font-bold px-1.5 py-0.5 rounded-full", w.is_active ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600")}>
                       {w.is_active ? t('labels.active', { namespace: 'inventory',  }) : t('labels.inactive', { namespace: 'inventory',  })}
                     </span>
                     {w.is_default && <span className="text-[9px] font-black text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">{t("labels.main", { namespace: "inventory",  })}</span>}
                   </div>
-                  {w.address && <p className="text-xs text-slate-500 mt-0.5 truncate">{w.address}</p>}
+                  {w.address && <p className="text-xs text-muted-foreground mt-0.5 truncate">{w.address}</p>}
                 </div>
               </div>
               <div className="flex items-center gap-1.5 shrink-0">
-                <Button variant="ghost" size="sm" className="h-8 text-slate-600 hover:text-blue-600 hover:bg-blue-50" onClick={() => onEdit(w)}>
+                <Button variant="ghost" size="sm" className="h-8 text-muted-foreground hover:text-blue-600 hover:bg-blue-50" onClick={() => onEdit(w)}>
                   <Pencil className="w-3.5 h-3.5 ml-1" />{t("labels.edit", { namespace: "inventory",  })}
                 </Button>
                 {onViewMaterials && (
-                  <Button variant="ghost" size="sm" className="h-8 text-slate-600 hover:text-emerald-600 hover:bg-emerald-50" onClick={() => onViewMaterials(w)}>
+                  <Button variant="ghost" size="sm" className="h-8 text-muted-foreground hover:text-emerald-600 hover:bg-emerald-50" onClick={() => onViewMaterials(w)}>
                     <Package className="w-3.5 h-3.5 ml-1" />{t("warehouses.materials", { namespace: "inventory",  })}
                   </Button>
                 )}
-                <Button variant="ghost" size="sm" className={cn("h-8", w.is_default ? "text-slate-300 cursor-not-allowed" : "text-rose-600 hover:bg-rose-50")} onClick={() => handleDelete(w.id, w.name)} disabled={w.is_default}>
+                <Button variant="ghost" size="sm" className={cn("h-8", w.is_default ? "text-muted-foreground cursor-not-allowed" : "text-rose-600 hover:bg-rose-50")} onClick={() => handleDelete(w.id, w.name)} disabled={w.is_default}>
                   <Trash2 className="w-3.5 h-3.5 ml-1" />{t("labels.delete", { namespace: "inventory",  })}
                 </Button>
               </div>
@@ -264,7 +264,7 @@ export function InventoryWarehouses({
         <div
           key={w.id}
           className={cn(
-            "group relative bg-white border border-slate-200 shadow-sm hover:shadow-xl hover:border-blue-200 transition-all duration-300",
+            "group relative bg-card border border-border shadow-sm hover:shadow-xl hover:border-blue-200 transition-all duration-300",
             isSmall ? "p-5 rounded-2xl" : isLarge ? "p-10 rounded-3xl" : "p-8 rounded-3xl"
           )}
         >
@@ -288,14 +288,14 @@ export function InventoryWarehouses({
 
           {/* Name */}
           <h3 className={cn(
-            "font-black text-slate-900",
+            "font-black text-foreground",
             isSmall ? "text-base mb-1" : isLarge ? "text-2xl mb-3" : "text-xl mb-2"
           )}>{w.name}</h3>
 
           {/* Address */}
           {w.address && (
-            <div className={cn("flex items-center gap-1.5", isSmall ? "text-xs mb-3" : isLarge ? "text-base mb-5" : "text-sm mb-4", "text-slate-500")}>
-              <MapPin className={cn("text-slate-400 shrink-0", isSmall ? "w-3 h-3" : isLarge ? "w-4 h-4" : "w-3.5 h-3.5")} />
+            <div className={cn("flex items-center gap-1.5", isSmall ? "text-xs mb-3" : isLarge ? "text-base mb-5" : "text-sm mb-4", "text-muted-foreground")}>
+              <MapPin className={cn("text-muted-foreground shrink-0", isSmall ? "w-3 h-3" : isLarge ? "w-4 h-4" : "w-3.5 h-3.5")} />
               <span>{w.address}</span>
             </div>
           )}

@@ -72,7 +72,7 @@ export function AutoAmountSection({ title, hint, rows, onPatch, onDelete, fixedA
 
       {editing && (
         <div className="flex items-center gap-2">
-          <div className="flex-1 min-w-0 rounded-lg border border-slate-200 bg-slate-50/60 px-2 py-1.5 flex items-center">
+          <div className="flex-1 min-w-0 rounded-lg border border-border bg-slate-50/60 px-2 py-1.5 flex items-center">
             <span className="text-xs font-bold text-slate-700 truncate">{fixedAccountName}</span>
           </div>
           <div className="w-32 shrink-0">
@@ -85,7 +85,7 @@ export function AutoAmountSection({ title, hint, rows, onPatch, onDelete, fixedA
               placeholder={t("autoAmount.openingBalancePlaceholder", { namespace: "openingBalance" })}
               aria-label={t("autoAmount.openingBalanceAria", { namespace: "openingBalance" })}
               autoFocus
-              className={"h-8 text-end tabular-nums text-xs " + (localValue.trim() !== "" && toNum(localValue) <= 0 ? "border-red-400" : "border-slate-200")}
+              className={"h-8 text-end tabular-nums text-xs " + (localValue.trim() !== "" && toNum(localValue) <= 0 ? "border-red-400" : "border-border")}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && existingRow) {
                   e.preventDefault();
@@ -120,10 +120,10 @@ export function AutoAmountSection({ title, hint, rows, onPatch, onDelete, fixedA
 
       {existingRow && toNum(existingRow.amount) > 0 && !editing && (
         <div className="flex items-center gap-2">
-          <div className="flex-1 min-w-0 rounded-lg border border-slate-200 bg-slate-50/60 px-2 py-1.5 flex items-center">
+          <div className="flex-1 min-w-0 rounded-lg border border-border bg-slate-50/60 px-2 py-1.5 flex items-center">
             <span className="text-xs font-bold text-slate-700 truncate">{fixedAccountName}</span>
           </div>
-          <div className="w-32 shrink-0 rounded-lg border border-slate-200 bg-white px-2 py-1.5 flex items-center justify-end">
+          <div className="w-32 shrink-0 rounded-lg border border-border bg-card px-2 py-1.5 flex items-center justify-end">
             <span className="tabular-nums text-xs font-bold text-slate-700">{toFixed(toNum(existingRow.amount), 2)}</span>
           </div>
           {nativeHint && (

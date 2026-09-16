@@ -470,7 +470,7 @@ export default function Categories() {
           <Button
             size="sm"
             variant="outline"
-            className="bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
+            className="bg-card border-border text-foreground hover:bg-accent"
             disabled={!canOperate}
             onClick={handleOpenEdit}
           >
@@ -479,7 +479,7 @@ export default function Categories() {
           <Button
             size="sm"
             variant="outline"
-            className="bg-white border-rose-200 text-rose-700 hover:bg-rose-50"
+            className="bg-card border-rose-200 text-rose-700 hover:bg-rose-50"
             disabled={!canDelete}
             onClick={handleDeleteRequest}
           >
@@ -491,13 +491,13 @@ export default function Categories() {
         <>
           <button
             onClick={expandAll}
-            className="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-bold text-slate-500 hover:text-slate-800 hover:bg-slate-200/70 transition-colors"
+            className="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-bold text-muted-foreground hover:text-slate-800 hover:bg-accent transition-colors"
           >
             <ChevronLeft className="w-3 h-3" /> {t("categories.expand", { namespace: "inventory",  })}
           </button>
           <button
             onClick={collapseAll}
-            className="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-bold text-slate-500 hover:text-slate-800 hover:bg-slate-200/70 transition-colors"
+            className="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-bold text-muted-foreground hover:text-slate-800 hover:bg-accent transition-colors"
           >
             {t("categories.collapse", { namespace: "inventory",  })} <ChevronRight className="w-3 h-3" />
           </button>
@@ -507,7 +507,7 @@ export default function Categories() {
         <div className="space-y-1">
           {isLoading ? (
              Array.from({ length: 10 }).map((_, i) => (
-              <div key={i} className="h-10 bg-slate-50 animate-pulse rounded-lg mb-2" />
+              <div key={i} className="h-10 bg-muted animate-pulse rounded-lg mb-2" />
             ))
           ) : (
             <CategoryTreeNodeItem

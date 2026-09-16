@@ -115,7 +115,7 @@ export function InvoiceList({
           <Button size="sm" onClick={onCreate} className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100 h-9 px-4 font-bold">
             <Plus className="w-4 h-4 ml-2" />{createLabel}
           </Button>
-          <div className="w-[1px] h-6 bg-slate-200 mx-1" />
+          <div className="w-[1px] h-6 bg-muted mx-1" />
           <Button variant="outline" size="sm" disabled={!selectedId}
             onClick={() => {
               if (!selectedInvoice) return;
@@ -125,7 +125,7 @@ export function InvoiceList({
                 onView(selectedInvoice);
               }
             }}
-            className="h-9 border-slate-200 hover:bg-slate-50 font-bold">
+            className="h-9 border-border hover:bg-accent font-bold">
             <Eye className="w-4 h-4 ml-2 text-blue-500" /> {t("actions.view", { namespace: "invoicing",  })}
           </Button>
           <Button variant="outline" size="sm" disabled={!selectedId}
@@ -137,17 +137,17 @@ export function InvoiceList({
                 onEdit(selectedInvoice);
               }
             }}
-            className="h-9 border-slate-200 hover:bg-slate-50 font-bold">
+            className="h-9 border-border hover:bg-accent font-bold">
             <Settings2 className="w-4 h-4 ml-2 text-amber-500" /> {t("actions.edit", { namespace: "invoicing",  })}
           </Button>
           <Button variant="outline" size="sm" disabled={!selectedId}
             onClick={handleDeleteSelected}
-            className="h-9 border-slate-200 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 font-bold transition-all">
+            className="h-9 border-border hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 font-bold transition-all">
             <Trash2 className="w-4 h-4 ml-2 text-rose-500" /> {t("actions.delete", { namespace: "invoicing",  })}
           </Button>
           <Button variant="outline" size="sm" disabled={!selectedId}
             onClick={() => { window.dispatchEvent(new Event("app:prepare-print")); requestAnimationFrame(() => window.print()); }}
-            className="h-9 border-slate-200 hover:bg-slate-50 font-bold">
+            className="h-9 border-border hover:bg-accent font-bold">
             <Printer className="w-4 h-4 ml-2 text-slate-500" /> {t("actions.print", { namespace: "invoicing",  })}
           </Button>
         </div>

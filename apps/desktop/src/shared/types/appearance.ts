@@ -29,6 +29,9 @@ export type ThemeId =
 
 export type ColorMode = 'light' | 'dark' | 'system';
 
+// ── UI Scale ────────────────────────────────────────────────
+export type UIScale = 'small' | 'default' | 'large';
+
 // ── Density ──────────────────────────────────────────────────
 export type DensityMode = 'compact' | 'comfortable' | 'spacious';
 export type TabStyleMode = 'default' | 'browser' | 'vscode';
@@ -98,6 +101,7 @@ export interface AppearanceSettings {
   mode: ColorMode;
   primaryColor: string;
   density: DensityMode;
+  uiScale: UIScale;
   tabStyle: TabStyleMode;
   motion: MotionMode;
   show: VisibilitySettings;
@@ -129,6 +133,7 @@ export const DEFAULT_APPEARANCE: AppearanceSettings = {
   mode: 'light',
   primaryColor: 'blue',
   density: 'comfortable',
+  uiScale: 'default',
   tabStyle: 'default',
   motion: 'full',
   navMenuType: 'sidenav',
@@ -166,6 +171,7 @@ export interface AppearanceContextType {
   setMode: (mode: ColorMode) => void;
   setPrimaryColor: (color: string) => void;
   setDensity: (density: DensityMode) => void;
+  setUIScale: (scale: UIScale) => void;
   updateVisibility: (key: keyof VisibilitySettings, value: boolean) => void;
   updateSidebarSetting: <K extends keyof AppearanceSettings>(key: K, value: AppearanceSettings[K]) => void;
   updateSettings: (partial: Partial<AppearanceSettings>) => void;

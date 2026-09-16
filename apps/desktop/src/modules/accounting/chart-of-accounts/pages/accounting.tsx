@@ -506,8 +506,8 @@ export default function Accounting() {
               action.tone === "primary"
                 ? "bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100 text-white"
                 : action.tone === "danger"
-                  ? "bg-white border-rose-200 text-rose-700 hover:bg-rose-50"
-                  : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50";
+                  ? "bg-card border-rose-200 text-rose-700 hover:bg-rose-50"
+                  : "bg-card border-border text-foreground hover:bg-slate-50";
             return (
               <Button
                 key={action.key}
@@ -525,7 +525,7 @@ export default function Accounting() {
       }
       treeHeaderActions={
         <>
-          <div className="ms-2 flex items-center gap-1 rounded-lg border border-slate-200 bg-white p-1">
+          <div className="ms-2 flex items-center gap-1 rounded-lg border border-border bg-card p-1">
             <button
               type="button"
               onClick={() => setTreePresentation("default")}

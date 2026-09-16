@@ -113,7 +113,7 @@ export function WizardLineEditor({
         return (
           <div key={l.key} className="space-y-0.5">
             {isEditing ? (
-              <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-2 py-1.5">
+              <div className="flex items-center gap-2 rounded-lg border border-border bg-card px-2 py-1.5">
                 <AccountCombobox
                   accounts={accounts}
                   options={detailAccounts}
@@ -160,14 +160,14 @@ export function WizardLineEditor({
                 </Button>
               </div>
             ) : (
-              <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-2 py-1.5">
+              <div className="flex items-center gap-2 rounded-lg border border-border bg-card px-2 py-1.5">
                 <div className="flex-1 min-w-0 flex items-center gap-2">
                   <span className="text-2xs font-bold text-slate-400 tabular-nums shrink-0">
                     {account?.code || "—"}
                   </span>
                   <span className="truncate text-slate-700">{account?.name_ar || placeholder}</span>
                 </div>
-                <div className="w-32 shrink-0 rounded-lg border border-slate-200 bg-white px-2 py-1.5 flex items-center justify-end">
+                <div className="w-32 shrink-0 rounded-lg border border-border bg-card px-2 py-1.5 flex items-center justify-end">
                   <span className="tabular-nums text-xs font-bold text-slate-700">{l.amount || "0.00"}</span>
                 </div>
                 {nature && (

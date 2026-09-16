@@ -39,7 +39,7 @@ export function AccountLineRow({
   const resolvedErrorMessage = errorMessage ?? t("accountLineRow.invalidAmount", { namespace: "openingBalance" });
   return (
     <div className={cn("space-y-1", className)}>
-      <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white p-2 transition-shadow focus-within:border-blue-300 focus-within:ring-1 focus-within:ring-blue-200">
+      <div className="flex items-center gap-2 rounded-lg border border-border bg-card p-2 transition-shadow focus-within:border-blue-300 focus-within:ring-1 focus-within:ring-blue-200">
         <AccountCombobox
           accounts={accounts}
           options={options}

@@ -42,7 +42,7 @@ export function LanguageSelector({
             className={`w-full group relative flex items-center justify-center gap-3 h-16 rounded-2xl border-2 transition-all hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none cursor-pointer ${
               selected === "ar"
                 ? "border-blue-500 bg-blue-50 shadow-sm shadow-blue-600/10"
-                : "border-slate-200 bg-white hover:border-blue-400 hover:bg-blue-50"
+                : "border-border bg-card hover:border-blue-400 hover:bg-blue-50"
             }`}
           >
             <span className="text-2xl">🇸🇦</span>
@@ -56,7 +56,7 @@ export function LanguageSelector({
             className={`w-full group relative flex items-center justify-center gap-3 h-16 rounded-2xl border-2 transition-all hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none cursor-pointer ${
               selected === "en"
                 ? "border-blue-500 bg-blue-50 shadow-sm shadow-blue-600/10"
-                : "border-slate-200 bg-white hover:border-blue-400 hover:bg-blue-50"
+                : "border-border bg-card hover:border-blue-400 hover:bg-blue-50"
             }`}
           >
             <span className="text-2xl">🇬🇧</span>
