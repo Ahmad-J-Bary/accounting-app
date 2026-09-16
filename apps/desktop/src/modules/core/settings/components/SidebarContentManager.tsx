@@ -114,7 +114,7 @@ export const SidebarContentManager: React.FC = () => {
     <SettingsManagerLayout resetAction={resetToDefault}>
       <div className="space-y-6" dir="rtl">
         {/* Title */}
-        <div className="flex flex-col gap-1 border-r-4 border-primary pr-3 pb-1 mb-2">
+        <div className="flex flex-col gap-1 border-e-4 border-primary pe-3 pb-1 mb-2">
           <h2 className="text-xl font-black text-foreground font-sans">{t("sidebarContent.title", { namespace: "settings",  })}</h2>
           <p className="text-xs text-muted-foreground font-sans">{t("sidebarContent.description", { namespace: "settings",  })}</p>
         </div>
@@ -146,7 +146,7 @@ export const SidebarContentManager: React.FC = () => {
                     onKeyDown={(e) => e.key === 'Enter' && handleAddGroup()}
                   />
                   <Button size="sm" onClick={handleAddGroup} className="bg-primary hover:bg-primary/80 text-xs font-bold rounded-lg h-8 shrink-0">
-                    <Plus className="w-3.5 h-3.5 ml-1" />
+                    <Plus className="w-3.5 h-3.5 ms-1" />
                     {t("sidebarContent.add", { namespace: "settings",  })}
                   </Button>
                 </div>

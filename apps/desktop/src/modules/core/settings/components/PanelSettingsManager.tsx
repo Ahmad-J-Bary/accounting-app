@@ -25,7 +25,7 @@ export const PanelSettingsManager: React.FC = () => {
   return (
     <SettingsManagerLayout resetAction={resetSideSettings}>
       <div className="space-y-5">
-        <div className="flex flex-col gap-1 border-r-4 border-success pr-3 pb-1 mb-2">
+        <div className="flex flex-col gap-1 border-e-4 border-success pe-3 pb-1 mb-2">
           <h2 className="text-xl font-black text-foreground">{t("panel.title", { namespace: "settings",  })}</h2>
           <p className="text-xs text-muted-foreground">{t("panel.description", { namespace: "settings",  })}</p>
         </div>
@@ -275,7 +275,7 @@ export const PanelSettingsManager: React.FC = () => {
           </div>
 
           <div className="border border-muted rounded-xl overflow-hidden bg-muted/40 p-4 flex justify-center items-stretch h-[350px]">
-            <div className="flex-1 flex items-center justify-center text-muted-foreground text-xs font-bold border border-dashed border-muted rounded-lg ml-3 bg-white">
+            <div className="flex-1 flex items-center justify-center text-muted-foreground text-xs font-bold border border-dashed border-muted rounded-lg ms-3 bg-white">
               {t("panel.mainContent", { namespace: "settings",  })}
             </div>
             {!previewOverlay ? (

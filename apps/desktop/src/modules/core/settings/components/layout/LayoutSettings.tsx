@@ -58,7 +58,7 @@ function OptionCard({
       )}
     >
       {isActive && (
-        <span className="absolute top-0.5 left-0.5 w-2.5 h-2.5 bg-primary rounded-full flex items-center justify-center z-10 shadow-sm">
+        <span className="absolute top-0.5 start-0.5 w-2.5 h-2.5 bg-primary rounded-full flex items-center justify-center z-10 shadow-sm">
           <Check className="w-1.5 h-1.5 text-primary-foreground" />
         </span>
       )}

@@ -70,15 +70,15 @@ export function CompanySettings({ settings, onChange }: CompanySettingsProps) {
         <div className="space-y-2">
           <Label className="font-bold text-foreground">{t("company.nameAr", { namespace: "settings" })}</Label>
           <div className="relative">
-            <Building className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input className="pr-11 h-11 sm:h-12 rounded-lg border-border" value={settings.company_name} onChange={e => onChange("company_name", e.target.value)} />
+            <Building className="absolute end-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input className="pe-11 h-11 sm:h-12 rounded-lg border-border" value={settings.company_name} onChange={e => onChange("company_name", e.target.value)} />
           </div>
         </div>
         <div className="space-y-2">
           <Label className="font-bold text-foreground">{t("company.nameEn", { namespace: "settings" })}</Label>
           <div className="relative">
-            <Globe className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input className="pr-11 h-11 sm:h-12 rounded-lg border-border" dir="ltr" value={settings.company_name_en ?? ""} onChange={e => onChange("company_name_en", e.target.value)} />
+            <Globe className="absolute end-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input className="pe-11 h-11 sm:h-12 rounded-lg border-border" dir="ltr" value={settings.company_name_en ?? ""} onChange={e => onChange("company_name_en", e.target.value)} />
           </div>
         </div>
         <div className="space-y-2">
@@ -92,22 +92,22 @@ export function CompanySettings({ settings, onChange }: CompanySettingsProps) {
         <div className="space-y-2 md:col-span-2">
           <Label className="font-bold text-foreground">{t("company.address", { namespace: "settings" })}</Label>
           <div className="relative">
-            <MapPin className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input className="pr-11 h-11 sm:h-12 rounded-lg border-border" value={settings.address ?? ""} onChange={e => onChange("address", e.target.value)} />
+            <MapPin className="absolute end-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input className="pe-11 h-11 sm:h-12 rounded-lg border-border" value={settings.address ?? ""} onChange={e => onChange("address", e.target.value)} />
           </div>
         </div>
         <div className="space-y-2">
           <Label className="font-bold text-foreground">{t("company.phone", { namespace: "settings" })}</Label>
           <div className="relative">
-            <Phone className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input className="pr-11 h-11 sm:h-12 rounded-lg border-border font-mono" dir="ltr" value={settings.phone ?? ""} onChange={e => onChange("phone", e.target.value)} />
+            <Phone className="absolute end-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input className="pe-11 h-11 sm:h-12 rounded-lg border-border font-mono" dir="ltr" value={settings.phone ?? ""} onChange={e => onChange("phone", e.target.value)} />
           </div>
         </div>
         <div className="space-y-2">
           <Label className="font-bold text-foreground">{t("company.email", { namespace: "settings" })}</Label>
           <div className="relative">
-            <Mail className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input className="pr-11 h-11 sm:h-12 rounded-lg border-border font-mono" dir="ltr" value={settings.email ?? ""} onChange={e => onChange("email", e.target.value)} />
+            <Mail className="absolute end-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input className="pe-11 h-11 sm:h-12 rounded-lg border-border font-mono" dir="ltr" value={settings.email ?? ""} onChange={e => onChange("email", e.target.value)} />
           </div>
         </div>
         <div className="space-y-2 md:col-span-2">

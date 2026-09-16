@@ -206,7 +206,7 @@ function NavSidebarPreview({
                             <span className="truncate" style={fontSizeStyle}>{item.label}</span>
                           )}
                           {isActive && !isCollapsed && (
-                            <div className="mr-auto w-1 h-1 rounded-full bg-white animate-pulse" />
+                            <div className="me-auto w-1 h-1 rounded-full bg-white animate-pulse" />
                           )}
                         </button>
                       </li>
@@ -269,7 +269,7 @@ export const NavbarSettingsManager: React.FC = () => {
   return (
     <SettingsManagerLayout resetAction={resetNavSettings}>
       <div className="space-y-5">
-        <div className="flex flex-col gap-1 border-r-4 border-primary pr-3 pb-1 mb-2">
+        <div className="flex flex-col gap-1 border-e-4 border-primary pe-3 pb-1 mb-2">
           <h2 className="text-xl font-black text-foreground">{t("navbar.title", { namespace: "settings",  })}</h2>
           <p className="text-xs text-muted-foreground">{t("navbar.description", { namespace: "settings",  })}</p>
         </div>

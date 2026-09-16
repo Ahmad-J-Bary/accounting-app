@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
-import { Building, FileText, DollarSign, Palette, ChevronDown, ChevronUp, Table2, PanelRightOpen, Settings as SettingsIcon, Globe, ShieldCheck, Sliders, FileDown, Database, Menu } from "lucide-react";
+import { Building, FileText, DollarSign, Palette, Table2, PanelRightOpen, Settings as SettingsIcon, Globe, ShieldCheck, Sliders, FileDown, Database, Menu } from "lucide-react";
 import { settingsService } from '@modules/core/api/settingsService';
 import type { CompanySettings as CompanySettingsType } from "@erp/shared-types";
-import { cn } from "@shared/lib/utils";
-import { useResponsiveContext } from "@shared/hooks/useResponsiveContext";
+import { useIsMobile, useIsTablet } from "@shared/hooks/useResponsive";
 import { Sheet, SheetContent, SheetTitle, SheetDescription } from "@shared/ui/sheet";
+import { SettingsNavigation } from "@widgets/templates/SettingsNavigation";
 
 import { TableSettingsManager } from "../components/TableSettingsManager";
 import { NavbarSettingsManager } from "../components/NavbarSettingsManager";
@@ -27,7 +27,8 @@ import { useLocalization } from "@app/providers/LocalizationProvider";
 
 export default function Settings() {
   const { t } = useLocalization();
-  const { isMobile } = useResponsiveContext();
+  const isMobile = useIsMobile();
+  const isTablet = useIsTablet();
   const [settings, setSettings] = useState<CompanySettingsType | null>(null);
   const [loading, setLoading] = useState(true);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
@@ -96,86 +97,46 @@ export default function Settings() {
   const activeItem = allItems.find(i => i.id === activeNav);
   const ActiveIcon = activeItem?.icon || SettingsIcon;
 
+  const handleNavChange = (id: string) => {
+    setActiveNav(id);
+    if (isMobile || isTablet) setMobileNavOpen(false);
+  };
+
   const renderNavContent = () => (
-    <nav className="space-y-1">
-      {sidebarItems.map(item => (
-        <button
-          key={item.id}
-          onClick={() => {
-            setActiveNav(item.id);
-            if (isMobile) setMobileNavOpen(false);
-          }}
-          className={cn(
-            "w-full flex items-center gap-3 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl font-bold transition-all text-sm sm:text-base",
-            activeNav === item.id
-              ? "bg-primary text-primary-foreground shadow-md"
-              : "text-muted-foreground hover:bg-accent"
-          )}
-        >
-          <item.icon className="w-4 h-4 shrink-0" />
-          <span className="truncate">{item.label}</span>
-        </button>
-      ))}
-
-      <div className="space-y-1">
-        <button
-          onClick={() => setAppearanceExpanded(!appearanceExpanded)}
-          className="w-full flex items-center justify-between gap-3 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl font-bold transition-all text-muted-foreground hover:bg-accent text-sm sm:text-base"
-        >
-          <div className="flex items-center gap-3">
-            <Palette className="w-4 h-4 shrink-0" />
-            <span>{t("nav.appearanceCategory", { namespace: "settings" })}</span>
-          </div>
-          {appearanceExpanded ? <ChevronUp className="w-4 h-4 shrink-0" /> : <ChevronDown className="w-4 h-4 shrink-0" />}
-        </button>
-
-        {appearanceExpanded && (
-          <div className="me-4 sm:me-6 space-y-0.5">
-            {appearanceItems.map(item => (
-              <button
-                key={item.id}
-                onClick={() => {
-                  setActiveNav(item.id);
-                  if (isMobile) setMobileNavOpen(false);
-                }}
-                className={cn(
-                  "w-full flex items-center gap-3 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg font-medium transition-all text-xs sm:text-sm",
-                  activeNav === item.id
-                    ? "bg-primary text-primary-foreground shadow-md"
-                    : "text-muted-foreground hover:bg-accent"
-                )}
-              >
-                <item.icon className="w-3.5 h-3.5 shrink-0" />
-                <span className="truncate">{item.label}</span>
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-    </nav>
+    <SettingsNavigation
+      items={sidebarItems}
+      groupItems={appearanceItems}
+      groupLabel={t("nav.appearanceCategory", { namespace: "settings" })}
+      activeNav={activeNav}
+      onNavChange={handleNavChange}
+      groupExpanded={appearanceExpanded}
+      onGroupToggle={() => setAppearanceExpanded(!appearanceExpanded)}
+    />
   );
+
+  const mobileTrigger = isMobile || isTablet ? (
+    <button
+      onClick={() => setMobileNavOpen(true)}
+      className="flex items-center gap-2 px-3 py-2 rounded-xl bg-card border border-border text-foreground font-bold text-sm"
+      aria-label={t("pageTitle", { namespace: "settings" })}
+    >
+      <ActiveIcon className="w-4 h-4" />
+      <span className="truncate max-w-[140px]">{activeItem?.label}</span>
+      <Menu className="w-4 h-4 text-muted-foreground" />
+    </button>
+  ) : undefined;
 
   return (
     <SettingsLayout
       title={t("pageTitle", { namespace: "settings" })}
       description={t("pageDescription", { namespace: "settings" })}
-      actions={
-        isMobile ? (
-          <button
-            onClick={() => setMobileNavOpen(true)}
-            className="flex items-center gap-2 px-3 py-2 rounded-xl bg-card border border-border text-foreground font-bold text-sm"
-          >
-            <ActiveIcon className="w-4 h-4" />
-            <span className="truncate max-w-[140px]">{activeItem?.label}</span>
-            <Menu className="w-4 h-4 text-muted-foreground" />
-          </button>
-        ) : undefined
-      }
-      sidebar={isMobile ? undefined : renderNavContent()}
+      actions={mobileTrigger}
+      sidebar={renderNavContent()}
+      showSidebar={!isMobile && !isTablet}
     >
       {renderSection()}
 
-      {isMobile && (
+      {(isMobile || isTablet) && (
         <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
           <SheetContent side="right" className="w-[280px] sm:w-[320px] p-4 overflow-y-auto">
             <SheetTitle className="text-end">{t("pageTitle", { namespace: "settings" })}</SheetTitle>
