@@ -111,9 +111,9 @@ export function TopBar({
   };
 
   const navItemClass = isHorizontalDark
-    ? "text-muted-foreground hover:text-foreground hover:bg-accent"
+    ? "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent"
     : "text-muted-foreground hover:text-foreground hover:bg-accent";
-  const btnHoverClass = isHorizontalDark ? "hover:bg-accent" : "hover:bg-accent";
+  const btnHoverClass = isHorizontalDark ? "hover:bg-sidebar-accent" : "hover:bg-accent";
 
   const renderNavItem = (item: SidebarItemConfig, slim: boolean) => {
     const isActive = activeTabId === item.to || location.pathname === item.to;
@@ -190,7 +190,7 @@ export function TopBar({
           <div className="space-y-0.5">
             {visibleItems.map((item: SidebarItemConfig, idx: number) => {
               if (item.isSeparator) {
-                return <div key={item.id || idx} className="h-px mx-2 my-1.5 bg-border" />;
+                return <div key={item.id || idx} className={cn("h-px mx-2 my-1.5", isHorizontalDark ? "bg-[hsl(var(--sidebar-border))]" : "bg-border")} />;
               }
 
               const isActive = activeTabId === item.to || location.pathname === item.to;
@@ -257,7 +257,7 @@ export function TopBar({
           size="icon"
           onClick={onToggleExchange}
           title={isExchangeVisible ? t("topbar.hideExchangeRate", { namespace: "shell",  }) : t("topbar.showExchangeRate", { namespace: "shell",  })}
-          className={cn(isExchangeVisible && "bg-primary/10 text-primary hover:bg-primary/20")}
+          className={cn(isExchangeVisible && (isHorizontalDark ? "bg-[hsl(var(--sidebar-accent))] text-[hsl(var(--sidebar-foreground))]" : "bg-primary/10 text-primary"))}
         >
           <DollarSign className="w-5 h-5" />
         </Button>
@@ -284,7 +284,7 @@ export function TopBar({
         <DropdownMenuTrigger asChild>
           {mergedSlim ? (
             <button className={cn("flex items-center gap-1 rounded-md px-1 py-0.5 transition", btnHoverClass)}>
-              <span className={cn("text-[10px] font-medium leading-tight", isHorizontalDark && "text-foreground")}>{t("topbar.user", { namespace: "shell",  })}</span>
+              <span className={cn("text-[10px] font-medium leading-tight", isHorizontalDark && "text-[hsl(var(--sidebar-foreground))]")}>{t("topbar.user", { namespace: "shell",  })}</span>
               <ChevronDown className="w-2.5 h-2.5 opacity-60" />
             </button>
           ) : (
@@ -293,7 +293,7 @@ export function TopBar({
                 <AvatarFallback className="bg-primary text-primary-foreground text-xs">أ</AvatarFallback>
               </Avatar>
               <div className="text-right hidden md:block">
-                <div className={cn("text-sm font-medium leading-tight", isHorizontalDark && "text-foreground")}>{t("topbar.user", { namespace: "shell",  })}</div>
+                <div className={cn("text-sm font-medium leading-tight", isHorizontalDark && "text-[hsl(var(--sidebar-foreground))]")}>{t("topbar.user", { namespace: "shell",  })}</div>
               </div>
             </button>
           )}
@@ -321,7 +321,7 @@ export function TopBar({
       <header className={cn(
         "flex items-center px-4 md:px-6 gap-2 sticky top-0 z-30 backdrop-blur-sm",
         isHorizontalDark
-          ? "bg-background/95 text-foreground border-b border-border shadow-sm"
+          ? "bg-[hsl(var(--sidebar-background))] text-[hsl(var(--sidebar-foreground))] border-b border-[hsl(var(--sidebar-border))] shadow-sm"
           : "bg-background/95 border-b border-border shadow-sm",
         merged ? (mergedSlim ? "h-10" : "h-14") : "h-14"
       )}>
@@ -331,9 +331,9 @@ export function TopBar({
             <Building2 className="w-4 h-4 text-primary-foreground" />
           </div>
           <div className="min-w-0 hidden sm:flex items-center gap-1.5">
-            <span className={cn("text-sm font-extrabold leading-tight", isHorizontalDark ? "text-foreground" : "text-foreground")}>{t("topbar.brandName", { namespace: "shell",  })}</span>
-            <span className={cn("text-xs select-none", isHorizontalDark ? "text-muted-foreground" : "text-muted-foreground")}>|</span>
-            <span className={cn("text-sm font-semibold leading-tight truncate", isHorizontalDark ? "text-muted-foreground" : "text-muted-foreground")}>{settings?.company_name || t("topbar.companyFallback", { namespace: "shell",  })}</span>
+            <span className={cn("text-sm font-extrabold leading-tight", isHorizontalDark ? "text-[hsl(var(--sidebar-foreground))]" : "text-foreground")}>{t("topbar.brandName", { namespace: "shell",  })}</span>
+            <span className={cn("text-xs select-none", isHorizontalDark ? "text-[hsl(var(--sidebar-foreground))]/40" : "text-muted-foreground")}>|</span>
+            <span className={cn("text-sm font-semibold leading-tight truncate", isHorizontalDark ? "text-[hsl(var(--sidebar-foreground))]/60" : "text-muted-foreground")}>{settings?.company_name || t("topbar.companyFallback", { namespace: "shell",  })}</span>
           </div>
           {merged && <UpdateBanner variant="slim" dark={isHorizontalDark} />}
         </div>

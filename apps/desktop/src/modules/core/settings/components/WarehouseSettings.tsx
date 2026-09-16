@@ -46,9 +46,9 @@ export function WarehouseSettings({ settings, onChange }: WarehouseSettingsProps
         numeral_system: settings.numeral_system || "western",
       });
       publishSettingsUpdated();
-      toast.success(t("toasts.saved", { namespace: "settings",  }), { description: t("toasts.savedWarehouses", { namespace: "settings",  }) });
+      toast.success(t("toasts.saved", { namespace: "settings" }), { description: t("toasts.savedWarehouses", { namespace: "settings" }) });
     } catch (e) {
-      toast.error(t("toasts.saveError", { namespace: "settings",  }), { description: String(e) });
+      toast.error(t("toasts.saveError", { namespace: "settings" }), { description: String(e) });
     }
   };
 
@@ -58,55 +58,55 @@ export function WarehouseSettings({ settings, onChange }: WarehouseSettingsProps
   const fromSelectValue = (v: string) => v === "__default" ? undefined : v;
 
   return (
-    <SettingsSection title={t("warehouses.title", { namespace: "settings",  })} description={t("warehouses.description", { namespace: "settings",  })}>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="space-y-3">
-          <Label className="font-bold text-slate-700 flex items-center gap-2">
+    <SettingsSection title={t("warehouses.title", { namespace: "settings" })} description={t("warehouses.description", { namespace: "settings" })}>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+        <div className="space-y-2 sm:space-y-3">
+          <Label className="font-bold text-foreground flex items-center gap-2">
             <Building className="w-4 h-4 text-blue-600" />
-            {t("warehouses.purchase", { namespace: "settings",  })}
+            {t("warehouses.purchase", { namespace: "settings" })}
           </Label>
           <Select
             value={toSelectValue(settings.purchase_warehouse_id)}
             onValueChange={(v) => onChange("purchase_warehouse_id", fromSelectValue(v) ?? "")}
           >
-            <SelectTrigger className="h-12 rounded-lg border-slate-200 font-bold">
-              <SelectValue placeholder={t("warehouses.selectPlaceholder", { namespace: "settings",  })} />
+            <SelectTrigger className="h-11 sm:h-12 rounded-lg border-border font-bold">
+              <SelectValue placeholder={t("warehouses.selectPlaceholder", { namespace: "settings" })} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="__default" className="font-bold text-slate-400">{t("warehouses.defaultOption", { namespace: "settings",  })}{defaultWarehouse ? ` (${defaultWarehouse.name})` : ""}</SelectItem>
+              <SelectItem value="__default" className="font-bold text-muted-foreground">{t("warehouses.defaultOption", { namespace: "settings" })}{defaultWarehouse ? ` (${defaultWarehouse.name})` : ""}</SelectItem>
               {otherWarehouses.map((w) => (
                 <SelectItem key={w.id} value={w.id} className="font-bold">{w.name}</SelectItem>
               ))}
             </SelectContent>
           </Select>
-          <p className="text-xs text-slate-400 font-medium">{t("warehouses.purchaseHint", { namespace: "settings",  })}</p>
+          <p className="text-xs text-muted-foreground font-medium">{t("warehouses.purchaseHint", { namespace: "settings" })}</p>
         </div>
-        <div className="space-y-3">
-          <Label className="font-bold text-slate-700 flex items-center gap-2">
+        <div className="space-y-2 sm:space-y-3">
+          <Label className="font-bold text-foreground flex items-center gap-2">
             <Warehouse className="w-4 h-4 text-emerald-600" />
-            {t("warehouses.sales", { namespace: "settings",  })}
+            {t("warehouses.sales", { namespace: "settings" })}
           </Label>
           <Select
             value={toSelectValue(settings.sales_warehouse_id)}
             onValueChange={(v) => onChange("sales_warehouse_id", fromSelectValue(v) ?? "")}
           >
-            <SelectTrigger className="h-12 rounded-lg border-slate-200 font-bold">
-              <SelectValue placeholder={t("warehouses.selectPlaceholder", { namespace: "settings",  })} />
+            <SelectTrigger className="h-11 sm:h-12 rounded-lg border-border font-bold">
+              <SelectValue placeholder={t("warehouses.selectPlaceholder", { namespace: "settings" })} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="__default" className="font-bold text-slate-400">{t("warehouses.defaultOption", { namespace: "settings",  })}{defaultWarehouse ? ` (${defaultWarehouse.name})` : ""}</SelectItem>
+              <SelectItem value="__default" className="font-bold text-muted-foreground">{t("warehouses.defaultOption", { namespace: "settings" })}{defaultWarehouse ? ` (${defaultWarehouse.name})` : ""}</SelectItem>
               {otherWarehouses.map((w) => (
                 <SelectItem key={w.id} value={w.id} className="font-bold">{w.name}</SelectItem>
               ))}
             </SelectContent>
           </Select>
-          <p className="text-xs text-slate-400 font-medium">{t("warehouses.salesHint", { namespace: "settings",  })}</p>
+          <p className="text-xs text-muted-foreground font-medium">{t("warehouses.salesHint", { namespace: "settings" })}</p>
         </div>
       </div>
-      <div className="flex justify-end mt-6 pt-6 border-t border-slate-100">
-        <Button onClick={handleSave} className="gap-2 h-11 px-6">
+      <div className="flex justify-end mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-border">
+        <Button onClick={handleSave} className="gap-2 h-10 sm:h-11 px-5 sm:px-6">
           <Save className="w-4 h-4" />
-          {t("saveEdits", { namespace: "settings",  })}
+          {t("saveEdits", { namespace: "settings" })}
         </Button>
       </div>
     </SettingsSection>

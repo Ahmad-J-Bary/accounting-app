@@ -12,24 +12,24 @@ interface SettingsLayoutProps {
 
 export function SettingsLayout({ title, description, sidebar, children, className }: SettingsLayoutProps) {
   return (
-    <div className={cn("min-h-screen bg-slate-50/30 p-4 lg:p-6 space-y-6", className)} dir="rtl">
-      <header className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-1">
+    <div className={cn("min-h-screen bg-muted/30 p-3 sm:p-4 lg:p-6 space-y-4 sm:space-y-6", className)} dir="rtl">
+      <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-2 sm:gap-4 pb-1">
         <div className="space-y-1">
-          <h1 className="text-2xl font-black text-slate-900 tracking-tight">{title}</h1>
-          {description && <p className="text-slate-500 font-medium text-base">{description}</p>}
+          <h1 className="text-lg sm:text-xl md:text-2xl font-black text-foreground tracking-tight">{title}</h1>
+          {description && <p className="text-muted-foreground font-medium text-sm sm:text-base">{description}</p>}
         </div>
       </header>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 items-start">
         {sidebar && (
-          <aside className="lg:col-span-3 sticky top-4">
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-3">
+          <aside className="lg:col-span-3 lg:sticky lg:top-4 order-2 lg:order-1">
+            <div className="bg-card rounded-2xl border border-border shadow-sm p-2 sm:p-3">
               {sidebar}
             </div>
           </aside>
         )}
         
-        <main className={cn(sidebar ? "lg:col-span-9" : "lg:col-span-12", "space-y-4")}>
+        <main className={cn(sidebar ? "lg:col-span-9" : "lg:col-span-12", "space-y-3 sm:space-y-4 order-1 lg:order-2")}>
           {children}
         </main>
       </div>
@@ -49,12 +49,12 @@ export function SettingsSection({
   className?: string;
 }) {
   return (
-    <div className={cn("bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden", className)}>
-      <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/30">
-        <h3 className="font-bold text-slate-900 text-lg">{title}</h3>
-        {description && <p className="text-xs font-medium text-slate-400 mt-0.5">{description}</p>}
+    <div className={cn("bg-card rounded-2xl border border-border shadow-sm overflow-hidden", className)}>
+      <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-border bg-muted/30">
+        <h3 className="font-bold text-foreground text-base sm:text-lg">{title}</h3>
+        {description && <p className="text-xs font-medium text-muted-foreground mt-0.5">{description}</p>}
       </div>
-      <div className="p-6">
+      <div className="p-4 sm:p-6">
         {children}
       </div>
     </div>

@@ -14,12 +14,12 @@ interface SettingsGroupProps {
 
 export function SettingsGroup({ title, icon: Icon, color = "text-blue-600", children, className }: SettingsGroupProps) {
   return (
-    <div className={cn("bg-white rounded-2xl p-5 border border-slate-200 shadow-sm space-y-4", className)}>
-      <div className="flex items-center gap-3">
-        <div className={cn("p-2 rounded-xl bg-opacity-10", color)} style={{ backgroundColor: color.replace('text-', 'rgba(') }}>
-          <Icon className="w-5 h-5" style={{ color }} />
+    <div className={cn("bg-card rounded-2xl p-4 sm:p-5 border border-border shadow-sm space-y-3 sm:space-y-4", className)}>
+      <div className="flex items-center gap-2.5 sm:gap-3">
+        <div className={cn("p-1.5 sm:p-2 rounded-xl bg-opacity-10 shrink-0", color)} style={{ backgroundColor: color.replace('text-', 'rgba(') }}>
+          <Icon className="w-4 h-4 sm:w-5 sm:h-5" style={{ color }} />
         </div>
-        <h3 className="text-lg font-bold text-slate-800">{title}</h3>
+        <h3 className="text-base sm:text-lg font-bold text-foreground">{title}</h3>
       </div>
       <div className="pt-1">{children}</div>
     </div>
@@ -35,7 +35,7 @@ interface SettingsManagerLayoutProps {
 export function SettingsManagerLayout({ children, resetButton, resetAction }: SettingsManagerLayoutProps) {
   const { t } = useLocalization();
   return (
-    <div className="space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-500" dir="rtl">
+    <div className="space-y-4 sm:space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-500" dir="rtl">
       {children}
       {(resetButton || resetAction) && (
         <div className="flex justify-start">
@@ -44,10 +44,10 @@ export function SettingsManagerLayout({ children, resetButton, resetAction }: Se
               <Button
                 variant="outline"
                 onClick={resetAction}
-                className="rounded-xl h-10 gap-2 text-slate-500 border-slate-200"
+                className="rounded-xl h-9 sm:h-10 gap-2 text-muted-foreground border-border"
               >
                 <RotateCcw className="w-4 h-4" />
-                {t('actions.restoreDefaults', )}
+                {t('actions.restoreDefaults')}
               </Button>
             )
           )}

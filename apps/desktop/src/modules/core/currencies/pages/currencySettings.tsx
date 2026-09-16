@@ -231,7 +231,7 @@ export default function CurrencySettings() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-[60vh] text-muted-foreground">
-        <RefreshCw className="animate-spin w-8 h-8 ml-3" />
+        <RefreshCw className="animate-spin w-8 h-8 ms-3" />
         {t("currencies.loading", { namespace: "settings",  })}
       </div>
     );
@@ -240,47 +240,48 @@ export default function CurrencySettings() {
   const baseCurrency = currencies.find(c => c.is_base);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Currencies List */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              <div>
-                <CardTitle>{t("currencies.title", { namespace: "settings",  })}</CardTitle>
-                <CardDescription>{t("currencies.description", { namespace: "settings",  })}</CardDescription>
+              <div className="min-w-0">
+                <CardTitle>{t("currencies.title", { namespace: "settings" })}</CardTitle>
+                <CardDescription className="truncate">{t("currencies.description", { namespace: "settings" })}</CardDescription>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               {baseCurrency && (
-                <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20">
-                  {t("currencies.baseLabel", { namespace: "settings",  })} {baseCurrency.code} ({baseCurrency.symbol})
+                <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20 hidden sm:inline-flex">
+                  {t("currencies.baseLabel", { namespace: "settings" })} {baseCurrency.code} ({baseCurrency.symbol})
                 </Badge>
               )}
               <Button variant="outline" size="sm" onClick={() => { loadData(); refreshContext(); }} disabled={refreshing}>
-                <RefreshCw className={`w-3.5 h-3.5 ml-1 ${refreshing ? 'animate-spin' : ''}`} />
-                {t("currencies.update", { namespace: "settings",  })}
+                <RefreshCw className={`w-3.5 h-3.5 ms-1 ${refreshing ? 'animate-spin' : ''}`} />
+                {t("currencies.update", { namespace: "settings" })}
               </Button>
               <Button size="sm" onClick={() => setIsAddDialogOpen(true)}>
-                <Plus className="w-3.5 h-3.5 ml-1" />
-                {t("currencies.addCurrency", { namespace: "settings",  })}
+                <Plus className="w-3.5 h-3.5 ms-1" />
+                {t("currencies.addCurrency", { namespace: "settings" })}
               </Button>
             </div>
           </div>
         </CardHeader>
         <CardContent>
           {currencies.length === 0 ? (
-            <div className="text-center py-10 text-slate-400 space-y-3">
-              <DollarSign className="w-12 h-12 mx-auto text-slate-200" />
-              <p className="font-bold">{t("currencies.noCurrencies", { namespace: "settings",  })}</p>
-              <p className="text-sm">{t("currencies.noCurrenciesHint", { namespace: "settings",  })}</p>
+            <div className="text-center py-8 sm:py-10 text-muted-foreground space-y-3">
+              <DollarSign className="w-10 h-10 sm:w-12 sm:h-12 mx-auto text-muted-foreground/30" />
+              <p className="font-bold">{t("currencies.noCurrencies", { namespace: "settings" })}</p>
+              <p className="text-sm">{t("currencies.noCurrenciesHint", { namespace: "settings" })}</p>
               <Button onClick={() => setIsAddDialogOpen(true)}>
-                <Plus className="w-4 h-4 ml-2" />
-                {t("currencies.addFirst", { namespace: "settings",  })}
+                <Plus className="w-4 h-4 ms-2" />
+                {t("currencies.addFirst", { namespace: "settings" })}
               </Button>
             </div>
           ) : (
-            <Table>
+            <div className="overflow-x-auto -mx-4 sm:mx-0">
+            <Table className="min-w-[500px]">
               <TableHeader>
                 <TableRow>
                   <TableHead className="text-right">{t("currencies.table.code", { namespace: "settings",  })}</TableHead>
@@ -310,12 +311,12 @@ export default function CurrencySettings() {
                     <TableCell className="text-left">
                       <div className="flex items-center justify-end gap-1">
                         <Button variant="ghost" size="sm" className="text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-50" onClick={() => openEditDialog(curr)}>
-                          <Pencil className="w-3.5 h-3.5 ml-1" /> {t("currencies.edit", { namespace: "settings",  })}
+                          <Pencil className="w-3.5 h-3.5 ms-1" /> {t("currencies.edit", { namespace: "settings" })}
                         </Button>
                         {!curr.is_base ? (
                           <>
                             <Button variant="ghost" size="sm" className="text-xs text-amber-600 hover:text-amber-800 hover:bg-amber-50" onClick={() => handleSetBase(curr.code)}>
-                              <Star className="w-3.5 h-3.5 ml-1" /> {t("currencies.setBase", { namespace: "settings",  })}
+                              <Star className="w-3.5 h-3.5 ms-1" /> {t("currencies.setBase", { namespace: "settings" })}
                             </Button>
                             <Button variant="ghost" size="icon" onClick={() => handleDeleteCurrency(curr.code)} className="text-red-500 hover:text-red-700 hover:bg-red-50">
                               <Trash2 className="w-4 h-4" />
@@ -328,13 +329,14 @@ export default function CurrencySettings() {
                 ))}
               </TableBody>
             </Table>
+            </div>
           )}
         </CardContent>
       </Card>
 
       {/* Exchange Rates + History */}
       {currencies.length > 1 && (
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-6">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
@@ -371,7 +373,7 @@ export default function CurrencySettings() {
                       </span>
                     </div>
                     <Button size="sm" className="h-8 text-xs" onClick={() => handleSetRate(status.currency_code)}>
-                      <Save className="w-3 h-3 ml-1" />
+                      <Save className="w-3 h-3 ms-1" />
                       {t("currencies.save", { namespace: "settings",  })}
                     </Button>
                   </div>
@@ -388,15 +390,15 @@ export default function CurrencySettings() {
           <Card className="xl:col-span-2">
             <Tabs defaultValue="chart" className="w-full" dir="rtl">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <div className="space-y-1">
+                <div className="space-y-1 min-w-0">
                   <CardTitle className="flex items-center gap-2 text-base">
-                    <History className="w-4 h-4 text-primary" />
-                    {t("currencies.rateHistory", { namespace: "settings",  })}
+                    <History className="w-4 h-4 text-primary shrink-0" />
+                    {t("currencies.rateHistory", { namespace: "settings" })}
                   </CardTitle>
-                  <CardDescription>{t("currencies.rateHistoryDesc", { namespace: "settings",  })}</CardDescription>
+                  <CardDescription className="truncate">{t("currencies.rateHistoryDesc", { namespace: "settings" })}</CardDescription>
                 </div>
-                <div className="flex items-center gap-4">
-                  <div className="flex gap-1 bg-muted p-1 rounded-md">
+                <div className="flex items-center gap-2 sm:gap-4 shrink-0">
+                  <div className="flex gap-1 bg-muted p-1 rounded-md overflow-x-auto">
                     {currencies.filter(c => !c.is_base).map(c => (
                       <button
                         key={c.code}

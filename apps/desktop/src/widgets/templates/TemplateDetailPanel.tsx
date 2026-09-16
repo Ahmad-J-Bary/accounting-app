@@ -3,20 +3,11 @@ import { cn } from "@shared/lib/utils";
 import { useSidePanelSettings } from "@shared/hooks";
 
 interface TemplateDetailPanelProps {
-  /** Whether the panel is currently open */
   isOpen: boolean;
-  /** Panel content (details/form/sidebar shell) */
   children: ReactNode;
-  /** Custom class */
   className?: string;
 }
 
-/**
- * Shared animated detail side panel used by page templates (tree + table).
- * Its width follows the global side-panel settings while the inner content
- * keeps a stable minimum width to avoid reflow while animating. When closed
- * it collapses to zero width and fades out.
- */
 export function TemplateDetailPanel({
   isOpen,
   children,
@@ -29,6 +20,7 @@ export function TemplateDetailPanel({
       className={cn(
         "bg-card rounded-xl border border-border shadow-xl flex flex-col overflow-hidden transition-all duration-300 shrink-0",
         !isOpen && "w-0 opacity-0 border-none p-0 overflow-hidden",
+        isOpen && "max-lg:absolute max-lg:inset-y-0 max-lg:end-0 max-lg:z-30 max-lg:w-full sm:max-lg:w-[320px] md:max-lg:w-[380px] max-lg:shadow-2xl",
         className,
       )}
       style={{
@@ -36,7 +28,7 @@ export function TemplateDetailPanel({
         transitionProperty: "width, opacity",
       }}
     >
-      <div className="flex-1 overflow-auto" style={{ minWidth: settings.customWidth + "px" }}>
+      <div className="flex-1 overflow-auto" style={{ minWidth: typeof window !== 'undefined' && window.innerWidth < 1024 ? undefined : settings.customWidth + "px" }}>
         {children}
       </div>
     </aside>

@@ -26,8 +26,6 @@ interface CompanySettingsProps {
 
 export function CompanySettings({ settings, onChange }: CompanySettingsProps) {
   const { t } = useLocalization();
-  // Company type is only changeable before the accounting setup starts
-  // (NOT_STARTED): afterwards it is locked to protect the opening migration.
   const { data: migrations = [] } = useQuery({
     queryKey: QUERY_KEYS.openingBalanceMigrations,
     queryFn: () => openingBalanceService.listMigrations(),
@@ -60,84 +58,84 @@ export function CompanySettings({ settings, onChange }: CompanySettingsProps) {
         accounting_start_mode: settings.accounting_start_mode ?? COMPANY_TYPE_EXISTING,
       });
       publishSettingsUpdated();
-      toast.success(t("toasts.saved", { namespace: "settings",  }), { description: t("toasts.savedCompany", { namespace: "settings",  }) });
+      toast.success(t("toasts.saved", { namespace: "settings" }), { description: t("toasts.savedCompany", { namespace: "settings" }) });
     } catch (e) {
-      toast.error(t("toasts.saveError", { namespace: "settings",  }), { description: String(e) });
+      toast.error(t("toasts.saveError", { namespace: "settings" }), { description: String(e) });
     }
   };
 
   return (
-    <SettingsSection title={t("company.title", { namespace: "settings",  })} description={t("company.description", { namespace: "settings",  })}>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <SettingsSection title={t("company.title", { namespace: "settings" })} description={t("company.description", { namespace: "settings" })}>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
         <div className="space-y-2">
-          <Label className="font-bold text-slate-700">{t("company.nameAr", { namespace: "settings",  })}</Label>
+          <Label className="font-bold text-foreground">{t("company.nameAr", { namespace: "settings" })}</Label>
           <div className="relative">
-            <Building className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-400" />
-            <Input className="pr-11 h-12 rounded-lg border-slate-200 focus:ring-blue-500" value={settings.company_name} onChange={e => onChange("company_name", e.target.value)} />
+            <Building className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input className="pr-11 h-11 sm:h-12 rounded-lg border-border" value={settings.company_name} onChange={e => onChange("company_name", e.target.value)} />
           </div>
         </div>
         <div className="space-y-2">
-          <Label className="font-bold text-slate-700">{t("company.nameEn", { namespace: "settings",  })}</Label>
+          <Label className="font-bold text-foreground">{t("company.nameEn", { namespace: "settings" })}</Label>
           <div className="relative">
-            <Globe className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-400" />
-            <Input className="pr-11 h-12 rounded-lg border-slate-200 focus:ring-blue-500" dir="ltr" value={settings.company_name_en ?? ""} onChange={e => onChange("company_name_en", e.target.value)} />
+            <Globe className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input className="pr-11 h-11 sm:h-12 rounded-lg border-border" dir="ltr" value={settings.company_name_en ?? ""} onChange={e => onChange("company_name_en", e.target.value)} />
           </div>
         </div>
         <div className="space-y-2">
-          <Label className="font-bold text-slate-700">{t("company.taxNumber", { namespace: "settings",  })}</Label>
-          <Input className="h-12 rounded-lg border-slate-200" value={settings.tax_number ?? ""} onChange={e => onChange("tax_number", e.target.value)} />
+          <Label className="font-bold text-foreground">{t("company.taxNumber", { namespace: "settings" })}</Label>
+          <Input className="h-11 sm:h-12 rounded-lg border-border" value={settings.tax_number ?? ""} onChange={e => onChange("tax_number", e.target.value)} />
         </div>
         <div className="space-y-2">
-          <Label className="font-bold text-slate-700">{t("company.commercialRegister", { namespace: "settings",  })}</Label>
-          <Input className="h-12 rounded-lg border-slate-200" value={settings.commercial_register ?? ""} onChange={e => onChange("commercial_register", e.target.value)} />
+          <Label className="font-bold text-foreground">{t("company.commercialRegister", { namespace: "settings" })}</Label>
+          <Input className="h-11 sm:h-12 rounded-lg border-border" value={settings.commercial_register ?? ""} onChange={e => onChange("commercial_register", e.target.value)} />
         </div>
         <div className="space-y-2 md:col-span-2">
-          <Label className="font-bold text-slate-700">{t("company.address", { namespace: "settings",  })}</Label>
+          <Label className="font-bold text-foreground">{t("company.address", { namespace: "settings" })}</Label>
           <div className="relative">
-            <MapPin className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-400" />
-            <Input className="pr-11 h-12 rounded-lg border-slate-200" value={settings.address ?? ""} onChange={e => onChange("address", e.target.value)} />
+            <MapPin className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input className="pr-11 h-11 sm:h-12 rounded-lg border-border" value={settings.address ?? ""} onChange={e => onChange("address", e.target.value)} />
           </div>
         </div>
         <div className="space-y-2">
-          <Label className="font-bold text-slate-700">{t("company.phone", { namespace: "settings",  })}</Label>
+          <Label className="font-bold text-foreground">{t("company.phone", { namespace: "settings" })}</Label>
           <div className="relative">
-            <Phone className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-400" />
-            <Input className="pr-11 h-12 rounded-lg border-slate-200 font-mono" dir="ltr" value={settings.phone ?? ""} onChange={e => onChange("phone", e.target.value)} />
+            <Phone className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input className="pr-11 h-11 sm:h-12 rounded-lg border-border font-mono" dir="ltr" value={settings.phone ?? ""} onChange={e => onChange("phone", e.target.value)} />
           </div>
         </div>
         <div className="space-y-2">
-          <Label className="font-bold text-slate-700">{t("company.email", { namespace: "settings",  })}</Label>
+          <Label className="font-bold text-foreground">{t("company.email", { namespace: "settings" })}</Label>
           <div className="relative">
-            <Mail className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-400" />
-            <Input className="pr-11 h-12 rounded-lg border-slate-200 font-mono" dir="ltr" value={settings.email ?? ""} onChange={e => onChange("email", e.target.value)} />
+            <Mail className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input className="pr-11 h-11 sm:h-12 rounded-lg border-border font-mono" dir="ltr" value={settings.email ?? ""} onChange={e => onChange("email", e.target.value)} />
           </div>
         </div>
         <div className="space-y-2 md:col-span-2">
-          <Label className="font-bold text-slate-700">{t("company.companyType", { namespace: "settings",  })}</Label>
+          <Label className="font-bold text-foreground">{t("company.companyType", { namespace: "settings" })}</Label>
           <Select
             value={settings.accounting_start_mode ?? COMPANY_TYPE_EXISTING}
             onValueChange={(v) => onChange("accounting_start_mode", v)}
             disabled={!canChangeType}
           >
-            <SelectTrigger className="h-12 rounded-lg border-slate-200">
-              <SelectValue placeholder={t("company.companyTypePlaceholder", { namespace: "settings",  })} />
+            <SelectTrigger className="h-11 sm:h-12 rounded-lg border-border">
+              <SelectValue placeholder={t("company.companyTypePlaceholder", { namespace: "settings" })} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={COMPANY_TYPE_EXISTING} className="text-xs">{t("company.typeExisting", { namespace: "settings",  })}</SelectItem>
-              <SelectItem value={COMPANY_TYPE_NEW} className="text-xs">{t("company.typeNew", { namespace: "settings",  })}</SelectItem>
+              <SelectItem value={COMPANY_TYPE_EXISTING} className="text-xs">{t("company.typeExisting", { namespace: "settings" })}</SelectItem>
+              <SelectItem value={COMPANY_TYPE_NEW} className="text-xs">{t("company.typeNew", { namespace: "settings" })}</SelectItem>
             </SelectContent>
           </Select>
-          <p className="text-xs text-slate-400" data-testid="company-type-hint">
+          <p className="text-xs text-muted-foreground" data-testid="company-type-hint">
             {canChangeType
-              ? t("company.typeHintChangeable", { namespace: "settings",  })
+              ? t("company.typeHintChangeable", { namespace: "settings" })
               : t("company.typeLocked", { namespace: "settings", vars: { state: initStateLabel(initState, t) } })}
           </p>
         </div>
       </div>
-      <div className="flex justify-end mt-6 pt-6 border-t border-slate-100">
-        <Button onClick={handleSave} className="gap-2 h-11 px-6">
+      <div className="flex justify-end mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-border">
+        <Button onClick={handleSave} className="gap-2 h-10 sm:h-11 px-5 sm:px-6">
           <Save className="w-4 h-4" />
-          {t("saveEdits", { namespace: "settings",  })}
+          {t("saveEdits", { namespace: "settings" })}
         </Button>
       </div>
     </SettingsSection>
