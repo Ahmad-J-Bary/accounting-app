@@ -196,6 +196,8 @@ export const common: Record<AppLanguage, TranslationTree> = {
       hierarchicalTree: "شجرة البيانات الهيكلية",
       barcode: "الباركود",
       materialNameAr: "الصنف (عربي)",
+      first: "أول",
+      last: "آخر",
     },
     confirmations: {
       delete: "هل أنت متأكد من الحذف؟",
@@ -404,6 +406,8 @@ export const common: Record<AppLanguage, TranslationTree> = {
       hierarchicalTree: "Hierarchical Data Tree",
       barcode: "Barcode",
       materialNameAr: "Material (Arabic)",
+      first: "First",
+      last: "Last",
     },
     confirmations: {
       delete: "Are you sure you want to delete?",

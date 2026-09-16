@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { TableSummary, type SummaryColumn } from "@widgets/table-shell/TableSummary";
 import type { DocumentColumn } from "./GenericDocumentGrid";
 import type { GridLine } from "@modules/invoicing/lib/invoiceUtils";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 interface GridSummaryRowProps {
   filteredColumns: DocumentColumn[];
@@ -21,6 +22,7 @@ export function GridSummaryRow({
   asPageFooter = false,
   gridTemplate,
 }: GridSummaryRowProps) {
+  const { t } = useLocalization();
   const totalQty = lines.reduce((sum, line) => sum + (Number(line.quantity) || 0), 0);
   const formattedQty = String(totalQty).replace(/\.?0+$/, "");
 
@@ -41,7 +43,7 @@ export function GridSummaryRow({
         cols.push({
           id: col.key,
           columnId: col.key,
-          label: "إجمالي الكمية",
+          label: t("grid.totalQuantity", { namespace: "inventory" }),
           value: formattedQty,
           align: col.align,
           className: "tabular-nums font-bold",
@@ -57,7 +59,7 @@ export function GridSummaryRow({
           cols.push({
             id: col.key,
             columnId: col.key,
-            label: "المجموع",
+            label: t("document.summaryLabel", { namespace: "invoicing" }),
             value: formatRawAmount(total, currCode),
             align: col.align,
             className: "tabular-nums font-black text-slate-900",
@@ -77,7 +79,7 @@ export function GridSummaryRow({
     });
 
     return cols;
-  }, [filteredColumns, formattedQty, lines, formatRawAmount]);
+  }, [filteredColumns, formattedQty, lines, formatRawAmount, t]);
 
   return (
     <TableSummary

@@ -8,6 +8,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuCheckboxItem,
 } from "@shared/ui/dropdown-menu";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 import type { DocumentColumn } from "./GenericDocumentGrid";
 import type { GridLine } from "@modules/invoicing/lib/invoiceUtils";
 
@@ -155,6 +156,7 @@ export function DocumentGridCell({
 }: DocumentGridCellProps) {
   const { fontSize, readOnly, materials, warehouses, getCellValue } = config;
   const { onUpdateLine, onCellChange, onKeyDown, onActiveCellChange, onSearchRowChange, onSearchTypeChange, onSearchTermChange, inputRefs } = callbacks;
+  const { t } = useLocalization();
 
   if (col.type === "tier_select") {
     const material = materials.find((m) => m.id === line.material_id);
@@ -162,9 +164,9 @@ export function DocumentGridCell({
     const currentTier = line.tier || "retail";
 
     const tiers = [
-      { id: "retail", label: "مفرق" },
-      { id: "semi_wholesale", label: "نصف جملة" },
-      { id: "wholesale", label: "جملة" },
+      { id: "retail", label: t("saleTiers.retail", { namespace: "inventory" }) },
+      { id: "semi_wholesale", label: t("saleTiers.semi_wholesale", { namespace: "inventory" }) },
+      { id: "wholesale", label: t("saleTiers.wholesale", { namespace: "inventory" }) },
     ];
 
     const handleTierChange = (tierId: string) => {
@@ -192,7 +194,7 @@ export function DocumentGridCell({
                 : "bg-slate-50 text-slate-400 border-slate-200 cursor-default",
             )}>
               <span className="flex items-center gap-1">
-                <span>{line.material_id ? (tiers.find(t => t.id === currentTier)?.label || "مفرق") : ""}</span>
+                <span>{line.material_id ? (tiers.find(t => t.id === currentTier)?.label || t("saleTiers.retail", { namespace: "inventory" })) : ""}</span>
                 {currentMaxQty > 0 && <span className="text-[7px] text-amber-500 font-bold">&le;{currentMaxQty}</span>}
               </span>
             </button>
@@ -279,11 +281,11 @@ export function DocumentGridCell({
                 ? "bg-blue-50 text-blue-600 border-blue-100 hover:bg-blue-100 cursor-pointer"
                 : "bg-slate-50 text-slate-400 border-slate-200 cursor-default",
             )}>
-              {line.material_id ? currentUnitName || "اختر" : ""}
+              {line.material_id ? currentUnitName || t("grid.selectUnit", { namespace: "inventory" }) : ""}
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="center" className="min-w-[100px] shadow-xl">
-            <DropdownMenuLabel className="text-right text-3xs font-black text-slate-500 uppercase">الوحدات المتاحة</DropdownMenuLabel>
+            <DropdownMenuLabel className="text-right text-3xs font-black text-slate-500 uppercase">{t("grid.availableUnits", { namespace: "inventory" })}</DropdownMenuLabel>
             <DropdownMenuSeparator />
             {units.map((u) => (
               <DropdownMenuCheckboxItem
@@ -314,11 +316,11 @@ export function DocumentGridCell({
                 ? "bg-violet-50 text-violet-600 border-violet-100 hover:bg-violet-100 cursor-pointer"
                 : "bg-slate-50 text-slate-400 border-slate-200 cursor-default",
             )}>
-              {currentWarehouse?.name || "اختر المستودع"}
+              {currentWarehouse?.name || t("grid.selectWarehouse", { namespace: "inventory" })}
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="center" className="min-w-[140px] shadow-xl">
-            <DropdownMenuLabel className="text-right text-3xs font-black text-slate-500 uppercase">المستودعات</DropdownMenuLabel>
+            <DropdownMenuLabel className="text-right text-3xs font-black text-slate-500 uppercase">{t("grid.warehouses", { namespace: "inventory" })}</DropdownMenuLabel>
             <DropdownMenuSeparator />
             {warehouses.map((w) => (
               <DropdownMenuCheckboxItem
@@ -339,11 +341,11 @@ export function DocumentGridCell({
   if (col.type === "price_tier") {
     const currentTier = line.tier || "retail";
     const tiers = [
-      { id: "retail", label: "مفرق" },
-      { id: "semi_wholesale", label: "نصف جملة" },
-      { id: "wholesale", label: "جملة" },
+      { id: "retail", label: t("saleTiers.retail", { namespace: "inventory" }) },
+      { id: "semi_wholesale", label: t("saleTiers.semi_wholesale", { namespace: "inventory" }) },
+      { id: "wholesale", label: t("saleTiers.wholesale", { namespace: "inventory" }) },
     ];
-    const tierLabel = tiers.find(t => t.id === currentTier)?.label || "مفرق";
+    const tierLabel = tiers.find(t => t.id === currentTier)?.label || t("saleTiers.retail", { namespace: "inventory" });
     const priceValue = getCellValue(line, col.key);
 
     const handleTierChange = (tierId: string) => {
@@ -428,9 +430,9 @@ export function DocumentGridCell({
     }
 
     const chips: { label: string; value: string | null; color: string }[] = [
-      { label: "أول", value: priceHistory?.first_cost_base ?? null, color: "text-emerald-600 border-emerald-200 bg-emerald-50 hover:bg-emerald-100" },
-      { label: "متوسط", value: priceHistory?.average_cost_base ?? null, color: "text-blue-600 border-blue-200 bg-blue-50 hover:bg-blue-100" },
-      { label: "آخر", value: priceHistory?.last_cost_base ?? null, color: "text-amber-600 border-amber-200 bg-amber-50 hover:bg-amber-100" },
+      { label: t("labels.first", { namespace: "common" }), value: priceHistory?.first_cost_base ?? null, color: "text-emerald-600 border-emerald-200 bg-emerald-50 hover:bg-emerald-100" },
+      { label: t("grid.priceAverage", { namespace: "inventory" }), value: priceHistory?.average_cost_base ?? null, color: "text-blue-600 border-blue-200 bg-blue-50 hover:bg-blue-100" },
+      { label: t("labels.last", { namespace: "common" }), value: priceHistory?.last_cost_base ?? null, color: "text-amber-600 border-amber-200 bg-amber-50 hover:bg-amber-100" },
     ];
     const hasAnyHistory = chips.some(c => c.value !== null && c.value !== "0");
 
@@ -473,9 +475,9 @@ export function DocumentGridCell({
 
   if (col.type === "sale_tier_prices") {
     const tiers = [
-      { key: "retail_price", label: "مفرق" },
-      { key: "semi_wholesale_price", label: "نصف جملة" },
-      { key: "wholesale_price", label: "جملة" },
+      { key: "retail_price", label: t("saleTiers.retail", { namespace: "inventory" }) },
+      { key: "semi_wholesale_price", label: t("saleTiers.semi_wholesale", { namespace: "inventory" }) },
+      { key: "wholesale_price", label: t("saleTiers.wholesale", { namespace: "inventory" }) },
     ];
     const layout = line.sale_tier_layout || col.saleTierLayout || "row";
     const isRowLayout = layout === "row";
@@ -486,7 +488,7 @@ export function DocumentGridCell({
         tabIndex={-1}
         onClick={toggleLayout}
         className="absolute -top-0.5 -left-0.5 opacity-0 group-hover:opacity-100 transition-opacity text-3xs p-0.5 rounded bg-white border border-slate-200 text-slate-400 hover:text-slate-700 hover:border-slate-300 shadow-sm z-10"
-        title={isRowLayout ? "عرض أفقي" : "عرض عمودي"}
+        title={isRowLayout ? t("grid.layoutHorizontal", { namespace: "inventory" }) : t("grid.layoutVertical", { namespace: "inventory" })}
       >
         {isRowLayout ? "⊞" : "☰"}
       </button>
@@ -631,7 +633,7 @@ export function DocumentGridCell({
           fontSize={fontSize}
           fontFamily={config.fontFamily}
           align={col.align}
-          placeholder="البحث..."
+          placeholder={t("labels.placeholder", { namespace: "common" })}
           inputRefs={inputRefs}
           onChange={handleChange}
           onFocus={handleFocus}

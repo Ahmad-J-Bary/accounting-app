@@ -28,6 +28,7 @@ function LotRow({ lot, baseSym, onUpdate }: {
   baseSym: string;
   onUpdate: (id: string, retail?: string | null, semi?: string | null, wholesale?: string | null) => void;
 }) {
+  const { t } = useLocalization();
   const [retail, setRetail] = useState(lot.retail_price_base || "");
   const [semi, setSemi] = useState(lot.semi_wholesale_price_base || "");
   const [wholesale, setWholesale] = useState(lot.wholesale_price_base || "");
@@ -50,10 +51,10 @@ function LotRow({ lot, baseSym, onUpdate }: {
       <td className={cn("p-2 text-center tabular-nums font-bold",
         parseFloat(lot.quantity_remaining) > 0 ? "text-emerald-600" : "text-red-400"
       )}>{toLocalString(parseFloat(lot.quantity_remaining))}</td>
-      <td className="p-2 text-left tabular-nums font-bold text-amber-600" title="تكلفة الوحدة (قبل التكاليف الإضافية)">
+      <td className="p-2 text-left tabular-nums font-bold text-amber-600" title={t("materials.detail.rawCostTitle", { namespace: "inventory" })}>
         {formatCurrency(parseFloat(lot.raw_unit_cost_base || lot.unit_cost_base), baseSym || undefined)}
       </td>
-      <td className="p-2 text-left tabular-nums font-bold text-slate-600" title="تكلفة الوحدة (بعد التكاليف الإضافية)">
+      <td className="p-2 text-left tabular-nums font-bold text-slate-600" title={t("materials.detail.netCostTitle", { namespace: "inventory" })}>
         {formatCurrency(parseFloat(lot.unit_cost_base), baseSym || undefined)}
       </td>
       <td className="p-1 text-center">
@@ -392,14 +393,14 @@ export function MaterialDetailPanel({
                     <div className="bg-slate-50 px-4 py-2 border-b font-bold text-xs text-slate-700 flex justify-between">
                       <span>أسعار مبيع: {unit.name}</span>
                       <span className="text-[10px] text-slate-400 font-normal italic">
-                        تعادل: {unit.conversion_factor} من الوحدة الأساسية
+                        {t("grid.equivOfBase", { namespace: "inventory", vars: { count: unit.conversion_factor } })}
                       </span>
                     </div>
                     <div className="grid grid-cols-2 gap-px bg-slate-100">
                       {[
-                        { id: "retail", label: "مفرق" },
-                        { id: "semi_wholesale", label: "نصف جملة" },
-                        { id: "wholesale", label: "جملة" },
+                        { id: "retail", label: t("saleTiers.retail", { namespace: "inventory" }) },
+                        { id: "semi_wholesale", label: t("saleTiers.semi_wholesale", { namespace: "inventory" }) },
+                        { id: "wholesale", label: t("saleTiers.wholesale", { namespace: "inventory" }) },
                       ].map((tier) => {
                         const price = material.sale_prices.find(
                           (p) =>

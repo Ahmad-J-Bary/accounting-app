@@ -417,6 +417,7 @@ export const inventory: Record<AppLanguage, TranslationTree> = {
     },
     grid: {
       priceTypeLabel: "نوع السعر",
+      priceAverage: "متوسط",
       selectUnit: "اختر",
       availableUnits: "الوحدات المتاحة",
       selectWarehouse: "اختر المستودع",
@@ -1058,6 +1059,7 @@ export const inventory: Record<AppLanguage, TranslationTree> = {
     },
     grid: {
       priceTypeLabel: "Price Type",
+      priceAverage: "Average",
       selectUnit: "Select",
       availableUnits: "Available Units",
       selectWarehouse: "Select Warehouse",
