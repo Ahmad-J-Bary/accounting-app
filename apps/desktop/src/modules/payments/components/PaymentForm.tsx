@@ -11,6 +11,7 @@ import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { useLocalization } from "@app/providers/LocalizationProvider";
 import { getExchangeRate } from "@shared/lib/currency-strategy";
 import { PAYMENT_TYPE_LABELS, HIDDEN_PAYMENT_TYPES } from "../lib/constants";
+import { resolvePartnerDisplayName, resolveAccountName } from "@shared/lib/system-labels";
 
 export type PaymentFormPayload = CreatePaymentRequest & { id?: string };
 
@@ -25,7 +26,7 @@ interface PaymentFormProps {
 }
 
 export function PaymentForm({ customers, suppliers, accounts, onSave, onClose, saving, initialValues }: PaymentFormProps) {
-  const { t } = useLocalization();
+  const { t, language } = useLocalization();
   const { currencies, baseCurrency, rateMap } = useCurrencyContext();
 
   const [form, setForm] = useState<Partial<PaymentFormPayload>>({
@@ -110,7 +111,7 @@ export function PaymentForm({ customers, suppliers, accounts, onSave, onClose, s
           <Select value={form.customer_id} onValueChange={val => setForm(p => ({ ...p, customer_id: val }))}>
             <SelectTrigger className="h-9 font-bold bg-white"><SelectValue placeholder={t("payment.selectCustomer", { namespace: "invoicing",  })} /></SelectTrigger>
             <SelectContent>
-              {customers.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+              {customers.map(c => <SelectItem key={c.id} value={c.id}>{resolvePartnerDisplayName(c.name, c.code, "customer", language, t)}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>
@@ -132,7 +133,7 @@ export function PaymentForm({ customers, suppliers, accounts, onSave, onClose, s
           <Select value={form.supplier_id} onValueChange={val => setForm(p => ({ ...p, supplier_id: val }))}>
             <SelectTrigger className="h-9 font-bold bg-white"><SelectValue placeholder={t("payment.selectSupplier", { namespace: "invoicing",  })} /></SelectTrigger>
             <SelectContent>
-              {suppliers.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+              {suppliers.map(s => <SelectItem key={s.id} value={s.id}>{resolvePartnerDisplayName(s.name, s.code, "supplier", language, t)}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>
@@ -145,7 +146,7 @@ export function PaymentForm({ customers, suppliers, accounts, onSave, onClose, s
           <Select value={form.debit_account_id} onValueChange={val => setForm(p => ({ ...p, debit_account_id: val }))}>
             <SelectTrigger className="h-9 font-bold bg-white"><SelectValue placeholder={t("payment.selectExpenseAccount", { namespace: "invoicing",  })} /></SelectTrigger>
             <SelectContent>
-              {expenseAccounts.map(a => <SelectItem key={a.id} value={a.id}>{a.name_ar}</SelectItem>)}
+              {expenseAccounts.map(a => <SelectItem key={a.id} value={a.id}>{resolveAccountName(a, language)}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>
@@ -158,7 +159,7 @@ export function PaymentForm({ customers, suppliers, accounts, onSave, onClose, s
           <Select value={form.debit_account_id} onValueChange={val => setForm(p => ({ ...p, debit_account_id: val }))}>
             <SelectTrigger className="h-9 font-bold bg-white"><SelectValue placeholder={t("payment.selectDrawingsAccount", { namespace: "invoicing",  })} /></SelectTrigger>
             <SelectContent>
-              {drawingAccounts.map(a => <SelectItem key={a.id} value={a.id}>{a.name_ar}</SelectItem>)}
+              {drawingAccounts.map(a => <SelectItem key={a.id} value={a.id}>{resolveAccountName(a, language)}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>

@@ -74,7 +74,7 @@ export function CategoryForm({
       setName("");
       setCodePrefix(mode === "create_cat" ? suggestPrefix() : "");
     }
-  }, [open, mode, selected, isRoot, isUncategorized, getGeneralSubPrefix, suggestPrefix]);
+  }, [open, mode, selected, isRoot, isUncategorized, getGeneralSubPrefix, suggestPrefix, language]);
 
   const handleSave = async () => {
     if (!name.trim()) { setError(t("categories.form.nameRequired", { namespace: "inventory",  })); return; }

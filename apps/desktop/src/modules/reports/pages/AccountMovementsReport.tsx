@@ -17,7 +17,7 @@ function getDescendantIds(accountId: string, accounts: AccountDto[]): string[] {
 
 export default function AccountMovementsReport() {
   const { filters, setFilters, baseCurrency } = useReportFilters();
-  const { t } = useLocalization();
+  const { t, language } = useLocalization();
   const [searchParams] = useSearchParams();
   const { data: accounts = [] } = useChartOfAccounts();
   const [selectedAccountId, setSelectedAccountId] = useState<string>(searchParams.get('accountId') || '');
@@ -43,7 +43,7 @@ export default function AccountMovementsReport() {
           <SelectContent>
             {accounts.map(a => (
               <SelectItem key={a.id} value={a.id} className="font-bold">
-                {a.code} - {a.name_ar}
+                {a.code} - {language === "ar" ? a.name_ar : a.name_en}
               </SelectItem>
             ))}
           </SelectContent>

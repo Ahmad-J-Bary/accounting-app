@@ -12,6 +12,7 @@ import {
 import { useMemo } from "react";
 import { useLocalization } from "@app/providers/LocalizationProvider";
 import { formatNumber } from "@shared/lib/format";
+import { resolveAccountName, resolvePartnerDisplayName } from "@shared/lib/system-labels";
 import {
   SidebarShell,
   SidebarHeader,
@@ -40,15 +41,21 @@ export function PaymentDetailPanel({
   onEdit,
   onDelete,
 }: PaymentDetailPanelProps) {
-  const { t } = useLocalization();
+  const { t, language } = useLocalization();
   const { baseCurrency, convertBetween, currencies } = useCurrencyContext();
 
-  const getAccountName = (id?: string) =>
-    accounts.find((a) => a.id === id)?.name_ar || "-";
-  const getCustomerName = (id?: string) =>
-    customers.find((c) => c.id === id)?.name || "-";
-  const getSupplierName = (id?: string) =>
-    suppliers.find((s) => s.id === id)?.name || "-";
+  const getAccountName = (id?: string) => {
+    const account = accounts.find((a) => a.id === id);
+    return account ? resolveAccountName(account, language) : "-";
+  };
+  const getCustomerName = (id?: string) => {
+    const c = customers.find((c) => c.id === id);
+    return c ? resolvePartnerDisplayName(c.name, c.code, "customer", language, t) : "-";
+  };
+  const getSupplierName = (id?: string) => {
+    const s = suppliers.find((s) => s.id === id);
+    return s ? resolvePartnerDisplayName(s.name, s.code, "supplier", language, t) : "-";
+  };
 
   const { displayAmount, amountInBase } = useMemo(() => {
     const amt = parseFloat(payment.amount) || 0;

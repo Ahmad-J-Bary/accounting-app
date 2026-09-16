@@ -13,6 +13,7 @@ import { Button } from "@shared/ui/button";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@shared/ui/select";
 import type { Payment, AccountDto } from "@erp/shared-types";
 import { useLocalization } from "@app/providers/LocalizationProvider";
+import { resolveAccountName } from "@shared/lib/system-labels";
 
 type SortField = "journal_entry_number" | "payment_date" | "payment_type" | "credit_account" | "debit_account";
 
@@ -54,7 +55,7 @@ export function PaymentsTable({
   onDelete,
 }: PaymentsTableProps) {
 
-  const { t } = useLocalization();
+  const { t, language } = useLocalization();
   const { isBaseCurrency, currencySuffix: cs, hasSecondaryCurrencies } = useBaseCurrencyColumns();
   const { exportData, currencyMode, ratesSheet, baseCode } = useExportSetup();
   const sortedCurrencies = useMemo(() => {
@@ -100,19 +101,19 @@ export function PaymentsTable({
           break;
         case "credit_account":
           comparison = (
-            accounts.find((acc) => acc.id === a.credit_account_id)?.name_ar ||
+            resolveAccountName(accounts.find((acc) => acc.id === a.credit_account_id) ?? ({} as AccountDto), language) ||
             ""
           ).localeCompare(
-            accounts.find((acc) => acc.id === b.credit_account_id)?.name_ar ||
+            resolveAccountName(accounts.find((acc) => acc.id === b.credit_account_id) ?? ({} as AccountDto), language) ||
               "",
             "ar",
           );
           break;
         case "debit_account":
           comparison = (
-            accounts.find((acc) => acc.id === a.debit_account_id)?.name_ar || ""
+            resolveAccountName(accounts.find((acc) => acc.id === a.debit_account_id) ?? ({} as AccountDto), language) || ""
           ).localeCompare(
-            accounts.find((acc) => acc.id === b.debit_account_id)?.name_ar ||
+            resolveAccountName(accounts.find((acc) => acc.id === b.debit_account_id) ?? ({} as AccountDto), language) ||
               "",
             "ar",
           );
@@ -183,9 +184,8 @@ export function PaymentsTable({
         label: t("payment.creditAccount", { namespace: "invoicing",  }),
         accessor: (p) => {
           if (p.credit_account_id) {
-            return (
-              accounts.find((a) => a.id === p.credit_account_id)?.name_ar || ""
-            );
+            const acc = accounts.find((a) => a.id === p.credit_account_id);
+            return acc ? resolveAccountName(acc, language) : "";
           }
           return "";
         },
@@ -197,9 +197,8 @@ export function PaymentsTable({
         label: t("payment.debitAccount", { namespace: "invoicing",  }),
         accessor: (p) => {
           if (p.debit_account_id) {
-            return (
-              accounts.find((a) => a.id === p.debit_account_id)?.name_ar || ""
-            );
+            const acc = accounts.find((a) => a.id === p.debit_account_id);
+            return acc ? resolveAccountName(acc, language) : "";
           }
           return "";
         },
@@ -238,6 +237,7 @@ export function PaymentsTable({
       isBaseCurrency,
       cs,
       t,
+      language,
     ],
   );
 
@@ -284,11 +284,11 @@ export function PaymentsTable({
       { id: "notes", label: t("payment.statement", { namespace: "invoicing",  }), accessor: (row) => String((row as Record<string, unknown>).notes ?? "") },
       { id: "credit_account", label: t("payment.creditAccount", { namespace: "invoicing",  }), accessor: (row) => {
         const p = row as unknown as Payment;
-        return p.credit_account_id ? accounts.find((a) => a.id === p.credit_account_id)?.name_ar ?? "" : "";
+        return p.credit_account_id ? resolveAccountName(accounts.find((a) => a.id === p.credit_account_id) ?? ({} as AccountDto), language) : "";
       }},
       { id: "debit_account", label: t("payment.debitAccount", { namespace: "invoicing",  }), accessor: (row) => {
         const p = row as unknown as Payment;
-        return p.debit_account_id ? accounts.find((a) => a.id === p.debit_account_id)?.name_ar ?? "" : "";
+        return p.debit_account_id ? resolveAccountName(accounts.find((a) => a.id === p.debit_account_id) ?? ({} as AccountDto), language) : "";
       }},
       dateCol("payment_date", t("labels.date", { namespace: "common",  }), (row) => (row as unknown as Payment).payment_date),
     ];
@@ -302,7 +302,7 @@ export function PaymentsTable({
       summaryLabel: t("document.summaryLabel", { namespace: "invoicing",  }),
       currencyRatesSheet: ratesSheet,
     });
-  }, [sortedData, sortedCurrencies, accounts, formatAmount, toBase, currencyMode, baseCode, rateMap, exportData, hasSecondaryCurrencies, enrichedColumns, ratesSheet, t]);
+  }, [sortedData, sortedCurrencies, accounts, formatAmount, toBase, currencyMode, baseCode, rateMap, exportData, hasSecondaryCurrencies, enrichedColumns, ratesSheet, t, language]);
 
   const summaryColumns = useMemo<SummaryColumn[]>(() => {
     const baseTotal = sortedData.reduce((sum, p) => {

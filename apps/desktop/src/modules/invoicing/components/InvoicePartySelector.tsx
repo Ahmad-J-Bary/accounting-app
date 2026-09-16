@@ -5,6 +5,7 @@ import { cn } from '@shared/lib/utils';
 import { useLocalization } from "@app/providers/LocalizationProvider";
 import { customerService } from '@modules/partners/api/customerService';
 import { supplierService } from '@modules/partners/api/supplierService';
+import { resolvePartnerDisplayName } from "@shared/lib/system-labels";
 
 type PartyType = "customer" | "supplier";
 
@@ -40,7 +41,7 @@ export function InvoicePartySelector({
   onSearchActive,
   onCreateParty,
 }: InvoicePartySelectorProps) {
-  const { t } = useLocalization();
+  const { t, language } = useLocalization();
   const [isEditing, setIsEditing] = useState(!selectedId);
   const [inputValue, setInputValue] = useState("");
   const [debouncedValue, setDebouncedValue] = useState("");
@@ -173,7 +174,7 @@ export function InvoicePartySelector({
     if (e.key === 'Enter' && open && filtered.length > 0) {
       e.preventDefault();
       const first = filtered[0];
-      handleSelect(first.id, first.name);
+      handleSelect(first.id, resolvePartnerDisplayName(first.name, first.code, type, language, t));
     } else if (e.key === 'Enter' && open && filtered.length === 0 && inputValueRef.current && onCreateParty && !creating) {
       e.preventDefault();
       setCreating(true);
@@ -192,7 +193,7 @@ export function InvoicePartySelector({
         setInputValue(selectedName || "");
       }
     }
-  }, [open, filtered, handleSelect, selectedId, selectedName, onCreateParty, creating]);
+  }, [open, filtered, handleSelect, selectedId, selectedName, onCreateParty, creating, language, t, type]);
 
   const handleBlur = useCallback(() => {
     blurTimeoutRef.current = setTimeout(() => {
@@ -340,11 +341,11 @@ export function InvoicePartySelector({
                 )}
                 onMouseDown={(e) => {
                   e.preventDefault();
-                  handleSelect(p.id, p.name);
+                  handleSelect(p.id, resolvePartnerDisplayName(p.name, p.code, type, language, t));
                 }}
               >
                 <div className="flex flex-col">
-                  <span className="text-sm font-semibold text-foreground">{p.name}</span>
+                  <span className="text-sm font-semibold text-foreground">{resolvePartnerDisplayName(p.name, p.code, type, language, t)}</span>
                   <div className="flex gap-2 items-center mt-0.5">
                     <span className="text-[10px] text-muted-foreground font-mono">{p.code}</span>
                     {p.phone && <span className="text-[10px] text-muted-foreground bg-muted px-1 rounded">{p.phone}</span>}

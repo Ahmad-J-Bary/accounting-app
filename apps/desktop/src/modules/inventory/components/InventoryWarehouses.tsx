@@ -173,7 +173,7 @@ export function InventoryWarehouses({
                     </div>
                     <div>
                       <span className="font-bold text-slate-800 text-sm">{w.name}</span>
-                      {w.is_default && <span className="mr-2 text-[9px] font-black text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">رئيسي</span>}
+                      {w.is_default && <span className="mr-2 text-[9px] font-black text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">{t("labels.main", { namespace: "inventory",  })}</span>}
                     </div>
                   </div>
                   {renderMatchedItems(w)}
@@ -224,7 +224,7 @@ export function InventoryWarehouses({
                     <span className={cn("text-[9px] font-bold px-1.5 py-0.5 rounded-full", w.is_active ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600")}>
                       {w.is_active ? t('labels.active', { namespace: 'inventory',  }) : t('labels.inactive', { namespace: 'inventory',  })}
                     </span>
-                    {w.is_default && <span className="text-[9px] font-black text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">رئيسي</span>}
+                    {w.is_default && <span className="text-[9px] font-black text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">{t("labels.main", { namespace: "inventory",  })}</span>}
                   </div>
                   {w.address && <p className="text-xs text-slate-500 mt-0.5 truncate">{w.address}</p>}
                 </div>
@@ -282,7 +282,7 @@ export function InventoryWarehouses({
               isSmall ? "px-2 py-0.5" : isLarge ? "px-4 py-1.5" : "px-3 py-1",
               w.is_active ? "bg-emerald-50 text-emerald-600 border-emerald-100" : "bg-rose-50 text-rose-600 border-rose-100"
             )}>
-              {w.is_active ? "نشط" : "غير نشط"}
+              {w.is_active ? t('labels.active', { namespace: 'inventory',  }) : t('labels.inactive', { namespace: 'inventory',  })}
             </span>
           </div>
 
