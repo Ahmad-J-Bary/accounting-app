@@ -48,7 +48,7 @@ export function DocumentToolbar({
           size="sm"
           variant="outline"
           onClick={onNewMaterial}
-          className="bg-card border-emerald-200 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-400 dark:hover:bg-emerald-950"
+          className="bg-card border-success/20 text-success hover:bg-success/10 dark:border-success dark:text-success dark:hover:bg-success"
         >
           <Plus className="w-4 h-4 ms-2" /> {t('labels.newMaterial', )}
         </Button>
@@ -70,7 +70,7 @@ export function DocumentToolbar({
             size="sm"
             onClick={onSaveAndPost}
             disabled={saving}
-            className="bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-100 dark:shadow-emerald-900/30 font-bold"
+            className="bg-success hover:bg-success shadow-lg shadow-success/20 dark:shadow-success/30 font-bold"
           >
             <Send className="w-4 h-4 ms-2" /> {t('labels.saveAndPostEdits', )}
           </Button>
@@ -78,7 +78,7 @@ export function DocumentToolbar({
             variant="outline"
             size="sm"
             onClick={onReopen}
-            className="border-rose-200 text-rose-600 hover:bg-rose-50 dark:border-rose-800 dark:text-rose-400 dark:hover:bg-rose-950 font-bold"
+            className="border-destructive/20 text-destructive hover:bg-destructive/10 dark:border-destructive dark:text-destructive dark:hover:bg-destructive font-bold"
           >
             <History className="w-4 h-4 ms-2" /> {t('actions.unpost', )}
           </Button>
@@ -98,7 +98,7 @@ export function DocumentToolbar({
             size="sm"
             onClick={onSaveAndPost}
             disabled={saving}
-            className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100 dark:shadow-blue-900/30 font-bold"
+            className="bg-primary hover:bg-primary shadow-lg shadow-primary/20 dark:shadow-primary/30 font-bold"
           >
             <Send className="w-4 h-4 ms-2" /> {resolvedSaveAndPostLabel}
           </Button>

@@ -32,7 +32,7 @@ export const TablePagination: React.FC<TablePaginationProps> = ({
 
   return (
     <div className={cn("flex items-center justify-between px-2 py-1", className)}>
-      <div className="flex-1 text-sm text-slate-500 font-medium">
+      <div className="flex-1 text-sm text-muted-foreground font-medium">
         {totalItems !== undefined && (
           <span>
             {t('labels.showing', )} {(currentPage - 1) * (pageSize || 0) + 1} {t('labels.to', )} {Math.min(currentPage * (pageSize || 0), totalItems)} {t('labels.of', )} {totalItems} {t('labels.record', )}
@@ -43,7 +43,7 @@ export const TablePagination: React.FC<TablePaginationProps> = ({
         <Button
           variant="outline"
           size="icon"
-          className="h-8 w-8 border-slate-200"
+          className="h-8 w-8 border-muted"
           onClick={() => onPageChange(1)}
           disabled={currentPage === 1}
         >
@@ -52,7 +52,7 @@ export const TablePagination: React.FC<TablePaginationProps> = ({
         <Button
           variant="outline"
           size="icon"
-          className="h-8 w-8 border-slate-200"
+          className="h-8 w-8 border-muted"
           onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage === 1}
         >
@@ -60,15 +60,15 @@ export const TablePagination: React.FC<TablePaginationProps> = ({
         </Button>
         
         <div className="flex items-center gap-1 px-2">
-          <span className="text-sm font-bold text-slate-700">{currentPage}</span>
-          <span className="text-sm text-slate-400">{t('labels.of', )}</span>
-          <span className="text-sm font-bold text-slate-700">{totalPages}</span>
+          <span className="text-sm font-bold text-foreground">{currentPage}</span>
+          <span className="text-sm text-muted-foreground">{t('labels.of', )}</span>
+          <span className="text-sm font-bold text-foreground">{totalPages}</span>
         </div>
 
         <Button
           variant="outline"
           size="icon"
-          className="h-8 w-8 border-slate-200"
+          className="h-8 w-8 border-muted"
           onClick={() => onPageChange(currentPage + 1)}
           disabled={currentPage === totalPages}
         >
@@ -77,7 +77,7 @@ export const TablePagination: React.FC<TablePaginationProps> = ({
         <Button
           variant="outline"
           size="icon"
-          className="h-8 w-8 border-slate-200"
+          className="h-8 w-8 border-muted"
           onClick={() => onPageChange(totalPages)}
           disabled={currentPage === totalPages}
         >

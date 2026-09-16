@@ -12,9 +12,9 @@ interface ActionButtonProps {
 const COLOR_MAP = {
   amber: "bg-amber-500 hover:bg-amber-600 shadow-amber-100",
   red: "bg-red-500 hover:bg-red-600 shadow-red-100",
-  blue: "bg-blue-600 hover:bg-blue-700 shadow-blue-100",
-  emerald: "bg-emerald-600 hover:bg-emerald-700 shadow-emerald-100",
-  rose: "bg-rose-500 hover:bg-rose-600 shadow-rose-100",
+  blue: "bg-primary hover:bg-primary shadow-primary/20",
+  emerald: "bg-success hover:bg-success shadow-success/20",
+  rose: "bg-destructive hover:bg-destructive shadow-destructive/20",
 };
 
 export function ActionButton({

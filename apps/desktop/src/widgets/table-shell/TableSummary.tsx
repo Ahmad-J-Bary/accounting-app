@@ -72,8 +72,8 @@ export const TableSummary: React.FC<TableSummaryProps> = ({
               "px-2 py-1.5 flex items-center justify-center text-center select-none transition-colors",
               hasValue
                 ? asPageFooter
-                  ? "text-2xs font-black text-slate-500 uppercase tracking-wider"
-                  : "text-2xs font-black text-blue-600 uppercase tracking-wider"
+                  ? "text-2xs font-black text-muted-foreground uppercase tracking-wider"
+                  : "text-2xs font-black text-primary uppercase tracking-wider"
                 : "text-transparent",
               !asPageFooter && cellBorderClass,
               asPageFooter && hasBorder && cellBorderClass,
@@ -111,8 +111,8 @@ export const TableSummary: React.FC<TableSummaryProps> = ({
               "tabular-nums flex items-center justify-center text-center transition-colors",
               hasValue
                 ? asPageFooter
-                  ? "font-extrabold text-slate-900"
-                  : "bg-blue-50/30 font-extrabold text-slate-900"
+                  ? "font-extrabold text-foreground"
+                  : "bg-primary/10 font-extrabold text-foreground"
                 : "text-transparent select-none",
               !asPageFooter && cellBorderClass,
               asPageFooter && hasBorder && cellBorderClass,

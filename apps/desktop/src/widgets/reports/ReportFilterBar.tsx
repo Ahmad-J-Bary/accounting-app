@@ -91,7 +91,7 @@ export function ReportFilterBar({
       
       {showSelect && (
         <Select value={effectiveValue} onValueChange={onCurrencyChange}>
-          <SelectTrigger className="h-9 w-auto min-w-[130px] rounded-lg border-slate-200 bg-white text-xs">
+          <SelectTrigger className="h-9 w-auto min-w-[130px] rounded-lg border-muted bg-white text-xs">
             <SelectValue placeholder={t('labels.chooseCurrency', )} />
           </SelectTrigger>
           <SelectContent>
@@ -117,7 +117,7 @@ export function ReportFilterBar({
           type="button"
           variant="outline"
           size="sm"
-          className="h-9 gap-1.5 rounded-lg border-slate-200 bg-white text-xs text-slate-600"
+          className="h-9 gap-1.5 rounded-lg border-muted bg-white text-xs text-muted-foreground"
           onClick={() => void onRefresh()}
         >
           <RefreshCw className="h-3.5 w-3.5" />
@@ -125,13 +125,13 @@ export function ReportFilterBar({
         </Button>
       )}
       {refreshing && (
-        <span className="flex h-9 items-center gap-1.5 rounded-lg bg-white px-2.5 text-xs text-slate-500">
+        <span className="flex h-9 items-center gap-1.5 rounded-lg bg-white px-2.5 text-xs text-muted-foreground">
           <Loader2 className="h-3.5 w-3.5 animate-spin" />
           {t('states.refreshing', )}
         </span>
       )}
       {lastLoadedAt && !refreshing && (
-        <span className="text-xs text-slate-400">
+        <span className="text-xs text-muted-foreground">
           {t('labels.lastUpdate', )}{" "}
           {lastLoadedAt.toLocaleTimeString("ar-EG", {
             hour: "2-digit",

@@ -220,7 +220,7 @@ export function SummaryPanel({
                   value={safeCurrency}
                   disabled={isReadOnly}
                   onChange={(e) => onCurrencyChange(e.target.value)}
-                  className="h-7 px-1 rounded border-none bg-transparent font-black text-blue-600 text-[11px] outline-none focus:ring-0 cursor-pointer"
+                  className="h-7 px-1 rounded border-none bg-transparent font-black text-primary text-[11px] outline-none focus:ring-0 cursor-pointer"
                 >
                   {currencies.map((c) => (
                     <option
@@ -233,7 +233,7 @@ export function SummaryPanel({
                   ))}
                 </select>
               ) : (
-                <span className="text-xs font-black text-blue-600">
+                <span className="text-xs font-black text-primary">
                   {resolveCurrencyMeta(safeCurrency)?.symbol || safeCurrency}
                 </span>
               )}
@@ -246,24 +246,24 @@ export function SummaryPanel({
               {/* Tree Part 1: مجموع الفاتورة & تكاليف اضافية */}
               <div className="flex flex-col justify-center gap-1.5">
                 {/* مجموع الفاتورة */}
-                <div className="flex items-center gap-2 text-2xs font-bold text-slate-500 bg-muted px-2.5 py-1 rounded-md border border-border h-7 shrink-0">
-                  <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+                <div className="flex items-center gap-2 text-2xs font-bold text-muted-foreground bg-muted px-2.5 py-1 rounded-md border border-border h-7 shrink-0">
+                  <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground" />
                    <span>{t('labels.invoiceTotal', )}</span>
-                  <span className="font-black text-slate-800 tabular-nums">
+                  <span className="font-black text-foreground tabular-nums">
                     {formatRawAmount(subtotal, currency)}
                   </span>
                 </div>
 
                 {/* تكاليف إضافية */}
-                <div className="flex items-center gap-2 text-2xs font-bold text-indigo-500 bg-indigo-50/40 px-2.5 py-1 rounded-md border border-indigo-100/60 h-7 shrink-0">
-                  <span className="w-1.5 h-1.5 rounded-full bg-indigo-400" />
+                <div className="flex items-center gap-2 text-2xs font-bold text-primary bg-primary/10 px-2.5 py-1 rounded-md border border-primary/20 h-7 shrink-0">
+                  <span className="w-1.5 h-1.5 rounded-full bg-primary" />
                    <span>{t('labels.extraCosts', )}</span>
                   {onExtraCostsChange && !isReadOnly ? (
                     <input
                       type="number"
                       value={safeExtra}
                       onChange={(e) => onExtraCostsChange(e.target.value)}
-                      className="h-5.5 w-16 font-black text-[11px] border-indigo-200 focus:ring-indigo-500 bg-white py-0 px-1 rounded-md border outline-none text-indigo-600 text-center"
+                      className="h-5.5 w-16 font-black text-[11px] border-primary/20 focus:ring-primary bg-white py-0 px-1 rounded-md border outline-none text-primary text-center"
                     />
                   ) : (
                     <span className="font-black tabular-nums">
@@ -274,7 +274,7 @@ export function SummaryPanel({
               </div>
 
               {/* Bracket merging into المبلغ كاملاً */}
-              <div className="flex items-center select-none text-indigo-300 font-light -mx-1 shrink-0">
+              <div className="flex items-center select-none text-primary/30 font-light -mx-1 shrink-0">
                 <svg className="w-3.5 h-12" viewBox="0 0 16 48" fill="none">
                   <path
                     d="M0 6C6 6 8 14 8 24C8 34 6 42 0 42M8 24H16"
@@ -286,7 +286,7 @@ export function SummaryPanel({
               </div>
 
               {/* المبلغ كاملاً */}
-              <div className="flex flex-col items-center bg-indigo-600 text-white px-4 py-1.5 rounded-xl shadow-md h-[42px] justify-center shrink-0">
+              <div className="flex flex-col items-center bg-primary text-primary-foreground px-4 py-1.5 rounded-xl shadow-md h-[42px] justify-center shrink-0">
                 <span className="text-4xs font-black uppercase tracking-wider opacity-90">
                   {t('labels.totalAmount', )}
                 </span>
@@ -314,7 +314,7 @@ export function SummaryPanel({
                   {safeExtra > 0 ? (
                     <>
                       {/* Connection branching out to مدفوع الفاتورة & مدفوع التكاليف */}
-                      <div className="flex items-center select-none text-blue-300 font-light -mx-1 shrink-0">
+                      <div className="flex items-center select-none text-primary/30 font-light -mx-1 shrink-0">
                         <svg
                           className="w-3.5 h-12"
                           viewBox="0 0 16 48"
@@ -332,13 +332,13 @@ export function SummaryPanel({
                       {/* The two target branches with split payment methods */}
                       <div className="flex flex-col justify-center gap-1.5">
                         {/* دفع الفاتورة */}
-                        <div className="flex items-center gap-2 bg-blue-50/40 px-2.5 py-1 rounded-md border border-blue-100/60 h-7 shrink-0">
-                          <span className="w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0" />
-                          <span className="text-3xs font-black text-blue-500 uppercase tracking-wider shrink-0">
+                        <div className="flex items-center gap-2 bg-primary/10 px-2.5 py-1 rounded-md border border-primary/20 h-7 shrink-0">
+                          <span className="w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
+                          <span className="text-3xs font-black text-primary uppercase tracking-wider shrink-0">
                             {t('labels.invoicePayment', )}
                           </span>
                           {isCashParty ? (
-                            <span className="h-5 px-1 font-black text-3xs text-emerald-600 flex items-center">
+                            <span className="h-5 px-1 font-black text-3xs text-success flex items-center">
                               {t('labels.cash', )}
                             </span>
                           ) : (
@@ -348,7 +348,7 @@ export function SummaryPanel({
                                 handleInvoicePaymentMethodChange(e.target.value)
                               }
                               disabled={isReadOnly}
-                              className="h-5 px-1 bg-white border border-blue-200 rounded font-black text-3xs outline-none cursor-pointer text-blue-700 focus:ring-0"
+                              className="h-5 px-1 bg-white border border-primary/20 rounded font-black text-3xs outline-none cursor-pointer text-primary focus:ring-0"
                             >
                               <option value="cash">{t('labels.cash', )}</option>
                               <option value="credit">{t('labels.credit', )}</option>
@@ -369,10 +369,10 @@ export function SummaryPanel({
                                 const valDoc = displayToDoc(clampedDisplay);
                                 onPaidAmountChange(valDoc.toFixed(2));
                               }}
-                              className="h-4.5 w-14 font-black text-2xs border-blue-200 focus:ring-blue-500 bg-white py-0 px-1 rounded-md border outline-none text-center"
+                              className="h-4.5 w-14 font-black text-2xs border-primary/20 focus:ring-primary bg-white py-0 px-1 rounded-md border outline-none text-center"
                             />
                           ) : (
-                            <span className="font-black text-2xs tabular-nums text-blue-800">
+                            <span className="font-black text-2xs tabular-nums text-primary">
                               {formatRawAmount(
                                 derivedInvoiceMethod === "cash" ? invoiceMaxDisplay : 0,
                                 safeCurrency,
@@ -382,9 +382,9 @@ export function SummaryPanel({
                         </div>
 
                         {/* دفع التكاليف */}
-                        <div className="flex items-center gap-2 bg-violet-50/40 px-2.5 py-1 rounded-md border border-violet-100/60 h-7 shrink-0">
-                          <span className="w-1.5 h-1.5 rounded-full bg-violet-400 shrink-0" />
-                          <span className="text-3xs font-black text-violet-500 uppercase tracking-wider shrink-0">
+                        <div className="flex items-center gap-2 bg-accent px-2.5 py-1 rounded-md border border-border h-7 shrink-0">
+                          <span className="w-1.5 h-1.5 rounded-full bg-accent-foreground shrink-0" />
+                          <span className="text-3xs font-black text-accent-foreground uppercase tracking-wider shrink-0">
                             {t('labels.costsPayment', )}
                           </span>
                           {isCashParty ? (
@@ -398,7 +398,7 @@ export function SummaryPanel({
                                 handleExtraPaymentMethodChange(e.target.value)
                               }
                               disabled={isReadOnly}
-                              className="h-5 px-1 bg-white border border-violet-200 rounded font-black text-3xs outline-none cursor-pointer text-violet-700 focus:ring-0"
+                              className="h-5 px-1 bg-white border border-border rounded font-black text-3xs outline-none cursor-pointer text-accent-foreground focus:ring-0"
                             >
                               <option value="cash">{t('labels.cash', )}</option>
                               <option value="credit">{t('labels.credit', )}</option>
@@ -419,10 +419,10 @@ export function SummaryPanel({
                                 const valDoc = displayToDoc(clampedDisplay);
                                 onExtraPaidAmountChange(valDoc.toFixed(2));
                               }}
-                              className="h-4.5 w-14 font-black text-2xs border-violet-200 focus:ring-violet-500 bg-white py-0 px-1 rounded-md border outline-none text-violet-600 text-center"
+                              className="h-4.5 w-14 font-black text-2xs border-border focus:ring-primary bg-white py-0 px-1 rounded-md border outline-none text-accent-foreground text-center"
                             />
                           ) : (
-                            <span className="font-black text-2xs tabular-nums text-violet-800">
+                            <span className="font-black text-2xs tabular-nums text-accent-foreground">
                               {formatRawAmount(
                                 derivedExtraMethod === "cash" ? safeExtraDisplay : 0,
                                 safeCurrency,
@@ -487,10 +487,10 @@ export function SummaryPanel({
                                 const valDoc = displayToDoc(clampedDisplay);
                                 onPaidAmountChange(valDoc.toFixed(2));
                               }}
-                              className="h-4.5 w-14 font-black text-2xs border-blue-200 focus:ring-blue-500 bg-white py-0 px-1 rounded-md border outline-none text-center"
+                              className="h-4.5 w-14 font-black text-2xs border-primary/20 focus:ring-primary bg-white py-0 px-1 rounded-md border outline-none text-center"
                             />
                           ) : (
-                            <span className="font-black text-2xs tabular-nums text-blue-800">
+                            <span className="font-black text-2xs tabular-nums text-primary">
                               {formatRawAmount(
                                 derivedInvoiceMethod === "cash" ? invoiceMaxDisplay : 0,
                                 safeCurrency,
@@ -509,10 +509,10 @@ export function SummaryPanel({
           {(invoiceType === "Sales" || invoiceType === "OpeningBalance") && (
             <div className="flex items-center gap-2">
               {/* المبلغ كاملاً */}
-              <div className="flex items-center gap-2 text-2xs font-bold text-slate-500 bg-muted px-2.5 py-1 rounded-md border border-border h-7 shrink-0">
-                <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+              <div className="flex items-center gap-2 text-2xs font-bold text-muted-foreground bg-muted px-2.5 py-1 rounded-md border border-border h-7 shrink-0">
+                <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground" />
                 <span>{t('labels.totalAmount', )}</span>
-                <span className="font-black text-slate-800 tabular-nums">
+                <span className="font-black text-foreground tabular-nums">
                   {formatRawAmount(net, currency)}
                 </span>
               </div>
@@ -537,7 +537,7 @@ export function SummaryPanel({
                       {t('labels.paymentMethod', )}
                     </span>
                     {isCashParty ? (
-                      <span className="h-6 px-1 font-black text-[11px] text-emerald-600 flex items-center">
+                      <span className="h-6 px-1 font-black text-[11px] text-success flex items-center">
                         {t('labels.cash', )}
                       </span>
                     ) : (
@@ -545,7 +545,7 @@ export function SummaryPanel({
                         value={paymentMethod || "cash"}
                         onChange={(e) => onPaymentMethodChange(e.target.value)}
                         disabled={isReadOnly}
-                        className="h-6 px-1 bg-transparent font-black text-[11px] outline-none cursor-pointer border-none text-slate-800 focus:ring-0"
+                        className="h-6 px-1 bg-transparent font-black text-[11px] outline-none cursor-pointer border-none text-foreground focus:ring-0"
                       >
                         <option value="cash">{t('labels.cash', )}</option>
                         <option value="credit">{t('labels.credit', )}</option>
@@ -567,8 +567,8 @@ export function SummaryPanel({
                   </div>
 
                   {/* مدفوع الفاتورة */}
-                  <div className="flex items-center gap-2 text-2xs font-bold text-blue-600 bg-blue-50/40 px-2.5 py-1 rounded-md border border-blue-100/60 h-7 shrink-0">
-                    <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
+                  <div className="flex items-center gap-2 text-2xs font-bold text-primary bg-primary/10 px-2.5 py-1 rounded-md border border-primary/20 h-7 shrink-0">
+                    <span className="w-1.5 h-1.5 rounded-full bg-primary" />
                     <span>{t('labels.paidAmount', )}</span>
                     {paymentMethod === "partial" &&
                     onPaidAmountChange &&
@@ -583,7 +583,7 @@ export function SummaryPanel({
                             clampPaidSafe(e.target.value, net),
                           )
                         }
-                        className="h-5 w-16 font-black text-[11px] border-blue-200 focus:ring-blue-500 bg-white py-0 px-1 rounded-md border outline-none text-center"
+                        className="h-5 w-16 font-black text-[11px] border-primary/20 focus:ring-primary bg-white py-0 px-1 rounded-md border outline-none text-center"
                       />
                     ) : (
                       <span className="font-black tabular-nums">
@@ -610,7 +610,7 @@ export function SummaryPanel({
             <span
               className={cn(
                 "text-3xs font-black uppercase tracking-widest mb-0.5",
-                remaining <= 0 ? "text-emerald-600" : "text-rose-600",
+                remaining <= 0 ? "text-success" : "text-destructive",
               )}
             >
               {t('labels.remainingAmount', )}
@@ -618,7 +618,7 @@ export function SummaryPanel({
             <span
               className={cn(
                 "text-sm font-black tabular-nums tracking-tight",
-                remaining <= 0 ? "text-emerald-600" : "text-rose-600",
+                remaining <= 0 ? "text-success" : "text-destructive",
               )}
             >
               {formatRawAmount(remaining, currency)}

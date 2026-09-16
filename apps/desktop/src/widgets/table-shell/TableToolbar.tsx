@@ -118,7 +118,7 @@ export const TableToolbar: React.FC<TableToolbarProps> = ({
                   {t('labels.stickyHeader', )}
                 </DropdownMenuCheckboxItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={resetSettings} className="flex-row-reverse text-rose-600 focus:text-rose-600">
+                <DropdownMenuItem onClick={resetSettings} className="flex-row-reverse text-destructive focus:text-destructive">
                   <RotateCcw className="w-4 h-4 ml-2" />
                   {t('actions.factoryReset', )}
                 </DropdownMenuItem>
@@ -153,7 +153,7 @@ export const TableToolbar: React.FC<TableToolbarProps> = ({
                 <DropdownMenuLabel className="flex items-center justify-between text-right gap-2">
                   <span>{t('labels.showHideColumns', )}</span>
                   {hasColumns && (
-                    <span className="text-2xs tabular-nums text-slate-500 font-medium">
+                    <span className="text-2xs tabular-nums text-muted-foreground font-medium">
                       {visibleCount} / {totalCount}
                     </span>
                   )}
@@ -175,7 +175,7 @@ export const TableToolbar: React.FC<TableToolbarProps> = ({
                     <DropdownMenuItem
                       onClick={onColumnsReset}
                       disabled={!columnsModified}
-                      className="flex-row-reverse text-blue-600 focus:text-blue-600 disabled:text-slate-400 disabled:opacity-50"
+                      className="flex-row-reverse text-primary focus:text-primary disabled:text-slate-400 disabled:opacity-50"
                     >
                       <RotateCcw className="w-4 h-4 ml-2" />
                       {t('actions.restoreDefaultColumns', )}

@@ -32,9 +32,9 @@ export function StatCard({ label, value, icon: Icon, variant = "default", classN
           isAccent
             ? "bg-white/15"
             : isPositive
-            ? "bg-emerald-600"
+            ? "bg-success"
             : isNegative
-            ? "bg-rose-600"
+            ? "bg-destructive"
             : "bg-primary",
         )}
       >
@@ -55,9 +55,9 @@ export function StatCard({ label, value, icon: Icon, variant = "default", classN
             isAccent
               ? "text-white"
               : isPositive
-              ? "text-emerald-700"
+              ? "text-success"
               : isNegative
-              ? "text-rose-700"
+              ? "text-destructive"
               : "text-foreground",
           )}
         >

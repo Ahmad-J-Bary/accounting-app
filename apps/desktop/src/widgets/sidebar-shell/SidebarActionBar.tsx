@@ -2,9 +2,9 @@ import { cn } from "@shared/lib/utils";
 import type { SidebarAction, SidebarActionBarProps } from "./types";
 
 const ACTION_ICON_COLORS: Record<NonNullable<SidebarAction["variant"]>, string> = {
-  primary: "text-blue-600",
-  secondary: "text-slate-500",
-  success: "text-emerald-600",
+  primary: "text-primary",
+  secondary: "text-muted-foreground",
+  success: "text-success",
   danger: "text-red-500",
   warning: "text-amber-600",
 };
@@ -36,7 +36,7 @@ export function SidebarActionBar({
           disabled={act.disabled}
           className={cn(
             "inline-flex items-center justify-center gap-1.5 h-9 px-3 rounded-xl border text-xs font-bold transition-all duration-150 whitespace-nowrap select-none",
-            "bg-white hover:bg-slate-50 text-slate-700 border-slate-200 hover:border-slate-300",
+            "bg-white hover:bg-slate-50 text-foreground border-slate-200 hover:border-slate-300",
             "disabled:opacity-40 disabled:cursor-not-allowed"
           )}
         >

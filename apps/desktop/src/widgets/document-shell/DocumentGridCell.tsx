@@ -73,7 +73,7 @@ function CellWrapper({
         isInteractive && "relative",
         !isInteractive && "text-muted-foreground transition-colors group-hover:text-foreground",
         isReadonlyCell && "bg-gray-100/50",
-        isCellActive && "ring-inset ring-2 ring-blue-400 z-20",
+        isCellActive && "ring-inset ring-2 ring-primary z-20",
       )}
       style={{ minWidth: 0, fontSize: `${config.fontSize}px`, fontFamily: config.fontFamily }}
     >
@@ -131,7 +131,7 @@ function EditableInput({
       step={isNum ? "any" : undefined}
       className={cn(
         "w-full bg-transparent border-none outline-none focus:bg-card transition-colors text-center",
-        isNum ? "tabular-nums font-bold [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" : "font-bold text-blue-800 placeholder:text-muted-foreground",
+        isNum ? "tabular-nums font-bold [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" : "font-bold text-primary placeholder:text-muted-foreground",
       )}
       style={{ fontSize: `${fontSize}px`, fontFamily }}
       value={value}
@@ -253,7 +253,7 @@ export function DocumentGridCell({
   if (col.type === "badge") {
     return (
       <CellWrapper column={col} config={config} isReadonlyCell>
-        <span className="text-3xs font-black bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded border border-blue-100 uppercase tracking-tighter">
+        <span className="text-3xs font-black bg-primary/10 text-primary px-1.5 py-0.5 rounded border border-primary/20 uppercase tracking-tighter">
           {getCellValue(line, col.key)}
         </span>
       </CellWrapper>
@@ -278,7 +278,7 @@ export function DocumentGridCell({
             <button className={cn(
               "text-3xs font-black px-2 py-0.5 rounded border uppercase tracking-tighter transition-all",
               line.material_id
-                ? "bg-blue-50 text-blue-600 border-blue-100 hover:bg-blue-100 cursor-pointer"
+                ? "bg-primary/10 text-primary border-primary/20 hover:bg-primary/20 cursor-pointer"
                 : "bg-muted text-muted-foreground border-border cursor-default",
             )}>
               {line.material_id ? currentUnitName || t("grid.selectUnit", { namespace: "inventory" }) : ""}
@@ -430,8 +430,8 @@ export function DocumentGridCell({
     }
 
     const chips: { label: string; value: string | null; color: string }[] = [
-      { label: t("labels.first", { namespace: "common" }), value: priceHistory?.first_cost_base ?? null, color: "text-emerald-600 border-emerald-200 bg-emerald-50 hover:bg-emerald-100" },
-      { label: t("grid.priceAverage", { namespace: "inventory" }), value: priceHistory?.average_cost_base ?? null, color: "text-blue-600 border-blue-200 bg-blue-50 hover:bg-blue-100" },
+      { label: t("labels.first", { namespace: "common" }), value: priceHistory?.first_cost_base ?? null, color: "text-success border-success/20 bg-success/10 hover:bg-success/20" },
+      { label: t("grid.priceAverage", { namespace: "inventory" }), value: priceHistory?.average_cost_base ?? null, color: "text-primary border-primary/20 bg-primary/10 hover:bg-primary/20" },
       { label: t("labels.last", { namespace: "common" }), value: priceHistory?.last_cost_base ?? null, color: "text-amber-600 border-amber-200 bg-amber-50 hover:bg-amber-100" },
     ];
     const hasAnyHistory = chips.some(c => c.value !== null && c.value !== "0");

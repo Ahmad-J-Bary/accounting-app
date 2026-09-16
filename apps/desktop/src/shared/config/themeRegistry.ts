@@ -38,6 +38,7 @@ export const THEME_REGISTRY: Record<ThemeId, ThemeDefinition> = {
       '--warning-foreground': '0 0% 100%',
       '--info': '217 91% 60%',
       '--info-foreground': '0 0% 100%',
+      '--overlay': '0 0% 0%',
     },
   },
   'default-dark': {
@@ -77,6 +78,7 @@ export const THEME_REGISTRY: Record<ThemeId, ThemeDefinition> = {
       '--warning-foreground': '0 0% 100%',
       '--info': '217 91% 65%',
       '--info-foreground': '0 0% 100%',
+      '--overlay': '0 0% 0%',
     },
   },
   'system': {
@@ -116,6 +118,7 @@ export const THEME_REGISTRY: Record<ThemeId, ThemeDefinition> = {
       '--warning-foreground': '0 0% 100%',
       '--info': '217 91% 60%',
       '--info-foreground': '0 0% 100%',
+      '--overlay': '0 0% 0%',
     },
   },
   'luxury': {
@@ -155,6 +158,7 @@ export const THEME_REGISTRY: Record<ThemeId, ThemeDefinition> = {
       '--warning-foreground': '0 0% 100%',
       '--info': '217 91% 60%',
       '--info-foreground': '0 0% 100%',
+      '--overlay': '0 0% 0%',
     },
   },
   'retro': {
@@ -194,6 +198,7 @@ export const THEME_REGISTRY: Record<ThemeId, ThemeDefinition> = {
       '--warning-foreground': '0 0% 100%',
       '--info': '217 91% 60%',
       '--info-foreground': '0 0% 100%',
+      '--overlay': '0 0% 0%',
     },
   },
   'arctic': {
@@ -233,6 +238,7 @@ export const THEME_REGISTRY: Record<ThemeId, ThemeDefinition> = {
       '--warning-foreground': '0 0% 100%',
       '--info': '217 91% 60%',
       '--info-foreground': '0 0% 100%',
+      '--overlay': '0 0% 0%',
     },
   },
   'nature': {
@@ -272,6 +278,7 @@ export const THEME_REGISTRY: Record<ThemeId, ThemeDefinition> = {
       '--warning-foreground': '0 0% 100%',
       '--info': '217 91% 60%',
       '--info-foreground': '0 0% 100%',
+      '--overlay': '0 0% 0%',
     },
   },
   'ember': {
@@ -311,6 +318,7 @@ export const THEME_REGISTRY: Record<ThemeId, ThemeDefinition> = {
       '--warning-foreground': '0 0% 100%',
       '--info': '217 91% 60%',
       '--info-foreground': '0 0% 100%',
+      '--overlay': '0 0% 0%',
     },
   },
   'dracula': {
@@ -350,6 +358,7 @@ export const THEME_REGISTRY: Record<ThemeId, ThemeDefinition> = {
       '--warning-foreground': '0 0% 100%',
       '--info': '217 91% 65%',
       '--info-foreground': '0 0% 100%',
+      '--overlay': '0 0% 0%',
     },
   },
   'midnight': {
@@ -389,6 +398,7 @@ export const THEME_REGISTRY: Record<ThemeId, ThemeDefinition> = {
       '--warning-foreground': '0 0% 100%',
       '--info': '217 91% 65%',
       '--info-foreground': '0 0% 100%',
+      '--overlay': '0 0% 0%',
     },
   },
 };

@@ -79,16 +79,16 @@ export function MaterialSearchPanel({
         <div className="flex items-center gap-1.5 text-slate-400">
           <Search className="w-3.5 h-3.5" />
         </div>
-        <span className="text-[11px] font-black text-slate-500 tracking-wider">
+        <span className="text-[11px] font-black text-muted-foreground tracking-wider">
           {t('labels.searchResults', )}
         </span>
-        <span className="text-2xs tabular-nums font-bold px-1.5 py-0.5 rounded bg-blue-50 text-blue-600">
+        <span className="text-2xs tabular-nums font-bold px-1.5 py-0.5 rounded bg-primary/10 text-primary">
           {filtered.length}
         </span>
         <span className="text-2xs text-slate-400 font-semibold">{t('labels.item', )}</span>
         <button
           onClick={onClose}
-          className="mr-auto p-1 rounded-lg text-slate-300 hover:text-slate-500 hover:bg-slate-100 transition-all"
+          className="mr-auto p-1 rounded-lg text-slate-300 hover:text-muted-foreground hover:bg-slate-100 transition-all"
         >
           <X className="w-3.5 h-3.5" />
         </button>
@@ -111,12 +111,12 @@ export function MaterialSearchPanel({
                 onMouseDown={(e) => { e.preventDefault(); onSelect(m); }}
                 className={cn(
                   "w-full text-right block px-5 py-3 transition-all duration-75",
-                  "hover:bg-blue-50/60 active:bg-blue-100/40",
+                  "hover:bg-primary/10 active:bg-primary/20",
                 )}
               >
                 <div className="flex items-center gap-3 flex-wrap">
                   {activeFields.includes("material_code") && (
-                    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-slate-50 border border-slate-100/80 font-mono text-[11px] font-bold text-slate-500 leading-relaxed shrink-0">
+                    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-slate-50 border border-slate-100/80 font-mono text-[11px] font-bold text-muted-foreground leading-relaxed shrink-0">
                       <Hash className="w-3 h-3 text-slate-300" />
                       {fieldConfig.material_code.render(m)}
                     </span>
@@ -130,7 +130,7 @@ export function MaterialSearchPanel({
                   )}
 
                   {activeFields.includes("material_name") && (
-                    <span className="font-bold text-[13px] text-slate-800 min-w-0 leading-snug">
+                    <span className="font-bold text-[13px] text-foreground min-w-0 leading-snug">
                       {fieldConfig.material_name.render(m)}
                     </span>
                   )}
@@ -142,11 +142,11 @@ export function MaterialSearchPanel({
                     <DollarSign className="w-2.5 h-2.5 opacity-60" />
                     {formatCost(m.average_cost_base)} {sym}
                   </span>
-                  <span className="flex items-center gap-1 text-2xs tabular-nums text-emerald-600 font-bold" title={t('labels.lastPurchasePrice', )}>
+                  <span className="flex items-center gap-1 text-2xs tabular-nums text-success font-bold" title={t('labels.lastPurchasePrice', )}>
                     <ShoppingCart className="w-2.5 h-2.5 opacity-60" />
                     {formatCost(m.last_purchase_price_base)} {sym}
                   </span>
-                  <span className="flex items-center gap-1 text-2xs tabular-nums text-blue-600 font-bold" title={t('labels.lastSalePrice', )}>
+                  <span className="flex items-center gap-1 text-2xs tabular-nums text-primary font-bold" title={t('labels.lastSalePrice', )}>
                     <TrendingUp className="w-2.5 h-2.5 opacity-60" />
                     {formatCost(m.last_sale_price_base)} {sym}
                   </span>

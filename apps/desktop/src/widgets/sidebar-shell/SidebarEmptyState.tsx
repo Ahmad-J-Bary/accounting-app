@@ -13,14 +13,14 @@ export function SidebarEmptyState({
   return (
     <div
       className={cn(
-        "flex flex-col items-center justify-center py-16 px-6 text-center space-y-4 text-slate-400 h-full",
+        "flex flex-col items-center justify-center py-16 px-6 text-center space-y-4 text-muted-foreground h-full",
         className
       )}
     >
-      <div className="p-4 bg-slate-50 rounded-full border border-dashed border-slate-200">
-        {icon || <AlertCircle className="w-8 h-8 text-slate-300" />}
+      <div className="p-4 bg-muted rounded-full border border-dashed border-muted">
+        {icon || <AlertCircle className="w-8 h-8 text-muted-foreground" />}
       </div>
-      <p className="text-xs font-bold text-slate-500 max-w-[240px] leading-relaxed">
+      <p className="text-xs font-bold text-muted-foreground max-w-[240px] leading-relaxed">
         {resolvedMessage}
       </p>
     </div>

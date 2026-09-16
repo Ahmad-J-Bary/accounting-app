@@ -108,6 +108,7 @@
     --sidebar-ring: 210 40% 70%;
 
     /* ── Semantic Status Colors ── */
+    --overlay: 0 0% 0%;
     --success: 152 69% 35%;
     --success-foreground: 0 0% 100%;
     --warning: 38 92% 50%;
@@ -155,6 +156,7 @@
     --sidebar-ring: 210 40% 70%;
 
     /* ── Semantic Status Colors (dark) ── */
+    --overlay: 0 0% 0%;
     --success: 152 69% 42%;
     --success-foreground: 0 0% 100%;
     --warning: 38 92% 55%;
@@ -291,7 +293,7 @@
     @apply bg-card border border-border rounded-lg shadow-sm;
   }
   .erp-table-row:hover {
-    @apply bg-slate-50;
+    @apply bg-muted/50;
   }
 }
 
@@ -432,14 +434,14 @@
   height: 8px;
 }
 ::-webkit-scrollbar-track {
-  background: #f1f5f9;
+  background: hsl(var(--muted));
 }
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: hsl(var(--border));
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: hsl(var(--muted-foreground));
 }
 
 /* Sidebar scrollbar - hidden by default, shows on hover */
@@ -454,10 +456,10 @@
   border-radius: 3px;
 }
 .sidebar-root:hover .sidebar-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(148, 163, 184, 0.5);
+  background: hsl(var(--sidebar-border));
 }
 .sidebar-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(148, 163, 184, 0.7);
+  background: hsl(var(--sidebar-ring));
 }
 
 /* ==========================================

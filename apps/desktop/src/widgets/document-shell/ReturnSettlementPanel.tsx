@@ -73,7 +73,7 @@ export function ReturnSettlementPanel({
                 <select
                   value={safeCurrency}
                   onChange={(e) => onCurrencyChange(e.target.value)}
-                  className="h-7 px-1 rounded border-none bg-transparent font-black text-blue-600 text-[11px] outline-none focus:ring-0 cursor-pointer"
+                  className="h-7 px-1 rounded border-none bg-transparent font-black text-primary text-[11px] outline-none focus:ring-0 cursor-pointer"
                 >
                   {availableCurrencies.map((c) => (
                     <option key={c.code} value={c.code} className="text-slate-800 font-bold">
@@ -82,17 +82,17 @@ export function ReturnSettlementPanel({
                   ))}
                 </select>
               ) : (
-                <span className="text-xs font-black text-blue-600">
+                <span className="text-xs font-black text-primary">
                   {availableCurrencies.find((c) => c.code === safeCurrency)?.symbol || baseCurrency?.symbol || safeCurrency}
                 </span>
               )}
             </div>
           ) : null}
 
-          <div className="flex items-center gap-2 text-2xs font-bold text-slate-500 bg-muted px-2.5 py-1 rounded-md border border-border h-7 shrink-0">
+          <div className="flex items-center gap-2 text-2xs font-bold text-muted-foreground bg-muted px-2.5 py-1 rounded-md border border-border h-7 shrink-0">
             <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground" />
             <span>{t("labels.returnValue", { namespace: "common" })}</span>
-            <span className="font-black text-slate-800 tabular-nums">{totalAmount.toFixed(2)}</span>
+            <span className="font-black text-foreground tabular-nums">{totalAmount.toFixed(2)}</span>
           </div>
 
           <div className="text-slate-300 font-light select-none shrink-0">
@@ -103,10 +103,10 @@ export function ReturnSettlementPanel({
 
           <div className={`flex items-center gap-2 text-2xs font-bold px-2.5 py-1 rounded-md border h-7 shrink-0 ${
             partnerBalance > 0
-              ? "text-rose-600 bg-rose-50/40 border-rose-100"
-              : "text-emerald-600 bg-emerald-50/40 border-emerald-100"
+              ? "text-destructive bg-destructive/10 border-destructive/20"
+              : "text-success bg-success/10 border-success/20"
           }`}>
-            <span className={`w-1.5 h-1.5 rounded-full ${partnerBalance > 0 ? "bg-rose-400" : "bg-emerald-400"}`} />
+            <span className={`w-1.5 h-1.5 rounded-full ${partnerBalance > 0 ? "bg-destructive" : "bg-success"}`} />
             <span>{t("labels.partnerBalance", { namespace: "common", vars: { partner: partnerLabel } })}</span>
             <span className="font-black tabular-nums">{partnerBalance.toFixed(2)}</span>
           </div>
@@ -128,7 +128,7 @@ export function ReturnSettlementPanel({
                 if (partnerBalance <= 0 && val !== "full_cash_return") return;
                 onSettlementModeChange(val);
               }}
-              className="h-6 px-1 bg-transparent font-black text-2xs outline-none cursor-pointer border-none text-slate-800 focus:ring-0"
+              className="h-6 px-1 bg-transparent font-black text-2xs outline-none cursor-pointer border-none text-foreground focus:ring-0"
             >
               {showFullCashReturn && (
                 <option value="full_cash_return">{t("labels.fullCashReturn", { namespace: "common" })}</option>
@@ -157,7 +157,7 @@ export function ReturnSettlementPanel({
                 <select
                   value={isPaid ? "paid" : "unpaid"}
                   onChange={(e) => onIsPaidChange(e.target.value === "paid")}
-                  className="h-6 px-1 bg-transparent font-black text-2xs outline-none cursor-pointer border-none text-slate-800 focus:ring-0"
+                  className="h-6 px-1 bg-transparent font-black text-2xs outline-none cursor-pointer border-none text-foreground focus:ring-0"
                 >
                   <option value="paid">{t("labels.paidDirectly", { namespace: "common" })}</option>
                   <option value="unpaid">{t("labels.notYetPaidAfter", { namespace: "common" })}</option>
@@ -175,22 +175,22 @@ export function ReturnSettlementPanel({
           {effectiveMode === "deduct_from_debt" && (
             <div className="flex flex-col gap-1.5 shrink-0">
               {Math.min(totalAmount, partnerBalance) > 0 && (
-                <div className="flex items-center gap-2 text-2xs font-bold text-emerald-600 bg-emerald-50/40 px-2.5 py-1 rounded-md border border-emerald-100/60 h-7 shrink-0">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                <div className="flex items-center gap-2 text-2xs font-bold text-success bg-success/10 px-2.5 py-1 rounded-md border border-success/20 h-7 shrink-0">
+                  <span className="w-1.5 h-1.5 rounded-full bg-success" />
                   <span>{t("labels.deductedFromBalance", { namespace: "common" })}</span>
                   <span className="font-black tabular-nums">{Math.min(totalAmount, partnerBalance).toFixed(2)}</span>
                 </div>
               )}
               {!hasDebt && totalAmount > 0 && (
-                <div className="flex items-center gap-2 text-2xs font-bold text-blue-600 bg-blue-50/40 px-2.5 py-1 rounded-md border border-blue-100/60 h-7 shrink-0">
-                  <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
+                <div className="flex items-center gap-2 text-2xs font-bold text-primary bg-primary/10 px-2.5 py-1 rounded-md border border-primary/20 h-7 shrink-0">
+                  <span className="w-1.5 h-1.5 rounded-full bg-primary" />
                   <span>{paymentLabel}:</span>
                   <span className="font-black tabular-nums">{totalAmount.toFixed(2)}</span>
                 </div>
               )}
               {totalAmount > partnerBalance && partnerBalance > 0 && (
-                <div className="flex items-center gap-2 text-2xs font-bold text-blue-600 bg-blue-50/40 px-2.5 py-1 rounded-md border border-blue-100/60 h-7 shrink-0">
-                  <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
+                <div className="flex items-center gap-2 text-2xs font-bold text-primary bg-primary/10 px-2.5 py-1 rounded-md border border-primary/20 h-7 shrink-0">
+                  <span className="w-1.5 h-1.5 rounded-full bg-primary" />
                   <span>{paymentLabel}:</span>
                   <span className="font-black tabular-nums">{(totalAmount - partnerBalance).toFixed(2)}</span>
                 </div>
@@ -219,15 +219,15 @@ export function ReturnSettlementPanel({
                     const clamped = Math.max(minCash, Math.min(totalAmount, v));
                     onSettlementCashChange(clamped.toFixed(2));
                   }}
-                  className="h-5 w-16 font-black text-2xs border-blue-200 focus:ring-blue-500 bg-card py-0 px-1 rounded-md border outline-none text-center"
+                  className="h-5 w-16 font-black text-2xs border-primary/20 focus:ring-primary bg-card py-0 px-1 rounded-md border outline-none text-center"
                   min={minCash}
                   max={totalAmount}
                   step="0.01"
                 />
               </div>
               {(totalAmount - parseFloat(settlementCash || "0")) > 0 && (
-                <div className="flex items-center gap-2 text-2xs font-bold text-emerald-600 bg-emerald-50/40 px-2.5 py-1 rounded-md border border-emerald-100/60 h-7 shrink-0">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                <div className="flex items-center gap-2 text-2xs font-bold text-success bg-success/10 px-2.5 py-1 rounded-md border border-success/20 h-7 shrink-0">
+                  <span className="w-1.5 h-1.5 rounded-full bg-success" />
                   <span>{t("labels.deductedFromBalance", { namespace: "common" })}</span>
                   <span className="font-black tabular-nums">{(totalAmount - parseFloat(settlementCash || "0")).toFixed(2)}</span>
                 </div>
@@ -239,19 +239,19 @@ export function ReturnSettlementPanel({
         <div className="flex flex-col items-end px-4 py-1.5 mr-auto shrink-0 bg-muted rounded-md border border-border">
           <span className={`text-3xs font-black uppercase tracking-widest mb-0.5 ${
             effectiveMode === "full_cash_return"
-              ? "text-emerald-600"
+              ? "text-success"
               : (partnerBalance - Math.min(totalAmount, partnerBalance)) <= 0
-                ? "text-emerald-600"
-                : "text-rose-600"
+                ? "text-success"
+                : "text-destructive"
           }`}>
             {t("labels.balanceAfterSettlement", { namespace: "common" })}
           </span>
           <span className={`text-sm font-black tabular-nums tracking-tight ${
             effectiveMode === "full_cash_return"
-              ? "text-emerald-600"
+              ? "text-success"
               : effectiveMode === "deduct_from_debt"
-                ? (Math.max(0, partnerBalance - totalAmount) <= 0 ? "text-emerald-600" : "text-rose-600")
-                : ((partnerBalance - (totalAmount - parseFloat(settlementCash || "0"))) <= 0 ? "text-emerald-600" : "text-rose-600")
+                ? (Math.max(0, partnerBalance - totalAmount) <= 0 ? "text-success" : "text-destructive")
+                : ((partnerBalance - (totalAmount - parseFloat(settlementCash || "0"))) <= 0 ? "text-success" : "text-destructive")
           }`}>
             {effectiveMode === "full_cash_return"
               ? partnerBalance.toFixed(2)
@@ -280,8 +280,8 @@ export function ReturnSettlementPanel({
             className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-blue-500"
           />
           <div className="flex justify-between text-2xs text-muted-foreground">
-            <span className="text-blue-600 font-bold">{t("labels.cashLabel", { namespace: "common" })} {parseFloat(settlementCash || "0").toFixed(2)}</span>
-            <span className="text-emerald-600 font-bold">{t("labels.deductedFromBalance", { namespace: "common" })} {(totalAmount - parseFloat(settlementCash || "0")).toFixed(2)}</span>
+            <span className="text-primary font-bold">{t("labels.cashLabel", { namespace: "common" })} {parseFloat(settlementCash || "0").toFixed(2)}</span>
+            <span className="text-success font-bold">{t("labels.deductedFromBalance", { namespace: "common" })} {(totalAmount - parseFloat(settlementCash || "0")).toFixed(2)}</span>
           </div>
         </div>
       )}

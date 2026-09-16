@@ -36,21 +36,21 @@ export function SidebarSection({
   return (
     <div
       className={cn(
-        "border border-slate-100 rounded-xl bg-slate-50/30 shadow-[0_1px_2px_rgba(0,0,0,0.01)]",
+        "border border-muted rounded-xl bg-muted/30 shadow-[0_1px_2px_rgba(0,0,0,0.01)]",
         className
       )}
     >
       <button
         type="button"
         onClick={() => setIsOpen((prev) => !prev)}
-        className="w-full flex items-center justify-between px-4 py-2.5 bg-slate-50/80 hover:bg-slate-100/60 transition-colors text-right border-b border-slate-100 rounded-t-xl"
+        className="w-full flex items-center justify-between px-4 py-2.5 bg-muted/80 hover:bg-muted/60 transition-colors text-right border-b border-muted rounded-t-xl"
       >
-        <span className="text-xs font-black text-slate-800 flex items-center gap-1.5">
+        <span className="text-xs font-black text-foreground flex items-center gap-1.5">
           {icon}{title}
         </span>
         <ChevronDown
           className={cn(
-            "w-4 h-4 text-slate-400 transition-transform duration-250",
+            "w-4 h-4 text-muted-foreground transition-transform duration-250",
             !isOpen && "rotate-90"
           )}
         />
