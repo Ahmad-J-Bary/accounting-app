@@ -10,6 +10,7 @@ import type { TranslateFn } from "./migration-labels";
 export interface OpeningSectionLine {
   code: string;
   name_ar: string;
+  name_en?: string | null;
   amount: number;
 }
 
@@ -100,7 +101,12 @@ export function deriveOpeningSnapshot(input: {
       label: def.label,
       amount,
       done: Math.abs(amount) > 0.001,
-      lines: lines.map((l) => ({ code: l.code, name_ar: l.name_ar, amount: toNum(l.amount) })),
+      lines: lines.map((l) => ({
+        code: l.code,
+        name_ar: l.name_ar,
+        name_en: l.name_en,
+        amount: toNum(l.amount),
+      })),
     };
   });
 

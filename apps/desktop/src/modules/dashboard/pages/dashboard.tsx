@@ -1,4 +1,4 @@
-﻿import { useState, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { Button } from "@shared/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@shared/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
@@ -26,8 +26,15 @@ import { useLocalization } from '@app/providers/LocalizationProvider';
 const CHART_COLORS = ["#2563eb", "#10b981", "#f59e0b", "#64748b", "#8b5cf6", "#ec4899"];
 
 export default function Dashboard() {
-  const { t } = useLocalization();
-  const { formatAmount, displayMode, baseCurrency, currencies } = useCurrencyContext();
+  const { t, direction } = useLocalization();
+  const {
+    formatAmount,
+    displayMode,
+    baseCurrency,
+    currencies,
+    displayCurrencyCode,
+    setDisplayCurrencyCode,
+  } = useCurrencyContext();
   const [localDisplayMode, setLocalDisplayMode] = useState<CurrencyDisplayMode | "both">(displayMode);
   const [period, setPeriod] = useState<DashboardPeriod>("this_month");
 
@@ -135,60 +142,64 @@ export default function Dashboard() {
 
   return (
     <DashboardLayout
-      header={
-        <>
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 bg-primary rounded-2xl flex items-center justify-center shadow-lg shadow-primary/20">
-              <LayoutDashboard className="w-8 h-8 text-white" />
-            </div>
-            <div className="space-y-1">
-              <h1 className="text-3xl font-black text-foreground">{t("title", { namespace: "dashboard",  })}</h1>
-              <p className="text-muted-foreground font-medium">{t("subtitle", { namespace: "dashboard",  })}</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="flex bg-muted p-1 rounded-xl">
-              <button
-                onClick={() => setLocalDisplayMode("base")}
-                className={`px-3 py-1.5 text-xs rounded-lg font-bold transition-all ${localDisplayMode === "base" ? "bg-card shadow-sm" : "text-muted-foreground"}`}
-              >
-                {baseCurrency?.symbol || baseCurrency?.code || t("currencyButtons.base", { namespace: "dashboard",  })}
-              </button>
-              {secondaryCurrencies.map(c => (
+      title={t("title", { namespace: "dashboard" })}
+      description={t("subtitle", { namespace: "dashboard" })}
+      icon={<LayoutDashboard className="w-8 h-8 text-white" />}
+      controls={
+        <div className="flex flex-wrap items-center gap-3 lg:justify-end">
+          <div className="flex flex-wrap items-center rounded-xl bg-muted p-1">
+            <button
+              type="button"
+              onClick={() => setLocalDisplayMode("base")}
+              className={`rounded-lg px-3 py-1.5 text-xs font-bold transition-all ${localDisplayMode === "base" ? "bg-card shadow-sm" : "text-muted-foreground"}`}
+              aria-pressed={localDisplayMode === "base"}
+            >
+              {baseCurrency?.symbol || baseCurrency?.code || t("currencyButtons.base", { namespace: "dashboard" })}
+            </button>
+            {secondaryCurrencies.map((c) => {
+              const isActive = localDisplayMode === "selected" && displayCurrencyCode === c.code;
+              return (
                 <button
                   key={c.code}
-                  onClick={() => setLocalDisplayMode("selected")}
-                  className={`px-3 py-1.5 text-xs rounded-lg font-bold transition-all ${localDisplayMode === "selected" ? "bg-card shadow-sm" : "text-muted-foreground"}`}
+                  type="button"
+                  onClick={() => {
+                    setDisplayCurrencyCode(c.code);
+                    setLocalDisplayMode("selected");
+                  }}
+                  className={`rounded-lg px-3 py-1.5 text-xs font-bold transition-all ${isActive ? "bg-card shadow-sm" : "text-muted-foreground"}`}
+                  aria-pressed={isActive}
                 >
                   {c.symbol || c.code}
                 </button>
-              ))}
-              <button
-                onClick={() => setLocalDisplayMode("both")}
-                className={`px-3 py-1.5 text-xs rounded-lg font-bold transition-all ${localDisplayMode === "both" ? "bg-card shadow-sm" : "text-muted-foreground"}`}
-              >
-                <DollarSign className="w-3 h-3 inline ml-1" />
-                {t("currencyButtons.both", { namespace: "dashboard",  })}
-              </button>
-            </div>
-            <Select value={period} onValueChange={(v) => setPeriod(v as DashboardPeriod)}>
-              <SelectTrigger className="w-[180px] h-12 bg-card rounded-xl border-border shadow-sm">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="today">{t("period.today", { namespace: "dashboard",  })}</SelectItem>
-                <SelectItem value="this_month">{t("period.thisMonth", { namespace: "dashboard",  })}</SelectItem>
-                <SelectItem value="this_year">{t("period.thisYear", { namespace: "dashboard",  })}</SelectItem>
-              </SelectContent>
-            </Select>
-            {refreshing && (
-              <span className="flex h-12 items-center gap-1.5 rounded-xl bg-card px-4 border border-border shadow-sm text-muted-foreground text-xs">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                {t("refreshing", { namespace: "dashboard",  })}
-              </span>
-            )}
+              );
+            })}
+            <button
+              type="button"
+              onClick={() => setLocalDisplayMode("both")}
+              className={`rounded-lg px-3 py-1.5 text-xs font-bold transition-all ${localDisplayMode === "both" ? "bg-card shadow-sm" : "text-muted-foreground"}`}
+              aria-pressed={localDisplayMode === "both"}
+            >
+              <DollarSign className="me-1 inline h-3 w-3" />
+              {t("currencyButtons.both", { namespace: "dashboard" })}
+            </button>
           </div>
-        </>
+          <Select value={period} onValueChange={(v) => setPeriod(v as DashboardPeriod)}>
+            <SelectTrigger className="h-12 w-[180px] rounded-xl border-border bg-card shadow-sm">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="today">{t("period.today", { namespace: "dashboard" })}</SelectItem>
+              <SelectItem value="this_month">{t("period.thisMonth", { namespace: "dashboard" })}</SelectItem>
+              <SelectItem value="this_year">{t("period.thisYear", { namespace: "dashboard" })}</SelectItem>
+            </SelectContent>
+          </Select>
+          {refreshing && (
+            <span className="flex h-12 items-center gap-1.5 rounded-xl border border-border bg-card px-4 text-xs text-muted-foreground shadow-sm">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              {t("refreshing", { namespace: "dashboard" })}
+            </span>
+          )}
+        </div>
       }
     >
       {/* Row 1: الأصول / الالتزامات */}
@@ -255,7 +266,7 @@ export default function Dashboard() {
               <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 12}} dy={10} />
               <YAxis axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 12}} dx={-10} />
               <Tooltip 
-                contentStyle={{borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', direction: 'rtl'}}
+                contentStyle={{borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', direction}}
               />
               <Area type="monotone" dataKey="revenue" name={t("chart.revenueSeries", { namespace: "dashboard",  })} stroke="#2563eb" strokeWidth={3} fillOpacity={1} fill="url(#colorRev)" />
               <Area type="monotone" dataKey="expenses" name={t("chart.expensesSeries", { namespace: "dashboard",  })} stroke="#f43f5e" strokeWidth={3} fillOpacity={1} fill="url(#colorExp)" />
@@ -353,23 +364,23 @@ export default function Dashboard() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="text-muted-foreground font-black text-[10px] uppercase tracking-widest border-b border-slate-100">
-                      <th className="text-right pb-4">{t("recent.journalCols.number", { namespace: "dashboard",  })}</th>
-                      <th className="text-right pb-4">{t("recent.journalCols.statement", { namespace: "dashboard",  })}</th>
-                      <th className="text-left pb-4">{t("recent.journalCols.amount", { namespace: "dashboard",  })}</th>
-                      <th className="text-left pb-4">{t("recent.journalCols.status", { namespace: "dashboard",  })}</th>
+                      <th className="pb-4 text-start">{t("recent.journalCols.number", { namespace: "dashboard",  })}</th>
+                      <th className="pb-4 text-start">{t("recent.journalCols.statement", { namespace: "dashboard",  })}</th>
+                      <th className="pb-4 text-end">{t("recent.journalCols.amount", { namespace: "dashboard",  })}</th>
+                      <th className="pb-4 text-end">{t("recent.journalCols.status", { namespace: "dashboard",  })}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50">
                     {recentJournals.map((j) => (
                       <tr key={j.id} className="hover:bg-muted/50 transition-colors">
-                        <td className="py-4 font-black text-primary">{formatNumber(parseInt(j.entry_number) || 0)}</td>
-                        <td className="py-4 font-bold text-foreground truncate max-w-[200px]">{j.description}</td>
-                        <td className="py-4 text-left tabular-nums font-black">
+                        <td className="py-4 text-start font-black text-primary">{formatNumber(parseInt(j.entry_number) || 0)}</td>
+                        <td className="max-w-[200px] truncate py-4 text-start font-bold text-foreground">{j.description}</td>
+                        <td className="py-4 text-end font-black tabular-nums">
                           {toNumber(j.total_base_debit) > 0
                             ? formatAmount(toNumber(j.total_base_debit), { mode: localDisplayMode })
                             : formatAmount(toNumber(j.total_base_credit), { mode: localDisplayMode })}
                         </td>
-                        <td className="py-4 text-left"><StatusBadge status={j.status} /></td>
+                        <td className="py-4 text-end"><StatusBadge status={j.status} /></td>
                       </tr>
                     ))}
                   </tbody>
@@ -388,21 +399,21 @@ export default function Dashboard() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="text-muted-foreground font-black text-[10px] uppercase tracking-widest border-b border-slate-100">
-                      <th className="text-right pb-4">{t("recent.paymentCols.number", { namespace: "dashboard",  })}</th>
-                      <th className="text-right pb-4">{t("recent.paymentCols.type", { namespace: "dashboard",  })}</th>
-                      <th className="text-right pb-4">{t("recent.paymentCols.party", { namespace: "dashboard",  })}</th>
-                      <th className="text-left pb-4">{t("recent.paymentCols.amount", { namespace: "dashboard",  })}</th>
-                      <th className="text-left pb-4">{t("recent.paymentCols.date", { namespace: "dashboard",  })}</th>
+                      <th className="pb-4 text-start">{t("recent.paymentCols.number", { namespace: "dashboard",  })}</th>
+                      <th className="pb-4 text-start">{t("recent.paymentCols.type", { namespace: "dashboard",  })}</th>
+                      <th className="pb-4 text-start">{t("recent.paymentCols.party", { namespace: "dashboard",  })}</th>
+                      <th className="pb-4 text-end">{t("recent.paymentCols.amount", { namespace: "dashboard",  })}</th>
+                      <th className="pb-4 text-end">{t("recent.paymentCols.date", { namespace: "dashboard",  })}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50">
                     {recentPayments.map((p) => (
                       <tr key={p.id} className="hover:bg-muted/50 transition-colors">
-                        <td className="py-4 font-black text-primary">{formatNumber(parseInt(p.voucher_number) || 0)}</td>
-                        <td className="py-4 font-bold text-foreground">{paymentTypeLabel[p.payment_type] || p.payment_type}</td>
-                        <td className="py-4 font-bold text-foreground">{p.customer_name || p.supplier_name || "—"}</td>
-                        <td className="py-4 text-left tabular-nums font-black">{formatAmount(toNumber(p.amount), { mode: localDisplayMode })}</td>
-                        <td className="py-4 text-muted-foreground tabular-nums font-mono text-xs">{formatDate(p.payment_date)}</td>
+                        <td className="py-4 text-start font-black text-primary">{formatNumber(parseInt(p.voucher_number) || 0)}</td>
+                        <td className="py-4 text-start font-bold text-foreground">{paymentTypeLabel[p.payment_type] || p.payment_type}</td>
+                        <td className="py-4 text-start font-bold text-foreground">{p.customer_name || p.supplier_name || "—"}</td>
+                        <td className="py-4 text-end font-black tabular-nums">{formatAmount(toNumber(p.amount), { mode: localDisplayMode })}</td>
+                        <td className="py-4 text-end font-mono text-xs text-muted-foreground">{formatDate(p.payment_date)}</td>
                       </tr>
                     ))}
                   </tbody>

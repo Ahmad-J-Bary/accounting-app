@@ -3,7 +3,6 @@ import { useQueryClient } from '@tanstack/react-query';
 import { toast } from "sonner";
 import { Plus, Download } from "lucide-react";
 import { transferService } from '@modules/inventory/api/transferService';
-import { Button } from "@shared/ui/button";
 import type { StockMovement, CreateTransferRequest } from '@erp/shared-types';
 import type { TransferRow } from '@modules/inventory/components/TransferTable';
 import { TransferDetailPanel } from '@modules/inventory/components/TransferDetailPanel';
@@ -19,6 +18,7 @@ import type { ExcelExportColumn } from "@shared/lib/excel";
 import { dateCol, executeExport } from "@shared/lib/excel";
 import { toLocalString, getNumberingSystem } from "@shared/lib/format";
 import { useLocalization } from "@app/providers/LocalizationProvider";
+import type { ResponsiveActionItem } from "@widgets/page-header/ResponsiveActions";
 
 export default function Transfers() {
   const { t } = useLocalization();
@@ -170,19 +170,34 @@ export default function Transfers() {
     });
   }, [exportRows, exportData, t]);
 
+  const toolbarActions = useMemo<ResponsiveActionItem[]>(() => [
+    {
+      id: "new-transfer",
+      label: t("transfers.add", { namespace: "inventory" }),
+      icon: Plus,
+      priority: "primary",
+      onClick: () => {
+        setTransferDetailData(null);
+        setTransferFormMode('create');
+        setTransferFormData(null);
+        setWarehouseTransferPreset(null);
+        setTransferFormOpen(true);
+      },
+    },
+    {
+      id: "export-transfers",
+      label: t("labels.exportExcel", { namespace: "inventory" }),
+      icon: Download,
+      priority: "secondary",
+      variant: "outline",
+      onClick: handleExport,
+    },
+  ], [handleExport, t]);
+
   return (
     <OperationalTableTemplate
       title={t("transfers.title", { namespace: "inventory",  })}
-      toolbar={
-        <div className="flex items-center gap-2">
-          <Button size="sm" onClick={() => { setTransferDetailData(null); setTransferFormMode('create'); setTransferFormData(null); setWarehouseTransferPreset(null); setTransferFormOpen(true); }} className="bg-amber-600 hover:bg-amber-700 text-white shadow-lg shadow-amber-100 font-bold">
-            <Plus className="w-4 h-4 ml-2" />{t("transfers.add", { namespace: "inventory",  })}
-          </Button>
-          <Button variant="outline" size="sm" onClick={handleExport} className="border-muted hover:bg-muted font-bold">
-            <Download className="w-4 h-4 ml-2 text-muted-foreground" /> {t("labels.exportExcel", { namespace: "inventory",  })}
-          </Button>
-        </div>
-      }
+      toolbarActions={toolbarActions}
       tableContent={
         <TransferTable
           movements={movements}

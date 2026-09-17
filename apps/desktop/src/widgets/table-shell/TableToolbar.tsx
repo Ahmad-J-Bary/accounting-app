@@ -56,11 +56,12 @@ export const TableToolbar: React.FC<TableToolbarProps> = ({
   filterBar,
 }) => {
   const { settings, updateSetting, resetSettings } = useTableSettings();
-  const { t, direction } = useLocalization();
+  const { t, direction, isRTL } = useLocalization();
   const resolvedSearchPlaceholder = searchPlaceholder ?? t('labels.placeholder', );
   const visibleCount = columns.filter((c) => c.visible).length;
   const totalCount = columns.length;
   const hasColumns = columns.length > 0;
+  const menuItemClassName = isRTL ? "flex-row-reverse" : "";
 
   return (
     <div className="mb-2 flex flex-wrap items-center gap-2" dir={direction}>
@@ -97,30 +98,30 @@ export const TableToolbar: React.FC<TableToolbarProps> = ({
                   value={settings.density}
                   onValueChange={(v) => updateSetting('density', v as TableDensity)}
                 >
-                  <DropdownMenuRadioItem value="compact" className="flex-row-reverse">{t('labels.compact', )}</DropdownMenuRadioItem>
-                  <DropdownMenuRadioItem value="comfortable" className="flex-row-reverse">{t('labels.comfortable', )}</DropdownMenuRadioItem>
-                  <DropdownMenuRadioItem value="spacious" className="flex-row-reverse">{t('labels.spacious', )}</DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="compact" className={menuItemClassName}>{t('labels.compact', )}</DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="comfortable" className={menuItemClassName}>{t('labels.comfortable', )}</DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="spacious" className={menuItemClassName}>{t('labels.spacious', )}</DropdownMenuRadioItem>
                 </DropdownMenuRadioGroup>
                 <DropdownMenuSeparator />
                 <DropdownMenuLabel className="text-start">{t('labels.otherOptions', )}</DropdownMenuLabel>
                 <DropdownMenuCheckboxItem
                   checked={settings.zebraRows}
                   onCheckedChange={(v) => updateSetting('zebraRows', !!v)}
-                  className="flex-row-reverse"
+                  className={menuItemClassName}
                 >
                   {t('labels.zebraRows', )}
                 </DropdownMenuCheckboxItem>
                 <DropdownMenuCheckboxItem
                   checked={settings.stickyHeader}
                   onCheckedChange={(v) => updateSetting('stickyHeader', !!v)}
-                  className="flex-row-reverse"
+                  className={menuItemClassName}
                 >
                   {t('labels.stickyHeader', )}
                 </DropdownMenuCheckboxItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={resetSettings} className="flex-row-reverse text-destructive focus:text-destructive">
+                <DropdownMenuItem onClick={resetSettings} className={cn(menuItemClassName, "text-destructive focus:text-destructive")}>
                   <RotateCcw className="ms-2 h-4 w-4" />
-                  {t('actions.factoryReset', )}
+                  {t('labels.factoryReset', )}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -164,7 +165,7 @@ export const TableToolbar: React.FC<TableToolbarProps> = ({
                     key={col.id}
                     checked={col.visible}
                     onCheckedChange={() => onColumnToggle(col.id)}
-                    className="flex-row-reverse"
+                    className={menuItemClassName}
                   >
                     <span>{col.label}</span>
                   </DropdownMenuCheckboxItem>
@@ -175,7 +176,7 @@ export const TableToolbar: React.FC<TableToolbarProps> = ({
                     <DropdownMenuItem
                       onClick={onColumnsReset}
                       disabled={!columnsModified}
-                      className="flex-row-reverse text-primary focus:text-primary disabled:text-slate-400 disabled:opacity-50"
+                      className={cn(menuItemClassName, "text-primary focus:text-primary disabled:text-slate-400 disabled:opacity-50")}
                     >
                       <RotateCcw className="ms-2 h-4 w-4" />
                       {t('actions.restoreDefaultColumns', )}

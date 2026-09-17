@@ -26,6 +26,7 @@ import { PaymentDetailPanel } from "@modules/payments/components/PaymentDetailPa
 import { PaymentsTable } from "@modules/payments/components/PaymentsTable";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { useLocalization } from "@app/providers/LocalizationProvider";
+import type { ResponsiveActionItem } from "@widgets/page-header/ResponsiveActions";
 
 export default function PaymentsPage() {
   const { t } = useLocalization();
@@ -150,21 +151,23 @@ export default function PaymentsPage() {
     setShowDialog(true);
   }, []);
 
+  const toolbarActions = useCallback<() => ResponsiveActionItem[]>(() => [
+    {
+      id: "new-payment",
+      label: t("payment.new", { namespace: "invoicing" }),
+      icon: Plus,
+      priority: "primary",
+      onClick: () => {
+        setSelectedPayment(null);
+        setShowDialog(true);
+      },
+    },
+  ], [t]);
+
   return (
     <OperationalTableTemplate
       title={t("payment.title", { namespace: "invoicing",  })}
-      toolbar={
-        <Button
-          size="sm"
-          onClick={() => {
-            setSelectedPayment(null);
-            setShowDialog(true);
-          }}
-          className="bg-primary hover:bg-primary/80 shadow-lg shadow-primary/20 font-bold"
-        >
-          <Plus className="w-4 h-4 ml-2" /> {t("payment.new", { namespace: "invoicing",  })}
-        </Button>
-      }
+      toolbarActions={toolbarActions()}
       tableContent={
         <PaymentsTable
           payments={payments}

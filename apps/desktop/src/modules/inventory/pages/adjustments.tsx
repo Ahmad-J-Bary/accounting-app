@@ -1,7 +1,6 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useQueryClient } from '@tanstack/react-query';
 import { INVENTORY_MUTATION_KEYS, invalidateKeys } from "@shared/hooks/queryClient";
-import { Button } from "@shared/ui/button";
 import { Plus, Eye, Settings2, Trash2, Download } from "lucide-react";
 import { adjustmentService } from '@modules/inventory/api/adjustmentService';
 import { materialService } from '@modules/inventory/api/materialService';
@@ -17,6 +16,7 @@ import { dateCol, executeExport, addCurrencySummary, applyVisibilityToCurrencyCo
 import type { ExcelExportColumn } from "@shared/lib/excel";
 import { formatNumber, getNumberingSystem } from "@shared/lib/format";
 import { useLocalization } from "@app/providers/LocalizationProvider";
+import type { ResponsiveActionItem } from "@widgets/page-header/ResponsiveActions";
 
 export default function AdjustmentsPage() {
   const { t } = useLocalization();
@@ -183,36 +183,62 @@ export default function AdjustmentsPage() {
     if (!selectedItem) setSelectedItem(null);
   }, [selectedItem]);
 
+  const toolbarActions = useMemo<ResponsiveActionItem[]>(() => [
+    {
+      id: "new-adjustment",
+      label: t("adjustments.new", { namespace: "inventory" }),
+      icon: Plus,
+      priority: "primary",
+      onClick: handleNewClick,
+    },
+    {
+      id: "view-adjustment",
+      label: t("actions.view", { namespace: "common" }),
+      icon: Eye,
+      priority: "secondary",
+      variant: "outline",
+      disabled: !selectedItem,
+      onClick: () => {
+        if (selectedItem) handleView(selectedItem);
+      },
+    },
+    {
+      id: "edit-adjustment",
+      label: t("actions.edit", { namespace: "common" }),
+      icon: Settings2,
+      priority: "secondary",
+      variant: "outline",
+      disabled: !selectedItem,
+      onClick: () => {
+        if (selectedItem) handleEditClick(selectedItem);
+      },
+    },
+    {
+      id: "delete-adjustment",
+      label: t("actions.delete", { namespace: "common" }),
+      icon: Trash2,
+      priority: "overflow",
+      variant: "outline",
+      destructive: true,
+      disabled: !selectedItem,
+      onClick: () => {
+        if (selectedItem) void handleDelete(selectedItem.id);
+      },
+    },
+    {
+      id: "export-adjustments",
+      label: t("labels.exportExcel", { namespace: "inventory" }),
+      icon: Download,
+      priority: "tertiary",
+      variant: "outline",
+      onClick: handleExport,
+    },
+  ], [handleDelete, handleEditClick, handleExport, handleNewClick, handleView, selectedItem, t]);
+
   return (
     <OperationalTableTemplate
       title={t("adjustments.title", { namespace: "inventory",  })}
-      toolbar={
-        <div className="flex items-center gap-2">
-          <Button size="sm" onClick={handleNewClick} className="bg-primary hover:bg-primary/80 shadow-lg shadow-primary/20 font-bold">
-            <Plus className="w-4 h-4 ml-2" /> {t("adjustments.new", { namespace: "inventory",  })}
-          </Button>
-          <div className="h-6 w-px bg-muted mx-1" />
-          <Button variant="outline" size="sm" disabled={!selectedItem}
-            onClick={() => selectedItem && handleView(selectedItem)}
-            className="h-9 border-muted hover:bg-muted font-bold">
-            <Eye className="w-4 h-4 ml-2 text-primary" /> {t("actions.view", { namespace: "common",  })}
-          </Button>
-          <Button variant="outline" size="sm" disabled={!selectedItem}
-            onClick={() => selectedItem && handleEditClick(selectedItem)}
-            className="h-9 border-muted hover:bg-muted font-bold">
-            <Settings2 className="w-4 h-4 ml-2 text-amber-500" /> {t("actions.edit", { namespace: "common",  })}
-          </Button>
-          <Button variant="outline" size="sm" disabled={!selectedItem}
-            onClick={() => selectedItem && handleDelete(selectedItem.id)}
-            className="h-9 border-muted hover:bg-destructive/10 hover:text-destructive hover:border-destructive/20 font-bold transition-all">
-            <Trash2 className="w-4 h-4 ml-2 text-destructive" /> {t("actions.delete", { namespace: "common",  })}
-          </Button>
-          <div className="h-6 w-px bg-muted mx-1" />
-          <Button variant="outline" size="sm" onClick={handleExport} className="h-9 border-muted hover:bg-muted font-bold">
-            <Download className="w-4 h-4 ml-2 text-muted-foreground" /> {t("labels.exportExcel", { namespace: "inventory",  })}
-          </Button>
-        </div>
-      }
+      toolbarActions={toolbarActions}
       tableContent={
           <AdjustmentsTable
             data={adjustments}

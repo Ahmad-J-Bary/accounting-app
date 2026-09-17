@@ -2,6 +2,7 @@ export interface PositionAccountLine {
   account_id: string;
   code: string;
   name_ar: string;
+  name_en?: string | null;
   purpose: string;
   group_key: string;
   amount: string;

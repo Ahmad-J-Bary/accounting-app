@@ -1,5 +1,7 @@
 import type { AccountDto } from "@erp/shared-types";
 
+export type SupportedLanguage = "ar" | "en";
+
 export interface MigrationLite {
   id: string;
   status: string;
@@ -50,6 +52,25 @@ export function isDebitNature(accountType: string): boolean {
 
 export function findAccount(accounts: readonly AccountDto[], id: string): AccountDto | undefined {
   return accounts.find((a) => a.id === id);
+}
+
+export function getLocalizedAccountName(
+  account: Pick<AccountDto, "name_ar" | "name_en" | "code"> | null | undefined,
+  language: SupportedLanguage,
+): string {
+  if (!account) return "";
+  if (language === "ar") {
+    return account.name_ar || account.name_en || account.code;
+  }
+  return account.name_en || account.name_ar || account.code;
+}
+
+export function getLocalizedAccountLabel(
+  account: Pick<AccountDto, "code" | "name_ar" | "name_en"> | null | undefined,
+  language: SupportedLanguage,
+): string {
+  if (!account) return "";
+  return `${account.code} - ${getLocalizedAccountName(account, language)}`;
 }
 
 export interface ReconciliationRowLite {

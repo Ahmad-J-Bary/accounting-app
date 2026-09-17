@@ -5,6 +5,8 @@ import { AccountCombobox } from "@modules/opening-balance/components/AccountComb
 import type { AccountDto } from "@erp/shared-types";
 import { openingBalance } from "@shared/i18n/resources/openingBalance";
 
+let currentLanguage: "ar" | "en" = "ar";
+
 vi.mock("@app/providers/LocalizationProvider", () => ({
   useLocalization: () => ({
     t: (key: string, opts?: any) => {
@@ -17,10 +19,10 @@ vi.mock("@app/providers/LocalizationProvider", () => ({
       }
       return val;
     },
-    language: "ar",
-    direction: "rtl",
-    isRTL: true,
-    locale: "ar-SY",
+    language: currentLanguage,
+    direction: currentLanguage === "ar" ? "rtl" : "ltr",
+    isRTL: currentLanguage === "ar",
+    locale: currentLanguage === "ar" ? "ar-SY" : "en-US",
     setLanguage: vi.fn(),
     resolveLabel: (key: string) => key,
     terminologyOverrides: [],
@@ -34,6 +36,7 @@ const ACCOUNTS: AccountDto[] = [
     id: "a1",
     code: "111100",
     name_ar: "الصندوق",
+    name_en: "Cash",
     account_type: "Assets",
     category: "Detail",
     is_active: true,
@@ -42,6 +45,7 @@ const ACCOUNTS: AccountDto[] = [
     id: "a2",
     code: "211100",
     name_ar: "الموردون",
+    name_en: "Suppliers",
     account_type: "Liabilities",
     category: "Detail",
     is_active: true,
@@ -49,6 +53,13 @@ const ACCOUNTS: AccountDto[] = [
 ];
 
 describe("AccountCombobox", () => {
+  it("shows the localized English account name when the UI is English", () => {
+    currentLanguage = "en";
+    render(<AccountCombobox accounts={ACCOUNTS} value="a2" onValueChange={vi.fn()} />);
+    expect(screen.getByText("Suppliers")).toBeInTheDocument();
+    currentLanguage = "ar";
+  });
+
   it("shows the placeholder when no account is selected", () => {
     render(<AccountCombobox accounts={ACCOUNTS} value="" onValueChange={vi.fn()} />);
     expect(screen.getByText("ابحث واختر حساباً...")).toBeInTheDocument();
@@ -78,6 +89,17 @@ describe("AccountCombobox", () => {
     await user.type(screen.getByPlaceholderText("ابحث برمز الحساب أو الاسم..."), "2111");
     expect(screen.getByText("الموردون")).toBeInTheDocument();
     expect(screen.queryByText("الصندوق")).not.toBeInTheDocument();
+  });
+
+  it("filters options by English account name too", async () => {
+    currentLanguage = "en";
+    const user = userEvent.setup();
+    render(<AccountCombobox accounts={ACCOUNTS} value="" onValueChange={vi.fn()} />);
+    await user.click(screen.getByRole("combobox"));
+    await user.type(screen.getByPlaceholderText("ابحث برمز الحساب أو الاسم..."), "Supp");
+    expect(screen.getByText("Suppliers")).toBeInTheDocument();
+    expect(screen.queryByText("Cash")).not.toBeInTheDocument();
+    currentLanguage = "ar";
   });
 
   it("shows an empty message when nothing matches", async () => {

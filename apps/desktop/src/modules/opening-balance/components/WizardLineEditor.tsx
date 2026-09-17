@@ -8,6 +8,7 @@ import { cn } from "@shared/lib/utils";
 import type { AccountDto } from "@erp/shared-types";
 import type { WizLine } from "@modules/opening-balance/lib/wizard-types";
 import { newLine } from "@modules/opening-balance/lib/wizard-types";
+import { getLocalizedAccountName } from "@modules/opening-balance/lib/migration-labels";
 import { AccountCombobox } from "./AccountCombobox";
 import { useLocalization } from "@app/providers/LocalizationProvider";
 
@@ -38,7 +39,7 @@ export function WizardLineEditor({
   accounts,
   detailAccounts,
 }: WizardLineEditorProps) {
-  const { t } = useLocalization();
+  const { t, language } = useLocalization();
   const [editingKeys, setEditingKeys] = useState<Set<string>>(new Set());
   const [newKeys, setNewKeys] = useState<Set<string>>(new Set());
 
@@ -165,7 +166,9 @@ export function WizardLineEditor({
                   <span className="text-2xs font-bold text-muted-foreground tabular-nums shrink-0">
                     {account?.code || "—"}
                   </span>
-                  <span className="truncate text-foreground">{account?.name_ar || placeholder}</span>
+                  <span className="truncate text-foreground">
+                    {account ? getLocalizedAccountName(account, language) : placeholder}
+                  </span>
                 </div>
                 <div className="w-32 shrink-0 rounded-lg border border-border bg-card px-2 py-1.5 flex items-center justify-end">
                   <span className="tabular-nums text-xs font-bold text-foreground">{l.amount || "0.00"}</span>

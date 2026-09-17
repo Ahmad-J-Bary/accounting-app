@@ -29,7 +29,7 @@ import { useLocalization } from "@app/providers/LocalizationProvider";
 
 export default function CurrencySettings() {
   const { refresh: refreshContext, updateRate } = useCurrencyContext();
-  const { t } = useLocalization();
+  const { t, language, direction, locale } = useLocalization();
   const [currencies, setCurrencies] = useState<Currency[]>([]);
   const [rateStatus, setRateStatus] = useState<TodayRateStatus[]>([]);
   const [worldCurrencies, setWorldCurrencies] = useState<WorldCurrency[]>([]);
@@ -110,7 +110,7 @@ export default function CurrencySettings() {
         is_base: isFirst,
         is_active: true,
       });
-      toast.success(t("currencies.addSuccess", { namespace: "settings",  }), { description: t("currencies.addSuccessDesc", { namespace: "settings", vars: { name: wc.name_ar, code: wc.code } }) });
+      toast.success(t("currencies.addSuccess", { namespace: "settings",  }), { description: t("currencies.addSuccessDesc", { namespace: "settings", vars: { name: (language === "ar" ? wc.name_ar : wc.name_en) || wc.name_ar || wc.name_en, code: wc.code } }) });
       await loadData();
       await refreshContext();
     } catch (e) {
@@ -145,7 +145,7 @@ export default function CurrencySettings() {
         decimals: editForm.decimals,
         is_active: true,
       });
-      toast.success(t("currencies.editSuccess", { namespace: "settings",  }), { description: t("currencies.editSuccessDesc", { namespace: "settings", vars: { name: editingCurrency.name_ar } }) });
+      toast.success(t("currencies.editSuccess", { namespace: "settings",  }), { description: t("currencies.editSuccessDesc", { namespace: "settings", vars: { name: resolveCurrencyNames(editingCurrency).localized } }) });
       await loadData();
       await refreshContext();
     } catch (e) {
@@ -238,6 +238,17 @@ export default function CurrencySettings() {
   }
 
   const baseCurrency = currencies.find(c => c.is_base);
+  const worldCurrencyMap = new Map(worldCurrencies.map((currency) => [currency.code, currency]));
+  const resolveCurrencyNames = (currency: Pick<Currency, "code" | "name_ar" | "name_en">) => {
+    const worldCurrency = worldCurrencyMap.get(currency.code);
+    const localized = language === "ar"
+      ? worldCurrency?.name_ar || currency.name_ar || worldCurrency?.name_en || currency.name_en || currency.code
+      : worldCurrency?.name_en || currency.name_en || worldCurrency?.name_ar || currency.name_ar || currency.code;
+    const secondary = language === "ar"
+      ? worldCurrency?.name_en || currency.name_en || ""
+      : worldCurrency?.name_ar || currency.name_ar || "";
+    return { localized, secondary };
+  };
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -284,19 +295,24 @@ export default function CurrencySettings() {
             <Table className="min-w-[500px]">
               <TableHeader>
                 <TableRow>
-                  <TableHead className="text-right">{t("currencies.table.code", { namespace: "settings",  })}</TableHead>
-                  <TableHead className="text-right">{t("currencies.table.name", { namespace: "settings",  })}</TableHead>
-                  <TableHead className="text-right">{t("currencies.table.symbol", { namespace: "settings",  })}</TableHead>
-                  <TableHead className="text-right">{t("currencies.table.type", { namespace: "settings",  })}</TableHead>
-                  <TableHead className="text-right">{t("currencies.table.decimals", { namespace: "settings",  })}</TableHead>
-                  <TableHead className="text-left">{t("currencies.table.actions", { namespace: "settings",  })}</TableHead>
+                  <TableHead className="text-start">{t("currencies.table.code", { namespace: "settings",  })}</TableHead>
+                  <TableHead className="text-start">{t("currencies.table.name", { namespace: "settings",  })}</TableHead>
+                  <TableHead className="text-start">{t("currencies.table.symbol", { namespace: "settings",  })}</TableHead>
+                  <TableHead className="text-start">{t("currencies.table.type", { namespace: "settings",  })}</TableHead>
+                  <TableHead className="text-start">{t("currencies.table.decimals", { namespace: "settings",  })}</TableHead>
+                  <TableHead className="text-end">{t("currencies.table.actions", { namespace: "settings",  })}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {currencies.map((curr) => (
                   <TableRow key={curr.code}>
                     <TableCell className="font-bold">{curr.code}</TableCell>
-                    <TableCell>{curr.name_ar}</TableCell>
+                    <TableCell>
+                      <div className="font-medium text-foreground">{resolveCurrencyNames(curr).localized}</div>
+                      {resolveCurrencyNames(curr).secondary ? (
+                        <div className="text-xs text-muted-foreground">{resolveCurrencyNames(curr).secondary}</div>
+                      ) : null}
+                    </TableCell>
                     <TableCell className="font-mono">{curr.symbol}</TableCell>
                     <TableCell>
                       {curr.is_base ? (
@@ -308,7 +324,7 @@ export default function CurrencySettings() {
                       )}
                     </TableCell>
                     <TableCell className="font-mono text-xs">{curr.decimals}</TableCell>
-                    <TableCell className="text-left">
+                    <TableCell className="text-end">
                       <div className="flex items-center justify-end gap-1">
                         <Button variant="ghost" size="sm" className="text-xs text-primary hover:text-primary/80 hover:bg-primary/10" onClick={() => openEditDialog(curr)}>
                           <Pencil className="w-3.5 h-3.5 ms-1" /> {t("currencies.edit", { namespace: "settings" })}
@@ -366,9 +382,9 @@ export default function CurrencySettings() {
                         type="number"
                         value={newRates[status.currency_code] ?? ""}
                         onChange={e => setNewRates(prev => ({ ...prev, [status.currency_code]: e.target.value }))}
-                        className="pl-10 text-left tabular-nums h-8 text-sm"
+                        className="h-8 ps-10 text-start tabular-nums text-sm"
                       />
-                      <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground font-mono">
+                      <span className="absolute start-2 top-1/2 -translate-y-1/2 text-[10px] font-mono text-muted-foreground">
                         {baseCurrency?.code}
                       </span>
                     </div>
@@ -388,7 +404,7 @@ export default function CurrencySettings() {
           </Card>
 
           <Card className="xl:col-span-2">
-            <Tabs defaultValue="chart" className="w-full" dir="rtl">
+            <Tabs defaultValue="chart" className="w-full" dir={direction}>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <div className="space-y-1 min-w-0">
                   <CardTitle className="flex items-center gap-2 text-base">
@@ -434,7 +450,7 @@ export default function CurrencySettings() {
                           </linearGradient>
                         </defs>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                        <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 11}} reversed={true} />
+                        <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 11}} reversed={direction === "rtl"} />
                         <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 11}} domain={['auto', 'auto']} />
                         <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} labelStyle={{ fontWeight: 'bold', marginBottom: '4px' }} />
                         <Area type="monotone" dataKey="rate" name={t("currencies.exchangeRate", { namespace: "settings",  })} stroke="#1e3a5f" strokeWidth={2} fillOpacity={1} fill="url(#colorRate2)" />
@@ -446,16 +462,16 @@ export default function CurrencySettings() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="text-right">{t("currencies.rateDate", { namespace: "settings",  })}</TableHead>
-                        <TableHead className="text-right">{t("currencies.rateValue", { namespace: "settings", vars: { code: baseCurrency?.code } })}</TableHead>
-                        <TableHead className="text-right">{t("currencies.rateType", { namespace: "settings",  })}</TableHead>
-                        <TableHead className="text-right">{t("currencies.rateSource", { namespace: "settings",  })}</TableHead>
+                        <TableHead className="text-start">{t("currencies.rateDate", { namespace: "settings",  })}</TableHead>
+                        <TableHead className="text-start">{t("currencies.rateValue", { namespace: "settings", vars: { code: baseCurrency?.code } })}</TableHead>
+                        <TableHead className="text-start">{t("currencies.rateType", { namespace: "settings",  })}</TableHead>
+                        <TableHead className="text-start">{t("currencies.rateSource", { namespace: "settings",  })}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {history.map((h) => (
                         <TableRow key={h.id}>
-                          <TableCell>{new Date(h.rate_date).toLocaleDateString("ar-SY")}</TableCell>
+                          <TableCell>{new Date(h.rate_date).toLocaleDateString(locale)}</TableCell>
                           <TableCell className="font-mono font-bold">{toLocalString(parseFloat(h.rate))}</TableCell>
                           <TableCell><Badge variant="outline">{h.rate_type === 'Market' ? t("currencies.marketPrice", { namespace: "settings",  }) : t("currencies.officialPrice", { namespace: "settings",  })}</Badge></TableCell>
                           <TableCell className="text-muted-foreground text-xs">{h.source || t("currencies.manual", { namespace: "settings",  })}</TableCell>
@@ -472,7 +488,7 @@ export default function CurrencySettings() {
 
       {/* Add Currency Dialog — World Currencies List */}
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent className="sm:max-w-[550px] max-h-[80vh] overflow-y-auto" dir="rtl">
+        <DialogContent className="max-h-[80vh] overflow-y-auto sm:max-w-[550px]" dir={direction}>
           <DialogHeader>
             <DialogTitle>{t("currencies.addDialog", { namespace: "settings",  })}</DialogTitle>
             <DialogDescription>
@@ -480,12 +496,12 @@ export default function CurrencySettings() {
             </DialogDescription>
           </DialogHeader>
           <div className="relative mb-4">
-            <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Search className="absolute end-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               value={worldSearch}
               onChange={e => setWorldSearch(e.target.value)}
               placeholder={t("currencies.searchPlaceholder", { namespace: "settings",  })}
-              className="pr-10 h-10"
+              className="h-10 pe-10"
             />
           </div>
           <div className="max-h-[400px] overflow-y-auto space-y-1">
@@ -498,14 +514,14 @@ export default function CurrencySettings() {
                 <button
                   key={wc.code}
                   onClick={() => handleAddCurrency(wc)}
-                  className="w-full flex items-center gap-4 p-3 rounded-lg hover:bg-muted transition-colors border border-transparent hover:border-muted text-right"
+                  className="w-full rounded-lg border border-transparent p-3 text-start transition-colors hover:border-muted hover:bg-muted"
                 >
                   <div className="w-12 h-12 bg-muted rounded-xl flex items-center justify-center text-lg font-bold text-foreground">
                     {wc.symbol}
                   </div>
                   <div className="flex-1">
-                    <div className="font-bold text-foreground">{wc.name_ar} ({wc.code})</div>
-                    <div className="text-xs text-muted-foreground">{wc.name_en}</div>
+                    <div className="font-bold text-foreground">{(language === "ar" ? wc.name_ar : wc.name_en) || wc.name_ar || wc.name_en} ({wc.code})</div>
+                    <div className="text-xs text-muted-foreground">{language === "ar" ? wc.name_en : wc.name_ar}</div>
                   </div>
                   <div className="text-xs text-muted-foreground">{wc.decimals} {t("currencies.decimalsLabel", { namespace: "settings",  })}</div>
                   <Plus className="w-4 h-4 text-primary shrink-0" />
@@ -523,7 +539,7 @@ export default function CurrencySettings() {
 
       {/* Edit Currency Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]" dir="rtl">
+        <DialogContent className="sm:max-w-[425px]" dir={direction}>
           <DialogHeader>
             <DialogTitle>{t("currencies.editDialog", { namespace: "settings",  })}</DialogTitle>
             <DialogDescription>
@@ -532,19 +548,19 @@ export default function CurrencySettings() {
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="edit_name_ar" className="text-right">{t("currencies.nameAr", { namespace: "settings",  })}</Label>
+              <Label htmlFor="edit_name_ar" className="text-start">{t("currencies.nameAr", { namespace: "settings",  })}</Label>
               <Input id="edit_name_ar" value={editForm.name_ar} onChange={e => setEditForm({...editForm, name_ar: e.target.value})} className="col-span-3" />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="edit_name_en" className="text-right">{t("currencies.nameEn", { namespace: "settings",  })}</Label>
+              <Label htmlFor="edit_name_en" className="text-start">{t("currencies.nameEn", { namespace: "settings",  })}</Label>
               <Input id="edit_name_en" value={editForm.name_en} onChange={e => setEditForm({...editForm, name_en: e.target.value})} className="col-span-3" />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="edit_symbol" className="text-right">{t("currencies.symbolLabel", { namespace: "settings",  })}</Label>
+              <Label htmlFor="edit_symbol" className="text-start">{t("currencies.symbolLabel", { namespace: "settings",  })}</Label>
               <Input id="edit_symbol" value={editForm.symbol} onChange={e => setEditForm({...editForm, symbol: e.target.value})} className="col-span-3" />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="edit_decimals" className="text-right">{t("currencies.decimalsField", { namespace: "settings",  })}</Label>
+              <Label htmlFor="edit_decimals" className="text-start">{t("currencies.decimalsField", { namespace: "settings",  })}</Label>
               <Input id="edit_decimals" type="number" min={0} max={6} value={editForm.decimals} onChange={e => setEditForm({...editForm, decimals: parseInt(e.target.value) || 2})} className="col-span-3" />
             </div>
           </div>

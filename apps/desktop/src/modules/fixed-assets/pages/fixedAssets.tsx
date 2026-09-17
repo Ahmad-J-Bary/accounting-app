@@ -31,6 +31,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@shared/ui/select";
+import type { ResponsiveActionItem } from "@widgets/page-header/ResponsiveActions";
 
 const TYPE_CATEGORY_NAMES: Record<string, string[]> = {
   buildings_land: ["أبنية وأراضي"],
@@ -394,40 +395,41 @@ export default function FixedAssetsPage() {
     return undefined;
   }, [assetTypeFilter, typeCategoryIds]);
 
+  const toolbarActions = useMemo<ResponsiveActionItem[]>(() => [
+    {
+      id: "rotation-run",
+      label: t("table.rotateButton", { namespace: "fixedAssets" }),
+      priority: "secondary",
+      variant: "outline",
+      onClick: () => {
+        void handleRunRotation();
+      },
+    },
+    {
+      id: "export-assets",
+      label: t("table.exportButton", { namespace: "fixedAssets" }),
+      icon: Download,
+      priority: "tertiary",
+      variant: "outline",
+      onClick: handleExport,
+    },
+    {
+      id: "add-asset",
+      label: t("table.addButton", { namespace: "fixedAssets" }),
+      icon: Plus,
+      priority: "primary",
+      onClick: () => {
+        setSelectedAsset(null);
+        setEditingAsset(null);
+        setShowForm(true);
+      },
+    },
+  ], [handleExport, handleRunRotation, t]);
+
   return (
     <OperationalTableTemplate
       title={t("title", { namespace: "fixedAssets",  })}
-      toolbar={
-        <div className="flex items-center gap-2">
-          <Button
-            size="sm"
-            variant="outline"
-            className="bg-white border-muted text-foreground hover:bg-muted"
-            onClick={handleRunRotation}
-          >
-            {t("table.rotateButton", { namespace: "fixedAssets",  })}
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            className="bg-white border-muted text-foreground hover:bg-muted"
-            onClick={handleExport}
-          >
-            <Download className="w-4 h-4 ml-2 text-muted-foreground" /> {t("table.exportButton", { namespace: "fixedAssets",  })}
-          </Button>
-          <Button
-            size="sm"
-            onClick={() => {
-              setSelectedAsset(null);
-              setEditingAsset(null);
-              setShowForm(true);
-            }}
-            className="bg-primary hover:bg-primary/80 shadow-lg shadow-primary/20 font-bold"
-          >
-            <Plus className="w-4 h-4 ml-2" /> {t("table.addButton", { namespace: "fixedAssets",  })}
-          </Button>
-        </div>
-      }
+      toolbarActions={toolbarActions}
       tableContent={
         <SharedTable
           columns={columns}

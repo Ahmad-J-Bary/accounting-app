@@ -1,4 +1,4 @@
-import { Button } from "@shared/ui/button";
+import { useMemo } from "react";
 import { Plus } from "lucide-react";
 import { productionService } from '@modules/inventory/api/productionService';
 import type { ProductionOrder } from "@erp/shared-types";
@@ -8,6 +8,7 @@ import { useDataTable } from '@shared/hooks';
 import { ProductionTable } from '@modules/inventory/components/ProductionTable';
 import { toast } from "sonner";
 import { useLocalization } from "@app/providers/LocalizationProvider";
+import type { ResponsiveActionItem } from "@widgets/page-header/ResponsiveActions";
 
 export default function ProductionPage() {
   const { t } = useLocalization();
@@ -22,14 +23,22 @@ export default function ProductionPage() {
     searchFields: ["order_number"],
   });
 
+  const toolbarActions = useMemo<ResponsiveActionItem[]>(() => [
+    {
+      id: "new-production-order",
+      label: t("production.newOrder", { namespace: "inventory" }),
+      icon: Plus,
+      priority: "primary",
+      onClick: () => {
+        toast.info(t("production.newOrderComingSoon", { namespace: "inventory" }));
+      },
+    },
+  ], [t]);
+
   return (
     <OperationalTableTemplate
       title={t("production.title", { namespace: "inventory",  })}
-      toolbar={
-        <Button size="sm" onClick={() => toast.info(t("production.newOrderComingSoon", { namespace: "inventory",  }))} className="bg-primary hover:bg-primary/80 shadow-lg shadow-primary/20 font-bold">
-          <Plus className="w-4 h-4 ml-2" /> {t("production.newOrder", { namespace: "inventory",  })}
-        </Button>
-      }
+      toolbarActions={toolbarActions}
       tableContent={
         <ProductionTable
           data={orders}

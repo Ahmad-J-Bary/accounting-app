@@ -103,7 +103,7 @@ export function DataBackupSection() {
     return () => {
       unlisten?.();
     };
-  }, [load]);
+  }, [load, t]);
 
   const handleConfigChange = async (patch: Partial<BackupConfig>) => {
     try {

@@ -5,11 +5,28 @@ import { deriveOpeningSnapshot } from "@modules/opening-balance/lib/derive-openi
 import type { OpeningPositionControlDto } from "@erp/shared-types";
 
 const t = (key: string) => key;
+let currentLanguage: "ar" | "en" = "ar";
 
-const line = (code: string, name_ar: string, group_key: string, amount: string) => ({
+vi.mock("@app/providers/LocalizationProvider", () => ({
+  useLocalization: () => ({
+    t: (key: string) => key,
+    language: currentLanguage,
+    direction: currentLanguage === "ar" ? "rtl" : "ltr",
+    isRTL: currentLanguage === "ar",
+    locale: currentLanguage === "ar" ? "ar-SY" : "en-US",
+    setLanguage: vi.fn(),
+    resolveLabel: (key: string) => key,
+    terminologyOverrides: [],
+    setTerminologyOverride: vi.fn(),
+    removeTerminologyOverride: vi.fn(),
+  }),
+}));
+
+const line = (code: string, name_ar: string, group_key: string, amount: string, name_en?: string) => ({
   account_id: "id-" + code,
   code,
   name_ar,
+  name_en,
   purpose: "general",
   group_key,
   amount,
@@ -93,5 +110,18 @@ describe("OpeningDashboard", () => {
     render(<OpeningDashboard snapshot={snapshot} onOpenSection={onOpen} />);
     fireEvent.click(screen.getByText("wizard.sectionInventory"));
     expect(onOpen).toHaveBeenCalledWith("inventory");
+  });
+
+  it("shows English line labels when localized names are available", () => {
+    currentLanguage = "en";
+    const position = samplePosition();
+    position.asset_detail = [
+      line("122", "الصندوق", "Other", "300", "Cash"),
+      line("112", "العملاء", "Receivable", "1200", "Customers"),
+    ];
+    const snapshot = deriveOpeningSnapshot({ status: "Posted", position, t });
+    render(<OpeningDashboard snapshot={snapshot} />);
+    expect(screen.getByText(/122 Cash/)).toBeInTheDocument();
+    currentLanguage = "ar";
   });
 });

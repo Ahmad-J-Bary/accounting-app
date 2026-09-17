@@ -16,7 +16,12 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@shared/ui/popover";
-import { TYPE_LABEL, findAccount, isDebitNature } from "../lib/migration-labels";
+import {
+  TYPE_LABEL,
+  findAccount,
+  getLocalizedAccountName,
+  isDebitNature,
+} from "../lib/migration-labels";
 import { useLocalization } from "@app/providers/LocalizationProvider";
 
 interface AccountComboboxProps {
@@ -42,7 +47,7 @@ export function AccountCombobox({
   disabled = false,
   className,
 }: AccountComboboxProps) {
-  const { t } = useLocalization();
+  const { t, language } = useLocalization();
   const [open, setOpen] = useState(false);
   const selected = findAccount(accounts, value);
 
@@ -70,7 +75,9 @@ export function AccountCombobox({
                 <span className="rounded bg-muted px-1.5 py-0.5 text-[11px] font-bold tabular-nums text-muted-foreground">
                   {selected.code}
                 </span>
-                <span className="truncate font-semibold text-foreground">{selected.name_ar}</span>
+                <span className="truncate font-semibold text-foreground">
+                  {getLocalizedAccountName(selected, language)}
+                </span>
                 <span className="shrink-0 text-[11px] text-muted-foreground">({TYPE_LABEL[selected.account_type]?.(t)})</span>
                 <span
                   className={cn(
@@ -101,7 +108,7 @@ export function AccountCombobox({
                 return (
                   <CommandItem
                     key={a.id}
-                    value={`${a.code} ${a.name_ar} ${TYPE_LABEL[a.account_type]?.(t)}`}
+                    value={`${a.code} ${a.name_ar || ""} ${a.name_en || ""} ${TYPE_LABEL[a.account_type]?.(t)}`}
                     onSelect={() => {
                       onValueChange(a.id);
                       setOpen(false);
@@ -112,7 +119,9 @@ export function AccountCombobox({
                       <span className="rounded bg-muted px-1.5 py-0.5 text-[11px] font-bold tabular-nums text-muted-foreground">
                         {a.code}
                       </span>
-                      <span className="truncate text-foreground">{a.name_ar}</span>
+                      <span className="truncate text-foreground">
+                        {getLocalizedAccountName(a, language)}
+                      </span>
                       <span className="text-[11px] text-muted-foreground">({TYPE_LABEL[a.account_type]?.(t)})</span>
                       <span
                         className={cn(

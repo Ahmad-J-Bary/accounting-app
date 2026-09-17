@@ -1,7 +1,6 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useQueryClient } from '@tanstack/react-query';
 import { INVENTORY_MUTATION_KEYS, invalidateKeys } from "@shared/hooks/queryClient";
-import { Button } from "@shared/ui/button";
 import { Plus, Download } from "lucide-react";
 import { damagedService } from '@modules/inventory/api/damagedService';
 import { materialService } from '@modules/inventory/api/materialService';
@@ -16,6 +15,7 @@ import { dateCol, executeExport, addCurrencySummary, applyVisibilityToCurrencyCo
 import type { ExcelExportColumn } from "@shared/lib/excel";
 import { getNumberingSystem } from "@shared/lib/format";
 import { useLocalization } from "@app/providers/LocalizationProvider";
+import type { ResponsiveActionItem } from "@widgets/page-header/ResponsiveActions";
 
 export default function DamagedPage() {
   const { t } = useLocalization();
@@ -163,6 +163,24 @@ export default function DamagedPage() {
     });
   }, [items, currencies, formatAmount, currencyMode, baseCode, rateMap, exportData, hasSecondaryCurrencies, ratesSheet, visibleColumnIds, t]);
 
+  const toolbarActions = useMemo<ResponsiveActionItem[]>(() => [
+    {
+      id: "new-damaged-item",
+      label: t("damaged.register", { namespace: "inventory" }),
+      icon: Plus,
+      priority: "primary",
+      onClick: handleNewClick,
+    },
+    {
+      id: "export-damaged-items",
+      label: t("labels.exportExcel", { namespace: "inventory" }),
+      icon: Download,
+      priority: "secondary",
+      variant: "outline",
+      onClick: handleExport,
+    },
+  ], [handleExport, handleNewClick, t]);
+
   // Build initial values for form when editing
   const formInitialValues = selectedItem
     ? {
@@ -180,20 +198,7 @@ export default function DamagedPage() {
   return (
     <OperationalTableTemplate
       title={t("damaged.title", { namespace: "inventory",  })}
-      toolbar={
-        <div className="flex items-center gap-2">
-          <Button
-            size="sm"
-            onClick={handleNewClick}
-            className="bg-destructive hover:bg-destructive/80 shadow-lg shadow-destructive/20 font-bold"
-          >
-            <Plus className="w-4 h-4 ml-2" /> {t("damaged.register", { namespace: "inventory",  })}
-          </Button>
-          <Button variant="outline" size="sm" onClick={handleExport} className="border-muted hover:bg-muted font-bold">
-            <Download className="w-4 h-4 ml-2 text-muted-foreground" /> {t("labels.exportExcel", { namespace: "inventory",  })}
-          </Button>
-        </div>
-      }
+      toolbarActions={toolbarActions}
       tableContent={
           <DamagedTable
             items={items}

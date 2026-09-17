@@ -26,7 +26,7 @@ import { SettingsLayout } from "@widgets/templates/SettingsLayout";
 import { useLocalization } from "@app/providers/LocalizationProvider";
 
 export default function Settings() {
-  const { t } = useLocalization();
+  const { t, direction, isRTL } = useLocalization();
   const isMobile = useIsMobile();
   const isTablet = useIsTablet();
   const [settings, setSettings] = useState<CompanySettingsType | null>(null);
@@ -138,8 +138,8 @@ export default function Settings() {
 
       {(isMobile || isTablet) && (
         <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
-          <SheetContent side="right" className="w-[280px] sm:w-[320px] p-4 overflow-y-auto">
-            <SheetTitle className="text-end">{t("pageTitle", { namespace: "settings" })}</SheetTitle>
+          <SheetContent side={isRTL ? "right" : "left"} className="w-[280px] sm:w-[320px] p-4 overflow-y-auto" dir={direction}>
+            <SheetTitle className="text-start">{t("pageTitle", { namespace: "settings" })}</SheetTitle>
             <SheetDescription className="sr-only">{t("pageDescription", { namespace: "settings" })}</SheetDescription>
             <div className="mt-4">
               {renderNavContent()}

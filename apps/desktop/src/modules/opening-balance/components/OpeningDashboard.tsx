@@ -20,7 +20,7 @@ interface OpeningDashboardProps {
  * blockers before the position can be posted/locked.
  */
 export function OpeningDashboard({ snapshot, onOpenSection, loading = false, footer }: OpeningDashboardProps) {
-  const { t } = useLocalization();
+  const { t, direction, language } = useLocalization();
   if (loading) {
     return (
       <div className="rounded-xl border border-muted bg-white p-6 text-center text-xs text-muted-foreground font-semibold">
@@ -42,7 +42,7 @@ export function OpeningDashboard({ snapshot, onOpenSection, loading = false, foo
   }
 
   return (
-    <div className="space-y-4" dir="rtl">
+    <div className="space-y-4" dir={direction}>
       {/* Accounting-equation summary strip */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <SummaryTile label={t("openingBalance.totalAssets", { namespace: "accounting",  })} value={snapshot.totalAssets} tone="text-blue-700" />
@@ -95,13 +95,18 @@ function SummaryTile({ label, value, tone }: { label: string; value: number; ton
 }
 
 function SectionCard({ section, onOpen }: { section: OpeningSection; onOpen?: () => void }) {
-  const { t } = useLocalization();
+  const { t, language } = useLocalization();
+  const lineName = (line: OpeningSection["lines"][number]) =>
+    language === "ar"
+      ? line.name_ar || line.name_en || line.code
+      : line.name_en || line.name_ar || line.code;
+
   const card = (
     <button
       type="button"
       onClick={onOpen}
       className={cn(
-        "w-full text-end rounded-xl border bg-white p-3 space-y-1.5 transition-all",
+        "w-full text-start rounded-xl border bg-white p-3 space-y-1.5 transition-all",
         section.done
           ? "border-success/20 hover:border-success/30"
           : "border-muted hover:border-slate-300",
@@ -120,7 +125,7 @@ function SectionCard({ section, onOpen }: { section: OpeningSection; onOpen?: ()
       </div>
       <div className="text-2xs font-semibold text-muted-foreground truncate">
         {section.done
-          ? section.lines.slice(0, 2).map((l) => `${l.code} ${l.name_ar}`).join(" · ")
+          ? section.lines.slice(0, 2).map((l) => `${l.code} ${lineName(l)}`).join(" · ")
           : t("openingBalance.waitingForData", { namespace: "accounting",  })}
       </div>
     </button>

@@ -23,6 +23,7 @@ import {
 } from "../lib/company-lifecycle";
 import { GuidedTransitionWizard } from "../components/GuidedTransitionWizard";
 import { useLocalization } from "@app/providers/LocalizationProvider";
+import type { ResponsiveActionItem } from "@widgets/page-header/ResponsiveActions";
 
 export default function OpeningBalanceMigration() {
   const { t } = useLocalization();
@@ -89,18 +90,25 @@ export default function OpeningBalanceMigration() {
     return <Navigate to="/dashboard" replace />;
   }
 
+  const toolbarActions: ResponsiveActionItem[] = [
+    {
+      id: "refresh-migrations",
+      label: t("openingBalance.refreshButton", { namespace: "accounting" }),
+      icon: RefreshCw,
+      priority: "secondary",
+      variant: "outline",
+      onClick: () => {
+        void refetchMigrations();
+      },
+    },
+  ];
+
   return (
     <ErrorBoundary>
     <OperationalTableTemplate
       title={t("openingBalance.migrationPageTitle.closed", { namespace: "accounting",  })}
       badge={<Badge className="bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-50">{initStateLabel(initState, t)}</Badge>}
-      toolbar={
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => refetchMigrations()} className="border-slate-200 hover:bg-slate-50 font-bold">
-            <RefreshCw className="w-4 h-4 ms-2 text-slate-500" /> {t("openingBalance.refreshButton", { namespace: "accounting",  })}
-          </Button>
-        </div>
-      }
+      toolbarActions={toolbarActions}
       tableContent={
         <div className="flex flex-col h-full overflow-auto p-4 gap-4">
           <GuidedTransitionWizard />

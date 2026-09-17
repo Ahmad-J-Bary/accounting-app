@@ -6,6 +6,7 @@ import type { SalesReturnDto, PurchaseReturnDto } from "@erp/shared-types";
 import type { CurrencyDisplayMode } from "@app/providers/CurrencyContext";
 import { useLocalization } from "@app/providers/LocalizationProvider";
 import { ReturnsTable } from "./ReturnsTable";
+import type { ResponsiveActionItem } from "@widgets/page-header/ResponsiveActions";
 
 interface ReturnsListProps {
   returns: (SalesReturnDto | PurchaseReturnDto)[];
@@ -69,6 +70,10 @@ export function ReturnsList({
   const partyLabel = partyType === "supplier"
     ? t("return.partySupplier", { namespace: "invoicing",  })
     : t("return.partyCustomer", { namespace: "invoicing",  });
+  const selectedReturn = useMemo(
+    () => returns.find((ret) => ret.id === selectedId),
+    [returns, selectedId],
+  );
 
   const handleDeleteSelected = async () => {
     if (!selectedId) return;
@@ -77,43 +82,66 @@ export function ReturnsList({
     setSelectedId(null);
   };
 
+  const toolbarActions = useMemo<ResponsiveActionItem[]>(() => [
+    {
+      id: "create-return",
+      label: createLabel,
+      icon: Plus,
+      priority: "primary",
+      onClick: onCreate,
+    },
+    {
+      id: "view-return",
+      label: t("actions.view", { namespace: "invoicing" }),
+      icon: Eye,
+      priority: "secondary",
+      variant: "outline",
+      disabled: !selectedId,
+      onClick: () => {
+        if (selectedReturn) onView(selectedReturn);
+      },
+    },
+    {
+      id: "edit-return",
+      label: t("actions.edit", { namespace: "invoicing" }),
+      icon: Settings2,
+      priority: "secondary",
+      variant: "outline",
+      disabled: !selectedId,
+      onClick: () => {
+        if (selectedReturn) onEdit(selectedReturn);
+      },
+    },
+    {
+      id: "delete-return",
+      label: t("actions.delete", { namespace: "invoicing" }),
+      icon: Trash2,
+      priority: "overflow",
+      variant: "outline",
+      destructive: true,
+      disabled: !selectedId,
+      onClick: () => {
+        void handleDeleteSelected();
+      },
+    },
+    {
+      id: "print-return",
+      label: t("actions.print", { namespace: "invoicing" }),
+      icon: Printer,
+      priority: "tertiary",
+      variant: "outline",
+      disabled: !selectedId,
+      onClick: () => {
+        window.dispatchEvent(new Event("app:prepare-print"));
+        requestAnimationFrame(() => window.print());
+      },
+    },
+  ], [createLabel, handleDeleteSelected, onCreate, onEdit, onView, selectedId, selectedReturn, t]);
+
   return (
     <OperationalTableTemplate
       title={title}
-      toolbar={
-        <div className="no-print flex items-center gap-2">
-          <Button size="sm" onClick={onCreate} className="bg-primary hover:bg-primary/80 shadow-lg shadow-primary/20 h-9 px-4 font-bold">
-            <Plus className="w-4 h-4 ml-2" />{createLabel}
-          </Button>
-          <div className="w-[1px] h-6 bg-slate-200 mx-1" />
-          <Button variant="outline" size="sm" disabled={!selectedId}
-            onClick={() => {
-              const ret = returns.find(r => r.id === selectedId);
-              if (ret) onView(ret);
-            }}
-            className="h-9 border-muted hover:bg-muted/50 font-bold">
-            <Eye className="w-4 h-4 ml-2 text-primary" /> {t("actions.view", { namespace: "invoicing",  })}
-          </Button>
-          <Button variant="outline" size="sm" disabled={!selectedId}
-            onClick={() => {
-              const ret = returns.find(r => r.id === selectedId);
-              if (ret) onEdit(ret);
-            }}
-            className="h-9 border-muted hover:bg-muted/50 font-bold">
-            <Settings2 className="w-4 h-4 ml-2 text-amber-500" /> {t("actions.edit", { namespace: "invoicing",  })}
-          </Button>
-          <Button variant="outline" size="sm" disabled={!selectedId}
-            onClick={handleDeleteSelected}
-            className="h-9 border-muted hover:bg-destructive/10 hover:text-destructive hover:border-destructive/20 font-bold transition-all">
-            <Trash2 className="w-4 h-4 ml-2 text-destructive" /> {t("actions.delete", { namespace: "invoicing",  })}
-          </Button>
-          <Button variant="outline" size="sm" disabled={!selectedId}
-            onClick={() => { window.dispatchEvent(new Event("app:prepare-print")); requestAnimationFrame(() => window.print()); }}
-            className="h-9 border-muted hover:bg-muted/50 font-bold">
-            <Printer className="w-4 h-4 ml-2 text-muted-foreground" /> {t("actions.print", { namespace: "invoicing",  })}
-          </Button>
-        </div>
-      }
+      toolbarActions={toolbarActions}
       tableContent={
         <ReturnsTable
           items={filtered}

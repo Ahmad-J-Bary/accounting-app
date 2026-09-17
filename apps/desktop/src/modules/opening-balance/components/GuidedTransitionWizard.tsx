@@ -33,7 +33,7 @@ import { OpeningProgressChecklist, type ChecklistItem } from "@modules/opening-b
 import { useLocalization } from "@app/providers/LocalizationProvider";
 
 export function GuidedTransitionWizard() {
-  const { t } = useLocalization();
+  const { t, direction, isRTL } = useLocalization();
   const w = useOpeningBalanceWizard();
   const isNew = w.startMode === START_MODE_NEW;
   const navigate = useNavigate();
@@ -102,7 +102,9 @@ export function GuidedTransitionWizard() {
             ) : locked ? (
               t("wizard.doneLockedDesc", { namespace: "openingBalance" })
             ) : (
-              <>حالة الترحيل النهائية: <StatusBadge status={w.migration?.status || ""} /> — تاريخ القطع: {toLocalDateStr(w.migration?.cutover_date || "")}</>
+              <>
+                {t("wizard.finalMigrationStatusLabel", { namespace: "openingBalance" })} <StatusBadge status={w.migration?.status || ""} /> · {t("wizard.cutoverDate", { namespace: "openingBalance" })}: {toLocalDateStr(w.migration?.cutover_date || "")}
+              </>
             )}
           </p>
         </div>
@@ -259,7 +261,7 @@ export function GuidedTransitionWizard() {
                   navLink={
                     <Button size="sm" variant="outline" onClick={() => goTo("/customers", t("wizard.customersPage", { namespace: "openingBalance" }))} className="h-8 shrink-0 rounded-full border-primary/20 bg-primary/10 px-3 text-xs font-bold text-primary hover:bg-primary/20 hover:border-primary/40 transition-all">
                       {t("wizard.customersPageButton", { namespace: "openingBalance" })}
-                      <ArrowLeft className="w-3.5 h-3.5 me-1" />
+                      <ArrowLeft className={`ms-1 h-3.5 w-3.5 ${isRTL ? "" : "rotate-180"}`} />
                     </Button>
                   }
                 />
@@ -293,7 +295,7 @@ export function GuidedTransitionWizard() {
                   navLink={
                     <Button size="sm" variant="outline" onClick={() => goTo("/fixed-assets", t("wizard.fixedAssetsTitle", { namespace: "openingBalance" }))} className="h-8 shrink-0 rounded-full border-primary/20 bg-primary/10 px-3 text-xs font-bold text-primary hover:bg-primary/20 hover:border-primary/40 transition-all">
                       {t("wizard.fixedAssetsPageButton", { namespace: "openingBalance" })}
-                      <ArrowLeft className="w-3.5 h-3.5 me-1" />
+                      <ArrowLeft className={`ms-1 h-3.5 w-3.5 ${isRTL ? "" : "rotate-180"}`} />
                     </Button>
                   }
                 />
@@ -321,7 +323,7 @@ export function GuidedTransitionWizard() {
                   navLink={
                     <Button size="sm" variant="outline" onClick={() => goTo("/suppliers", t("wizard.suppliersPage", { namespace: "openingBalance" }))} className="h-8 shrink-0 rounded-full border-primary/20 bg-primary/10 px-3 text-xs font-bold text-primary hover:bg-primary/20 hover:border-primary/40 transition-all">
                       {t("wizard.suppliersPageButton", { namespace: "openingBalance" })}
-                      <ArrowLeft className="w-3.5 h-3.5 me-1" />
+                      <ArrowLeft className={`ms-1 h-3.5 w-3.5 ${isRTL ? "" : "rotate-180"}`} />
                     </Button>
                   }
                 />
@@ -344,7 +346,7 @@ export function GuidedTransitionWizard() {
                   </span>
                 )}
               </div>
-              <WizardLineEditor rows={w.liabilitiesManual} setter={w.setLiabilitiesManual} updateLine={w.updateLine} placeholder="ابحث واختر حساب التزام..." accounts={w.accounts} detailAccounts={w.detailAccounts} />
+              <WizardLineEditor rows={w.liabilitiesManual} setter={w.setLiabilitiesManual} updateLine={w.updateLine} placeholder={t("wizard.liabilityPlaceholder", { namespace: "openingBalance" })} accounts={w.accounts} detailAccounts={w.detailAccounts} />
             </div>
           </div>
         );
@@ -364,7 +366,7 @@ export function GuidedTransitionWizard() {
                   navLink={
                     <Button size="sm" variant="outline" onClick={() => goTo("/partners", t("wizard.partnersPage", { namespace: "openingBalance" }))} className="h-8 shrink-0 rounded-full border-primary/20 bg-primary/10 px-3 text-xs font-bold text-primary hover:bg-primary/20 hover:border-primary/40 transition-all">
                       {t("wizard.partnersPageButton", { namespace: "openingBalance" })}
-                      <ArrowLeft className="w-3.5 h-3.5 me-1" />
+                      <ArrowLeft className={`ms-1 h-3.5 w-3.5 ${isRTL ? "" : "rotate-180"}`} />
                     </Button>
                   }
                 />
@@ -389,7 +391,7 @@ export function GuidedTransitionWizard() {
                   </span>
                 )}
               </div>
-              <WizardLineEditor rows={w.equityManual} setter={w.setEquityManual} updateLine={w.updateLine} placeholder="ابحث واختر حساب حقوق ملكية..." accounts={w.accounts} detailAccounts={w.detailAccounts} />
+              <WizardLineEditor rows={w.equityManual} setter={w.setEquityManual} updateLine={w.updateLine} placeholder={t("wizard.equityPlaceholder", { namespace: "openingBalance" })} accounts={w.accounts} detailAccounts={w.detailAccounts} />
             </div>
           </div>
         );
@@ -401,9 +403,17 @@ export function GuidedTransitionWizard() {
               <p className="text-xs font-semibold text-muted-foreground">{t("wizard.reviewHint", { namespace: "openingBalance" })}</p>
               <p className="text-xs text-muted-foreground">
                 {t("wizard.reviewDesc", { namespace: "openingBalance" })}
-                عدد البنود: {w.collectLines().length} ·
-                العملاء: {w.derivedAr.length} · الموردون: {w.derivedAp.length} ·
-                الأصول الثابتة: {w.faRows.length} · حقوق الشركاء: {w.partnerEquity.length + w.partnerCurrentManual.length}
+                {" "}
+                {t("wizard.reviewCounts", {
+                  namespace: "openingBalance",
+                  vars: {
+                    lines: w.collectLines().length,
+                    customers: w.derivedAr.length,
+                    suppliers: w.derivedAp.length,
+                    fixedAssets: w.faRows.length,
+                    partners: w.partnerEquity.length + w.partnerCurrentManual.length,
+                  },
+                })}
               </p>
             </div>
             {w.reconciliation && (
@@ -599,7 +609,7 @@ export function GuidedTransitionWizard() {
   if (isNew || w.migration?.status === "Locked") return wizard;
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_330px] gap-4 items-start" dir="rtl">
+    <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_330px]" dir={direction}>
       {wizard}
       <aside className="lg:sticky lg:top-4 space-y-3 lg:max-h-[calc(100vh-3rem)] lg:overflow-y-auto custom-scrollbar">
         <OpeningPositionSummary {...summary} plugAmount={w.totals.plugAmount} balanced={w.savedTotals.balanced} />
@@ -725,10 +735,43 @@ export function ResidualClassificationSection({
   accounts: AccountDto[];
   spec: ResidualClassificationSpecDto | undefined;
 }) {
-  const { t } = useLocalization();
+  const { t, language } = useLocalization();
   const [advanced, setAdvanced] = useState(false);
   const [confirmKey, setConfirmKey] = useState<string | null>(null);
   const confirmSpec = specs.find((s) => s.key === confirmKey);
+  const labelForSpec = (specItem: ResidualClassificationSpecDto) => {
+    switch (specItem.key) {
+      case "RetainedEarnings":
+        return t("wizard.residualSpecRetainedEarnings", { namespace: "openingBalance" });
+      case "OpeningEquityAdjustment":
+        return t("wizard.residualSpecEquityAdjustment", { namespace: "openingBalance" });
+      case "PriorPeriodAdjustment":
+        return t("wizard.residualSpecPriorPeriod", { namespace: "openingBalance" });
+      case "OtherEquity":
+        return t("wizard.residualSpecOtherEquity", { namespace: "openingBalance" });
+      default:
+        return t("wizard.residualSpecUnresolved", { namespace: "openingBalance" });
+    }
+  };
+  const treatmentForSpec = (specItem: ResidualClassificationSpecDto) => {
+    switch (specItem.key) {
+      case "RetainedEarnings":
+        return t("wizard.residualSpecRetainedEarningsTreatment", { namespace: "openingBalance" });
+      case "OpeningEquityAdjustment":
+        return t("wizard.residualSpecEquityAdjustmentTreatment", { namespace: "openingBalance" });
+      case "PriorPeriodAdjustment":
+        return t("wizard.residualSpecPriorPeriodTreatment", { namespace: "openingBalance" });
+      case "OtherEquity":
+        return t("wizard.residualSpecOtherEquityTreatment", { namespace: "openingBalance" });
+      default:
+        return t("wizard.residualSpecUnresolvedTreatment", { namespace: "openingBalance" });
+    }
+  };
+  const accountDisplayName = (
+    account?: { name_ar?: string | null; name_en?: string | null } | null,
+  ) => language === "ar"
+    ? account?.name_ar ?? ""
+    : account?.name_en || account?.name_ar || "";
 
   const apply = (key: string) => {
     onValueChange(key);
@@ -790,7 +833,7 @@ export function ResidualClassificationSection({
                     !s.allows_posting && "text-destructive",
                   )}
                 >
-                  <span className="truncate">{s.label_ar}</span>
+                  <span className="truncate">{labelForSpec(s)}</span>
                   {selected && <Check className="h-4 w-4 shrink-0" />}
                 </button>
               );
@@ -813,10 +856,10 @@ export function ResidualClassificationSection({
               <p className="text-xs font-semibold text-primary">{t("wizard.previewBeforeSave", { namespace: "openingBalance" })}</p>
               {plugAmount !== 0 && (
                 <p className="text-xs text-muted-foreground">
-                  {t("wizard.previewValue", { namespace: "openingBalance", vars: { amount: toFixed(plugAmount, 2), type: spec?.label_ar ?? value } })}
+                  {t("wizard.previewValue", { namespace: "openingBalance", vars: { amount: toFixed(plugAmount, 2), type: spec ? labelForSpec(spec) : value } })}
                 </p>
               )}
-              <p className="text-xs text-muted-foreground">{spec?.treatment_ar ?? ""}</p>
+              <p className="text-xs text-muted-foreground">{spec ? treatmentForSpec(spec) : ""}</p>
               {(spec?.designated_account || effectiveAccount) && (
                 <p className="text-xs text-muted-foreground">
                   {t("wizard.designatedAccount", { namespace: "openingBalance" })}
@@ -825,7 +868,7 @@ export function ResidualClassificationSection({
                       {(spec?.designated_account ?? effectiveAccount)?.code ?? ""}
                     </span>
                     <span className="font-bold text-foreground">
-                      {(spec?.designated_account ?? effectiveAccount)?.name_ar ?? ""}
+                      {accountDisplayName(spec?.designated_account ?? effectiveAccount ?? undefined)}
                     </span>
                   </span>
                 </p>
@@ -875,10 +918,10 @@ export function ResidualClassificationSection({
         onOpenChange={(open) => {
           if (!open) setConfirmKey(null);
         }}
-        title={t("wizard.confirmClassificationTitle", { namespace: "openingBalance", vars: { label: confirmSpec?.label_ar ?? "" } })}
+        title={t("wizard.confirmClassificationTitle", { namespace: "openingBalance", vars: { label: confirmSpec ? labelForSpec(confirmSpec) : "" } })}
         description={t("wizard.confirmClassificationDesc", { namespace: "openingBalance" })}
         confirmLabel={t("wizard.confirmClassificationLabel", { namespace: "openingBalance" })}
-        cancelLabel="إلغاء"
+        cancelLabel={t("actions.cancel", { namespace: "common" })}
         onConfirm={() => {
           if (confirmKey) apply(confirmKey);
           setConfirmKey(null);

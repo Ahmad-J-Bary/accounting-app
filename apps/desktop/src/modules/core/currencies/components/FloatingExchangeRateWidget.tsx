@@ -24,7 +24,7 @@ export function FloatingExchangeRateWidget({ isVisible, onClose }: FloatingExcha
     setDisplayCurrencyCode,
     hasTodayRate,
   } = useCurrencyContext();
-  const { t } = useLocalization();
+  const { t, language, direction } = useLocalization();
 
   const [selectedCode, setSelectedCode] = useState<string>("");
   const [rate, setRate] = useState<string>("1");
@@ -87,6 +87,14 @@ export function FloatingExchangeRateWidget({ isVisible, onClose }: FloatingExcha
 
   if (!baseCurrency || loading || !isVisible) return null;
 
+  const getCurrencyName = (code: string) => {
+    const currency = currencies.find((item) => item.code === code);
+    if (!currency) return code;
+    return language === "ar"
+      ? currency.name_ar || currency.name_en || currency.code
+      : currency.name_en || currency.name_ar || currency.code;
+  };
+
   return (
     <Draggable
       handle=".drag-handle"
@@ -94,7 +102,11 @@ export function FloatingExchangeRateWidget({ isVisible, onClose }: FloatingExcha
       position={position}
       onStop={handleStop}
     >
-      <div className="fixed bottom-4 left-4 z-50 w-[340px] rounded-xl border border-muted bg-white/95 backdrop-blur shadow-xl p-3 space-y-2 cursor-default select-none">
+      <div
+        className="fixed bottom-4 z-50 w-[340px] cursor-default select-none space-y-2 rounded-xl border border-muted bg-white/95 p-3 shadow-xl backdrop-blur"
+        style={{ insetInlineStart: "1rem" }}
+        dir={direction}
+      >
         <div className="flex items-center justify-between mb-1">
           <div className="flex items-center gap-2 drag-handle cursor-grab active:cursor-grabbing p-1 -m-1 hover:bg-muted/50 rounded transition-colors">
             <GripVertical className="w-3.5 h-3.5 text-muted-foreground" />
@@ -105,7 +117,7 @@ export function FloatingExchangeRateWidget({ isVisible, onClose }: FloatingExcha
               <Badge className="bg-success/10 text-success border-success/20 text-[9px] px-1.5 h-4 font-bold">{t("floatingWidget.updatedToday", { namespace: "settings",  })}</Badge>
             ) : (
               <Badge variant="outline" className="text-amber-700 border-amber-200 bg-amber-50 text-[9px] px-1.5 h-4 font-bold">
-                <AlertTriangle className="w-2.5 h-2.5 ml-1" />
+                <AlertTriangle className="me-1 h-2.5 w-2.5" />
                 {t("floatingWidget.notUpdated", { namespace: "settings",  })}
               </Badge>
             )}
@@ -124,7 +136,7 @@ export function FloatingExchangeRateWidget({ isVisible, onClose }: FloatingExcha
               <SelectContent>
                 {nonBase.map((c) => (
                   <SelectItem key={c.code} value={c.code}>
-                    {c.name_ar} ({c.code})
+                    {getCurrencyName(c.code)} ({c.code})
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -133,7 +145,7 @@ export function FloatingExchangeRateWidget({ isVisible, onClose }: FloatingExcha
 
           <div className="col-span-4">
             <Input
-              className="h-8 text-left text-xs tabular-nums font-bold border-muted focus:ring-1 focus:ring-blue-500"
+              className="h-8 border-muted text-start text-xs font-bold tabular-nums focus:ring-1 focus:ring-blue-500"
               value={rate}
               onChange={(e) => setRate(e.target.value)}
               type="number"
@@ -149,7 +161,7 @@ export function FloatingExchangeRateWidget({ isVisible, onClose }: FloatingExcha
           </div>
         </div>
 
-        <div className="text-[10px] text-muted-foreground font-bold px-1 text-right">
+        <div className="px-1 text-[10px] font-bold text-muted-foreground text-start">
           {t("floatingWidget.equivalent", { namespace: "settings", vars: { base: baseCurrency.symbol || baseCurrency.code, rate: selectedStatus?.rate ?? selectedStatus?.last_rate ?? "—", target: currentCurrency?.symbol || currentCode } })}
         </div>
 
@@ -162,7 +174,7 @@ export function FloatingExchangeRateWidget({ isVisible, onClose }: FloatingExcha
             <SelectContent>
               {currencies.filter((c) => c.is_active).map((c) => (
                 <SelectItem key={c.code} value={c.code}>
-                  {c.name_ar} ({c.code})
+                  {getCurrencyName(c.code)} ({c.code})
                 </SelectItem>
               ))}
             </SelectContent>

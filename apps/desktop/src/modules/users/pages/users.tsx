@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { PageHeader } from '@widgets/page-header/PageHeader';
 import { Button } from "@shared/ui/button";
 import { Card } from "@shared/ui/card";
@@ -8,6 +8,7 @@ import type { User, Role, CreateUserRequest, CreateRoleRequest } from "@erp/shar
 import { toast } from "sonner";
 import { cn } from "@shared/lib/utils";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@shared/ui/tabs";
+import type { ResponsiveActionItem } from "@widgets/page-header/ResponsiveActions";
 
 import { useDataTable } from '@shared/hooks';
 import { useLocalization } from '@app/providers/LocalizationProvider';
@@ -17,7 +18,7 @@ import { RoleTable } from '@modules/users/components/RoleTable';
 import { RoleForm } from '@modules/users/components/RoleForm';
 
 export default function UsersPage() {
-  const { t } = useLocalization();
+  const { t, direction } = useLocalization();
   const [activeTab, setActiveTab] = useState("users");
   
   const {
@@ -55,6 +56,24 @@ export default function UsersPage() {
   useEffect(() => { loadRoles(); }, [loadRoles]);
 
   const activeCount = useMemo(() => users.filter(u => u.is_active).length, [users]);
+  const headerActions = useMemo<ResponsiveActionItem[]>(() => [
+    {
+      id: activeTab === "users" ? "new-user" : "new-role",
+      label: activeTab === "users"
+        ? t("actions.newUser", { namespace: "users" })
+        : t("actions.newRole", { namespace: "users" }),
+      icon: Plus,
+      priority: "primary",
+      onClick: () => {
+        if (activeTab === "users") {
+          setShowUserDialog(true);
+          return;
+        }
+        setSelectedRole(null);
+        setShowRoleDialog(true);
+      },
+    },
+  ], [activeTab, t]);
 
   const handleCreateUser = async (payload: CreateUserRequest) => {
     setSaving(true);
@@ -101,24 +120,12 @@ export default function UsersPage() {
   };
 
   return (
-    <div className="flex flex-col gap-6" dir="rtl">
+    <div className="flex flex-col gap-6" dir={direction}>
       <PageHeader
         title={t("title", { namespace: "users",  })}
         subtitle={t("subtitle", { namespace: "users",  })}
         breadcrumbs={[{ label: t("breadcrumbHome", { namespace: "users",  }), to: "/dashboard" }, { label: t("breadcrumbSettings", { namespace: "users",  }) }, { label: t("breadcrumbUsers", { namespace: "users",  }) }]}
-        actions={
-          <Button onClick={() => {
-            if (activeTab === "users") {
-              setShowUserDialog(true);
-            } else {
-              setSelectedRole(null);
-              setShowRoleDialog(true);
-            }
-          }} className="bg-primary hover:bg-primary/80 shadow-lg shadow-primary/20 font-bold">
-            <Plus className="w-4 h-4 ml-2" />
-            {activeTab === "users" ? t("actions.newUser", { namespace: "users",  }) : t("actions.newRole", { namespace: "users",  })}
-          </Button>
-        }
+        actionItems={headerActions}
       />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

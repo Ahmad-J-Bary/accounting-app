@@ -2,6 +2,7 @@ import React from "react";
 import { cn } from "@shared/lib/utils";
 import { useIsLaptop, useIsTablet, useIsMobile } from "@shared/hooks/useResponsive";
 import { useLocalization } from "@app/providers/LocalizationProvider";
+import { ResponsiveActions, type ResponsiveActionItem } from "@widgets/page-header/ResponsiveActions";
 
 interface SettingsLayoutProps {
   title: string;
@@ -9,16 +10,27 @@ interface SettingsLayoutProps {
   sidebar?: React.ReactNode;
   children: React.ReactNode;
   actions?: React.ReactNode;
+  actionItems?: ResponsiveActionItem[];
   className?: string;
   /** Whether to show the sidebar (controlled by parent based on responsive state) */
   showSidebar?: boolean;
 }
 
-export function SettingsLayout({ title, description, sidebar, children, className, actions, showSidebar = true }: SettingsLayoutProps) {
+export function SettingsLayout({
+  title,
+  description,
+  sidebar,
+  children,
+  className,
+  actions,
+  actionItems,
+  showSidebar = true,
+}: SettingsLayoutProps) {
   const isMobile = useIsMobile();
   const isTablet = useIsTablet();
   const isLaptop = useIsLaptop();
   const { direction } = useLocalization();
+  const hasResponsiveActions = Boolean(actionItems?.length);
 
   const showInlineSidebar = showSidebar && sidebar && !isMobile && !isTablet;
 
@@ -29,7 +41,15 @@ export function SettingsLayout({ title, description, sidebar, children, classNam
           <h1 className="text-lg sm:text-xl md:text-2xl font-black text-foreground tracking-tight">{title}</h1>
           {description && <p className="text-muted-foreground font-medium text-sm sm:text-base">{description}</p>}
         </div>
-        {actions && <div className="flex items-center gap-2">{actions}</div>}
+        {(hasResponsiveActions || actions) && (
+          <div className="min-w-0">
+            {hasResponsiveActions ? (
+              <ResponsiveActions actions={actionItems ?? []} />
+            ) : (
+              <div className="flex items-center gap-2">{actions}</div>
+            )}
+          </div>
+        )}
       </header>
 
       <div className={cn(

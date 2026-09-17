@@ -1,10 +1,8 @@
-import { useState, useEffect, useCallback } from "react";
-import { Button } from "@shared/ui/button";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Plus, History, Download, DollarSign } from "lucide-react";
 
 import { accountingService } from '@modules/accounting/api/accountingService';
 import { SYSTEM_ACCOUNT_IDS, type AccountDto, type SaveAccountCommand } from "@erp/shared-types";
-
 
 import { useTabs } from "@app/providers/TabContext";
 import { useEntityList, useExportSetup, useBaseCurrencyColumns } from '@shared/hooks';
@@ -25,6 +23,7 @@ import { executeExport, buildCurrencySummary, applyVisibilityToCurrencyCols, cur
 import type { ExcelExportColumn } from "@shared/lib/excel";
 import { QUERY_KEYS, PAYMENT_RECEIPT_KEYS, invalidateKeys, queryClient } from "@shared/hooks/queryClient";
 import { toast } from "sonner";
+import type { ResponsiveActionItem } from "@widgets/page-header/ResponsiveActions";
 
 // The "مصاريف أخرى" parent account ID in the chart of accounts
 const OTHER_EXPENSES_PARENT_ID = SYSTEM_ACCOUNT_IDS.OTHER_EXPENSES;
@@ -177,56 +176,60 @@ export default function Expenses() {
   }, [expenses, currencies, formatAmount, toBase, currencyMode, baseCode, rateMap, expensesParent, exportData, hasSecondaryCurrencies, ratesSheet, visibleColumnIds, t, language]);
 
   const isLoading = loading || refreshing;
+  const toolbarActions = useMemo<ResponsiveActionItem[]>(() => [
+    {
+      id: "expense-journal",
+      label: t("expense.journal", { namespace: "invoicing" }),
+      icon: History,
+      priority: "secondary",
+      variant: "outline",
+      disabled: !selectedId || !selectedExpense?.id,
+      onClick: () => {
+        if (!selectedExpense?.id) return;
+        openTab({
+          id: `ledger-${selectedExpense.id}`,
+          title: t("expense.ledgerTabTitle", {
+            namespace: "invoicing",
+            vars: { name: language === "ar" ? selectedExpense.name_ar : (selectedExpense.name_en || selectedExpense.name_ar) },
+          }),
+          path: `/accounting/account-ledger/${selectedExpense.id}`,
+          closable: true,
+        });
+      },
+    },
+    {
+      id: "expense-voucher",
+      label: t("expense.createVoucher", { namespace: "invoicing" }),
+      icon: DollarSign,
+      priority: "secondary",
+      variant: "outline",
+      disabled: !selectedId,
+      onClick: () => {
+        setIsVoucherOpen(true);
+        setIsFormOpen(false);
+      },
+    },
+    {
+      id: "expense-export",
+      label: t("labels.exportExcel", { namespace: "common" }),
+      icon: Download,
+      priority: "tertiary",
+      variant: "outline",
+      onClick: handleExport,
+    },
+    {
+      id: "expense-add",
+      label: t("expense.addItem", { namespace: "invoicing" }),
+      icon: Plus,
+      priority: "primary",
+      onClick: handleOpenAdd,
+    },
+  ], [handleExport, handleOpenAdd, language, openTab, selectedExpense, selectedId, setIsFormOpen, t]);
 
   return (
     <OperationalTableTemplate
       title={t("expense.title", { namespace: "invoicing",  })}
-      toolbar={
-        <div className="flex items-center gap-2">
-          <Button
-            size="sm"
-            variant="outline"
-            className="bg-card border-border text-foreground hover:bg-accent"
-            disabled={!selectedId || !selectedExpense?.id}
-            onClick={() => selectedExpense?.id && openTab({
-              id: `ledger-${selectedExpense.id}`,
-              title: t("expense.ledgerTabTitle", { namespace: "invoicing", vars: { name: language === "ar" ? selectedExpense.name_ar : (selectedExpense.name_en || selectedExpense.name_ar) },  }),
-              path: `/accounting/account-ledger/${selectedExpense.id}`,
-              closable: true
-            })}
-          >
-            <History className="w-4 h-4 ml-2 text-muted-foreground" /> {t("expense.journal", { namespace: "invoicing",  })}
-          </Button>
-
-          <Button
-            size="sm"
-            variant="outline"
-            className="bg-card border-border text-foreground hover:bg-accent"
-            disabled={!selectedId}
-            onClick={() => {
-              setIsVoucherOpen(true);
-              setIsFormOpen(false);
-            }}
-          >
-            <DollarSign className="w-4 h-4 ml-2 text-destructive" /> {t("expense.createVoucher", { namespace: "invoicing",  })}
-          </Button>
-
-          <Button
-            size="sm"
-            variant="outline"
-            className="bg-card border-border text-foreground hover:bg-accent"
-            onClick={handleExport}
-          >
-            <Download className="w-4 h-4 ml-2 text-muted-foreground" /> {t("labels.exportExcel", { namespace: "common",  })}
-          </Button>
-
-          <div className="h-6 w-px bg-muted mx-1" />
-
-          <Button size="sm" onClick={handleOpenAdd} className="bg-primary hover:bg-primary/80 shadow-lg shadow-primary/20 font-bold">
-            <Plus className="w-4 h-4 ml-2" /> {t("expense.addItem", { namespace: "invoicing",  })}
-          </Button>
-        </div>
-      }
+      toolbarActions={toolbarActions}
       tableContent={
           <ExpenseTable
             expenses={expenses}

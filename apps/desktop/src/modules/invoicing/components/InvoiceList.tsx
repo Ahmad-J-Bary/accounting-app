@@ -6,6 +6,7 @@ import { InvoiceDto } from "@erp/shared-types";
 import type { CurrencyDisplayMode } from "@app/providers/CurrencyContext";
 import { useLocalization } from "@app/providers/LocalizationProvider";
 import { InvoiceTable } from "./InvoiceTable";
+import type { ResponsiveActionItem } from "@widgets/page-header/ResponsiveActions";
 
 
 export interface ExtraColumn {
@@ -106,52 +107,76 @@ export function InvoiceList({
     ? t("invoice.partySupplier", { namespace: "invoicing",  })
     : t("invoice.partyCustomer", { namespace: "invoicing",  });
   const defaultName = partyType === "supplier" ? t("invoice.cashSupplierName", { namespace: "invoicing" }) : t("invoice.cashCustomerName", { namespace: "invoicing" });
+  const toolbarActions = useMemo<ResponsiveActionItem[]>(() => [
+    {
+      id: "create-invoice",
+      label: createLabel,
+      icon: Plus,
+      priority: "primary",
+      onClick: onCreate,
+    },
+    {
+      id: "view-invoice",
+      label: t("actions.view", { namespace: "invoicing" }),
+      icon: Eye,
+      priority: "secondary",
+      variant: "outline",
+      disabled: !selectedId,
+      onClick: () => {
+        if (!selectedInvoice) return;
+        if (selectedInvoice.invoice_type === "OpeningBalance") {
+          onViewOpeningBalance?.(selectedInvoice);
+          return;
+        }
+        onView(selectedInvoice);
+      },
+    },
+    {
+      id: "edit-invoice",
+      label: t("actions.edit", { namespace: "invoicing" }),
+      icon: Settings2,
+      priority: "secondary",
+      variant: "outline",
+      disabled: !selectedId,
+      onClick: () => {
+        if (!selectedInvoice) return;
+        if (selectedInvoice.invoice_type === "OpeningBalance") {
+          onEditOpeningBalance?.(selectedInvoice);
+          return;
+        }
+        onEdit(selectedInvoice);
+      },
+    },
+    {
+      id: "delete-invoice",
+      label: t("actions.delete", { namespace: "invoicing" }),
+      icon: Trash2,
+      priority: "overflow",
+      variant: "outline",
+      destructive: true,
+      disabled: !selectedId,
+      onClick: () => {
+        void handleDeleteSelected();
+      },
+    },
+    {
+      id: "print-invoice",
+      label: t("actions.print", { namespace: "invoicing" }),
+      icon: Printer,
+      priority: "tertiary",
+      variant: "outline",
+      disabled: !selectedId,
+      onClick: () => {
+        window.dispatchEvent(new Event("app:prepare-print"));
+        requestAnimationFrame(() => window.print());
+      },
+    },
+  ], [createLabel, handleDeleteSelected, onCreate, onEdit, onEditOpeningBalance, onView, onViewOpeningBalance, selectedId, selectedInvoice, t]);
 
   return (
     <OperationalTableTemplate
       title={title}
-      toolbar={
-        <div className="no-print flex items-center gap-2">
-          <Button size="sm" onClick={onCreate} className="bg-primary hover:bg-primary/80 shadow-lg shadow-primary/20 h-9 px-4 font-bold">
-            <Plus className="w-4 h-4 ml-2" />{createLabel}
-          </Button>
-          <div className="w-[1px] h-6 bg-muted mx-1" />
-          <Button variant="outline" size="sm" disabled={!selectedId}
-            onClick={() => {
-              if (!selectedInvoice) return;
-              if (selectedInvoice.invoice_type === "OpeningBalance") {
-                onViewOpeningBalance?.(selectedInvoice);
-              } else {
-                onView(selectedInvoice);
-              }
-            }}
-            className="h-9 border-border hover:bg-accent font-bold">
-            <Eye className="w-4 h-4 ml-2 text-primary" /> {t("actions.view", { namespace: "invoicing",  })}
-          </Button>
-          <Button variant="outline" size="sm" disabled={!selectedId}
-            onClick={() => {
-              if (!selectedInvoice) return;
-              if (selectedInvoice.invoice_type === "OpeningBalance") {
-                onEditOpeningBalance?.(selectedInvoice);
-              } else {
-                onEdit(selectedInvoice);
-              }
-            }}
-            className="h-9 border-border hover:bg-accent font-bold">
-            <Settings2 className="w-4 h-4 ml-2 text-amber-500" /> {t("actions.edit", { namespace: "invoicing",  })}
-          </Button>
-          <Button variant="outline" size="sm" disabled={!selectedId}
-            onClick={handleDeleteSelected}
-            className="h-9 border-border hover:bg-destructive/10 hover:text-destructive hover:border-destructive/20 font-bold transition-all">
-            <Trash2 className="w-4 h-4 ml-2 text-destructive" /> {t("actions.delete", { namespace: "invoicing",  })}
-          </Button>
-          <Button variant="outline" size="sm" disabled={!selectedId}
-            onClick={() => { window.dispatchEvent(new Event("app:prepare-print")); requestAnimationFrame(() => window.print()); }}
-            className="h-9 border-border hover:bg-accent font-bold">
-            <Printer className="w-4 h-4 ml-2 text-muted-foreground" /> {t("actions.print", { namespace: "invoicing",  })}
-          </Button>
-        </div>
-      }
+      toolbarActions={toolbarActions}
       tableContent={
           <InvoiceTable
             data={filtered}

@@ -7,6 +7,8 @@ import type { WizLine } from "@modules/opening-balance/lib/wizard-types";
 import type { AccountDto } from "@erp/shared-types";
 import { openingBalance } from "@shared/i18n/resources/openingBalance";
 
+let currentLanguage: "ar" | "en" = "ar";
+
 vi.mock("@app/providers/LocalizationProvider", () => ({
   useLocalization: () => ({
     t: (key: string, opts?: any) => {
@@ -19,10 +21,10 @@ vi.mock("@app/providers/LocalizationProvider", () => ({
       }
       return val;
     },
-    language: "ar",
-    direction: "rtl",
-    isRTL: true,
-    locale: "ar-SY",
+    language: currentLanguage,
+    direction: currentLanguage === "ar" ? "rtl" : "ltr",
+    isRTL: currentLanguage === "ar",
+    locale: currentLanguage === "ar" ? "ar-SY" : "en-US",
     setLanguage: vi.fn(),
     resolveLabel: (key: string) => key,
     terminologyOverrides: [],
@@ -36,6 +38,7 @@ const ACCOUNTS: AccountDto[] = [
     id: "a1",
     code: "111100",
     name_ar: "الصندوق",
+    name_en: "Cash",
     account_type: "Assets",
     category: "Detail",
     is_active: true,
@@ -44,6 +47,7 @@ const ACCOUNTS: AccountDto[] = [
     id: "a2",
     code: "211100",
     name_ar: "الموردون",
+    name_en: "Suppliers",
     account_type: "Liabilities",
     category: "Detail",
     is_active: true,
@@ -123,5 +127,21 @@ describe("WizardLineEditor", () => {
       />,
     );
     expect(screen.getByText("أدخل مبلغاً صحيحاً أكبر من صفر لهذا البند.")).toBeInTheDocument();
+  });
+
+  it("renders localized account names in English mode", () => {
+    currentLanguage = "en";
+    render(
+      <WizardLineEditor
+        rows={[{ key: "r1", account_id: "a1", amount: "500" }]}
+        setter={vi.fn()}
+        updateLine={vi.fn()}
+        placeholder="x"
+        accounts={ACCOUNTS}
+        detailAccounts={ACCOUNTS}
+      />,
+    );
+    expect(screen.getByText("Cash")).toBeInTheDocument();
+    currentLanguage = "ar";
   });
 });

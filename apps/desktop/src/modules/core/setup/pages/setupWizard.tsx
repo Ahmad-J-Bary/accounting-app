@@ -14,7 +14,7 @@ import { useLocalization } from "@app/providers/LocalizationProvider";
 
 export default function SetupWizard() {
   const navigate = useNavigate();
-  const { t } = useLocalization();
+  const { t, direction, language, isRTL } = useLocalization();
   const [step, setStep] = useState<"loading" | "welcome" | "pick" | "done">("loading");
   const [companyName, setCompanyName] = useState("");
   const [companyType, setCompanyType] = useState<string>(COMPANY_TYPE_EXISTING);
@@ -132,6 +132,12 @@ export default function SetupWizard() {
     }
   };
 
+  const getLocalizedCurrencyName = (currency: WorldCurrency) =>
+    (language === "ar" ? currency.name_ar : currency.name_en) || currency.name_ar || currency.name_en || currency.code;
+
+  const getSecondaryCurrencyName = (currency: WorldCurrency) =>
+    (language === "ar" ? currency.name_en : currency.name_ar) || "";
+
   if (step === "loading") {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100">
@@ -156,7 +162,7 @@ export default function SetupWizard() {
 
   if (step === "welcome") {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 p-4">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 p-4" dir={direction}>
         <Card className="w-full max-w-lg text-center">
           <CardHeader>
             <CardTitle className="text-3xl">{t("welcome.title", { namespace: "setup" })}</CardTitle>
@@ -167,20 +173,20 @@ export default function SetupWizard() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="text-right">
+            <div className="text-start">
               <label className="block text-sm font-medium text-foreground mb-1.5">{t("welcome.companyName", { namespace: "setup" })}</label>
               <div className="relative">
-                <Building2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Building2 className="absolute end-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   value={companyName}
                   onChange={(e) => setCompanyName(e.target.value)}
                   placeholder={t("welcome.companyNamePlaceholder", { namespace: "setup" })}
-                  className="pr-10 h-11 text-base"
+                  className="h-11 pe-10 text-base"
                 />
               </div>
             </div>
 
-            <div className="text-right space-y-2">
+            <div className="space-y-2 text-start">
               <label className="block text-sm font-medium text-foreground mb-1.5">{t("welcome.companyType", { namespace: "setup" })}</label>
               <RadioGroup value={companyType} onValueChange={setCompanyType} className="gap-2">
                 <label
@@ -228,20 +234,20 @@ export default function SetupWizard() {
               </RadioGroup>
             </div>
             {!currenciesReady && (
-              <div className="bg-warning/10 border border-warning/20 rounded-lg p-4 text-right text-sm text-warning">
+              <div className="rounded-lg border border-warning/20 bg-warning/10 p-4 text-start text-sm text-warning">
                 <p className="font-bold mb-1">{t("welcome.baseCurrencyInfo", { namespace: "setup" })}</p>
                 <p>{t("welcome.baseCurrencyDesc", { namespace: "setup" })}</p>
               </div>
             )}
             {currenciesReady ? (
               <Button size="lg" className="w-full text-lg" onClick={handleSaveCompanyOnly} disabled={!companyName.trim() || saving}>
-                {saving ? <Loader2 className="w-5 h-5 animate-spin ml-2" /> : null}
+                {saving ? <Loader2 className="h-5 w-5 animate-spin me-2" /> : null}
                 {t("welcome.save", { namespace: "setup" })}
               </Button>
             ) : (
               <Button size="lg" className="w-full text-lg" onClick={handleStart} disabled={!companyName.trim()}>
                 {t("welcome.startSetup", { namespace: "setup" })}
-                <ArrowRight className="w-5 h-5 mr-2" />
+                <ArrowRight className={`h-5 w-5 ${isRTL ? "rotate-180" : ""} ms-2`} />
               </Button>
             )}
           </CardContent>
@@ -251,7 +257,7 @@ export default function SetupWizard() {
   }
 
   return (
-    <div className="min-h-screen flex items-start justify-center bg-gradient-to-br from-slate-50 to-slate-100 p-4 pt-12">
+    <div className="min-h-screen flex items-start justify-center bg-gradient-to-br from-slate-50 to-slate-100 p-4 pt-12" dir={direction}>
       <Card className="w-full max-w-2xl">
         <CardHeader>
           <CardTitle>{t("currency.title", { namespace: "setup" })}</CardTitle>
@@ -259,17 +265,17 @@ export default function SetupWizard() {
             {t("currency.desc", { namespace: "setup" })}
           </CardDescription>
           <div className="relative mt-2">
-            <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Search className="absolute end-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder={t("currency.searchPlaceholder", { namespace: "setup" })}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pr-9"
+              className="pe-9"
             />
           </div>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[420px] overflow-y-auto pl-1">
+          <div className="grid max-h-[420px] grid-cols-1 gap-3 overflow-y-auto ps-1 sm:grid-cols-2">
             {filtered.map((wc) => {
               const isBase = baseCode === wc.code;
               const isSecondary = secondaryCode === wc.code;
@@ -288,8 +294,10 @@ export default function SetupWizard() {
                     <span className="text-lg font-bold text-foreground">{wc.code}</span>
                     <span className="text-xl text-muted-foreground">{wc.symbol}</span>
                   </div>
-                  <div className="text-sm text-foreground">{wc.name_ar}</div>
-                  <div className="text-xs text-muted-foreground">{wc.name_en}</div>
+                  <div className="text-sm text-foreground">{getLocalizedCurrencyName(wc)}</div>
+                  {getSecondaryCurrencyName(wc) ? (
+                    <div className="text-xs text-muted-foreground">{getSecondaryCurrencyName(wc)}</div>
+                  ) : null}
                   <div className="flex gap-1 mt-2">
                     <Badge
                       variant={isBase ? "default" : "outline"}
@@ -323,7 +331,7 @@ export default function SetupWizard() {
               )}
             </div>
             <Button onClick={handleFinish} disabled={!baseCode || saving}>
-              {saving ? <Loader2 className="w-4 h-4 animate-spin ml-1" /> : null}
+              {saving ? <Loader2 className="h-4 w-4 animate-spin me-1" /> : null}
               {t("currency.confirm", { namespace: "setup" })}
             </Button>
           </div>

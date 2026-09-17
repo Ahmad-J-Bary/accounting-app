@@ -14,7 +14,7 @@ import { SettingsManagerLayout, SettingsGroup } from '@widgets/templates/Setting
 import { useLocalization } from "@app/providers/LocalizationProvider";
 
 export const SidebarContentManager: React.FC = () => {
-  const { t } = useLocalization();
+  const { t, direction } = useLocalization();
   const {
     layout,
     allItems,
@@ -112,7 +112,7 @@ export const SidebarContentManager: React.FC = () => {
 
   return (
     <SettingsManagerLayout resetAction={resetToDefault}>
-      <div className="space-y-6" dir="rtl">
+      <div className="space-y-6" dir={direction}>
         {/* Title */}
         <div className="flex flex-col gap-1 border-e-4 border-primary pe-3 pb-1 mb-2">
           <h2 className="text-xl font-black text-foreground font-sans">{t("sidebarContent.title", { namespace: "settings",  })}</h2>

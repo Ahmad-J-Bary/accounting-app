@@ -15,6 +15,7 @@ import { useExportSetup } from "@shared/hooks";
 import { executeExport } from "@shared/lib/excel";
 import type { ExcelExportColumn } from "@shared/lib/excel";
 import { useLocalization } from "@app/providers/LocalizationProvider";
+import type { ResponsiveActionItem } from "@widgets/page-header/ResponsiveActions";
 
 export default function Warehouses() {
   const { t } = useLocalization();
@@ -86,19 +87,31 @@ export default function Warehouses() {
     });
   }, [filteredWarehouses, exportData, t]);
 
+  const toolbarActions = useMemo<ResponsiveActionItem[]>(() => [
+    {
+      id: "new-warehouse",
+      label: t("warehouses.new", { namespace: "inventory" }),
+      icon: Plus,
+      priority: "primary",
+      onClick: () => {
+        setWarehouseEditItem(null);
+        setWarehouseFormOpen(true);
+      },
+    },
+    {
+      id: "export-warehouses",
+      label: t("labels.exportExcel", { namespace: "inventory" }),
+      icon: Download,
+      priority: "secondary",
+      variant: "outline",
+      onClick: handleExport,
+    },
+  ], [handleExport, t]);
+
   return (
     <OperationalTableTemplate
       title={t("warehouses.title", { namespace: "inventory",  })}
-      toolbar={
-        <div className="flex items-center gap-2">
-          <Button size="sm" onClick={() => { setWarehouseEditItem(null); setWarehouseFormOpen(true); }} className="bg-primary hover:bg-primary/80 text-white shadow-lg shadow-primary/20 font-bold">
-            <Plus className="w-4 h-4 ml-2" />{t("warehouses.new", { namespace: "inventory",  })}
-          </Button>
-          <Button variant="outline" size="sm" onClick={handleExport} className="border-muted hover:bg-muted font-bold">
-            <Download className="w-4 h-4 ml-2 text-muted-foreground" /> {t("labels.exportExcel", { namespace: "inventory",  })}
-          </Button>
-        </div>
-      }
+      toolbarActions={toolbarActions}
       tableContent={
         <div className="flex flex-col h-full">
           <div className="flex items-start gap-3 px-6 pt-4 pb-2 shrink-0">

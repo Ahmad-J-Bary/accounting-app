@@ -25,7 +25,7 @@ export function PositionControlCard({
   position,
   onShow,
 }: PositionControlCardProps) {
-  const { t } = useLocalization();
+  const { t, language } = useLocalization();
 return (
     <SectionCard
       title={t("positionControl.title", { namespace: "openingBalance" })}
@@ -144,13 +144,13 @@ return (
             </div>
 
             {position.asset_detail.length > 0 && (
-              <PositionDetailTable title={t("positionControl.assetDetails", { namespace: "openingBalance" })} lines={position.asset_detail} />
+              <PositionDetailTable title={t("positionControl.assetDetails", { namespace: "openingBalance" })} lines={position.asset_detail} language={language} />
             )}
             {position.liability_detail.length > 0 && (
-              <PositionDetailTable title={t("positionControl.liabilityDetails", { namespace: "openingBalance" })} lines={position.liability_detail} />
+              <PositionDetailTable title={t("positionControl.liabilityDetails", { namespace: "openingBalance" })} lines={position.liability_detail} language={language} />
             )}
             {position.equity_detail.length > 0 && (
-              <PositionDetailTable title={t("positionControl.equityDetails", { namespace: "openingBalance" })} lines={position.equity_detail} />
+              <PositionDetailTable title={t("positionControl.equityDetails", { namespace: "openingBalance" })} lines={position.equity_detail} language={language} />
             )}
 
             {position.partner_rows.length > 0 && (
@@ -175,7 +175,20 @@ return (
   );
 }
 
-function PositionDetailTable({ title, lines }: { title: string; lines: PositionAccountLine[] }) {
+function PositionDetailTable({
+  title,
+  lines,
+  language,
+}: {
+  title: string;
+  lines: PositionAccountLine[];
+  language: "ar" | "en";
+}) {
+  const lineName = (line: PositionAccountLine) =>
+    language === "ar"
+      ? line.name_ar || line.name_en || line.code
+      : line.name_en || line.name_ar || line.code;
+
   return (
     <div className="space-y-1">
       <div className="text-xs font-bold text-foreground">{title}</div>
@@ -184,7 +197,7 @@ function PositionDetailTable({ title, lines }: { title: string; lines: PositionA
           <div key={l.account_id} className="flex items-center justify-between gap-2 px-3 py-1.5 text-xs">
             <div className="flex items-center gap-2 min-w-0">
               <span className="text-2xs font-bold text-muted-foreground tabular-nums">{l.code}</span>
-              <span className="truncate text-foreground">{l.name_ar}</span>
+              <span className="truncate text-foreground">{lineName(l)}</span>
               <span className="text-2xs px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">{l.group_key}</span>
             </div>
             <span className="tabular-nums font-semibold text-foreground">{fmtMoney(l.amount)}</span>

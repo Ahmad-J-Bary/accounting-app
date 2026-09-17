@@ -52,6 +52,8 @@ import {
 } from "@modules/opening-balance/lib/derive-rows";
 import { defaultAccountFor } from "@modules/opening-balance/lib/auto-accounts";
 import {
+  getLocalizedAccountLabel,
+  getLocalizedAccountName,
   reconciliationReadiness,
   canValidateOpening,
   selectLatestOpenMigration,
@@ -189,7 +191,7 @@ interface WizardDraft {
 }
 
 export function useOpeningBalanceWizard() {
-  const { t } = useLocalization();
+  const { t, language } = useLocalization();
   const [step, setStep] = useState(0);
   const [startMode, setStartMode] = useState<string>(START_MODE_EXISTING);
   const [cutoverDate, setCutoverDate] = useState(() => toLocalDatePart(new Date()));
@@ -530,19 +532,19 @@ export function useOpeningBalanceWizard() {
   const defaultInventoryAccount = useMemo(() => defaultAccountFor(accounts, "inventory"), [accounts]);
   const effectiveInventoryAccountId = inventoryAccountId || defaultInventoryAccount;
 
-  // Fixed account names for display (code — name_ar)
+  // Fixed account names for display follow the active UI language.
   const fixedCashAccountName = useMemo(() => {
     const a = accounts.find((acc) => acc.id === defaultCashAccount);
-    return a ? `${a.code} - ${a.name_ar}` : "";
-  }, [accounts, defaultCashAccount]);
+    return getLocalizedAccountLabel(a, language);
+  }, [accounts, defaultCashAccount, language]);
   const fixedBankAccountName = useMemo(() => {
     const a = accounts.find((acc) => acc.id === defaultBankAccount);
-    return a ? `${a.code} - ${a.name_ar}` : "";
-  }, [accounts, defaultBankAccount]);
+    return getLocalizedAccountLabel(a, language);
+  }, [accounts, defaultBankAccount, language]);
   const fixedLoanAccountName = useMemo(() => {
     const a = accounts.find((acc) => acc.id === defaultLoanAccount);
-    return a ? `${a.code} - ${a.name_ar}` : "";
-  }, [accounts, defaultLoanAccount]);
+    return getLocalizedAccountLabel(a, language);
+  }, [accounts, defaultLoanAccount, language]);
 
   // ── Ensure one row per kind exists (auto-initialized on first load) ───────
   useEffect(() => {
@@ -1149,7 +1151,7 @@ export function useOpeningBalanceWizard() {
         items.push({ kind: KIND_INVENTORY, entity_id: r.material_id, reference: r.name, amount: String(r.value), qty: String(toNum(r.qty)) });
       }
     }
-    const accountName = (id: string) => accounts.find((a) => a.id === id)?.name_ar || null;
+    const accountName = (id: string) => getLocalizedAccountName(accounts.find((a) => a.id === id), language) || null;
     for (const l of cashBanks) {
       if (l.kind === "bank" && toNum(l.amount) > 0 && l.account_id) {
         items.push({ kind: KIND_BANK, entity_id: l.account_id, reference: accountName(l.account_id), amount: l.amount, qty: "0" });
@@ -1161,7 +1163,7 @@ export function useOpeningBalanceWizard() {
       }
     }
     return items;
-  }, [derivedAr, derivedAp, faRows, effectiveInventory, cashBanks, loans, accounts]);
+  }, [derivedAr, derivedAp, faRows, effectiveInventory, cashBanks, loans, accounts, language]);
 
   // Single source of truth (§ review step): the GL balance must be computed
   // from the LINES THAT WILL ACTUALLY BE SAVED. `collectLines` drops any row
