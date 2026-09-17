@@ -3,6 +3,7 @@ import { TopBar } from '../TopBar';
 import { TabBar } from '../TabBar';
 import { useAppearance } from '@shared/hooks/useAppearance';
 import { NavBar } from '../components/NavBar';
+import { useLocalization } from '@app/providers/LocalizationProvider';
 
 interface HorizontalLayoutProps {
   children: React.ReactNode;
@@ -12,6 +13,7 @@ interface HorizontalLayoutProps {
 
 export function HorizontalLayout({ children, isExchangeVisible, onToggleExchange }: HorizontalLayoutProps) {
   const { settings, activeLayout } = useAppearance();
+  const { direction } = useLocalization();
   const isStacked = activeLayout.id === 'horizontal-slim' || settings.topnavShape === 'stacked';
   const showTopBar = settings.show.topBar && activeLayout.topBarMode !== 'hidden';
   const showNavBar = activeLayout.navbarMode !== 'none';
@@ -19,7 +21,7 @@ export function HorizontalLayout({ children, isExchangeVisible, onToggleExchange
 
   if (isStacked) {
     return (
-      <div className="flex flex-col h-screen overflow-hidden" dir="rtl" data-density={settings.density}>
+      <div className="flex flex-col h-screen overflow-hidden" dir={direction} data-density={settings.density}>
         {showTopBar && <TopBar onToggleSidebar={() => {}} sidebarOpen={false} isExchangeVisible={isExchangeVisible} onToggleExchange={onToggleExchange} />}
         {showNavBar && (
           <NavBar
@@ -38,7 +40,7 @@ export function HorizontalLayout({ children, isExchangeVisible, onToggleExchange
   }
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden" dir="rtl" data-density={settings.density}>
+    <div className="flex flex-col h-screen overflow-hidden" dir={direction} data-density={settings.density}>
       <TopBar
         onToggleSidebar={() => {}}
         sidebarOpen={false}

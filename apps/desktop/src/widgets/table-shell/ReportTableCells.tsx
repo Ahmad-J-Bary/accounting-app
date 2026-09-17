@@ -2,7 +2,7 @@ import { cn } from "@shared/lib/utils";
 
 export function ReportTableHeader({ children }: { children: React.ReactNode }) {
   return (
-    <th className="whitespace-nowrap px-3 py-2.5 text-right text-[11px] font-black text-muted-foreground border-b border-muted">
+    <th className="whitespace-nowrap border-b border-muted px-3 py-2.5 text-start text-[11px] font-black text-muted-foreground">
       {children}
     </th>
   );

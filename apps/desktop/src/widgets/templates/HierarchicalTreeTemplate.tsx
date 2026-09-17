@@ -31,10 +31,10 @@ export function HierarchicalTreeTemplate({
   children,
   treePresentation = "default",
 }: HierarchicalTreeTemplateProps) {
-  const { t } = useLocalization();
+  const { t, direction } = useLocalization();
   const resolvedTreeHeaderTitle = treeHeaderTitle ?? t('labels.hierarchicalTree');
   return (
-    <div className={cn("flex flex-col h-full w-full bg-muted/30", className)} dir="rtl">
+    <div className={cn("flex h-full w-full flex-col bg-muted/30", className)} dir={direction}>
       <PageHeader title={title} badge={badge} actions={toolbar} pinAction pinLabel={title} />
 
       <div className="flex-1 flex overflow-hidden p-2 sm:p-3 md:p-4 gap-2 sm:gap-3 md:gap-4">

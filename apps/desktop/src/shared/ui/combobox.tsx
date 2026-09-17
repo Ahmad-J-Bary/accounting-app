@@ -16,6 +16,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@shared/ui/popover';
+import { useLocalization } from '@app/providers/LocalizationProvider';
 
 interface ComboboxProps {
   options: { value: string; label: string }[];
@@ -32,13 +33,17 @@ export function Combobox({
   options,
   value,
   onValueChange,
-  placeholder = 'Select option...',
-  searchPlaceholder = 'Search...',
-  emptyText = 'No options found',
+  placeholder,
+  searchPlaceholder,
+  emptyText,
   disabled = false,
   className,
 }: ComboboxProps) {
   const [open, setOpen] = React.useState(false);
+  const { t } = useLocalization();
+  const resolvedPlaceholder = placeholder ?? t('actions.select', { namespace: 'common' });
+  const resolvedSearchPlaceholder = searchPlaceholder ?? t('labels.search', { namespace: 'common' });
+  const resolvedEmptyText = emptyText ?? t('states.noResults', { namespace: 'common' });
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -52,15 +57,15 @@ export function Combobox({
         >
           {value
             ? options.find(option => option.value === value)?.label
-            : placeholder}
-          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+            : resolvedPlaceholder}
+          <ChevronsUpDown className="ms-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-full p-0">
         <Command>
-          <CommandInput placeholder={searchPlaceholder} />
+          <CommandInput placeholder={resolvedSearchPlaceholder} />
           <CommandList>
-            <CommandEmpty>{emptyText}</CommandEmpty>
+            <CommandEmpty>{resolvedEmptyText}</CommandEmpty>
             <CommandGroup>
               {options.map(option => (
                 <CommandItem
@@ -73,7 +78,7 @@ export function Combobox({
                 >
                   <Check
                     className={cn(
-                      'mr-2 h-4 w-4',
+                      'me-2 h-4 w-4',
                       value === option.value ? 'opacity-100' : 'opacity-0'
                     )}
                   />

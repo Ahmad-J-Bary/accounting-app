@@ -9,7 +9,7 @@ export function SidebarBody({ children, className }: SidebarBodyProps) {
   return (
     <div
       className={cn(
-        "flex-1 overflow-y-auto custom-scrollbar text-right",
+        "flex-1 overflow-y-auto custom-scrollbar text-start",
         getPaddingClass(),
         getSpacingClass(),
         getFontSizeClass(),

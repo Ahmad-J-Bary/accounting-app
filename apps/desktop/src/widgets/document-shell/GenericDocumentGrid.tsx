@@ -466,7 +466,7 @@ export function GenericDocumentGrid({
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="w-64 max-h-[420px] overflow-y-auto shadow-xl">
-          <DropdownMenuLabel className="flex items-center justify-between text-right gap-2">
+          <DropdownMenuLabel className="flex items-center justify-between gap-2 text-start">
             <span className="text-2xs font-black uppercase text-muted-foreground tracking-widest">
               {t("tooltip.showHideColumns", { namespace: "common" })}
             </span>
@@ -485,7 +485,7 @@ export function GenericDocumentGrid({
               key={col.key}
               checked={isVisible(col.key)}
               onCheckedChange={() => toggleColumn(col.key)}
-              className="text-right flex-row-reverse gap-2 text-[11px] font-bold py-1.5"
+              className="gap-2 py-1.5 text-[11px] font-bold text-start"
             >
               {col.header}
             </DropdownMenuCheckboxItem>
@@ -496,9 +496,9 @@ export function GenericDocumentGrid({
               <DropdownMenuItem
                 onClick={resetToDefault}
                 disabled={!isModified}
-                className="flex-row-reverse text-primary focus:text-primary disabled:text-muted-foreground disabled:opacity-50"
+                className="text-primary focus:text-primary disabled:text-muted-foreground disabled:opacity-50"
               >
-                <RotateCcw className="w-4 h-4 ml-2" />
+                <RotateCcw className="ms-2 h-4 w-4" />
                 {t("actions.restoreDefaultColumns", { namespace: "common" })}
               </DropdownMenuItem>
             </>

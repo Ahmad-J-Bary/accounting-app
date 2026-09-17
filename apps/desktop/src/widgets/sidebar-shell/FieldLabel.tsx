@@ -13,7 +13,7 @@ export function FieldLabel({
       style={{ fontSize: "var(--sidebar-label-size)" }}
     >
       {children}
-      {required && <span className="text-red-500 mr-1">*</span>}
+      {required && <span className="ms-1 text-red-500">*</span>}
     </label>
   );
 }

@@ -1,6 +1,7 @@
 import React from "react";
 import { cn } from "@shared/lib/utils";
 import { useIsLaptop, useIsTablet, useIsMobile } from "@shared/hooks/useResponsive";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 interface SettingsLayoutProps {
   title: string;
@@ -17,11 +18,12 @@ export function SettingsLayout({ title, description, sidebar, children, classNam
   const isMobile = useIsMobile();
   const isTablet = useIsTablet();
   const isLaptop = useIsLaptop();
+  const { direction } = useLocalization();
 
   const showInlineSidebar = showSidebar && sidebar && !isMobile && !isTablet;
 
   return (
-    <div className={cn("min-h-screen bg-muted/30 p-3 sm:p-4 lg:p-6 space-y-4 sm:space-y-6", className)} dir="rtl">
+    <div className={cn("min-h-screen bg-muted/30 p-3 sm:p-4 lg:p-6 space-y-4 sm:space-y-6", className)} dir={direction}>
       <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-2 sm:gap-4 pb-1">
         <div className="space-y-1">
           <h1 className="text-lg sm:text-xl md:text-2xl font-black text-foreground tracking-tight">{title}</h1>

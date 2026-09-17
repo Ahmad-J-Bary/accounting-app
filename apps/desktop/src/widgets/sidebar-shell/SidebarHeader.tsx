@@ -26,7 +26,7 @@ export function SidebarHeader({
         className
       )}
     >
-      <div className="flex items-center gap-3 text-right">
+      <div className="flex items-center gap-3 text-start">
         {icon && <div className="text-muted-foreground shrink-0">{icon}</div>}
         <div className="flex flex-col">
           <h2 className="text-base font-bold text-foreground leading-tight">

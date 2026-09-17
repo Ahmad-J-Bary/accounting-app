@@ -7,6 +7,7 @@ import { accountingService } from '@modules/accounting/api/accountingService';
 import { Wallet, Landmark, Package, HandCoins } from 'lucide-react';
 import type { AccountDto } from "@erp/shared-types";
 import { useLocalization } from "@app/providers/LocalizationProvider";
+import { resolveAccountName } from "@shared/lib/system-labels";
 
 export type CapitalSource = 'Cash' | 'Bank' | 'InKind' | 'Owed';
 
@@ -20,11 +21,11 @@ interface CapitalSourceDialogProps {
   submitting?: boolean;
 }
 
-const SOURCE_OPTIONS: { id: CapitalSource; icon: ComponentType<{ className?: string }>; label: string; hint: string }[] = [
-  { id: 'Cash', icon: Wallet, label: 'نقداً', hint: 'إيداع نقدي في الصندوق (خزينة)' },
-  { id: 'Bank', icon: Landmark, label: 'بنكي', hint: 'تحويل إلى حساب بنكي' },
-  { id: 'InKind', icon: Package, label: 'أصل عيني', hint: 'تقديم أصل (سيارة/معدات/مخزون)' },
-  { id: 'Owed', icon: HandCoins, label: 'ذمة برأس المال', hint: 'رأس المال معلق على الشريك — يُسدد لاحقاً (ذمة مدين للشركة)' },
+const SOURCE_OPTIONS: { id: CapitalSource; icon: ComponentType<{ className?: string }> }[] = [
+  { id: 'Cash', icon: Wallet },
+  { id: 'Bank', icon: Landmark },
+  { id: 'InKind', icon: Package },
+  { id: 'Owed', icon: HandCoins },
 ];
 
 function accountCandidates(accounts: AccountDto[], source: CapitalSource): AccountDto[] {
@@ -56,7 +57,7 @@ export function CapitalSourceDialog({
   onConfirm,
   submitting,
 }: CapitalSourceDialogProps) {
-  const { t } = useLocalization();
+  const { t, language } = useLocalization();
   const [source, setSource] = useState<CapitalSource>('Cash');
   const [fundingAccountId, setFundingAccountId] = useState('');
   const [accounts, setAccounts] = useState<AccountDto[]>([]);
@@ -148,7 +149,7 @@ export function CapitalSourceDialog({
                 <SelectContent>
                   {candidates.map((a) => (
                     <SelectItem key={a.id} value={a.id} className="text-xs">
-                      {a.code} — {a.name_ar}
+                      {a.code} — {resolveAccountName(a, language)}
                     </SelectItem>
                   ))}
                 </SelectContent>

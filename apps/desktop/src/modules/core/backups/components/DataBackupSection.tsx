@@ -16,15 +16,12 @@ import { HistorySection } from "./sections/HistorySection";
 import { SettingsSection } from "./sections/SettingsSection";
 import { friendlyBackupError, RESTORE_STATUS_SEEN_KEY } from "../lib/backupErrors";
 import { ErrorDetails } from "../lib/ErrorDetails";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 type Health = "checking" | "ok" | "error";
 
-const RESTORE_STATUS_TOASTS: Record<string, string> = {
-  applied: "تمت الاستعادة بنجاح ✓ — بياناتك سليمة.",
-  rolled_back: "تم التراجع عن الاستعادة تلقائيًا — بياناتك السابقة سليمة.",
-};
-
 export function DataBackupSection() {
+  const { t, direction } = useLocalization();
   const [backups, setBackups] = useState<BackupFileInfo[]>([]);
   const [config, setConfig] = useState<BackupConfig | null>(null);
   const [dbInfo, setDbInfo] = useState<Awaited<ReturnType<typeof backupService.getDatabaseInfo>> | null>(null);
@@ -54,7 +51,12 @@ export function DataBackupSection() {
       const status = c?.last_restore_status ?? null;
       if (status && status !== localStorage.getItem(RESTORE_STATUS_SEEN_KEY)) {
         localStorage.setItem(RESTORE_STATUS_SEEN_KEY, status);
-        const message = RESTORE_STATUS_TOASTS[status];
+        const message =
+          status === "applied"
+            ? t("backups.restoreApplied", { namespace: "settings" })
+            : status === "rolled_back"
+              ? t("backups.restoreRolledBack", { namespace: "settings" })
+              : null;
         if (message) {
           if (status === "applied") toast.success(message);
           else toast.error(message);
@@ -70,11 +72,11 @@ export function DataBackupSection() {
       }
     } catch (e) {
       console.error(e);
-      toast.error("فشل تحميل بيانات النسخ الاحتياطي");
+      toast.error(t("backups.loadFailed", { namespace: "settings" }));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     void load();
@@ -87,8 +89,11 @@ export function DataBackupSection() {
       .listenRestoreRejected((message) => {
         toast.error(
           message
-            ? `تم رفض البيانات المستوردة بعد الفحص وتم التراجع تلقائيًا: ${friendlyBackupError(message).friendly}`
-            : "تم رفض البيانات المستوردة بعد الفحص وتم التراجع تلقائيًا.",
+            ? t("backups.restoreRejectedWithReason", {
+                namespace: "settings",
+                vars: { reason: friendlyBackupError(message).friendly },
+              })
+            : t("backups.restoreRejected", { namespace: "settings" }),
         );
         void load(true);
       })
@@ -121,7 +126,12 @@ export function DataBackupSection() {
     try {
       const res = await backupService.applyRetention();
       toast.success(
-        res.removed.length > 0 ? `تمت إزالة ${res.removed.length} نسخة قديمة` : "لا توجد نسخ قديمة لإزالتها"
+        res.removed.length > 0
+          ? t("backups.retentionRemoved", {
+              namespace: "settings",
+              vars: { count: res.removed.length },
+            })
+          : t("backups.retentionNothingToRemove", { namespace: "settings" })
       );
       await load(true);
     } catch (e) {
@@ -143,7 +153,7 @@ export function DataBackupSection() {
     try {
       await backupService.cancelPendingRestore();
       setPending(null);
-      toast.info("تم إلغاء الاستعادة المعلقة");
+      toast.info(t("backups.pendingRestoreCanceled", { namespace: "settings" }));
     } catch (e) {
       toast.error(friendlyBackupError(e).friendly);
     }
@@ -161,24 +171,24 @@ export function DataBackupSection() {
     return (
       <div className="flex flex-col items-center justify-center h-[50vh] space-y-4">
         <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-        <p className="font-black text-muted-foreground">جاري تحميل البيانات والنسخ الاحتياطية...</p>
+        <p className="font-black text-muted-foreground">{t("backups.loadingData", { namespace: "settings" })}</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-muted/30 p-4 lg:p-6 space-y-6" dir="rtl">
+    <div className="min-h-screen bg-muted/30 p-4 lg:p-6 space-y-6" dir={direction}>
       {/* Page Header */}
       <header className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-1">
         <div className="space-y-1">
           <h1 className="text-2xl font-black text-foreground tracking-tight flex items-center gap-2">
             <DatabaseBackup className="w-6 h-6 text-primary" />
-            البيانات والنسخ الاحتياطية
+            {t("nav.backups", { namespace: "settings" })}
           </h1>
-          <p className="text-muted-foreground font-medium text-base">إدارة قاعدة البيانات والنسخ الاحتياطية</p>
+          <p className="text-muted-foreground font-medium text-base">{t("backups.pageDescription", { namespace: "settings" })}</p>
         </div>
         <Button onClick={() => void load(true)} variant="outline" size="sm">
-          <RefreshCw className="w-4 h-4 ml-1" /> تحديث
+          <RefreshCw className="ms-1 h-4 w-4" /> {t("actions.refresh", { namespace: "common" })}
         </Button>
       </header>
 
@@ -187,7 +197,7 @@ export function DataBackupSection() {
         <div className="flex items-start gap-3 p-4 rounded-xl border border-red-200 bg-red-50 text-red-700">
           <AlertTriangle className="w-5 h-5 mt-0.5" />
           <div>
-            <p className="font-bold">تحذير: فشل فحص سلامة قاعدة البيانات</p>
+            <p className="font-bold">{t("backups.healthCheckFailed", { namespace: "settings" })}</p>
             <p className="text-sm mt-1">{friendlyBackupError(healthMsg || "integrity check failed").friendly}</p>
             <ErrorDetails detail={friendlyBackupError(healthMsg || "integrity check failed").detail} />
           </div>
@@ -199,15 +209,20 @@ export function DataBackupSection() {
         <div className="flex items-center justify-between gap-3 p-4 rounded-xl border border-amber-200 bg-amber-50 text-amber-800">
           <div className="flex items-center gap-2">
             <Power className="w-5 h-5" />
-            <span className="font-bold">استعادة معلقة من «{pending.source_label}»</span>
-            <span className="text-sm">— أعد تشغيل التطبيق لإتمام الاستعادة</span>
+            <span className="font-bold">
+              {t("backups.pendingRestoreFrom", {
+                namespace: "settings",
+                vars: { source: pending.source_label },
+              })}
+            </span>
+            <span className="text-sm">- {t("backups.pendingRestoreRestartHint", { namespace: "settings" })}</span>
           </div>
           <div className="flex gap-2">
             <Button size="sm" onClick={handleRestart} disabled={operating}>
-              إعادة التشغيل الآن
+              {t("backups.restartNow", { namespace: "settings" })}
             </Button>
             <Button size="sm" variant="outline" onClick={handleCancelRestore} disabled={operating}>
-              <X className="w-4 h-4 ml-1" /> إلغاء
+              <X className="ms-1 h-4 w-4" /> {t("actions.cancel", { namespace: "common" })}
             </Button>
           </div>
         </div>
@@ -218,10 +233,8 @@ export function DataBackupSection() {
         <div className="flex items-start gap-3 p-4 rounded-xl border border-red-200 bg-red-50 text-red-700">
           <AlertTriangle className="w-5 h-5 mt-0.5" />
           <div>
-            <p className="font-bold">تم التراجع عن الاستعادة تلقائيًا</p>
-            <p className="text-sm mt-1">
-              رُفضت البيانات المستوردة بعد الفحص (السلامة/العلاقات) وتمت استعادة قاعدتك السابقة. بياناتك السابقة سليمة.
-            </p>
+            <p className="font-bold">{t("backups.rolledBackTitle", { namespace: "settings" })}</p>
+            <p className="text-sm mt-1">{t("backups.rolledBackDescription", { namespace: "settings" })}</p>
           </div>
         </div>
       )}

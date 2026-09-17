@@ -12,18 +12,18 @@ interface DateRangePickerProps {
 export function DateRangePicker({ from, to, onFromChange, onToChange, showSeparator }: DateRangePickerProps) {
   const { t } = useLocalization();
   return (
-    <div className="flex items-center gap-2 mr-auto">
+    <div className="me-auto flex items-center gap-2">
       {showSeparator && (
         <span className="inline-block w-px h-5 bg-slate-300 mx-2" />
       )}
-      <span className="text-xs text-slate-400 font-bold">{t('labels.from', )}</span>
+      <span className="text-xs font-bold text-slate-400">{t("labels.from", { namespace: "common" })}</span>
       <DatePicker
         value={from}
         onChange={onFromChange}
         className="h-9 w-36 text-xs rounded-lg bg-white"
         placeholder=""
       />
-      <span className="text-xs text-slate-400 font-bold">{t('labels.to', )}</span>
+      <span className="text-xs font-bold text-slate-400">{t("labels.to", { namespace: "common" })}</span>
       <DatePicker
         value={to}
         onChange={onToChange}

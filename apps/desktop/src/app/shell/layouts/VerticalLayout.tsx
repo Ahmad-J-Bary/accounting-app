@@ -3,6 +3,7 @@ import { Sidebar } from '../Sidebar';
 import { TopBar } from '../TopBar';
 import { TabBar } from '../TabBar';
 import { useAppearance } from '@shared/hooks/useAppearance';
+import { useLocalization } from '@app/providers/LocalizationProvider';
 
 interface VerticalLayoutProps {
   children: React.ReactNode;
@@ -14,12 +15,13 @@ interface VerticalLayoutProps {
 
 export function VerticalLayout({ children, sidebarOpen, onToggleSidebar, isExchangeVisible, onToggleExchange }: VerticalLayoutProps) {
   const { settings, activeLayout } = useAppearance();
+  const { direction } = useLocalization();
   const showSidebar = settings.show.sidebar && activeLayout.sidebarMode !== 'hidden';
   const showTopBar = settings.show.topBar && activeLayout.topBarMode !== 'hidden';
   const showTabs = settings.show.tabs && activeLayout.showTabs;
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden" dir="rtl" data-density={settings.density}>
+    <div className="flex flex-col h-screen overflow-hidden" dir={direction} data-density={settings.density}>
       {showTopBar && <TopBar onToggleSidebar={onToggleSidebar} sidebarOpen={sidebarOpen} isExchangeVisible={isExchangeVisible} onToggleExchange={onToggleExchange} />}
       <div className="flex flex-1 overflow-hidden">
         {showSidebar && (

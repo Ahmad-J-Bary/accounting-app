@@ -36,7 +36,7 @@ export function MaterialSearchPanel({
   baseCurrency,
   style,
 }: MaterialSearchPanelProps) {
-  const { t } = useLocalization();
+  const { t, direction } = useLocalization();
 
   const fieldConfig = {
     material_code:   { icon: Hash,      label: t('labels.code', ),      key: "code" as const,     render: (m: MaterialDto) => m.code },
@@ -72,7 +72,8 @@ export function MaterialSearchPanel({
   return (
     <div
       style={style}
-      className="bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in-95 duration-150 origin-top-right"
+      className="origin-top rounded-xl border border-slate-200 bg-white overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-150"
+      dir={direction}
     >
       {/* ── Header ── */}
       <div className="flex items-center gap-2.5 px-5 py-3 bg-white border-b border-slate-100">
@@ -88,14 +89,14 @@ export function MaterialSearchPanel({
         <span className="text-2xs text-slate-400 font-semibold">{t('labels.item', )}</span>
         <button
           onClick={onClose}
-          className="mr-auto p-1 rounded-lg text-slate-300 hover:text-muted-foreground hover:bg-slate-100 transition-all"
+          className="ms-auto rounded-lg p-1 text-slate-300 transition-all hover:bg-slate-100 hover:text-muted-foreground"
         >
           <X className="w-3.5 h-3.5" />
         </button>
       </div>
 
       {/* ── Results ── */}
-      <div className="max-h-72 overflow-y-auto custom-scrollbar" dir="rtl">
+      <div className="max-h-72 overflow-y-auto custom-scrollbar">
         {filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-10 px-4 text-center">
             <Search className="w-8 h-8 text-slate-200 mb-2" />
@@ -110,7 +111,7 @@ export function MaterialSearchPanel({
                 key={m.id}
                 onMouseDown={(e) => { e.preventDefault(); onSelect(m); }}
                 className={cn(
-                  "w-full text-right block px-5 py-3 transition-all duration-75",
+                  "block w-full px-5 py-3 text-start transition-all duration-75",
                   "hover:bg-primary/10 active:bg-primary/20",
                 )}
               >

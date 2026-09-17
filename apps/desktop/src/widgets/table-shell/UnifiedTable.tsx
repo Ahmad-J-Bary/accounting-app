@@ -131,7 +131,7 @@ export function UnifiedTable<T>({
   sortDirection,
 }: UnifiedTableProps<T>) {
   const { settings, getDensityPadding } = useTableSettings();
-  const { t } = useLocalization();
+  const { t, direction } = useLocalization();
   const resolvedEmptyMessage = emptyMessage ?? t('states.noDataAvailable', );
 
   const visibleColumns = useMemo(
@@ -286,7 +286,7 @@ export function UnifiedTable<T>({
           key={`skeleton-${idx}`}
           className={cn("animate-pulse", getRowBorderClass(settings.borderStyle))}
           style={{ display: "grid", gridTemplateColumns: displayGridTemplate }}
-          dir="rtl"
+          dir={direction}
         >
           {renderColumns.map(col => (
             <div
@@ -298,10 +298,10 @@ export function UnifiedTable<T>({
                 className={cn(
                   "h-3.5 rounded",
                   col.align === "left"
-                    ? "mr-auto ml-0 w-3/4"
+                    ? "ms-auto me-0 w-3/4"
                     : col.align === "center"
                     ? "mx-auto w-1/2"
-                    : "ml-auto mr-0 w-3/4",
+                    : "me-auto ms-0 w-3/4",
                 )}
               />
             </div>
@@ -327,7 +327,6 @@ export function UnifiedTable<T>({
       return (
         <div
           key={rowId}
-          dir="rtl"
           className={cn(
             "group transition-all duration-75",
             getRowBorderClass(settings.borderStyle),
@@ -335,6 +334,7 @@ export function UnifiedTable<T>({
             getRowBackgroundClass(isSelected, rowIdx, settings.zebraRows, settings.rowHoverEffect),
           )}
           style={{ display: "grid", gridTemplateColumns: displayGridTemplate }}
+          dir={direction}
           onClick={() => onRowClick?.(row)}
           onDoubleClick={() => onRowDoubleClick?.(row)}
         >

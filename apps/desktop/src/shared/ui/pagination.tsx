@@ -75,7 +75,7 @@ const PaginationPrevious = ({
     <PaginationLink
       aria-label={t('accessibility.goToPreviousPage')}
       size="default"
-      className={cn('gap-1 pl-2.5', className)}
+      className={cn('gap-1 ps-2.5', className)}
       {...props}
     >
       <Icon className="h-4 w-4" />
@@ -96,7 +96,7 @@ const PaginationNext = ({
     <PaginationLink
       aria-label={t('accessibility.goToNextPage')}
       size="default"
-      className={cn('gap-1 pr-2.5', className)}
+      className={cn('gap-1 pe-2.5', className)}
       {...props}
     >
       <span>{t('actions.next')}</span>

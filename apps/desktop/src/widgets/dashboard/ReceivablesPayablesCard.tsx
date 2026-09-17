@@ -25,13 +25,13 @@ export function ReceivablesPayablesCard({
 }: ReceivablesPayablesCardProps) {
   const { t } = useLocalization();
   const isAmber = color === "amber";
-  const borderClass = isAmber ? "border-r-amber-500" : "border-r-red-500";
+  const borderClass = isAmber ? "border-e-amber-500" : "border-e-red-500";
   const iconColorClass = isAmber ? "text-amber-600" : "text-red-600";
   const totalColorClass = isAmber ? "text-amber-600" : "text-red-600";
   const ArrowIcon = type === "receivable" ? ArrowUpRight : ArrowDownRight;
 
   return (
-    <Card className={`p-5 border-r-4 ${borderClass}`}>
+    <Card className={`border-e-4 p-5 ${borderClass}`}>
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <ArrowIcon className={`w-5 h-5 ${iconColorClass}`} />

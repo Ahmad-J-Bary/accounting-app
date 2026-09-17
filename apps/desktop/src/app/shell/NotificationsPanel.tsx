@@ -52,7 +52,7 @@ export function NotificationsPanel({
               <Bell className="w-5 h-5" />
               <h3 className="font-semibold">{t("notifications", { namespace: "shell",  })}</h3>
               {unreadCount > 0 && (
-                <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-destructive text-destructive-foreground ml-2">
+                <span className="ms-2 rounded-full bg-destructive px-2.5 py-0.5 text-xs font-semibold text-destructive-foreground">
                   {unreadCount}
                 </span>
               )}

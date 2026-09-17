@@ -10,9 +10,11 @@ import {
 } from "@shared/ui/dialog";
 import { Input } from "@shared/ui/input";
 import { Button } from "@shared/ui/button";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 export function BarcodeScanDialog() {
   const { activeSession, cancelScan, submitScan } = useBarcodeScanner();
+  const { direction, t } = useLocalization();
   const [value, setValue] = useState("");
 
   useEffect(() => {
@@ -25,14 +27,17 @@ export function BarcodeScanDialog() {
 
   return (
     <Dialog open={!!activeSession} onOpenChange={(open) => (!open ? cancelScan() : undefined)}>
-      <DialogContent className="max-w-md" dir="rtl">
+      <DialogContent className="max-w-md" dir={direction}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <ScanLine className="h-5 w-5 text-primary" />
-            مسح الباركود
+            {t("barcodeScan.title", { namespace: "common" })}
           </DialogTitle>
           <DialogDescription>
-            أدخل أو امسح قيمة الباركود للحقل: {activeSession.label}
+            {t("barcodeScan.description", {
+              namespace: "common",
+              vars: { field: activeSession.label },
+            })}
           </DialogDescription>
         </DialogHeader>
 
@@ -40,13 +45,13 @@ export function BarcodeScanDialog() {
           <Input
             value={value}
             onChange={(event) => setValue(event.target.value)}
-            placeholder="أدخل قيمة الباركود أو استخدم الماسح"
+            placeholder={t("barcodeScan.placeholder", { namespace: "common" })}
             dir="ltr"
             autoFocus
           />
           <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={cancelScan}>
-              إلغاء
+              {t("actions.cancel", { namespace: "common" })}
             </Button>
             <Button
               type="button"
@@ -56,7 +61,7 @@ export function BarcodeScanDialog() {
               }}
               disabled={!value.trim()}
             >
-              اعتماد
+              {t("actions.confirm", { namespace: "common" })}
             </Button>
           </div>
         </div>

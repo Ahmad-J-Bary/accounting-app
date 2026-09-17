@@ -42,7 +42,7 @@ export const TableSummary: React.FC<TableSummaryProps> = ({
   asPageFooter = false,
 }) => {
   const { settings, getDensityPadding } = useTableSettings();
-  const { t } = useLocalization();
+  const { t, direction } = useLocalization();
 
   if (!settings.showSummary) return null;
 
@@ -55,7 +55,7 @@ export const TableSummary: React.FC<TableSummaryProps> = ({
 
   const labelRow = (
     <div
-      dir="rtl"
+      dir={direction}
       className={cn(
         "items-center",
         gridTemplate ? "grid" : "flex",
@@ -93,7 +93,7 @@ export const TableSummary: React.FC<TableSummaryProps> = ({
 
   const valueRow = (
     <div
-      dir="rtl"
+      dir={direction}
       className={cn(
         "items-center",
         gridTemplate ? "grid" : "flex",
@@ -156,8 +156,8 @@ export const TableSummary: React.FC<TableSummaryProps> = ({
         )}
       >
         {hasAnyActive && (
-          <div className="absolute top-0 right-4 -translate-y-1/2 px-2 py-0.5 bg-slate-700 text-white text-3xs font-black uppercase tracking-wider rounded-full shadow-sm">
-            {t('labels.summary', )}
+          <div className="absolute end-4 top-0 -translate-y-1/2 rounded-full bg-slate-700 px-2 py-0.5 text-3xs font-black uppercase tracking-wider text-white shadow-sm">
+            {t("labels.summary", { namespace: "common" })}
           </div>
         )}
         {labelRow}

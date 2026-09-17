@@ -39,8 +39,8 @@ export function DataTable<T>({
   skeletonRows = 5,
   selectedId,
 }: DataTableProps<T>) {
-  const { t } = useLocalization();
-  const resolvedEmptyMessage = emptyMessage ?? t('states.noDataAvailable', );
+  const { t, direction } = useLocalization();
+  const resolvedEmptyMessage = emptyMessage ?? t("states.noDataAvailable", { namespace: "common" });
   const getAlignment = (colIdx: number, explicitAlign?: "right" | "left" | "center") => {
     if (explicitAlign) return explicitAlign;
     if (colIdx === 0) return "right";
@@ -58,7 +58,7 @@ export function DataTable<T>({
               <td key={colIdx} className="px-4 py-4">
                 <Skeleton className={cn(
                   "h-4 w-full rounded-md",
-                  align === "left" ? "mr-auto ml-0" : align === "center" ? "mx-auto" : "ml-auto mr-0",
+                  align === "left" ? "me-0 ms-auto" : align === "center" ? "mx-auto" : "me-auto ms-0",
                   idx % 2 === 0 ? "opacity-60" : "opacity-40"
                 )} />
               </td>
@@ -118,7 +118,7 @@ export function DataTable<T>({
   return (
     <div className={cn("border border-border/80 rounded-2xl overflow-hidden bg-white shadow-sm ring-1 ring-slate-100/10", className)}>
       <div className="overflow-x-auto">
-        <table className="w-full text-sm min-w-[800px] border-collapse" dir="rtl">
+        <table className="min-w-[800px] w-full border-collapse text-sm" dir={direction}>
           <thead className="bg-slate-50/50 backdrop-blur-md border-b border-border/80 sticky top-0 z-10">
             <tr>
               {columns.map((col, idx) => {

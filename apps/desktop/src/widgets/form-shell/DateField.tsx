@@ -14,12 +14,12 @@ export function DateField({ label, value, onChange, className }: DateFieldProps)
     <div className={`space-y-2 ${className ?? ""}`}>
       <Label className="text-xs font-black uppercase tracking-widest text-slate-400">{label}</Label>
       <div className="relative">
-        <Calendar className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+        <Calendar className="absolute end-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
         <Input
           type="date"
           value={value}
           onChange={(event) => onChange(event.target.value)}
-          className="h-11 rounded-xl border-slate-200 bg-slate-50/50 pr-10 font-bold tabular-nums"
+          className="h-11 rounded-xl border-slate-200 bg-slate-50/50 pe-10 font-bold tabular-nums"
         />
       </div>
     </div>

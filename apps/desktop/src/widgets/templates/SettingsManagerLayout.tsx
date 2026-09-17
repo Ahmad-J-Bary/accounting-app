@@ -33,9 +33,9 @@ interface SettingsManagerLayoutProps {
 }
 
 export function SettingsManagerLayout({ children, resetButton, resetAction }: SettingsManagerLayoutProps) {
-  const { t } = useLocalization();
+  const { t, direction } = useLocalization();
   return (
-    <div className="space-y-4 sm:space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-500" dir="rtl">
+    <div className="space-y-4 sm:space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-500" dir={direction}>
       {children}
       {(resetButton || resetAction) && (
         <div className="flex justify-start">

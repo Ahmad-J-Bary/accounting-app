@@ -145,7 +145,7 @@ export const GridHeader: React.FC<GridHeaderProps> = ({
           </div>
 
           {col.id === sortField && (
-            <span className="shrink-0 mr-1">
+            <span className="ms-1 shrink-0">
               {sortDirection === 'asc' ? (
                 <ChevronUp className="w-3.5 h-3.5 text-primary" />
               ) : (

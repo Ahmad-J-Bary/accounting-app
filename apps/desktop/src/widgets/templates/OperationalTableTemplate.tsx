@@ -2,6 +2,7 @@ import { ReactNode } from "react";
 import { cn } from "@shared/lib/utils";
 import { PageHeader } from "./PageHeader";
 import { TemplateDetailPanel } from "./TemplateDetailPanel";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 interface OperationalTableTemplateProps {
   title: string;
@@ -32,8 +33,9 @@ export function OperationalTableTemplate({
   className,
   children
 }: OperationalTableTemplateProps) {
+  const { direction } = useLocalization();
   return (
-    <div className={cn("flex flex-col h-full w-full bg-muted/30", className)} dir="rtl">
+    <div className={cn("flex flex-col h-full w-full bg-muted/30", className)} dir={direction}>
       <PageHeader title={title} badge={badge} actions={toolbar} pinAction pinLabel={title} />
 
       <div className="print-clean-parent flex-1 flex overflow-hidden p-2 sm:p-3 md:p-4 gap-2 sm:gap-3 md:gap-4">

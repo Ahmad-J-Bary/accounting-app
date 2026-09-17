@@ -1,6 +1,7 @@
 import { useSidePanelSettings } from "@shared/hooks";
 import { cn } from "@shared/lib/utils";
 import { Sheet, SheetContent } from "@shared/ui/sheet";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 import type { SidebarShellProps } from "./types";
 
 const WIDTH_MAP = {
@@ -19,6 +20,7 @@ export function SidebarShell({
   forceOverlay,
 }: SidebarShellProps) {
   const { settings, getSidebarWidth } = useSidePanelSettings();
+  const { direction } = useLocalization();
   const isOverlay =
     forceOverlay === true ||
     (forceOverlay === undefined && settings.overlayVsInline === "overlay");
@@ -39,8 +41,8 @@ export function SidebarShell({
 
   const borderClass = {
     none: "border-none",
-    left: "border-l border-slate-200/70",
-    right: "border-r border-slate-200/70",
+    left: "border-s border-slate-200/70",
+    right: "border-e border-slate-200/70",
     all: "border border-slate-200/70",
   }[settings.borderStyle];
 
@@ -48,10 +50,9 @@ export function SidebarShell({
     return (
       <Sheet open={show} onOpenChange={(open) => !open && handleClose()}>
         <SheetContent
-          side="left"
           hideClose
           className={cn(
-            "p-0 overflow-hidden flex flex-col h-full bg-white border-r border-slate-200/70 sm:max-w-none",
+            "flex h-full flex-col overflow-hidden bg-white p-0 sm:max-w-none",
             settings.background,
             shadowClass,
             className
@@ -79,7 +80,7 @@ export function SidebarShell({
         width: show ? width : "0px",
         transitionDuration: `${settings.animationSpeed}ms`,
       }}
-      dir="rtl"
+      dir={direction}
     >
       <div
         className="flex flex-col h-full overflow-hidden"

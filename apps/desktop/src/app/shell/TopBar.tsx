@@ -182,7 +182,7 @@ export function TopBar({
         </button>
         <div
           className={cn(
-            "absolute top-full right-0 mt-1 w-56 rounded-xl border p-1.5 shadow-xl opacity-0 translate-y-1 invisible",
+            "invisible absolute end-0 top-full mt-1 w-56 translate-y-1 rounded-xl border p-1.5 opacity-0 shadow-xl",
             "group-hover:opacity-100 group-hover:translate-y-0 group-hover:visible transition-all duration-200 z-50",
             isHorizontalDark ? "bg-popover border-border" : "bg-popover border-border"
           )}
@@ -211,7 +211,7 @@ export function TopBar({
                   key={item.id}
                   onClick={handleClick}
                   className={cn(
-                    "w-full flex items-center gap-2 px-3 py-2 rounded-lg text-right text-sm font-medium transition-all",
+                    "flex w-full items-center gap-2 rounded-lg px-3 py-2 text-start text-sm font-medium transition-all",
                     isActive
                       ? "text-primary bg-primary/10"
                       : navItemClass
@@ -238,7 +238,7 @@ export function TopBar({
             <span className="hidden sm:inline">{t("topbar.quickAction", { namespace: "shell",  })}</span>
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-52 text-right">
+        <DropdownMenuContent align="end" className="w-52 text-start">
           <DropdownMenuItem onClick={() => executeCommand("new-sales-invoice")} className="cursor-pointer">{t("topbar.newSalesInvoice", { namespace: "shell",  })}</DropdownMenuItem>
           <DropdownMenuItem onClick={() => executeCommand("new-purchase-invoice")} className="cursor-pointer">{t("topbar.newPurchaseInvoice", { namespace: "shell",  })}</DropdownMenuItem>
           <DropdownMenuItem>{t("topbar.newReceiptVoucher", { namespace: "shell",  })}</DropdownMenuItem>
@@ -276,7 +276,7 @@ export function TopBar({
       {showNotifications && (
         <Button variant="ghost" size="icon" className="relative" onClick={() => setNotificationsOpen(true)}>
           <Bell className="w-5 h-5" />
-          <span className="absolute top-1.5 left-1.5 w-2 h-2 bg-destructive rounded-full" />
+          <span className="absolute start-1.5 top-1.5 h-2 w-2 rounded-full bg-destructive" />
         </Button>
       )}
 
@@ -292,7 +292,7 @@ export function TopBar({
               <Avatar className="w-8 h-8">
                 <AvatarFallback className="bg-primary text-primary-foreground text-xs">أ</AvatarFallback>
               </Avatar>
-              <div className="text-right hidden md:block">
+              <div className="hidden text-start md:block">
                 <div className={cn("text-sm font-medium leading-tight", isHorizontalDark && "text-[hsl(var(--sidebar-foreground))]")}>{t("topbar.user", { namespace: "shell",  })}</div>
               </div>
             </button>

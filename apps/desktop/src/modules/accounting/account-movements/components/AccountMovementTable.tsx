@@ -495,7 +495,10 @@ export function AccountMovementTable({
       if (debitMatch) {
         const currCode = debitMatch[1];
         const isB = isBaseCurrency(currCode);
-        const label = col.label || `عليه / مدين${currencySuffix(currCode)}`;
+        const label = col.label || t("ledger.table.debitHeader", {
+          namespace: "accounting",
+          vars: { currency: currencySuffix(currCode) },
+        });
         return {
           id: `${id}_total`,
           columnId: id,
@@ -511,7 +514,10 @@ export function AccountMovementTable({
       if (creditMatch) {
         const currCode = creditMatch[1];
         const isB = isBaseCurrency(currCode);
-        const label = col.label || `له / دائن${currencySuffix(currCode)}`;
+        const label = col.label || t("ledger.table.creditHeader", {
+          namespace: "accounting",
+          vars: { currency: currencySuffix(currCode) },
+        });
         return {
           id: `${id}_total`,
           columnId: id,

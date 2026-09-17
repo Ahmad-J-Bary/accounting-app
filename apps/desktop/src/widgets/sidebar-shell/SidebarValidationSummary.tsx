@@ -13,13 +13,13 @@ export function SidebarValidationSummary({
   return (
     <div
       className={cn(
-        "p-4 rounded-xl bg-red-50 border border-red-100 flex gap-3 text-right text-red-800",
+        "flex gap-3 rounded-xl border border-red-100 bg-red-50 p-4 text-red-800 text-start",
         className
       )}
     >
       <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
       <div className="space-y-1">
-        <p className="text-xs font-black">{t('labels.fixErrors', )}</p>
+        <p className="text-xs font-black">{t("labels.fixErrors", { namespace: "common" })}</p>
         <ul className="list-disc list-inside text-[11px] font-medium space-y-0.5">
           {errors.map((err, i) => (
             <li key={i}>{err}</li>

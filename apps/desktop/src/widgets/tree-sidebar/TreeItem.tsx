@@ -1,6 +1,7 @@
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from '@shared/lib/utils';
 import { TreeItemProps, BaseTreeNode } from "./types";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 export function TreeItem<T extends BaseTreeNode>({
   node,
@@ -17,17 +18,21 @@ export function TreeItem<T extends BaseTreeNode>({
   virtualRootId,
   siblingFlags = [],
 }: TreeItemProps<T>) {
+  const { direction } = useLocalization();
   const isExpanded = expandedNodes.has(node.id);
   const hasChildren = node.children && node.children.length > 0;
   const isSelected = selectedId === node.id;
+  const CollapsedIcon = direction === "rtl" ? ChevronLeft : ChevronRight;
+  const inlineStart = direction === "rtl" ? "right" : "left";
+  const inlineEnd = direction === "rtl" ? "left" : "right";
 
   return (
     <div>
       <div className="relative group">
         {level > 0 && (
           <div
-            className="absolute right-0 top-0 bottom-0 pointer-events-none z-10"
-            style={{ width: `${level * 16}px` }}
+            className="pointer-events-none absolute inset-y-0 z-10"
+            style={{ [inlineStart]: 0, width: `${level * 16}px` }}
           >
             <div className="relative w-full h-full">
               {Array.from({ length: level }).map((_, i) => {
@@ -38,7 +43,7 @@ export function TreeItem<T extends BaseTreeNode>({
                   <div
                     key={i}
                     className="absolute inset-y-0 flex items-center justify-center"
-                    style={{ right: `${i * 16}px`, width: '16px' }}
+                    style={{ [inlineStart]: `${i * 16}px`, width: '16px' }}
                   >
                     {/* Ancestor levels — vertical continuation line */}
                     {!isCurrentLevel && hasMoreSiblings && (
@@ -48,15 +53,21 @@ export function TreeItem<T extends BaseTreeNode>({
                     {isCurrentLevel && (
                       <>
                         {/* Vertical line up to parent */}
-                        <div className="absolute top-0 right-1/2 w-px bg-slate-400/70 rounded-full" style={{ height: 'calc(50% - 3px)' }} />
+                        <div className="absolute top-0 w-px rounded-full bg-slate-400/70" style={{ [inlineStart]: '50%', height: 'calc(50% - 3px)' }} />
                         {/* Vertical line down to next sibling */}
                         {hasMoreSiblings && (
-                          <div className="absolute bottom-0 right-1/2 w-px bg-slate-400/70 rounded-full" style={{ height: 'calc(50% - 3px)' }} />
+                          <div className="absolute bottom-0 w-px rounded-full bg-slate-400/70" style={{ [inlineStart]: '50%', height: 'calc(50% - 3px)' }} />
                         )}
                         {/* Horizontal branch toward content */}
-                        <div className="absolute top-1/2 right-1/2 -translate-y-1/2 w-1/2 h-px bg-slate-400/70 rounded-full" />
+                        <div className="absolute top-1/2 h-px w-1/2 -translate-y-1/2 rounded-full bg-slate-400/70" style={{ [inlineStart]: '50%' }} />
                         {/* Junction dot */}
-                        <div className="absolute top-1/2 right-1/2 -translate-y-1/2 translate-x-1/2 w-[5px] h-[5px] rounded-full bg-slate-400/80 shadow-sm" />
+                        <div
+                          className="absolute top-1/2 h-[5px] w-[5px] -translate-y-1/2 rounded-full bg-slate-400/80 shadow-sm"
+                          style={{
+                            [inlineStart]: '50%',
+                            transform: `translateY(-50%) ${direction === 'rtl' ? 'translateX(50%)' : 'translateX(-50%)'}`,
+                          }}
+                        />
                       </>
                     )}
                   </div>
@@ -70,9 +81,9 @@ export function TreeItem<T extends BaseTreeNode>({
           className={cn(
             "flex items-center gap-2 py-2.5 px-3 cursor-pointer transition-all duration-150",
             "border-b border-slate-100 hover:bg-slate-50/80",
-            isSelected && "bg-primary/5 border-l-2 border-l-primary hover:bg-primary/10",
+              isSelected && "border-s-2 border-s-primary bg-primary/5 hover:bg-primary/10",
           )}
-          style={{ paddingRight: `${level * 16 + 12}px` }}
+          style={{ paddingInlineStart: `${level * 16 + 12}px` }}
           onClick={() => onSelect(node)}
           onDoubleClick={() => onDoubleClick?.(node)}
         >
@@ -91,7 +102,7 @@ export function TreeItem<T extends BaseTreeNode>({
                 {isExpanded ? (
                   <ChevronDown className="w-4 h-4" />
                 ) : (
-                  <ChevronRight className="w-4 h-4" />
+                  <CollapsedIcon className="w-4 h-4" />
                 )}
               </button>
             ) : (

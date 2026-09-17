@@ -4,6 +4,7 @@ import { Calendar } from "@shared/ui/calendar";
 import { CalendarIcon } from "lucide-react";
 import { cn } from "@shared/lib/utils";
 import { formatDate, formatNumber, getNumberingSystem } from "@shared/lib/format";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 interface DatePickerProps {
   value: string;
@@ -30,9 +31,11 @@ function toIsoString(date: Date): string {
   return `${y}-${m}-${day}`;
 }
 
-export function DatePicker({ value, onChange, className, placeholder = "اختر تاريخ" }: DatePickerProps) {
+export function DatePicker({ value, onChange, className, placeholder }: DatePickerProps) {
+  const { t } = useLocalization();
   const date = toDate(value);
   const isWestern = getNumberingSystem() === "latn";
+  const resolvedPlaceholder = placeholder ?? t("labels.selectDate", { namespace: "common" });
 
   const monthNames = isWestern
     ? ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
@@ -48,13 +51,13 @@ export function DatePicker({ value, onChange, className, placeholder = "اختر
         <Button
           variant="outline"
           className={cn(
-            "h-11 w-full justify-start gap-2 rounded-xl bg-slate-50/50 border-slate-200 font-bold pr-3",
+            "h-11 w-full justify-start gap-2 rounded-xl border-slate-200 bg-slate-50/50 pe-3 font-bold",
             !date && "text-slate-400",
             className
           )}
         >
           <CalendarIcon className="w-4 h-4 text-slate-400 shrink-0" />
-          <span className="truncate">{date ? formatDate(date) : placeholder}</span>
+          <span className="truncate">{date ? formatDate(date) : resolvedPlaceholder}</span>
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0" align="start">

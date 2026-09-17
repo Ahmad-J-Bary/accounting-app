@@ -1,5 +1,6 @@
 import { cn } from '@shared/lib/utils';
 import type { ReactNode } from 'react';
+import { useLocalization } from '@app/providers/LocalizationProvider';
 
 interface HeaderFieldProps {
   label: string;
@@ -28,11 +29,12 @@ export function HeaderField({
   children,
   required,
 }: HeaderFieldProps) {
+  const { direction } = useLocalization();
   const isPassive = readOnly || disabled;
 
   return (
     <div
-      dir="rtl"
+      dir={direction}
       className={cn(
         'group relative flex items-center gap-1.5 rounded-lg border-2 bg-background px-2 py-1 transition-all duration-200',
         isPassive
@@ -61,7 +63,7 @@ export function HeaderField({
           )}
         >
           {label}
-          {required && <span className="text-destructive mr-0.5">*</span>}
+          {required && <span className="ms-0.5 text-destructive">*</span>}
         </label>
       </div>
 

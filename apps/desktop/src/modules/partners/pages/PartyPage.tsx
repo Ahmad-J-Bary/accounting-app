@@ -31,58 +31,45 @@ type PanelMode = 'form' | 'return' | 'payment' | 'detail' | null;
 // ── Entity-specific configuration ──────────────────────────────────────────────
 
 interface PartyPageConfig {
-  title: string;
-  addButtonLabel: string;
   eventType: string;
   invoiceType: "Sales" | "Purchase";
   returnReturnType: "sales" | "purchase";
   isCreditFirst: boolean;
   paymentConfig: (entity: CustomerDto | SupplierDto) => ReturnType<typeof PAYMENT_CONFIGS.customer>;
-  statementPath: (id: string, name: string) => { id: string; title: string; path: string };
-  invoicesTab: (id: string, name: string) => { id: string; title: string; path: string };
-  successMessage: string;
+  statementPath: (id: string) => { id: string; path: string };
+  invoicesTab: (id: string) => { id: string; path: string };
 }
 
 const PARTY_CONFIGS: Record<string, PartyPageConfig> = {
   customer: {
-    title: "إدارة العملاء",
-    addButtonLabel: "إضافة عميل جديد",
     eventType: "erp:open-new-customer",
     invoiceType: "Sales",
     returnReturnType: "sales",
     isCreditFirst: false,
     paymentConfig: (entity) => PAYMENT_CONFIGS.customer(entity as CustomerDto),
-    statementPath: (id, name) => ({
+    statementPath: (id) => ({
       id: `statement-${id}`,
-      title: `كشف: ${name}`,
       path: `/partners/customer-statement/${id}`,
     }),
-    invoicesTab: (id, name) => ({
+    invoicesTab: (id) => ({
       id: `sales-customer-${id}`,
-      title: `مبيعات: ${name}`,
       path: `/sales-invoices?customerId=${id}`,
     }),
-    successMessage: "تم تسجيل سند القبض بنجاح",
   },
   supplier: {
-    title: "إدارة الموردين",
-    addButtonLabel: "مورد جديد",
     eventType: "erp:open-new-supplier",
     invoiceType: "Purchase",
     returnReturnType: "purchase",
     isCreditFirst: true,
     paymentConfig: (entity) => PAYMENT_CONFIGS.supplier(entity as SupplierDto),
-    statementPath: (id, name) => ({
+    statementPath: (id) => ({
       id: `statement-${id}`,
-      title: `كشف: ${name}`,
       path: `/partners/supplier-statement/${id}`,
     }),
-    invoicesTab: (id, name) => ({
+    invoicesTab: (id) => ({
       id: `purchases-supplier-${id}`,
-      title: `مشتريات: ${name}`,
       path: `/purchase-invoices?supplierId=${id}`,
     }),
-    successMessage: "تم تسجيل سند الدفع بنجاح",
   },
 };
 
@@ -299,7 +286,7 @@ export default function PartyPage({ entityName }: PartyPageProps) {
           }
         }}
       >
-        <History className="w-4 h-4 ml-2 text-muted-foreground" /> {t("partyPage.toolbar.ledger", { namespace: "partners",  })}
+        <History className="ms-2 h-4 w-4 text-muted-foreground" /> {t("partyPage.toolbar.ledger", { namespace: "partners",  })}
       </Button>
 
       <Button
@@ -308,11 +295,11 @@ export default function PartyPage({ entityName }: PartyPageProps) {
         className="bg-white border-muted text-foreground hover:bg-muted"
         disabled={!selectedId}
         onClick={() => {
-          const tab = cfg.invoicesTab(selectedId!, selectedItem?.name || "");
+          const tab = cfg.invoicesTab(selectedId!);
           openTab({ ...tab, title: t(entityName === "customer" ? "partyPage.salesTabCustomer" : "partyPage.purchasesTabSupplier", { namespace: "partners", vars: { name: selectedItem?.name || "" }}) });
         }}
       >
-        <ShoppingBag className="w-4 h-4 ml-2 text-primary" />
+        <ShoppingBag className="ms-2 h-4 w-4 text-primary" />
         {entityName === "customer" ? t("partyPage.toolbar.customerSales", { namespace: "partners",  }) : t("partyPage.toolbar.supplierPurchases", { namespace: "partners",  })}
       </Button>
 
@@ -322,11 +309,11 @@ export default function PartyPage({ entityName }: PartyPageProps) {
         className="bg-white border-muted text-foreground hover:bg-muted"
         disabled={!selectedId}
         onClick={() => {
-          const tab = cfg.statementPath(selectedId!, selectedItem?.name || "");
+          const tab = cfg.statementPath(selectedId!);
           openTab({ ...tab, title: t("detail.statementTab", { namespace: "partners", vars: { name: selectedItem?.name || "" },  }) });
         }}
       >
-        <Printer className="w-4 h-4 ml-2 text-success" /> {t("partyPage.toolbar.printStatement", { namespace: "partners",  })}
+        <Printer className="ms-2 h-4 w-4 text-success" /> {t("partyPage.toolbar.printStatement", { namespace: "partners",  })}
       </Button>
 
       <Button
@@ -338,7 +325,7 @@ export default function PartyPage({ entityName }: PartyPageProps) {
           setPanelMode('return');
         }}
       >
-        <Undo2 className="w-4 h-4 ml-2 text-warning" />
+        <Undo2 className="ms-2 h-4 w-4 text-warning" />
         {entityName === "customer" ? t("partyPage.toolbar.salesReturn", { namespace: "partners",  }) : t("partyPage.toolbar.purchaseReturn", { namespace: "partners",  })}
       </Button>
 
@@ -352,8 +339,8 @@ export default function PartyPage({ entityName }: PartyPageProps) {
         }}
       >
         {entityName === "customer"
-          ? <Receipt className="w-4 h-4 ml-2 text-warning" />
-          : <DollarSign className="w-4 h-4 ml-2 text-destructive" />
+          ? <Receipt className="ms-2 h-4 w-4 text-warning" />
+          : <DollarSign className="ms-2 h-4 w-4 text-destructive" />
         }
         {entityName === "customer" ? t("partyPage.toolbar.createReceipt", { namespace: "partners",  }) : t("partyPage.toolbar.createPayment", { namespace: "partners",  })}
       </Button>
@@ -364,13 +351,13 @@ export default function PartyPage({ entityName }: PartyPageProps) {
         className="bg-white border-muted text-foreground hover:bg-muted"
         onClick={handleExport}
       >
-        <Download className="w-4 h-4 ml-2 text-muted-foreground" /> {t("partyPage.toolbar.exportExcel", { namespace: "partners",  })}
+        <Download className="ms-2 h-4 w-4 text-muted-foreground" /> {t("partyPage.toolbar.exportExcel", { namespace: "partners",  })}
       </Button>
 
       <div className="h-6 w-px bg-muted mx-1" />
 
       <Button size="sm" onClick={handleOpenAddWithAccounts} className="bg-primary hover:bg-primary/80 shadow-lg shadow-primary/20">
-        <Plus className="w-4 h-4 ml-2" /> {t(entityName === "customer" ? "partyPage.addLabelCustomer" : "partyPage.addLabelSupplier", { namespace: "partners"})}
+        <Plus className="ms-2 h-4 w-4" /> {t(entityName === "customer" ? "partyPage.addLabelCustomer" : "partyPage.addLabelSupplier", { namespace: "partners"})}
       </Button>
     </div>
   );

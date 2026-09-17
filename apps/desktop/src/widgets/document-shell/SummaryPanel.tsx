@@ -55,7 +55,7 @@ export function SummaryPanel({
   isCashParty = false,
 }: SummaryPanelProps) {
   const { baseCurrency, currencies: contextCurrencies, convertBetween } = useCurrencyContext();
-  const { t } = useLocalization();
+  const { t, language, direction } = useLocalization();
   const safeExtra = extraCosts ?? 0;
   const availableCurrencies = currencies ?? contextCurrencies;
   const safeCurrency = currency || baseCurrency?.code || (availableCurrencies[0]?.code ?? "");
@@ -205,7 +205,7 @@ export function SummaryPanel({
   return (
     <div
       className="bg-card border border-border rounded-lg shadow-sm p-4 select-none"
-      dir="rtl"
+      dir={direction}
     >
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex flex-wrap items-center gap-4 overflow-x-auto no-scrollbar py-1">
@@ -228,7 +228,7 @@ export function SummaryPanel({
                       value={c.code}
                       className="text-foreground font-bold"
                     >
-                      {c.name_ar} ({c.symbol || resolveCurrencySymbol(c.code)})
+                      {(language === "ar" ? c.name_ar : c.name_en) || c.name_ar} ({c.symbol || resolveCurrencySymbol(c.code)})
                     </option>
                   ))}
                 </select>
@@ -598,7 +598,7 @@ export function SummaryPanel({
 
           {/* Children / Extra Actions */}
           {children && (
-            <div className="flex items-center gap-2 border-r border-border pr-2 shrink-0">
+            <div className="flex shrink-0 items-center gap-2 border-e border-border pe-2">
               {children}
             </div>
           )}
@@ -606,7 +606,7 @@ export function SummaryPanel({
 
         {/* Right Side: Remaining Balance */}
         {(invoiceType === "Sales" || invoiceType === "Purchase") && (
-          <div className="flex flex-col items-end px-4 py-1.5 mr-auto shrink-0 bg-muted rounded-md border border-border">
+          <div className="me-auto flex shrink-0 flex-col items-end rounded-md border border-border bg-muted px-4 py-1.5">
             <span
               className={cn(
                 "text-3xs font-black uppercase tracking-widest mb-0.5",

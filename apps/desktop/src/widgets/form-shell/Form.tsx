@@ -107,7 +107,7 @@ export function Form({
           <div key={field.name} className="space-y-2">
             <Label htmlFor={field.name}>
               {field.label}
-              {field.required && <span className="text-red-500 mr-1">*</span>}
+              {field.required && <span className="ms-1 text-red-500">*</span>}
             </Label>
             <Textarea
               id={field.name}
@@ -125,7 +125,7 @@ export function Form({
           <div key={field.name} className="space-y-2">
             <Label htmlFor={field.name}>
               {field.label}
-              {field.required && <span className="text-red-500 mr-1">*</span>}
+              {field.required && <span className="ms-1 text-red-500">*</span>}
             </Label>
             <Select
               value={value as string}
@@ -151,7 +151,7 @@ export function Form({
           <div key={field.name} className="space-y-2">
             <Label htmlFor={field.name}>
               {field.label}
-              {field.required && <span className="text-red-500 mr-1">*</span>}
+              {field.required && <span className="ms-1 text-red-500">*</span>}
             </Label>
             <Input
               id={field.name}

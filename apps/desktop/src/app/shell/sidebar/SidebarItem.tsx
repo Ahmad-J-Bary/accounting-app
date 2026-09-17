@@ -94,7 +94,7 @@ export function SidebarItem({
                 </span>
               )}
               {isActive && (
-                <div className="mr-auto w-1.5 h-1.5 rounded-full bg-primary-foreground animate-pulse" />
+                <div className="ms-auto h-1.5 w-1.5 rounded-full bg-primary-foreground animate-pulse" />
               )}
             </>
           )}

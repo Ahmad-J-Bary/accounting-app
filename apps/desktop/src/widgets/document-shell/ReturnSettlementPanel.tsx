@@ -34,7 +34,7 @@ export function ReturnSettlementPanel({
   onCurrencyChange,
 }: ReturnSettlementPanelProps) {
   const { currencies: contextCurrencies, baseCurrency, hasMultipleCurrencies } = useCurrencyContext();
-  const { t } = useLocalization();
+  const { t, language, direction } = useLocalization();
   const availableCurrencies = currenciesProp ?? contextCurrencies;
   const safeCurrency = selectedCurrency || baseCurrency?.code || (availableCurrencies[0]?.code ?? "");
   const minCash = useMemo(() => {
@@ -42,8 +42,12 @@ export function ReturnSettlementPanel({
     return 0;
   }, [totalAmount, partnerBalance]);
 
-  const partnerLabel = isSales ? t("term.customer", { namespace: "common" }) : t("term.supplier", { namespace: "common" });
-  const paymentLabel = isSales ? t("action.salesPaymentVoucher", { namespace: "common" }) : t("action.purchaseReceiptVoucher", { namespace: "common" });
+  const partnerLabel = isSales
+    ? t("labels.customer", { namespace: "common" })
+    : t("labels.supplier", { namespace: "common" });
+  const paymentLabel = isSales
+    ? t("labels.salesPaymentVoucher", { namespace: "common" })
+    : t("labels.purchaseReceiptVoucher", { namespace: "common" });
 
   const hasDebt = partnerBalance > 0 && totalAmount > 0;
   const cashAmount = useMemo(() => {
@@ -63,7 +67,7 @@ export function ReturnSettlementPanel({
   const showFullCashReturn = true;
 
   return (
-    <div className="bg-card border border-border rounded-lg shadow-sm p-4 select-none" dir="rtl">
+    <div className="bg-card border border-border rounded-lg shadow-sm p-4 select-none" dir={direction}>
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex flex-wrap items-center gap-2 overflow-x-auto no-scrollbar py-1">
           {hasMultipleCurrencies ? (
@@ -77,7 +81,7 @@ export function ReturnSettlementPanel({
                 >
                   {availableCurrencies.map((c) => (
                     <option key={c.code} value={c.code} className="text-foreground font-bold">
-                      {c.name_ar} ({c.symbol || resolveCurrencySymbol(c.code)})
+                      {(language === "ar" ? c.name_ar : c.name_en) || c.name_ar} ({c.symbol || resolveCurrencySymbol(c.code)})
                     </option>
                   ))}
                 </select>
@@ -236,7 +240,7 @@ export function ReturnSettlementPanel({
           )}
         </div>
 
-        <div className="flex flex-col items-end px-4 py-1.5 mr-auto shrink-0 bg-muted rounded-md border border-border">
+        <div className="me-auto flex shrink-0 flex-col items-end rounded-md border border-border bg-muted px-4 py-1.5">
           <span className={`text-3xs font-black uppercase tracking-widest mb-0.5 ${
             effectiveMode === "full_cash_return"
               ? "text-success"

@@ -3,6 +3,7 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { X } from 'lucide-react';
 import * as React from 'react';
 
+import { useLocalization } from '@app/providers/LocalizationProvider';
 import { cn } from '@shared/lib/utils';
 
 const Sheet = SheetPrimitive.Root;
@@ -56,26 +57,31 @@ interface SheetContentProps
 const SheetContent = React.forwardRef<
   React.ElementRef<typeof SheetPrimitive.Content>,
   SheetContentProps
->(({ side = 'right', className, children, hideClose, ...props }, ref) => (
-  <SheetPortal>
-    <SheetOverlay />
-    <SheetPrimitive.Content
-      ref={ref}
-      className={cn(sheetVariants({ side }), className)}
-      {...props}
-    >
-      <SheetTitle className="sr-only">اللوحة الجانبية</SheetTitle>
-      <SheetDescription className="sr-only">لوحة جانبية لعرض التفاصيل أو إدخال البيانات.</SheetDescription>
-      {children}
-      {!hideClose && (
-        <SheetPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-secondary">
-          <X className="h-4 w-4" />
-          <span className="sr-only">Close</span>
-        </SheetPrimitive.Close>
-      )}
-    </SheetPrimitive.Content>
-  </SheetPortal>
-));
+>(({ side, className, children, hideClose, ...props }, ref) => {
+  const { direction, t } = useLocalization();
+  const resolvedSide = side ?? (direction === 'rtl' ? 'left' : 'right');
+
+  return (
+    <SheetPortal>
+      <SheetOverlay />
+      <SheetPrimitive.Content
+        ref={ref}
+        className={cn(sheetVariants({ side: resolvedSide }), className)}
+        {...props}
+      >
+        <SheetTitle className="sr-only">{t('accessibility.sidePanel')}</SheetTitle>
+        <SheetDescription className="sr-only">{t('accessibility.sidePanelDescription')}</SheetDescription>
+        {children}
+        {!hideClose && (
+          <SheetPrimitive.Close className="absolute end-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-secondary">
+            <X className="h-4 w-4" />
+            <span className="sr-only">{t('accessibility.close')}</span>
+          </SheetPrimitive.Close>
+        )}
+      </SheetPrimitive.Content>
+    </SheetPortal>
+  );
+});
 SheetContent.displayName = SheetPrimitive.Content.displayName;
 
 const SheetHeader = ({
@@ -84,7 +90,7 @@ const SheetHeader = ({
 }: React.HTMLAttributes<HTMLDivElement>) => (
   <div
     className={cn(
-      'flex flex-col space-y-2 text-center sm:text-left',
+      'flex flex-col gap-2 text-center sm:text-start',
       className
     )}
     {...props}
@@ -98,7 +104,7 @@ const SheetFooter = ({
 }: React.HTMLAttributes<HTMLDivElement>) => (
   <div
     className={cn(
-      'flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2',
+      'flex flex-col-reverse gap-2 sm:flex-row sm:justify-end',
       className
     )}
     {...props}

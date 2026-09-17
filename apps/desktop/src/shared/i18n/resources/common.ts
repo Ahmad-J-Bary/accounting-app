@@ -187,6 +187,7 @@ export const common: Record<AppLanguage, TranslationTree> = {
       saveAndPostEdits: "حفظ وترحيل التعديلات",
       quickSearchTitle: "نافذة البحث السريع",
       quickSearchDesc: "استخدم هذه النافذة للبحث والوصول السريع للأوامر والصفحات.",
+      selectDate: "اختر تاريخ",
       selectItemToView: "الرجاء اختيار عنصر لعرض تفاصيله",
       fixErrors: "يرجى تصحيح الأخطاء التالية:",
       searchResults: "نتائج البحث",
@@ -220,6 +221,8 @@ export const common: Record<AppLanguage, TranslationTree> = {
       masterDetailLayout: "تخطيط رئيسي وتفاصيل",
       backToList: "العودة إلى القائمة",
       settingsNavigation: "تنقل الإعدادات",
+      sidePanel: "لوحة جانبية",
+      sidePanelDescription: "لوحة جانبية لعرض التفاصيل أو إدخال البيانات.",
     },
     confirmations: {
       delete: "هل أنت متأكد من الحذف؟",
@@ -235,6 +238,11 @@ export const common: Record<AppLanguage, TranslationTree> = {
       deleteFailed: "فشل الحذف: {{error}}",
       noDataToExport: "لا توجد بيانات للتصدير",
       excelSaved: "تم حفظ ملف Excel بنجاح",
+    },
+    barcodeScan: {
+      title: "مسح الباركود",
+      description: "أدخل أو امسح قيمة الباركود للحقل: {{field}}",
+      placeholder: "أدخل قيمة الباركود أو استخدم الماسح",
     },
     system: {
       cashCustomer: "زبون نقدي",
@@ -428,6 +436,7 @@ export const common: Record<AppLanguage, TranslationTree> = {
       saveAndPostEdits: "Save & Post Edits",
       quickSearchTitle: "Quick Search",
       quickSearchDesc: "Use this window to search and quickly access commands and pages.",
+      selectDate: "Select date",
       selectItemToView: "Please select an item to view its details",
       fixErrors: "Please fix the following errors:",
       searchResults: "Search Results",
@@ -457,6 +466,8 @@ export const common: Record<AppLanguage, TranslationTree> = {
       masterDetailLayout: "Master-detail layout",
       backToList: "Back to list",
       settingsNavigation: "Settings navigation",
+      sidePanel: "Side panel",
+      sidePanelDescription: "A side panel for showing details or entering data.",
     },
     confirmations: {
       delete: "Are you sure you want to delete?",
@@ -472,6 +483,11 @@ export const common: Record<AppLanguage, TranslationTree> = {
       deleteFailed: "Delete failed: {{error}}",
       noDataToExport: "There is no data to export",
       excelSaved: "Excel file saved successfully",
+    },
+    barcodeScan: {
+      title: "Scan Barcode",
+      description: "Enter or scan the barcode value for field: {{field}}",
+      placeholder: "Enter the barcode value or use the scanner",
     },
     system: {
       cashCustomer: "Cash Customer",

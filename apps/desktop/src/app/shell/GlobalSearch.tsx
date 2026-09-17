@@ -14,7 +14,7 @@ const GROUP_LABELS: Record<string, { key: string }> = {
 
 export function GlobalSearch() {
   const { isOpen, query, setQuery, closeSearch, results, activateResult } = useGlobalSearch();
-  const { t } = useLocalization();
+  const { t, direction } = useLocalization();
 
   const groupedResults = useMemo(() => {
     return results.reduce<Record<string, typeof results>>((acc, result) => {
@@ -43,7 +43,7 @@ export function GlobalSearch() {
         <Command
           className="overflow-hidden rounded-2xl border border-border bg-card shadow-2xl"
           shouldFilter={false}
-          dir="rtl"
+          dir={direction}
         >
           <div className="flex items-center gap-3 border-b border-border px-4 py-3">
             <Search className="h-5 w-5 text-muted-foreground" />
@@ -93,7 +93,7 @@ export function GlobalSearch() {
                         <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted text-muted-foreground">
                           <Icon className="h-4 w-4" />
                         </span>
-                        <span className="min-w-0 flex-1 text-right">
+                        <span className="min-w-0 flex-1 text-start">
                           <span className="block truncate font-bold text-foreground">{result.title}</span>
                           {result.subtitle && (
                             <span className="block truncate text-xs text-muted-foreground">{result.subtitle}</span>

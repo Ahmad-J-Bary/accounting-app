@@ -6,6 +6,7 @@ import { companyTypeOf, hiddenNavIds } from '@modules/opening-balance/lib/compan
 import { cn } from '@shared/lib/utils';
 import { ICON_MAP } from '../sidebarConfig';
 import { ChevronDown } from 'lucide-react';
+import { useLocalization } from '@app/providers/LocalizationProvider';
 
 interface NavBarProps {
   slim?: boolean;
@@ -25,15 +26,16 @@ export function NavBar({ slim = false, activeBg = 'bg-primary', hoverBg = 'hover
   const location = useLocation();
   const [hoveredGroup, setHoveredGroup] = useState<string | null>(null);
   const isHorizLight = horizontalAppearance === 'light';
+  const { direction } = useLocalization();
 
   const visibleGroups = layout.groups.filter(g => g.visible).sort((a, b) => a.order - b.order);
 
   if (vertical) {
     return (
       <nav
-        className="flex flex-col h-full border-l border-[hsl(var(--sidebar-border))] py-2 px-1 space-y-1"
+        className="flex h-full flex-col space-y-1 border-s border-[hsl(var(--sidebar-border))] px-1 py-2"
         style={{ background: 'hsl(var(--sidebar-background))' }}
-        dir="rtl"
+        dir={direction}
       >
         {visibleGroups.map(group => (
           <div key={group.id} className="relative">
@@ -53,7 +55,7 @@ export function NavBar({ slim = false, activeBg = 'bg-primary', hoverBg = 'hover
             </button>
             {/* Tooltip on hover */}
             {hoveredGroup === group.id && (
-              <div className="absolute right-full mr-2 top-1/2 -translate-y-1/2 z-50 px-2 py-1 text-[10px] font-bold text-white bg-slate-700 rounded shadow-lg whitespace-nowrap pointer-events-none">
+              <div className="pointer-events-none absolute end-full top-1/2 z-50 me-2 -translate-y-1/2 whitespace-nowrap rounded bg-slate-700 px-2 py-1 text-[10px] font-bold text-white shadow-lg">
                 {groupTitle(group)}
               </div>
             )}
@@ -73,7 +75,7 @@ export function NavBar({ slim = false, activeBg = 'bg-primary', hoverBg = 'hover
         slim ? "h-10" : "h-12"
       )}
       style={!isHorizLight ? { background: 'hsl(var(--sidebar-background))' } : undefined}
-      dir="rtl"
+      dir={direction}
     >
       {visibleGroups.map(group => {
         const displayGroupTitle = groupTitle(group);
@@ -149,7 +151,7 @@ export function NavBar({ slim = false, activeBg = 'bg-primary', hoverBg = 'hover
             {/* Dropdown Menu (on hover) */}
             <div
               className={cn(
-                "absolute top-full right-0 mt-1 w-56 rounded-xl border p-1.5 shadow-xl opacity-0 translate-y-1 invisible",
+                "invisible absolute end-0 top-full mt-1 w-56 translate-y-1 rounded-xl border p-1.5 opacity-0 shadow-xl",
                 "group-hover:opacity-100 group-hover:translate-y-0 group-hover:visible transition-all duration-200 z-50",
                 isHorizLight ? "bg-white border-muted" : "border-[hsl(var(--sidebar-border))]"
               )}
@@ -181,7 +183,7 @@ export function NavBar({ slim = false, activeBg = 'bg-primary', hoverBg = 'hover
                       key={item.id}
                       onClick={handleClick}
                       className={cn(
-                        "w-full flex items-center gap-2 px-3 py-2 rounded-lg text-right text-xs font-bold transition-all",
+                        "flex w-full items-center gap-2 rounded-lg px-3 py-2 text-start text-xs font-bold transition-all",
                         isActive
                           ? isHorizLight ? "text-primary bg-primary/10" : `${activeBg} text-white shadow-sm`
                           : isHorizLight

@@ -201,7 +201,7 @@ export function DocumentGridCell({
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="center" className="min-w-[140px] shadow-xl">
-            <DropdownMenuLabel className="text-right text-3xs font-black text-muted-foreground uppercase">
+            <DropdownMenuLabel className="text-3xs font-black uppercase text-muted-foreground text-start">
               {t("grid.priceTypeLabel", { namespace: "inventory" })}
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
@@ -216,7 +216,7 @@ export function DocumentGridCell({
                   key={t.id}
                   checked={currentTier === t.id}
                   onCheckedChange={() => handleTierChange(t.id)}
-                  className="text-right flex-row-reverse gap-2 text-2xs font-bold py-1.5"
+                  className="gap-2 py-1.5 text-2xs font-bold text-start"
                 >
                   <span className="flex items-center gap-2 w-full">
                     <span>{t.label}</span>
@@ -288,14 +288,14 @@ export function DocumentGridCell({
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="center" className="min-w-[100px] shadow-xl">
-            <DropdownMenuLabel className="text-right text-3xs font-black text-muted-foreground uppercase">{t("grid.availableUnits", { namespace: "inventory" })}</DropdownMenuLabel>
+            <DropdownMenuLabel className="text-3xs font-black uppercase text-muted-foreground text-start">{t("grid.availableUnits", { namespace: "inventory" })}</DropdownMenuLabel>
             <DropdownMenuSeparator />
             {units.map((u) => (
               <DropdownMenuCheckboxItem
                 key={u.id}
                 checked={line.unit_id === u.id || currentUnitName === u.name}
                 onCheckedChange={() => onUpdateLine(rowIdx, { unit_id: u.id, unit_name: u.name })}
-                className="text-right flex-row-reverse gap-2 text-2xs font-bold py-1.5"
+                className="gap-2 py-1.5 text-2xs font-bold text-start"
               >
                 {u.name}
               </DropdownMenuCheckboxItem>
@@ -323,14 +323,14 @@ export function DocumentGridCell({
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="center" className="min-w-[140px] shadow-xl">
-            <DropdownMenuLabel className="text-right text-3xs font-black text-muted-foreground uppercase">{t("grid.warehouses", { namespace: "inventory" })}</DropdownMenuLabel>
+            <DropdownMenuLabel className="text-3xs font-black uppercase text-muted-foreground text-start">{t("grid.warehouses", { namespace: "inventory" })}</DropdownMenuLabel>
             <DropdownMenuSeparator />
             {warehouses.map((w) => (
               <DropdownMenuCheckboxItem
                 key={w.id}
                 checked={currentWarehouseId === w.id}
                 onCheckedChange={() => onUpdateLine(rowIdx, { warehouse_id: w.id })}
-                className="text-right flex-row-reverse gap-2 text-2xs font-bold py-1.5"
+                className="gap-2 py-1.5 text-2xs font-bold text-start"
               >
                 {resolveWarehouseDisplayName(w, t)}
               </DropdownMenuCheckboxItem>
@@ -387,7 +387,7 @@ export function DocumentGridCell({
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="center" className="min-w-[140px] shadow-xl">
-              <DropdownMenuLabel className="text-right text-3xs font-black text-muted-foreground uppercase">
+              <DropdownMenuLabel className="text-3xs font-black uppercase text-muted-foreground text-start">
                 {t("grid.priceTypeLabel", { namespace: "inventory" })}
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
@@ -396,7 +396,7 @@ export function DocumentGridCell({
                   key={t.id}
                   checked={currentTier === t.id}
                   onCheckedChange={() => handleTierChange(t.id)}
-                  className="text-right flex-row-reverse gap-2 text-2xs font-bold py-1.5"
+                  className="gap-2 py-1.5 text-2xs font-bold text-start"
                 >
                   {t.label}
                 </DropdownMenuCheckboxItem>

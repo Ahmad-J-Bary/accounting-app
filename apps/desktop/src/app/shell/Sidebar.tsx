@@ -14,6 +14,7 @@ import { SidebarGroup } from './sidebar/SidebarGroup';
 import { SidebarPinnedSection } from './sidebar/SidebarPinnedSection';
 import { SidebarItem } from './sidebar/SidebarItem';
 import { FolderPlus } from 'lucide-react';
+import { useLocalization } from '@app/providers/LocalizationProvider';
 
 interface SidebarProps {
   collapsed?: boolean;
@@ -27,6 +28,7 @@ export function Sidebar({ collapsed: _collapsed, onClose }: SidebarProps) {
   const { initState, isReady } = useCompanyInitState();
   const { openTab, updateMainTab, activeTabId } = useTabs();
   const { itemLabel, groupTitle } = useNavLabels();
+  const { direction } = useLocalization();
   const location = useLocation();
 
   const {
@@ -132,9 +134,9 @@ export function Sidebar({ collapsed: _collapsed, onClose }: SidebarProps) {
     const railIconActive = isRailDark ? 'bg-primary/100/20 text-primary' : 'bg-primary/10 text-primary';
 
     return (
-      <div className="flex h-full overflow-hidden sidebar-root" dir="rtl">
+      <div className="sidebar-root flex h-full overflow-hidden" dir={direction}>
         {/* ── الرييل الضيق ── */}
-        <div className={cn("flex flex-col items-center py-2 gap-0.5 w-11 shrink-0 border-l z-10", railBg, railBorder)}>
+        <div className={cn("z-10 flex w-11 shrink-0 flex-col items-center gap-0.5 border-s py-2", railBg, railBorder)}>
           {/* أيقونات المجموعات */}
           <nav className="flex flex-col gap-0.5 flex-1 overflow-y-auto sidebar-scrollbar px-0.5">
             {visibleGroups.map(group => {
@@ -166,7 +168,7 @@ export function Sidebar({ collapsed: _collapsed, onClose }: SidebarProps) {
                 >
                   <GroupIcon className="w-3.5 h-3.5" />
                   {isSelected && (
-                    <span className={cn("absolute right-0 top-1/2 -translate-y-1/2 w-0.5 h-4 rounded-full", isRailDark ? 'bg-blue-400' : 'bg-primary')} />
+                    <span className={cn("absolute end-0 top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-full", isRailDark ? 'bg-blue-400' : 'bg-primary')} />
                   )}
                 </button>
               );
@@ -176,7 +178,7 @@ export function Sidebar({ collapsed: _collapsed, onClose }: SidebarProps) {
 
         {/* ── اللوحة الجانبية ── */}
         <aside className={cn(
-          "flex flex-col h-full overflow-hidden border-l transition-all duration-300",
+          "flex h-full flex-col overflow-hidden border-s transition-all duration-300",
           effectiveBg, effectiveTextClass, effectiveBorderClass,
         )} style={{ width: 200, minWidth: 200 }}>
           {selectedGroup && (
@@ -192,7 +194,7 @@ export function Sidebar({ collapsed: _collapsed, onClose }: SidebarProps) {
                     return <GI className="w-3 h-3" />;
                   })()}
                 </div>
-                <span className="text-[11px] font-bold truncate">{selectedGroup.customTitle ?? selectedGroup.defaultTitle}</span>
+                <span className="truncate text-[11px] font-bold">{groupTitle(selectedGroup)}</span>
               </div>
               {/* العناصر */}
               <nav className="flex-1 overflow-y-auto sidebar-scrollbar px-1.5 py-1 space-y-0.5">
@@ -222,7 +224,7 @@ export function Sidebar({ collapsed: _collapsed, onClose }: SidebarProps) {
         "h-full flex flex-col transition-all duration-300 ease-in-out relative sidebar-root",
         effectiveBg,
         effectiveTextClass,
-        navBordered ? `border-l ${effectiveBorderClass}` : "border-none"
+        navBordered ? `border-s ${effectiveBorderClass}` : "border-none"
       )}
       style={{ width: actualWidth, minWidth: actualWidth }}
     >

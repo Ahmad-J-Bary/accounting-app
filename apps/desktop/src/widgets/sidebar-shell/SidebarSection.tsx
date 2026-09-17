@@ -43,7 +43,7 @@ export function SidebarSection({
       <button
         type="button"
         onClick={() => setIsOpen((prev) => !prev)}
-        className="w-full flex items-center justify-between px-4 py-2.5 bg-muted/80 hover:bg-muted/60 transition-colors text-right border-b border-muted rounded-t-xl"
+        className="flex w-full items-center justify-between rounded-t-xl border-b border-muted bg-muted/80 px-4 py-2.5 text-start transition-colors hover:bg-muted/60"
       >
         <span className="text-xs font-black text-foreground flex items-center gap-1.5">
           {icon}{title}

@@ -34,17 +34,17 @@ export function TableActions({ onView, onEdit, onDelete, onExportRow, extraActio
             <MoreHorizontal className="w-4 h-4" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align={align} className="text-right min-w-[140px] rounded-xl shadow-xl border-slate-100">
+        <DropdownMenuContent align={align} className="min-w-[140px] rounded-xl border-slate-100 text-start shadow-xl">
           {onView && (
             <DropdownMenuItem onClick={onView} className="gap-2 cursor-pointer py-2.5">
               <Eye className="w-4 h-4 text-slate-400" />
-              <span>{t('labels.viewDetails', )}</span>
+              <span>{t("labels.viewDetails", { namespace: "common" })}</span>
             </DropdownMenuItem>
           )}
           {onEdit && (
             <DropdownMenuItem onClick={onEdit} className="gap-2 cursor-pointer py-2.5">
               <Edit className="w-4 h-4 text-slate-400" />
-              <span>{t('labels.editData', )}</span>
+              <span>{t("labels.editData", { namespace: "common" })}</span>
             </DropdownMenuItem>
           )}
           
@@ -65,7 +65,7 @@ export function TableActions({ onView, onEdit, onDelete, onExportRow, extraActio
           {onExportRow && (
             <DropdownMenuItem onClick={onExportRow} className="gap-2 cursor-pointer py-2.5">
               <Download className="w-4 h-4 text-slate-400" />
-              <span>{t('labels.exportExcel', )}</span>
+              <span>{t("labels.exportExcel", { namespace: "common" })}</span>
             </DropdownMenuItem>
           )}
 
@@ -77,7 +77,7 @@ export function TableActions({ onView, onEdit, onDelete, onExportRow, extraActio
                 className="gap-2 cursor-pointer py-2.5 text-red-600 focus:text-red-600 focus:bg-red-50/50 font-medium"
               >
                 <Trash2 className="w-4 h-4 text-red-400" />
-                <span>{t('labels.deleteRecord', )}</span>
+                <span>{t("labels.deleteRecord", { namespace: "common" })}</span>
               </DropdownMenuItem>
             </>
           )}

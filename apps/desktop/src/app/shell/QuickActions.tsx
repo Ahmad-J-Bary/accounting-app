@@ -98,7 +98,7 @@ export function QuickActions({ actions, columns = 4 }: QuickActionsProps) {
       <div className="flex items-center justify-between mb-4">
         <h3 className="font-semibold">{t("quickActions", { namespace: "shell",  })}</h3>
         <Button variant="ghost" size="sm">
-          <Plus className="w-4 h-4 ml-2" />
+          <Plus className="ms-2 h-4 w-4" />
           {t("customize", { namespace: "shell",  })}
         </Button>
       </div>

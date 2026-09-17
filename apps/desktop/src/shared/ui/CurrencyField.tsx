@@ -42,7 +42,7 @@ export function CurrencyField({
   min = "0",
   inputClassName = "",
 }: CurrencyFieldProps) {
-  const { t } = useLocalization();
+  const { t, direction, language } = useLocalization();
   const amountInput = (
     <Input
       type="number"
@@ -69,8 +69,8 @@ export function CurrencyField({
     <div className="grid grid-cols-2 gap-3">
       <div className="space-y-1.5">
         <FieldLabel>{t("currencies.currencyField", { namespace: "settings" })}</FieldLabel>
-        <Select dir="rtl" value={currency} onValueChange={onCurrencyChange} disabled={disabled}>
-          <SelectTrigger className="bg-white border-slate-200 h-9 w-full text-right text-xs">
+        <Select dir={direction} value={currency} onValueChange={onCurrencyChange} disabled={disabled}>
+          <SelectTrigger className="h-9 w-full bg-white text-start text-xs border-slate-200">
             <SelectValue placeholder={t("currencies.selectCurrency", { namespace: "settings" })} />
           </SelectTrigger>
           <SelectContent>
@@ -78,7 +78,7 @@ export function CurrencyField({
               .filter((c) => c.is_active)
               .map((c) => (
                 <SelectItem key={c.code} value={c.code} className="text-xs">
-                  {c.name_ar} ({c.code})
+                  {(language === "ar" ? c.name_ar : c.name_en) || c.name_ar} ({c.code})
                 </SelectItem>
               ))}
           </SelectContent>
