@@ -35,12 +35,14 @@ interface TableToolbarProps {
   search?: string;
   onSearchChange?: (value: string) => void;
   searchPlaceholder?: string;
-  columns: ToolbarColumn[];
-  onColumnToggle: (id: string) => void;
+  columns?: ToolbarColumn[];
+  onColumnToggle?: (id: string) => void;
   onColumnsReset?: () => void;
   columnsModified?: boolean;
   actions?: React.ReactNode;
   showViewOptions?: boolean;
+  showColumns?: boolean;
+  showDensity?: boolean;
   filterBar?: React.ReactNode;
   onExportExcel?: () => void;
   exportLoading?: boolean;
@@ -51,12 +53,14 @@ export const TableToolbar: React.FC<TableToolbarProps> = ({
   search,
   onSearchChange,
   searchPlaceholder,
-  columns,
+  columns = [],
   onColumnToggle,
   onColumnsReset,
   columnsModified = false,
   actions,
   showViewOptions = true,
+  showColumns,
+  showDensity,
   filterBar,
   onExportExcel,
   exportLoading = false,
@@ -70,16 +74,28 @@ export const TableToolbar: React.FC<TableToolbarProps> = ({
   const hasColumns = columns.length > 0;
   const menuItemClassName = isRTL ? "flex-row-reverse" : "";
 
+  // Compute fine-grained visibility for utilities
+  const shouldShowDensity = showDensity ?? showViewOptions;
+  const shouldShowColumns = (showColumns ?? showViewOptions) && hasColumns && onColumnToggle !== undefined;
+  const shouldShowExport = !!onExportExcel;
+
+  const hasAnyUtilities = shouldShowDensity || shouldShowColumns || shouldShowExport || !!actions;
+  const hasSearchOrFilter = onSearchChange !== undefined || !!filterBar;
+
+  if (!hasAnyUtilities && !hasSearchOrFilter) {
+    return null;
+  }
+
   return (
     <div className="mb-2 flex flex-wrap items-center gap-2" dir={direction}>
       {(onSearchChange !== undefined) && (
         <div className="relative flex-[2] min-w-[160px] max-w-[320px]">
-          <Search className="pointer-events-none absolute end-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+          <Search className="pointer-events-none absolute end-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder={resolvedSearchPlaceholder}
-            className="h-8 w-full bg-white pe-7 ps-3 text-sm transition-all border-slate-200 focus:bg-white"
+            className="h-8 w-full bg-background pe-8 ps-3 text-sm transition-all border-border focus:bg-background"
           />
         </div>
       )}
@@ -88,13 +104,13 @@ export const TableToolbar: React.FC<TableToolbarProps> = ({
           {filterBar}
         </div>
       )}
-      <div className="ms-auto flex items-center gap-1">
-        {actions}
-        {showViewOptions && (
-          <>
+      {hasAnyUtilities && (
+        <div className="ms-auto flex items-center gap-1.5">
+          {actions}
+          {shouldShowDensity && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="h-8 px-2 border-slate-200 bg-white text-slate-600">
+                <Button variant="outline" size="sm" className="h-8 px-2.5 border-border bg-background text-muted-foreground hover:text-foreground">
                   <LayoutGrid className="ms-1 h-3.5 w-3.5" />
                   <span className="text-xs">{t('labels.view', )}</span>
                 </Button>
@@ -132,15 +148,17 @@ export const TableToolbar: React.FC<TableToolbarProps> = ({
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+          )}
 
+          {shouldShowColumns && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="outline"
                   size="sm"
                   className={cn(
-                    "h-8 px-2 border-slate-200 bg-white text-slate-600",
-                    columnsModified && "border-amber-300 bg-amber-50 text-amber-700"
+                    "h-8 px-2.5 border-border bg-background text-muted-foreground hover:text-foreground",
+                    columnsModified && "border-amber-300 bg-amber-500/10 text-amber-600 dark:text-amber-400"
                   )}
                 >
                   <Columns className="ms-1 h-3.5 w-3.5" />
@@ -149,8 +167,8 @@ export const TableToolbar: React.FC<TableToolbarProps> = ({
                     <span className={cn(
                       "ms-1 rounded px-1 py-0.5 text-3xs font-bold tabular-nums",
                       columnsModified
-                        ? "bg-amber-200 text-amber-800"
-                        : "bg-slate-100 text-slate-600"
+                        ? "bg-amber-500/20 text-amber-700 dark:text-amber-300"
+                        : "bg-muted text-muted-foreground"
                     )}>
                       {visibleCount}/{totalCount}
                     </span>
@@ -171,7 +189,7 @@ export const TableToolbar: React.FC<TableToolbarProps> = ({
                   <DropdownMenuCheckboxItem
                     key={col.id}
                     checked={col.visible}
-                    onCheckedChange={() => onColumnToggle(col.id)}
+                    onCheckedChange={() => onColumnToggle?.(col.id)}
                     className={menuItemClassName}
                   >
                     <span>{col.label}</span>
@@ -183,7 +201,7 @@ export const TableToolbar: React.FC<TableToolbarProps> = ({
                     <DropdownMenuItem
                       onClick={onColumnsReset}
                       disabled={!columnsModified}
-                      className={cn(menuItemClassName, "text-primary focus:text-primary disabled:text-slate-400 disabled:opacity-50")}
+                      className={cn(menuItemClassName, "text-primary focus:text-primary disabled:text-muted-foreground disabled:opacity-50")}
                     >
                       <RotateCcw className="ms-2 h-4 w-4" />
                       {t('actions.restoreDefaultColumns', )}
@@ -192,17 +210,17 @@ export const TableToolbar: React.FC<TableToolbarProps> = ({
                 )}
               </DropdownMenuContent>
             </DropdownMenu>
+          )}
 
-            {onExportExcel && (
-              <ExportExcelButton
-                onClick={onExportExcel}
-                loading={exportLoading}
-                disabled={exportDisabled}
-              />
-            )}
-          </>
-        )}
-      </div>
+          {shouldShowExport && onExportExcel && (
+            <ExportExcelButton
+              onClick={onExportExcel}
+              loading={exportLoading}
+              disabled={exportDisabled}
+            />
+          )}
+        </div>
+      )}
     </div>
   );
 };

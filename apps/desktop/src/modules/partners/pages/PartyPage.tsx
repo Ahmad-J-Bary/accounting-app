@@ -1,6 +1,5 @@
-import { useState, useCallback, useEffect } from "react";
-import { Button } from "@shared/ui/button";
-import { Plus, History, ShoppingBag, Printer, Undo2, Receipt, DollarSign } from "lucide-react";
+import { useState, useCallback, useEffect, useMemo } from "react";
+import { Plus } from "lucide-react";
 import { toast } from "sonner";
 
 import { customerService } from '@modules/partners/api/customerService';
@@ -23,6 +22,7 @@ import { ReturnFromMaterialPanel } from '@modules/inventory/components/ReturnFro
 import { OperationalTableTemplate } from '@widgets/templates/OperationalTableTemplate';
 import { PartnerDetailPanel } from '@modules/partners/components/PartnerDetailPanel';
 import { PartnerFormPanel } from '@modules/partners/components/PartnerFormPanel';
+import type { ResponsiveActionItem } from "@widgets/page-header/ResponsiveActions";
 
 // ── Side panel mode type ─────────────────────────────────────────────────────────
 
@@ -265,93 +265,17 @@ export default function PartyPage({ entityName }: PartyPageProps) {
     });
   }, [items, currencies, entityName, toBase, formatAmount, currencyMode, baseCode, rateMap, visibleColumnIds, exportData, hasSecondaryCurrencies, ratesSheet, t]);
 
-  // ── Toolbar ──
+  // ── Normalized PageHeader Primary Action ──
 
-  const toolbar = (
-    <div className="flex items-center gap-2">
-      <Button
-        size="sm"
-        variant="outline"
-        className="bg-white border-muted text-foreground hover:bg-muted"
-        disabled={!selectedId}
-        onClick={() => {
-          const party = selectedItem as CustomerDto | SupplierDto;
-          if (party?.account_id) {
-            openTab({
-              id: `ledger-${party.account_id}`,
-              title: t("detail.ledgerTab", { namespace: "partners", vars: { name: selectedItem?.name },  }),
-              path: `/accounting/account-ledger/${party.account_id}`,
-              closable: true,
-            });
-          }
-        }}
-      >
-        <History className="ms-2 h-4 w-4 text-muted-foreground" /> {t("partyPage.toolbar.ledger", { namespace: "partners",  })}
-      </Button>
-
-      <Button
-        size="sm"
-        variant="outline"
-        className="bg-white border-muted text-foreground hover:bg-muted"
-        disabled={!selectedId}
-        onClick={() => {
-          const tab = cfg.invoicesTab(selectedId!);
-          openTab({ ...tab, title: t(entityName === "customer" ? "partyPage.salesTabCustomer" : "partyPage.purchasesTabSupplier", { namespace: "partners", vars: { name: selectedItem?.name || "" }}) });
-        }}
-      >
-        <ShoppingBag className="ms-2 h-4 w-4 text-primary" />
-        {entityName === "customer" ? t("partyPage.toolbar.customerSales", { namespace: "partners",  }) : t("partyPage.toolbar.supplierPurchases", { namespace: "partners",  })}
-      </Button>
-
-      <Button
-        size="sm"
-        variant="outline"
-        className="bg-white border-muted text-foreground hover:bg-muted"
-        disabled={!selectedId}
-        onClick={() => {
-          const tab = cfg.statementPath(selectedId!);
-          openTab({ ...tab, title: t("detail.statementTab", { namespace: "partners", vars: { name: selectedItem?.name || "" },  }) });
-        }}
-      >
-        <Printer className="ms-2 h-4 w-4 text-success" /> {t("partyPage.toolbar.printStatement", { namespace: "partners",  })}
-      </Button>
-
-      <Button
-        size="sm"
-        variant="outline"
-        className="bg-white border-muted text-foreground hover:bg-muted"
-        disabled={!selectedId}
-        onClick={() => {
-          setPanelMode('return');
-        }}
-      >
-        <Undo2 className="ms-2 h-4 w-4 text-warning" />
-        {entityName === "customer" ? t("partyPage.toolbar.salesReturn", { namespace: "partners",  }) : t("partyPage.toolbar.purchaseReturn", { namespace: "partners",  })}
-      </Button>
-
-      <Button
-        size="sm"
-        variant="outline"
-        className="bg-white border-muted text-foreground hover:bg-muted"
-        disabled={!selectedId}
-        onClick={() => {
-          setPanelMode('payment');
-        }}
-      >
-        {entityName === "customer"
-          ? <Receipt className="ms-2 h-4 w-4 text-warning" />
-          : <DollarSign className="ms-2 h-4 w-4 text-destructive" />
-        }
-        {entityName === "customer" ? t("partyPage.toolbar.createReceipt", { namespace: "partners",  }) : t("partyPage.toolbar.createPayment", { namespace: "partners",  })}
-      </Button>
-
-      <div className="h-6 w-px bg-muted mx-1" />
-
-      <Button size="sm" onClick={handleOpenAddWithAccounts} className="bg-primary hover:bg-primary/80 shadow-lg shadow-primary/20">
-        <Plus className="ms-2 h-4 w-4" /> {t(entityName === "customer" ? "partyPage.addLabelCustomer" : "partyPage.addLabelSupplier", { namespace: "partners"})}
-      </Button>
-    </div>
-  );
+  const headerActions = useMemo<ResponsiveActionItem[]>(() => [
+    {
+      id: `add-${entityName}`,
+      label: t(entityName === "customer" ? "partyPage.addLabelCustomer" : "partyPage.addLabelSupplier", { namespace: "partners" }),
+      icon: Plus,
+      priority: "primary",
+      onClick: () => { void handleOpenAddWithAccounts(); },
+    },
+  ], [entityName, handleOpenAddWithAccounts, t]);
 
   // ── Side panel ──
 
@@ -392,7 +316,7 @@ export default function PartyPage({ entityName }: PartyPageProps) {
   return (
     <OperationalTableTemplate
       title={t(entityName === "customer" ? "partyPage.titleCustomer" : "partyPage.titleSupplier", { namespace: "partners"})}
-      toolbar={toolbar}
+      toolbarActions={headerActions}
       tableContent={
         <PartyTable
           entityName={entityName}
@@ -415,7 +339,34 @@ export default function PartyPage({ entityName }: PartyPageProps) {
               });
             }
           }}
-          onDocument={(item) => { setSelectedId(item.id); setPanelMode('payment'); }}
+          onSales={(item) => {
+            const tab = cfg.invoicesTab(item.id);
+            openTab({
+              ...tab,
+              title: t(entityName === "customer" ? "partyPage.salesTabCustomer" : "partyPage.purchasesTabSupplier", {
+                namespace: "partners",
+                vars: { name: item.name || "" },
+              }),
+            });
+          }}
+          onStatement={(item) => {
+            const tab = cfg.statementPath(item.id);
+            openTab({
+              ...tab,
+              title: t("detail.statementTab", {
+                namespace: "partners",
+                vars: { name: item.name || "" },
+              }),
+            });
+          }}
+          onReturn={(item) => {
+            setSelectedId(item.id);
+            setPanelMode('return');
+          }}
+          onDocument={(item) => {
+            setSelectedId(item.id);
+            setPanelMode('payment');
+          }}
           selectedId={selectedId}
           onVisibleColumnsChange={setVisibleColumnIds}
         />

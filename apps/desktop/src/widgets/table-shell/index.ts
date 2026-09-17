@@ -18,3 +18,4 @@ export { DataTable } from './DataTable';
 export type { Column } from './DataTable';
 export { ExportExcelButton } from './ExportExcelButton';
 export type { ExportExcelButtonProps } from './ExportExcelButton';
+export { TableRowContextMenu } from './TableRowContextMenu';

@@ -9,6 +9,8 @@ import { TableSummary } from './TableSummary';
 import { TablePagination } from './TablePagination';
 import { EmptyState } from './EmptyState';
 import { GridHeader } from './GridHeader';
+import { TableRowContextMenu } from './TableRowContextMenu';
+import type { RowActionDescriptor } from '@shared/types/row-actions';
 import { useLocalization } from "@app/providers/LocalizationProvider";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -66,6 +68,8 @@ interface UnifiedTableProps<T> {
   sortField?: string;
   /** Current sort direction */
   sortDirection?: 'asc' | 'desc';
+  /** Shared row actions for right-click context menu */
+  rowActions?: RowActionDescriptor<T>[] | ((row: T) => RowActionDescriptor<T>[]);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -129,6 +133,7 @@ export function UnifiedTable<T>({
   tableId,
   sortField,
   sortDirection,
+  rowActions,
 }: UnifiedTableProps<T>) {
   const { settings, getDensityPadding } = useTableSettings();
   const { t, direction } = useLocalization();
@@ -324,7 +329,7 @@ export function UnifiedTable<T>({
       const rowId = String(row[idKey] ?? rowIdx);
       const isSelected = !!(selectedId && String(selectedId) === rowId);
 
-      return (
+      const rowElement = (
         <div
           key={rowId}
           className={cn(
@@ -357,6 +362,16 @@ export function UnifiedTable<T>({
             ))}
         </div>
       );
+
+      if (rowActions) {
+        return (
+          <TableRowContextMenu key={rowId} actions={rowActions} row={row}>
+            {rowElement}
+          </TableRowContextMenu>
+        );
+      }
+
+      return rowElement;
     });
   };
 

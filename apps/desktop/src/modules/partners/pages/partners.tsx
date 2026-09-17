@@ -198,48 +198,10 @@ export default function Partners() {
       },
     },
     {
-      id: "drawings-ledger",
-      label: t("toolbar.drawings", { namespace: "partners" }),
-      icon: TrendingUp,
-      priority: "secondary",
-      variant: "outline",
-      disabled: !selectedPartner,
-      onClick: () => {
-        if (!selectedPartner?.drawings_account_id) {
-          toast.error(t("toast.noDrawingsAccount", { namespace: "partners" }));
-          return;
-        }
-        openTab({
-          id: `ledger-${selectedPartner.drawings_account_id}`,
-          title: t("page.ledgerTab", {
-            namespace: "partners",
-            vars: { name: selectedPartner.name },
-          }),
-          path: `/accounting/account-ledger/${selectedPartner.drawings_account_id}`,
-          closable: true,
-        });
-      },
-    },
-    {
-      id: "drawings-voucher",
-      label: t("toolbar.drawingsVoucher", { namespace: "partners" }),
-      icon: PieChartIcon,
-      priority: "secondary",
-      variant: "outline",
-      disabled: !selectedPartner,
-      onClick: () => {
-        if (!selectedPartner?.drawings_account_id) {
-          toast.error(t("toast.noDrawingsAccount", { namespace: "partners" }));
-          return;
-        }
-        setActivePanel("drawings");
-      },
-    },
-    {
       id: "partner-statement",
       label: t("toolbar.statement", { namespace: "partners" }),
       icon: TrendingUp,
-      priority: "tertiary",
+      priority: "secondary",
       variant: "outline",
       onClick: () =>
         openTab({
@@ -257,15 +219,7 @@ export default function Partners() {
       variant: "outline",
       onClick: () => setActivePanel("profit-distribution"),
     },
-    {
-      id: "export-partners",
-      label: t("toolbar.exportExcel", { namespace: "partners" }),
-      icon: TrendingUp,
-      priority: "overflow",
-      variant: "outline",
-      onClick: () => toast.info(t("toolbar.exporting", { namespace: "partners" })),
-    },
-  ], [openTab, selectedPartner, t]);
+  ], [openTab, t]);
 
   return (
     <>

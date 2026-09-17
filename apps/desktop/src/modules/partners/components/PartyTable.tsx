@@ -5,12 +5,25 @@ import { TableShell } from "@widgets/table-shell/TableShell";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { useUnifiedColumns, useSortable, useTableColumns, useBaseCurrencyColumns } from "@shared/hooks";
 import { formatNumber } from "@shared/lib/format";
-import { NotebookText, Receipt, User, Truck } from "lucide-react";
+import {
+  Receipt,
+  User,
+  Truck,
+  Eye,
+  Edit,
+  Trash2,
+  History,
+  ShoppingBag,
+  Printer,
+  Undo2,
+  DollarSign,
+} from "lucide-react";
 import { TableActions } from "@widgets/table-shell/TableActions";
 import { useLocalization } from "@app/providers/LocalizationProvider";
 import { resolvePartnerDisplayName } from "@shared/lib/system-labels";
+import type { RowActionDescriptor } from "@shared/types/row-actions";
 
-interface PartyTableProps<T extends { id: string; name: string; code?: string; phone?: string | null; balance?: string | number; notes?: string | null }> {
+interface PartyTableProps<T extends { id: string; name: string; code?: string; phone?: string | null; balance?: string | number; notes?: string | null; account_id?: string | null }> {
   entityName: "customer" | "supplier";
   data: T[];
   loading: boolean;
@@ -21,6 +34,9 @@ interface PartyTableProps<T extends { id: string; name: string; code?: string; p
   onEdit: (item: T) => void;
   onDelete?: (id: string) => void;
   onJournal?: (item: T) => void;
+  onSales?: (item: T) => void;
+  onStatement?: (item: T) => void;
+  onReturn?: (item: T) => void;
   onDocument?: (item: T) => void;
   selectedId?: string | null;
   onVisibleColumnsChange?: (ids: string[]) => void;
@@ -57,7 +73,7 @@ const ENTITY_CONFIG = {
   },
 } as const;
 
-export function PartyTable<T extends { id: string; name: string; code?: string; phone?: string | null; balance?: string | number; notes?: string | null }>({
+export function PartyTable<T extends { id: string; name: string; code?: string; phone?: string | null; balance?: string | number; notes?: string | null; account_id?: string | null }>({
   entityName,
   data,
   loading,
@@ -68,6 +84,9 @@ export function PartyTable<T extends { id: string; name: string; code?: string; 
   onEdit,
   onDelete,
   onJournal,
+  onSales,
+  onStatement,
+  onReturn,
   onDocument,
   selectedId,
   onVisibleColumnsChange,
@@ -84,8 +103,97 @@ export function PartyTable<T extends { id: string; name: string; code?: string; 
     searchPlaceholder: t(entityName === "customer" ? "partyTable.searchPlaceholderCustomer" : "partyTable.searchPlaceholderSupplier", { namespace: "partners"}),
     emptyMessage: t(entityName === "customer" ? "partyTable.emptyCustomer" : "partyTable.emptySupplier", { namespace: "partners"}),
     summaryLabel: t(entityName === "customer" ? "partyTable.summaryLabelCustomer" : "partyTable.summaryLabelSupplier", { namespace: "partners"}),
-    documentLabel: t(entityName === "customer" ? "partyTable.documentLabelCustomer" : "partyTable.documentLabelSupplier", { namespace: "partners"}),
   }), [t, entityName]);
+
+  // Shared row actions registry for both Kebab Menu and right-click Context Menu
+  const rowActions = useMemo<RowActionDescriptor<T>[]>(() => {
+    const list: RowActionDescriptor<T>[] = [
+      {
+        id: "view",
+        label: t("labels.viewDetails", { namespace: "common" }),
+        icon: Eye,
+        priority: "primary",
+        onClick: (item) => onView(item),
+      },
+      {
+        id: "edit",
+        label: t("labels.editData", { namespace: "common" }),
+        icon: Edit,
+        priority: "primary",
+        onClick: (item) => onEdit(item),
+      },
+    ];
+
+    if (onJournal) {
+      list.push({
+        id: "journal",
+        label: t("partyPage.toolbar.ledger", { namespace: "partners" }),
+        icon: History,
+        priority: "secondary",
+        onClick: (item) => onJournal(item),
+      });
+    }
+
+    if (onSales) {
+      list.push({
+        id: "sales",
+        label: entityName === "customer"
+          ? t("partyPage.toolbar.customerSales", { namespace: "partners" })
+          : t("partyPage.toolbar.supplierPurchases", { namespace: "partners" }),
+        icon: ShoppingBag,
+        priority: "secondary",
+        onClick: (item) => onSales(item),
+      });
+    }
+
+    if (onStatement) {
+      list.push({
+        id: "statement",
+        label: t("partyPage.toolbar.printStatement", { namespace: "partners" }),
+        icon: Printer,
+        priority: "secondary",
+        onClick: (item) => onStatement(item),
+      });
+    }
+
+    if (onReturn) {
+      list.push({
+        id: "return",
+        label: entityName === "customer"
+          ? t("partyPage.toolbar.salesReturn", { namespace: "partners" })
+          : t("partyPage.toolbar.purchaseReturn", { namespace: "partners" }),
+        icon: Undo2,
+        priority: "tertiary",
+        onClick: (item) => onReturn(item),
+      });
+    }
+
+    if (onDocument) {
+      list.push({
+        id: "document",
+        label: entityName === "customer"
+          ? t("partyPage.toolbar.createReceipt", { namespace: "partners" })
+          : t("partyPage.toolbar.createPayment", { namespace: "partners" }),
+        icon: entityName === "customer" ? Receipt : DollarSign,
+        priority: "tertiary",
+        onClick: (item) => onDocument(item),
+      });
+    }
+
+    if (onDelete) {
+      list.push({
+        id: "delete",
+        label: t("labels.deleteRecord", { namespace: "common" }),
+        icon: Trash2,
+        priority: "overflow",
+        variant: "destructive",
+        destructive: true,
+        onClick: (item) => onDelete(item.id),
+      });
+    }
+
+    return list;
+  }, [entityName, onView, onEdit, onJournal, onSales, onStatement, onReturn, onDocument, onDelete, t]);
 
   const { sortedData, sortField, sortDirection, handleSort } = useSortable({
     data,
@@ -113,7 +221,7 @@ export function PartyTable<T extends { id: string; name: string; code?: string; 
         id: "code",
         header: "#",
         label: t("columns.accountNumber", { namespace: "partners",  }),
-        accessor: (item) => formatNumber(parseInt(item.code) || 0),
+        accessor: (item) => formatNumber(parseInt(item.code || "0", 10) || 0),
         className: "font-black text-foreground text-center",
       },
       {
@@ -170,21 +278,14 @@ export function PartyTable<T extends { id: string; name: string; code?: string; 
       label: t("columns.actions", { namespace: "partners",  }),
       accessor: (item) => (
         <TableActions
-          onView={() => onView(item)}
-          onEdit={() => onEdit(item)}
-          onDelete={onDelete ? () => onDelete(item.id) : undefined}
-          extraActions={[
-            ...(onJournal ? [{ label: t("actions.journal", { namespace: "partners",  }), icon: NotebookText, onClick: () => onJournal(item) }] : []),
-            ...(onDocument
-              ? [{ label: labels.documentLabel, icon: cfg.documentIcon, onClick: () => onDocument(item) }]
-              : []),
-          ]}
+          actions={rowActions}
+          row={item}
         />
       ),
     });
 
     return cols;
-  }, [onView, onEdit, onDelete, onJournal, onDocument, getAccountStatusColumn, getBalanceColumns, isBaseCurrency, entityName, cfg, Icon, labels, t, language]);
+  }, [rowActions, getAccountStatusColumn, getBalanceColumns, isBaseCurrency, entityName, cfg, Icon, t, language]);
 
   const defaultVisible = useMemo(() => {
     const ids: string[] = ["code", "name", "status"];
@@ -237,6 +338,7 @@ export function PartyTable<T extends { id: string; name: string; code?: string; 
         sortDirection={sortDirection}
         onRowClick={onView}
         selectedId={selectedId}
+        rowActions={rowActions}
         onHeaderClick={(col) => {
           if (col.id === "code" || col.id === "name") handleSort(col.id);
           if (col.id === "status" || col.id?.startsWith("balance_")) handleSort("balance");

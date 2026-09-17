@@ -7,15 +7,17 @@ import { useUnifiedColumns, useSortable, useBaseCurrencyColumns } from "@shared/
 import { toFixed } from "@shared/lib/format";
 import type { PartnerDto } from "@erp/shared-types";
 import type { PartnerWithRatios } from '@modules/partners/hooks/usePartnerRatios';
-import { NotebookText, Receipt, Users } from "lucide-react";
+import { Eye, Edit, Trash2, NotebookText, Receipt, Users } from "lucide-react";
 import { TableActions } from "@widgets/table-shell/TableActions";
 import { useLocalization } from "@app/providers/LocalizationProvider";
+import type { RowActionDescriptor } from "@shared/types/row-actions";
 
 interface PartnerTableProps {
   partners: PartnerWithRatios[];
   loading: boolean;
   search: string;
   onSearchChange: (val: string) => void;
+  onExportExcel?: () => void;
   onView: (p: PartnerDto) => void;
   onEdit: (p: PartnerDto) => void;
   onDelete: (id: string) => void;
@@ -33,6 +35,7 @@ export function PartnerTable({
   loading,
   search,
   onSearchChange,
+  onExportExcel,
   onView,
   onEdit,
   onDelete,
@@ -45,6 +48,50 @@ export function PartnerTable({
   const { currencies, formatAmount } = useCurrencyContext();
   const { isBaseCurrency, currencySuffix: cs } = useBaseCurrencyColumns();
   const { t } = useLocalization();
+
+  // Shared row actions registry for partners table
+  const rowActions = useMemo<RowActionDescriptor<PartnerWithRatios>[]>(() => {
+    return [
+      {
+        id: "view",
+        label: t("labels.viewDetails", { namespace: "common" }),
+        icon: Eye,
+        priority: "primary",
+        onClick: (p) => onView(p),
+      },
+      {
+        id: "edit",
+        label: t("labels.editData", { namespace: "common" }),
+        icon: Edit,
+        priority: "primary",
+        onClick: (p) => onEdit(p),
+      },
+      {
+        id: "journal",
+        label: t("actions.journal", { namespace: "partners" }),
+        icon: NotebookText,
+        priority: "secondary",
+        onClick: (p) => onJournal(p),
+      },
+      {
+        id: "drawingsVoucher",
+        label: t("actions.drawingsVoucher", { namespace: "partners" }),
+        icon: Receipt,
+        priority: "secondary",
+        onClick: (p) => onDocument(p),
+      },
+      {
+        id: "delete",
+        label: t("labels.deleteRecord", { namespace: "common" }),
+        icon: Trash2,
+        priority: "overflow",
+        variant: "destructive",
+        destructive: true,
+        onClick: (p) => onDelete(p.id),
+      },
+    ];
+  }, [onView, onEdit, onJournal, onDocument, onDelete, t]);
+
   const { sortedData: sortedPartners, sortField, sortDirection, handleSort } = useSortable({
     data: partners,
     defaultField: "name" as SortField,
@@ -70,7 +117,7 @@ export function PartnerTable({
         label: t("columns.partnerName", { namespace: "partners",  }),
         accessor: (p: PartnerWithRatios) => (
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600 shrink-0">
+            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary shrink-0">
               <Users className="w-4 h-4" />
             </div>
             <span className="font-bold text-foreground">{p.name}</span>
@@ -91,7 +138,7 @@ export function PartnerTable({
           return formatAmount(p.displayAmountBase, { currencyCode: curr.code });
         },
         className: isBase
-          ? "tabular-nums font-black text-slate-900"
+          ? "tabular-nums font-black text-foreground"
           : "tabular-nums font-medium text-muted-foreground"
       });
     });
@@ -102,7 +149,7 @@ export function PartnerTable({
         header: t("columns.capitalRatio", { namespace: "partners",  }),
         label: t("columns.capitalRatioFull", { namespace: "partners",  }),
         accessor: (p: PartnerWithRatios) => (
-          <span className="px-2 py-0.5 rounded-full bg-primary/10 text-blue-700 text-[10px] font-black tabular-nums">
+          <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-black tabular-nums">
             {toFixed(p.calculatedCapitalRatio, 2)}%
           </span>
         ),
@@ -123,20 +170,15 @@ export function PartnerTable({
         label: t("columns.actions", { namespace: "partners",  }),
         accessor: (p: PartnerWithRatios) => (
           <TableActions
-            onView={() => onView(p)}
-            onEdit={() => onEdit(p)}
-            onDelete={() => onDelete(p.id)}
-            extraActions={[
-              { label: t("actions.journal", { namespace: "partners",  }), icon: NotebookText, onClick: () => onJournal(p) },
-              { label: t("actions.drawingsVoucher", { namespace: "partners",  }), icon: Receipt, onClick: () => onDocument(p) },
-            ]}
+            actions={rowActions}
+            row={p}
           />
         )
       }
     );
 
     return cols;
-  }, [currencies, formatAmount, onView, onEdit, onDelete, onJournal, onDocument, isBaseCurrency, cs, t]);
+  }, [currencies, formatAmount, rowActions, isBaseCurrency, cs, t]);
 
   // Default visible: only base currency's amount column is shown; secondary amounts are hidden.
   const defaultVisible = useMemo(() => {
@@ -167,7 +209,7 @@ export function PartnerTable({
         case "name":
           return { id: "count", columnId: "name", label: "", value: t("summary.count", { namespace: "partners", vars: { count: sortedPartners.length },  }), className: "text-muted-foreground font-medium" };
         case "capital_ratio":
-          return { id: "total_capital_ratio", columnId: "capital_ratio", label: t("summary.total", { namespace: "partners",  }), value: `${toFixed(totalCapitalRatio, 2)}%`, className: "text-blue-700 font-black" };
+          return { id: "total_capital_ratio", columnId: "capital_ratio", label: t("summary.total", { namespace: "partners",  }), value: `${toFixed(totalCapitalRatio, 2)}%`, className: "text-primary font-black" };
         case "ratio":
           return { id: "total_ratio", columnId: "ratio", label: t("summary.total", { namespace: "partners",  }), value: `${toFixed(totalRatio, 2)}%`, className: "text-success font-black" };
         default: {
@@ -181,7 +223,7 @@ export function PartnerTable({
               label: t("summary.grandTotal", { namespace: "partners",  }),
               value: baseTotal > 0 ? formatAmount(baseTotal, { currencyCode: currCode }) : "—",
               className: isBase
-                ? "text-slate-900 font-black"
+                ? "text-foreground font-black"
                 : "text-muted-foreground font-extrabold"
             };
           }
@@ -203,6 +245,7 @@ export function PartnerTable({
       columnsModified={isModified}
       showToolbar={true}
       filterBar={filterBar}
+      onExportExcel={onExportExcel}
     >
       <UnifiedTable<PartnerWithRatios>
         data={sortedPartners}
@@ -219,6 +262,7 @@ export function PartnerTable({
         }}
         onRowClick={onRowClick}
         selectedId={selectedId}
+        rowActions={rowActions}
         emptyMessage={search ? t("table.emptySearch", { namespace: "partners",  }) : t("table.empty", { namespace: "partners",  })}
         summary={summaryColumns}
       />
