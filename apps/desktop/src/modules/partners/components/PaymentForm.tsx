@@ -94,9 +94,9 @@ export function PaymentForm({ config, onSave, onClose, saving }: PaymentFormProp
       saveDisabled={isSaveDisabled}
       saveLabel={t("payment.saveLabel", { namespace: "partners",  })}
     >
-      <div className="space-y-6 text-right">
+      <div className="space-y-6">
         <SidebarSection title={t("payment.detailsSection", { namespace: "partners",  })}>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {currencies.length > 1 && (
               <div className="space-y-1.5">
                 <FieldLabel>{t("payment.currency", { namespace: "partners",  })}</FieldLabel>
@@ -127,7 +127,7 @@ export function PaymentForm({ config, onSave, onClose, saving }: PaymentFormProp
               />
             </div>
 
-            <div className="col-span-2 grid grid-cols-2 gap-4 p-3 bg-muted/50 rounded-lg border border-muted">
+            <div className="col-span-full grid grid-cols-1 sm:grid-cols-2 gap-4 p-3 bg-muted/50 rounded-lg border border-muted">
               <div className="space-y-1.5">
                 <FieldLabel>{payCreditLabel}</FieldLabel>
                 <Input
@@ -148,7 +148,7 @@ export function PaymentForm({ config, onSave, onClose, saving }: PaymentFormProp
                 type="date"
                 value={form.payment_date?.slice(0, 10) ?? ""}
                 onChange={(e) => setForm((p) => ({ ...p, payment_date: new Date(e.target.value).toISOString() }))}
-                className="h-9 bg-white tabular-nums text-left"
+                className="h-9 bg-card tabular-nums"
               />
             </div>
 

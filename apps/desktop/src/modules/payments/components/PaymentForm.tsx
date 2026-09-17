@@ -186,9 +186,9 @@ export function PaymentForm({ customers, suppliers, accounts, onSave, onClose, s
       saveDisabled={isSaveDisabled}
       saveLabel={t("payment.save", { namespace: "invoicing",  })}
     >
-      <div className="space-y-6 text-right">
+      <div className="space-y-6">
         <SidebarSection title={t("payment.details", { namespace: "invoicing",  })}>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5 col-span-2">
               <FieldLabel>{t("payment.voucherType", { namespace: "invoicing",  })}</FieldLabel>
               <Select 
@@ -237,7 +237,7 @@ export function PaymentForm({ customers, suppliers, accounts, onSave, onClose, s
               />
             </div>
             
-            <div className="col-span-2 grid grid-cols-2 gap-4 p-3 bg-muted/50 rounded-lg border border-border">
+            <div className="col-span-full grid grid-cols-1 sm:grid-cols-2 gap-4 p-3 bg-muted/50 rounded-lg border border-border">
               {renderFromAccount()}
               {renderToAccount()}
             </div>
@@ -253,7 +253,7 @@ export function PaymentForm({ customers, suppliers, accounts, onSave, onClose, s
                   old.setFullYear(y, m - 1, d);
                   setForm(p => ({ ...p, payment_date: old.toISOString() }));
                 }}
-                className="h-9 bg-card tabular-nums text-left"
+                className="h-9 bg-card tabular-nums"
               />
             </div>
 

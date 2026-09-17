@@ -102,7 +102,7 @@ export function AddUnitForm({ baseUnitName, materialName, existingNames, onAdd, 
             <p className="text-[10px] text-muted-foreground font-bold uppercase">{t("materials.addUnit.willBeAdded", { namespace: "inventory",  })}</p>
             <p className="text-xs font-bold text-primary">{materialName}</p>
           </div>
-          <div className="text-left mr-auto">
+          <div className="text-start me-auto">
             <p className="text-[9px] text-muted-foreground">{t("materials.addUnit.equivalence", { namespace: "inventory",  })}</p>
             <p className="text-sm font-mono text-primary">1 {name} = {factor || "1"} {baseUnitName}</p>
           </div>

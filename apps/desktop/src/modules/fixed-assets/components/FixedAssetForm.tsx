@@ -433,7 +433,7 @@ export function FixedAssetForm({
         </FormField>
 
         {code ? (
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <FormField label={t("form.code", { namespace: "fixedAssets",  })}>
               <Input
                 value={code}
@@ -463,7 +463,7 @@ export function FixedAssetForm({
         )}
 
         {showWarehouseField ? (
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <FormField label={t("form.warehouse", { namespace: "fixedAssets",  })}>
               <Select dir="rtl" value={warehouseId} onValueChange={setWarehouseId}>
                 <SelectTrigger className="bg-white border-muted h-9 w-full text-right text-xs">
@@ -513,7 +513,7 @@ export function FixedAssetForm({
         ? t("form.purchaseSection", { namespace: "fixedAssets",  })
         : t("form.previousSection", { namespace: "fixedAssets",  })} icon={<BadgeDollarSign className="w-3.5 h-3.5" />} defaultOpen>
         {currencies.length > 1 ? (
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <FormField label={t("form.currency", { namespace: "fixedAssets",  })} required>
               <Select dir="rtl" value={currency} onValueChange={setCurrency}>
                 <SelectTrigger className="bg-white border-muted h-9 w-full text-right text-xs">

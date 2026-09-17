@@ -107,16 +107,16 @@ export function Form({
           <div key={field.name} className="space-y-2">
             <Label htmlFor={field.name}>
               {field.label}
-              {field.required && <span className="ms-1 text-red-500">*</span>}
+              {field.required && <span className="ms-1 text-destructive">*</span>}
             </Label>
             <Textarea
               id={field.name}
               placeholder={field.placeholder}
               value={value}
               onChange={(e) => handleChange(field.name, e.target.value)}
-              className={error ? 'border-red-500' : ''}
+              className={error ? 'border-destructive' : ''}
             />
-            {error && <p className="text-sm text-red-500">{error}</p>}
+            {error && <p className="text-sm text-destructive">{error}</p>}
           </div>
         );
 
@@ -125,13 +125,13 @@ export function Form({
           <div key={field.name} className="space-y-2">
             <Label htmlFor={field.name}>
               {field.label}
-              {field.required && <span className="ms-1 text-red-500">*</span>}
+              {field.required && <span className="ms-1 text-destructive">*</span>}
             </Label>
             <Select
               value={value as string}
               onValueChange={(val) => handleChange(field.name, val)}
             >
-              <SelectTrigger className={error ? 'border-red-500' : ''}>
+              <SelectTrigger className={error ? 'border-destructive' : ''}>
                 <SelectValue placeholder={field.placeholder} />
               </SelectTrigger>
               <SelectContent>
@@ -142,7 +142,7 @@ export function Form({
                 ))}
               </SelectContent>
             </Select>
-            {error && <p className="text-sm text-red-500">{error}</p>}
+            {error && <p className="text-sm text-destructive">{error}</p>}
           </div>
         );
 
@@ -151,7 +151,7 @@ export function Form({
           <div key={field.name} className="space-y-2">
             <Label htmlFor={field.name}>
               {field.label}
-              {field.required && <span className="ms-1 text-red-500">*</span>}
+              {field.required && <span className="ms-1 text-destructive">*</span>}
             </Label>
             <Input
               id={field.name}
@@ -159,9 +159,9 @@ export function Form({
               placeholder={field.placeholder}
               value={value}
               onChange={(e) => handleChange(field.name, e.target.value)}
-              className={error ? 'border-red-500' : ''}
+              className={error ? 'border-destructive' : ''}
             />
-            {error && <p className="text-sm text-red-500">{error}</p>}
+            {error && <p className="text-sm text-destructive">{error}</p>}
           </div>
         );
     }

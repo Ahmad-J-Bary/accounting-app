@@ -90,16 +90,16 @@ export function PartnerForm({ open, onClose, partner, onSave, saving, accountInf
       saveDisabled={!formData.name || !currencyField.amount}
       saveLabel={partner ? t("form.updateSave", { namespace: "partners",  }) : t("form.createSave", { namespace: "partners",  })}
     >
-      <div className="space-y-4 text-right">
+      <div className="space-y-4">
             {accountInfo && (
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <FieldLabel>{t("form.accountNumber", { namespace: "partners",  })}</FieldLabel>
-                  <Input value={accountInfo.code} readOnly className="h-9 bg-slate-50 border-slate-200 cursor-not-allowed" />
+                  <Input value={accountInfo.code} readOnly className="h-9 bg-muted border-border cursor-not-allowed" />
                 </div>
                 <div className="space-y-1.5">
                   <FieldLabel>{t("form.parentOf", { namespace: "partners",  })}</FieldLabel>
-                  <Input value={accountInfo.parentName} readOnly className="h-9 bg-slate-50 border-slate-200 cursor-not-allowed" />
+                  <Input value={accountInfo.parentName} readOnly className="h-9 bg-muted border-border cursor-not-allowed" />
                 </div>
               </div>
             )}
@@ -110,11 +110,10 @@ export function PartnerForm({ open, onClose, partner, onSave, saving, accountInf
                 placeholder={t("form.namePlaceholder", { namespace: "partners",  })} 
                 value={formData.name} 
                 onChange={e => setFormData({...formData, name: e.target.value})} 
-                className="text-right"
               />
             </div>
 
-            <div className="space-y-3 border p-4 rounded-lg bg-slate-50/50">
+            <div className="space-y-3 border p-4 rounded-lg bg-muted/50">
               <CurrencyField
                 label={t("form.contributedAmount", { namespace: "partners",  })}
                 currency={currencyField.currency}
@@ -129,7 +128,7 @@ export function PartnerForm({ open, onClose, partner, onSave, saving, accountInf
             </div>
 
             <div className="space-y-2 pt-2">
-              <Label className="block text-right font-medium">{t("form.profitRatioOptional", { namespace: "partners",  })}</Label>
+              <Label className="block font-medium">{t("form.profitRatioOptional", { namespace: "partners",  })}</Label>
               <div className="relative">
                 <Input 
                   type="number" 
@@ -137,9 +136,9 @@ export function PartnerForm({ open, onClose, partner, onSave, saving, accountInf
                   placeholder={t("form.autoDistribution", { namespace: "partners",  })} 
                   value={formData.manualRatio} 
                   onChange={e => setFormData({...formData, manualRatio: e.target.value})} 
-                  className="text-left pl-8"
+                  className="text-start ps-8"
                 />
-                <TrendingUp className="absolute left-2.5 top-2.5 w-4 h-4 text-muted-foreground opacity-50" />
+                <TrendingUp className="absolute start-2.5 top-2.5 w-4 h-4 text-muted-foreground opacity-50" />
               </div>
             </div>
 
@@ -149,7 +148,7 @@ export function PartnerForm({ open, onClose, partner, onSave, saving, accountInf
                 value={formData.notes}
                 onChange={(e) => setFormData({...formData, notes: e.target.value})}
                 placeholder={t("form.notesPlaceholder", { namespace: "partners",  })}
-                className="min-h-[60px] bg-white border-slate-200"
+                className="min-h-[60px] bg-background border-border"
               />
             </div>
           </div>

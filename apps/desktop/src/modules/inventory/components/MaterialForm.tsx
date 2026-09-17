@@ -636,9 +636,9 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
         {/* Tab 1: الأساسيات */}
         <TabsContent value="basic" className="space-y-3">
           <SidebarSection icon={<Package className="w-3.5 h-3.5" />} title={t("materials.form.basicDataSection", { namespace: "inventory" })} defaultOpen={true}>
-            <div className="space-y-2.5 text-right">
+            <div className="space-y-2.5">
               {/* اسم المادة عربي + إنجليزي */}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <FieldLabel className="flex items-center gap-1.5" required><Tag className="w-3.5 h-3.5 text-muted-foreground" /> {t("materials.form.nameAr", { namespace: "inventory" })}</FieldLabel>
                   <Input 
@@ -661,7 +661,7 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
               </div>
 
               {/* الكود والباركود */}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <FieldLabel className="flex items-center gap-1.5"><Hash className="w-3.5 h-3.5 text-muted-foreground" /> {t("labels.code", { namespace: "inventory" })}</FieldLabel>
                   <Input 
@@ -703,7 +703,7 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
               </div>
               
               {/* حد الطلب + ملاحظات */}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <FieldLabel className="flex items-center gap-1.5"><Package className="w-3.5 h-3.5 text-muted-foreground" /> {t("materials.columns.minimumStock", { namespace: "inventory" })}</FieldLabel>
                   <Input 
@@ -900,7 +900,7 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
         <TabsContent value="units" className="space-y-4">
           {/* الوحدات الافتراضية */}
           <SidebarSection title={t("materials.form.unitsDefaultSection", { namespace: "inventory" })} defaultOpen={true}>
-            <div className="grid grid-cols-2 gap-4 text-right">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <FieldLabel>{t("materials.form.defaultPurchaseUnit", { namespace: "inventory" })}</FieldLabel>
                 <Select value={formData.default_purchase_unit_id} onValueChange={v => setFormData({ ...formData, default_purchase_unit_id: v })}>
@@ -1066,7 +1066,7 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
                       <div className="flex justify-between items-center border-b border-border/40 pb-1">
                         <span className="font-black text-[10px] text-foreground bg-muted px-2 py-0.5 rounded-md">{tier.label}</span>
                       </div>
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         {/* سعر المبيع */}
                         <div className="space-y-1">
                           <span className="text-[8px] font-black text-muted-foreground block uppercase">{t("materials.form.salePrice", { namespace: "inventory" })}</span>
@@ -1220,7 +1220,7 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
               </div>
 
               <div className="border-t border-border pt-3 mt-1" />
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {activeCurrencies && activeCurrencies.length > 1 && (
               <div className="space-y-1.5">
                 <FieldLabel className="flex items-center gap-1.5"><DollarSign className="w-3.5 h-3.5 text-muted-foreground" /> {t("materials.form.defaultPurchaseCurrency", { namespace: "inventory" })}</FieldLabel>
