@@ -16,6 +16,7 @@ interface PartyTableProps<T extends { id: string; name: string; code?: string; p
   loading: boolean;
   search: string;
   onSearchChange: (val: string) => void;
+  onExportExcel?: () => void;
   onView: (item: T) => void;
   onEdit: (item: T) => void;
   onDelete?: (id: string) => void;
@@ -62,6 +63,7 @@ export function PartyTable<T extends { id: string; name: string; code?: string; 
   loading,
   search,
   onSearchChange,
+  onExportExcel,
   onView,
   onEdit,
   onDelete,
@@ -223,6 +225,7 @@ export function PartyTable<T extends { id: string; name: string; code?: string; 
       onColumnsReset={resetToDefault}
       columnsModified={isModified}
       showToolbar={true}
+      onExportExcel={onExportExcel}
     >
       <UnifiedTable
         data={sortedData}

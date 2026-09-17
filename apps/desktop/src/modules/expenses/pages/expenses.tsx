@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { Plus, History, Download, DollarSign } from "lucide-react";
+import { Plus, History, DollarSign } from "lucide-react";
 
 import { accountingService } from '@modules/accounting/api/accountingService';
 import { SYSTEM_ACCOUNT_IDS, type AccountDto, type SaveAccountCommand } from "@erp/shared-types";
@@ -210,21 +210,13 @@ export default function Expenses() {
       },
     },
     {
-      id: "expense-export",
-      label: t("labels.exportExcel", { namespace: "common" }),
-      icon: Download,
-      priority: "tertiary",
-      variant: "outline",
-      onClick: handleExport,
-    },
-    {
       id: "expense-add",
       label: t("expense.addItem", { namespace: "invoicing" }),
       icon: Plus,
       priority: "primary",
       onClick: handleOpenAdd,
     },
-  ], [handleExport, handleOpenAdd, language, openTab, selectedExpense, selectedId, setIsFormOpen, t]);
+  ], [handleOpenAdd, language, openTab, selectedExpense, selectedId, setIsFormOpen, t]);
 
   return (
     <OperationalTableTemplate
@@ -236,6 +228,7 @@ export default function Expenses() {
             loading={isLoading}
             search={search}
             onSearchChange={setSearch}
+            onExportExcel={handleExport}
             onView={(acc) => setSelectedId(acc.id)}
             onEdit={(acc) => handleOpenEdit(acc)}
             onDelete={(id) => { setSelectedId(null); handleDelete(id); }}

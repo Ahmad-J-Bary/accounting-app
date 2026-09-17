@@ -17,6 +17,7 @@ interface AdjustmentsTableProps {
   loading: boolean;
   search: string;
   onSearchChange: (val: string) => void;
+  onExportExcel?: () => void;
   selectedId?: string | null;
   onView?: (item: StockAdjustment) => void;
   onEdit?: (item: StockAdjustment) => void;
@@ -25,7 +26,7 @@ interface AdjustmentsTableProps {
   onVisibleColumnsChange?: (ids: string[]) => void;
 }
 
-export function AdjustmentsTable({ data, loading, search, onSearchChange, selectedId, onView, onEdit, onDelete, onRowClick, onVisibleColumnsChange }: AdjustmentsTableProps) {
+export function AdjustmentsTable({ data, loading, search, onSearchChange, onExportExcel, selectedId, onView, onEdit, onDelete, onRowClick, onVisibleColumnsChange }: AdjustmentsTableProps) {
   const { currencies, formatAmount } = useCurrencyContext();
   const { isBaseCurrency, currencySuffix: cs } = useBaseCurrencyColumns();
   const { t } = useLocalization();
@@ -215,6 +216,7 @@ export function AdjustmentsTable({ data, loading, search, onSearchChange, select
       onColumnsReset={resetToDefault}
       columnsModified={isModified}
       showToolbar={true}
+      onExportExcel={onExportExcel}
     >
       <UnifiedTable
         data={filtered}

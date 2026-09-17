@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useQueryClient } from '@tanstack/react-query';
 import { INVENTORY_MUTATION_KEYS, invalidateKeys } from "@shared/hooks/queryClient";
-import { Plus, Eye, Settings2, Trash2, Download } from "lucide-react";
+import { Plus, Eye, Settings2, Trash2 } from "lucide-react";
 import { adjustmentService } from '@modules/inventory/api/adjustmentService';
 import { materialService } from '@modules/inventory/api/materialService';
 import type { StockAdjustment, CreateStockAdjustmentRequest, UpdateStockAdjustmentRequest, MaterialDto } from "@erp/shared-types";
@@ -225,15 +225,7 @@ export default function AdjustmentsPage() {
         if (selectedItem) void handleDelete(selectedItem.id);
       },
     },
-    {
-      id: "export-adjustments",
-      label: t("labels.exportExcel", { namespace: "inventory" }),
-      icon: Download,
-      priority: "tertiary",
-      variant: "outline",
-      onClick: handleExport,
-    },
-  ], [handleDelete, handleEditClick, handleExport, handleNewClick, handleView, selectedItem, t]);
+  ], [handleDelete, handleEditClick, handleNewClick, handleView, selectedItem, t]);
 
   return (
     <OperationalTableTemplate
@@ -245,6 +237,7 @@ export default function AdjustmentsPage() {
             loading={isLoading}
             search={search}
             onSearchChange={setSearch}
+            onExportExcel={handleExport}
             selectedId={selectedItem?.id}
             onView={handleView}
             onEdit={handleEditClick}

@@ -16,8 +16,7 @@ import { getHeaderText, getPrimitiveCellValue } from "@modules/accounting/journa
 import { GroupedEntrySharedCell } from "@modules/accounting/journal/components/GroupedEntrySharedCell";
 import { computeClosingBalance, computeRunningBalance, isOpeningLine, groupMovementLinesByJournal } from "@modules/accounting/account-movements/lib/openingLines";
 import { useLocalization } from "@app/providers/LocalizationProvider";
-import { Download } from "lucide-react";
-import { Button } from "@shared/ui/button";
+
 
 type SortField = "entry_number" | "date" | "journal_type";
 
@@ -695,18 +694,7 @@ export function AccountMovementTable({
       onColumnToggle={toggleColumn}
       onColumnsReset={resetToDefault}
       columnsModified={isModified}
-      showToolbar={true}
-      actions={(
-        <Button
-          size="sm"
-          variant="outline"
-          className="h-8 border-muted bg-white text-foreground hover:bg-muted/50"
-          onClick={handleExport}
-        >
-          <Download className="w-3.5 h-3.5 ms-1.5 text-muted-foreground" />
-          {t("ledger.table.export", { namespace: "accounting",  })}
-        </Button>
-      )}
+      onExportExcel={handleExport}
     >
       <div
         ref={containerRef}

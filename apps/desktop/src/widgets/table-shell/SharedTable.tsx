@@ -33,6 +33,9 @@ interface SharedTableProps<T> {
   title?: string;
   className?: string;
   filterBar?: React.ReactNode;
+  onExportExcel?: () => void;
+  exportLoading?: boolean;
+  exportDisabled?: boolean;
   onVisibleColumnsChange?: (ids: string[]) => void;
 }
 
@@ -55,6 +58,9 @@ export function SharedTable<T>({
   title,
   className,
   filterBar,
+  onExportExcel,
+  exportLoading,
+  exportDisabled,
   onVisibleColumnsChange,
 }: SharedTableProps<T>) {
   const { enrichedColumns, visibleColumns, toolbarColumns, toggleColumn, resetToDefault, isModified } = useUnifiedColumns({
@@ -91,6 +97,9 @@ export function SharedTable<T>({
       showToolbar={true}
       className={className}
       filterBar={filterBar}
+      onExportExcel={onExportExcel}
+      exportLoading={exportLoading}
+      exportDisabled={exportDisabled}
     >
       <UnifiedTable
         data={sortedData}

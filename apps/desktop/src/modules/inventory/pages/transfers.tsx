@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from "sonner";
-import { Plus, Download } from "lucide-react";
+import { Plus } from "lucide-react";
 import { transferService } from '@modules/inventory/api/transferService';
 import type { StockMovement, CreateTransferRequest } from '@erp/shared-types';
 import type { TransferRow } from '@modules/inventory/components/TransferTable';
@@ -184,15 +184,7 @@ export default function Transfers() {
         setTransferFormOpen(true);
       },
     },
-    {
-      id: "export-transfers",
-      label: t("labels.exportExcel", { namespace: "inventory" }),
-      icon: Download,
-      priority: "secondary",
-      variant: "outline",
-      onClick: handleExport,
-    },
-  ], [handleExport, t]);
+  ], [t]);
 
   return (
     <OperationalTableTemplate
@@ -205,6 +197,7 @@ export default function Transfers() {
           onView={handleViewTransfer}
           onEdit={handleEditTransfer}
           onDelete={handleDeleteTransfer}
+          onExportExcel={handleExport}
         />
       }
       sidePanel={

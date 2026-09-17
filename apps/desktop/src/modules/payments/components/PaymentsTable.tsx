@@ -8,8 +8,7 @@ import { formatDateTime, formatNumber } from "@shared/lib/format";
 import type { ExcelExportColumn } from "@shared/lib/excel";
 import { executeExport, dateCol, buildCurrencySummary, currencyAmountCols } from "@shared/lib/excel";
 import { isIncomingPayment, signedBaseAmount, OUTGOING_PAYMENT_TYPES } from "@modules/payments/lib/payment-utils";
-import { ArrowDownCircle, ArrowUpCircle, Download, Filter } from "lucide-react";
-import { Button } from "@shared/ui/button";
+import { ArrowDownCircle, ArrowUpCircle, Filter } from "lucide-react";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@shared/ui/select";
 import type { Payment, AccountDto } from "@erp/shared-types";
 import { useLocalization } from "@app/providers/LocalizationProvider";
@@ -353,17 +352,7 @@ export function PaymentsTable({
       onColumnsReset={resetToDefault}
       columnsModified={isModified}
       showToolbar={true}
-      actions={
-        <Button
-          size="sm"
-          variant="outline"
-          className="h-8 border-border bg-card text-foreground hover:bg-accent"
-          onClick={handleExport}
-        >
-          <Download className="w-3.5 h-3.5 ml-1.5 text-muted-foreground" />
-          {t("labels.exportExcel", { namespace: "common",  })}
-        </Button>
-      }
+      onExportExcel={handleExport}
       filterBar={
         <Select value={typeFilter} onValueChange={onTypeFilterChange}>
           <SelectTrigger className="w-[130px] h-8 bg-card font-bold shadow-sm border-border text-xs">

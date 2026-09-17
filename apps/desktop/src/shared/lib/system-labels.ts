@@ -91,3 +91,8 @@ export function resolveWarehouseDisplayName(
 
   return warehouse.name;
 }
+
+export function resolveUncategorizedPrefix(language: AppLanguage): string {
+  return language === "ar" ? "غ" : "U";
+}
+

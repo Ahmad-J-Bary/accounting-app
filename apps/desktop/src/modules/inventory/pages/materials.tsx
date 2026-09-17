@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { Plus, Layers, ShoppingCart, TrendingUp, AlertTriangle, Undo2, ArrowRightLeft, Scale, Download } from "lucide-react";
+import { Plus, Layers, ShoppingCart, TrendingUp, AlertTriangle, Undo2, ArrowRightLeft, Scale } from "lucide-react";
 import { materialService } from '@modules/inventory/api/materialService';
 import { categoryService } from '@modules/inventory/api/categoryService';
 import { damagedService } from '@modules/inventory/api/damagedService';
@@ -534,16 +534,7 @@ export default function Materials() {
         setShowUnitsPanel(false);
       },
     },
-    {
-      id: "export-materials",
-      label: t("labels.exportExcel", { namespace: "inventory" }),
-      icon: Download,
-      priority: "overflow",
-      variant: "outline",
-      onClick: handleExport,
-    },
   ], [
-    handleExport,
     handleOpenAdd,
     handleOpenReturn,
     handleOpenTransfer,
@@ -567,6 +558,7 @@ export default function Materials() {
             loading={isLoading}
             search={search}
             onSearchChange={setSearch}
+            onExportExcel={handleExport}
             onEdit={handleOpenEdit}
             onDelete={handleDeleteMaterial}
             onManageUnits={(m) => {

@@ -20,6 +20,7 @@ interface MaterialTableProps {
   loading: boolean;
   search: string;
   onSearchChange: (val: string) => void;
+  onExportExcel?: () => void;
   onEdit: (m: MaterialDto) => void;
   onDelete: (id: string, name: string) => void;
   onManageUnits?: (material: MaterialDto) => void;
@@ -37,6 +38,7 @@ export function MaterialTable({
   loading,
   search,
   onSearchChange,
+  onExportExcel,
   onEdit,
   onDelete,
   onManageUnits,
@@ -580,6 +582,7 @@ export function MaterialTable({
       onColumnsReset={resetToDefault}
       columnsModified={isModified}
       showToolbar={true}
+      onExportExcel={onExportExcel}
     >
       <UnifiedTable
         data={sortedMaterials}

@@ -14,6 +14,7 @@ interface DamagedTableProps {
   loading: boolean;
   search: string;
   onSearchChange: (val: string) => void;
+  onExportExcel?: () => void;
   selectedId?: string | null;
   onView?: (item: DamagedItem) => void;
   onEdit?: (item: DamagedItem) => void;
@@ -26,6 +27,7 @@ export function DamagedTable({
   loading,
   search,
   onSearchChange,
+  onExportExcel,
   selectedId,
   onView,
   onEdit,
@@ -188,6 +190,7 @@ export function DamagedTable({
       emptyMessage={search ? t("labels.noResultsMatch", { namespace: "inventory",  }) : t("damaged.empty", { namespace: "inventory",  })}
       summary={summaryColumns}
       onVisibleColumnsChange={onVisibleColumnsChange}
+      onExportExcel={onExportExcel}
     />
   );
 }

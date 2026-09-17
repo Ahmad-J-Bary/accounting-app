@@ -16,4 +16,5 @@ export { EmptyState } from './EmptyState';
 
 export { DataTable } from './DataTable';
 export type { Column } from './DataTable';
-export { SharedTable } from './SharedTable';
+export { ExportExcelButton } from './ExportExcelButton';
+export type { ExportExcelButtonProps } from './ExportExcelButton';

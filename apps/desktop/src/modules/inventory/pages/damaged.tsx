@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useQueryClient } from '@tanstack/react-query';
 import { INVENTORY_MUTATION_KEYS, invalidateKeys } from "@shared/hooks/queryClient";
-import { Plus, Download } from "lucide-react";
+import { Plus } from "lucide-react";
 import { damagedService } from '@modules/inventory/api/damagedService';
 import { materialService } from '@modules/inventory/api/materialService';
 import type { DamagedItem, CreateDamagedItemRequest, UpdateDamagedItemRequest, MaterialDto } from "@erp/shared-types";
@@ -171,15 +171,7 @@ export default function DamagedPage() {
       priority: "primary",
       onClick: handleNewClick,
     },
-    {
-      id: "export-damaged-items",
-      label: t("labels.exportExcel", { namespace: "inventory" }),
-      icon: Download,
-      priority: "secondary",
-      variant: "outline",
-      onClick: handleExport,
-    },
-  ], [handleExport, handleNewClick, t]);
+  ], [handleNewClick, t]);
 
   // Build initial values for form when editing
   const formInitialValues = selectedItem
@@ -205,6 +197,7 @@ export default function DamagedPage() {
             loading={isLoading}
             search={search}
             onSearchChange={setSearch}
+            onExportExcel={handleExport}
             selectedId={selectedItem?.id}
             onView={handleView}
             onEdit={handleEditClick}

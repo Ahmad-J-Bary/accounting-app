@@ -22,6 +22,7 @@ import { useTableSettings } from '@shared/hooks';
 import { TableDensity } from '@shared/types/table-settings';
 import { cn } from '@shared/lib/utils';
 import { useLocalization } from "@app/providers/LocalizationProvider";
+import { ExportExcelButton } from "./ExportExcelButton";
 
 export interface ToolbarColumn {
   id: string;
@@ -41,6 +42,9 @@ interface TableToolbarProps {
   actions?: React.ReactNode;
   showViewOptions?: boolean;
   filterBar?: React.ReactNode;
+  onExportExcel?: () => void;
+  exportLoading?: boolean;
+  exportDisabled?: boolean;
 }
 
 export const TableToolbar: React.FC<TableToolbarProps> = ({
@@ -54,6 +58,9 @@ export const TableToolbar: React.FC<TableToolbarProps> = ({
   actions,
   showViewOptions = true,
   filterBar,
+  onExportExcel,
+  exportLoading = false,
+  exportDisabled = false,
 }) => {
   const { settings, updateSetting, resetSettings } = useTableSettings();
   const { t, direction, isRTL } = useLocalization();
@@ -81,7 +88,7 @@ export const TableToolbar: React.FC<TableToolbarProps> = ({
           {filterBar}
         </div>
       )}
-      <div className="me-auto flex items-center gap-1">
+      <div className="ms-auto flex items-center gap-1">
         {actions}
         {showViewOptions && (
           <>
@@ -185,6 +192,14 @@ export const TableToolbar: React.FC<TableToolbarProps> = ({
                 )}
               </DropdownMenuContent>
             </DropdownMenu>
+
+            {onExportExcel && (
+              <ExportExcelButton
+                onClick={onExportExcel}
+                loading={exportLoading}
+                disabled={exportDisabled}
+              />
+            )}
           </>
         )}
       </div>

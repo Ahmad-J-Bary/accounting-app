@@ -1,5 +1,5 @@
 import { useMemo, useRef, useCallback, useEffect, type ReactNode } from "react";
-import { Download, Undo2 } from "lucide-react";
+import { Undo2 } from "lucide-react";
 import { GridHeader, type GridHeaderColumn } from "@widgets/table-shell/GridHeader";
 import type { UnifiedColumn } from "@widgets/table-shell/UnifiedTable";
 import { TableSummary, type SummaryColumn } from "@widgets/table-shell/TableSummary";
@@ -1044,17 +1044,7 @@ export function JournalTable({
       onColumnsReset={resetToDefault}
       columnsModified={isModified}
       showToolbar={true}
-      actions={(
-        <Button
-          size="sm"
-          variant="outline"
-          className="h-8 border-muted bg-white text-foreground hover:bg-muted/50"
-          onClick={handleExport}
-        >
-          <Download className="w-3.5 h-3.5 ms-1.5 text-muted-foreground" />
-          {t("journal.table.export", { namespace: "accounting",  })}
-        </Button>
-      )}
+      onExportExcel={handleExport}
     >
       <div
         ref={containerRef}

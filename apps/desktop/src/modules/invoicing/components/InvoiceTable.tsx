@@ -6,14 +6,13 @@ import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { useUnifiedColumns, useSortable, useBaseCurrencyColumns, useExportSetup } from "@shared/hooks";
 import { executeExport, dateCol, currencyAmountCols } from "@shared/lib/excel";
 import type { ExcelExportColumn } from "@shared/lib/excel";
-import { Button } from "@shared/ui/button";
 import { useLocalization } from "@app/providers/LocalizationProvider";
 import { formatDateTime, formatNumber } from "@shared/lib/format";
 import { getInvoiceBaseAmount } from "../lib/invoiceHelpers";
 import type { InvoiceDto } from "@erp/shared-types";
 import { DocumentStatusBadge } from "./DocumentStatusBadge";
 import { TableActions } from "@widgets/table-shell/TableActions";
-import { CheckCircle2, History, Filter, Download } from "lucide-react";
+import { CheckCircle2, History, Filter } from "lucide-react";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@shared/ui/select";
 
 interface ExtraColumn {
@@ -704,17 +703,7 @@ export function InvoiceTable({
       onColumnsReset={resetToDefault}
       columnsModified={isModified}
       showToolbar={true}
-      actions={(
-        <Button
-          size="sm"
-          variant="outline"
-          className="h-8 border-border bg-card text-foreground hover:bg-accent"
-          onClick={handleExport}
-        >
-          <Download className="w-3.5 h-3.5 ml-1.5 text-success" />
-          {t("actions.exportExcel", { namespace: "invoicing",  })}
-        </Button>
-      )}
+      onExportExcel={handleExport}
       filterBar={
         <Select value={statusFilter} onValueChange={onStatusFilterChange}>
           <SelectTrigger className="w-[130px] h-8 bg-card font-bold shadow-sm border-border text-xs">

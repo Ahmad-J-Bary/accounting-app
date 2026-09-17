@@ -38,7 +38,7 @@ function ToggleRow({
 }
 
 export function AppearanceSettings() {
-  const { t } = useLocalization();
+  const { t, direction } = useLocalization();
   const { settings, updateSettings, resetSettings } = useAppearance();
   const { settings: navSettings, updateSetting: updateNav } = useNavSidebarSettings();
 
@@ -55,7 +55,7 @@ export function AppearanceSettings() {
   };
 
   return (
-    <div className="w-full space-y-3" dir="rtl">
+    <div className="w-full space-y-3" dir={direction}>
 
       <div className="flex justify-end">
         <button

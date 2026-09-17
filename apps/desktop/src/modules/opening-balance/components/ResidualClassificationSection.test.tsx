@@ -203,7 +203,7 @@ describe("ResidualClassificationSection", () => {
     const user = userEvent.setup();
     const { onValueChange } = renderSection();
     await user.click(screen.getByRole("radio", { name: "تعديل فترة سابقة" }));
-    await user.click(screen.getByRole("button", { name: "إلغاء" }));
+    await user.click(screen.getByRole("button", { name: /إلغاء|actions\.cancel/i }));
     expect(onValueChange).not.toHaveBeenCalled();
   });
 });

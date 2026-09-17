@@ -28,6 +28,7 @@ interface TransferTableProps {
   onView?: (row: TransferRow) => void;
   onEdit?: (row: TransferRow) => void;
   onDelete?: (reference: string) => void;
+  onExportExcel?: () => void;
   onVisibleColumnsChange?: (ids: string[]) => void;
 }
 
@@ -40,7 +41,7 @@ const sortFn = (a: TransferRow, b: TransferRow, field: TransferSortField, direct
   return direction === "asc" ? cmp : -cmp;
 };
 
-export function TransferTable({ movements, warehouses, className, onView, onEdit, onDelete, onVisibleColumnsChange }: TransferTableProps) {
+export function TransferTable({ movements, warehouses, className, onView, onEdit, onDelete, onExportExcel, onVisibleColumnsChange }: TransferTableProps) {
   const { t } = useLocalization();
   const [search, setSearch] = useState("");
   const [selectedRef, setSelectedRef] = useState<string | null>(null);
@@ -206,6 +207,7 @@ export function TransferTable({ movements, warehouses, className, onView, onEdit
       onColumnsReset={resetToDefault}
       columnsModified={isModified}
       showToolbar={true}
+      onExportExcel={onExportExcel}
       className={className}
     >
       <UnifiedTable

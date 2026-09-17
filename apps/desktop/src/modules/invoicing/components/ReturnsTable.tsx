@@ -5,13 +5,11 @@ import type { SummaryColumn } from "@widgets/table-shell/TableSummary";
 import { useExportSetup, useUnifiedColumns, useSortable, useBaseCurrencyColumns } from "@shared/hooks";
 import { executeExport, dateCol, currencyAmountCols } from "@shared/lib/excel";
 import type { ExcelExportColumn } from "@shared/lib/excel";
-import { Button } from "@shared/ui/button";
 import { useLocalization } from "@app/providers/LocalizationProvider";
 import { formatDateTime, formatNumber } from "@shared/lib/format";
 
 import type { SalesReturnDto, PurchaseReturnDto } from "@erp/shared-types";
 import { TableActions } from "@widgets/table-shell/TableActions";
-import { Download } from "lucide-react";
 
 interface ReturnsTableProps {
   items: (SalesReturnDto | PurchaseReturnDto)[];
@@ -288,17 +286,7 @@ export function ReturnsTable({
       onColumnsReset={resetToDefault}
       columnsModified={isModified}
       showToolbar={true}
-      actions={(
-        <Button
-          size="sm"
-          variant="outline"
-          className="h-8 border-muted bg-white text-foreground hover:bg-muted/50"
-          onClick={handleExport}
-        >
-          <Download className="w-3.5 h-3.5 ml-1.5 text-success" />
-          {t("actions.exportExcel", { namespace: "invoicing",  })}
-        </Button>
-      )}
+      onExportExcel={handleExport}
     >
       <UnifiedTable
         data={sortedData}

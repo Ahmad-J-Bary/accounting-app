@@ -23,6 +23,9 @@ export interface TableShellProps {
   footer?: ReactNode;
   showToolbar?: boolean;
   filterBar?: ReactNode;
+  onExportExcel?: () => void;
+  exportLoading?: boolean;
+  exportDisabled?: boolean;
   className?: string;
 }
 
@@ -40,6 +43,9 @@ export const TableShell: React.FC<TableShellProps> = ({
   footer,
   showToolbar = true,
   filterBar,
+  onExportExcel,
+  exportLoading,
+  exportDisabled,
   className,
 }) => {
   const { settings } = useTableSettings();
@@ -59,6 +65,9 @@ export const TableShell: React.FC<TableShellProps> = ({
             columnsModified={columnsModified}
             actions={actions}
             filterBar={filterBar}
+            onExportExcel={onExportExcel}
+            exportLoading={exportLoading}
+            exportDisabled={exportDisabled}
           />
         </div>
       )}

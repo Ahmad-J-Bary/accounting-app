@@ -13,6 +13,7 @@ import {
   isGeneralSubcategory,
   isUncategorizedCategory,
   resolveCategoryName,
+  resolveUncategorizedPrefix,
 } from "@shared/lib/system-labels";
 
 interface CategoryFormProps {
@@ -73,7 +74,7 @@ export function CategoryForm({
     setSaving(false);
     if (mode === "edit_cat" && selected) {
       setName(resolveCategoryName(selected, t));
-      if (isUncategorized && !selected.code_prefix) setCodePrefix(language === "ar" ? "غ" : "U");
+      if (isUncategorized && !selected.code_prefix) setCodePrefix(resolveUncategorizedPrefix(language));
       else if (isRoot) setCodePrefix(getGeneralSubPrefix(selected.id));
       else setCodePrefix(selected.code_prefix || "");
     } else {

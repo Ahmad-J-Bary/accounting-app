@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import { Button } from "@shared/ui/button";
-import { Plus, History, ShoppingBag, Printer, Download, Undo2, Receipt, DollarSign } from "lucide-react";
+import { Plus, History, ShoppingBag, Printer, Undo2, Receipt, DollarSign } from "lucide-react";
 import { toast } from "sonner";
 
 import { customerService } from '@modules/partners/api/customerService';
@@ -345,15 +345,6 @@ export default function PartyPage({ entityName }: PartyPageProps) {
         {entityName === "customer" ? t("partyPage.toolbar.createReceipt", { namespace: "partners",  }) : t("partyPage.toolbar.createPayment", { namespace: "partners",  })}
       </Button>
 
-      <Button
-        size="sm"
-        variant="outline"
-        className="bg-white border-muted text-foreground hover:bg-muted"
-        onClick={handleExport}
-      >
-        <Download className="ms-2 h-4 w-4 text-muted-foreground" /> {t("partyPage.toolbar.exportExcel", { namespace: "partners",  })}
-      </Button>
-
       <div className="h-6 w-px bg-muted mx-1" />
 
       <Button size="sm" onClick={handleOpenAddWithAccounts} className="bg-primary hover:bg-primary/80 shadow-lg shadow-primary/20">
@@ -390,7 +381,7 @@ export default function PartyPage({ entityName }: PartyPageProps) {
   ) : panelMode === 'detail' && selectedItem ? (
     <PartnerDetailPanel
       type={entityName}
-      partner={selectedItem}
+      partner={selectedItem as unknown as CustomerDto | SupplierDto}
       onClose={() => { setSelectedId(null); setPanelMode(null); }}
       onEdit={(p) => { void handleOpenEditWithAccounts(p as CustomerDto | SupplierDto); }}
       onDelete={(id) => { setSelectedId(null); handleDelete(id); }}
@@ -409,6 +400,7 @@ export default function PartyPage({ entityName }: PartyPageProps) {
           loading={isLoading}
           search={search}
           onSearchChange={setSearch}
+          onExportExcel={handleExport}
           onView={(item) => { setSelectedId(item.id); setPanelMode('detail'); }}
           onEdit={(item) => { void handleOpenEditWithAccounts(item as unknown as CustomerDto | SupplierDto); }}
           onDelete={(id) => { setSelectedId(null); handleDelete(id); }}

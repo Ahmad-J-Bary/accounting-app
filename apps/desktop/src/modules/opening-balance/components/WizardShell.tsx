@@ -54,15 +54,18 @@ export function WizardShell({
   completedSteps,
   children,
 }: WizardShellProps) {
-  const { t } = useLocalization();
+  const { t, direction, isRTL } = useLocalization();
   // stepOrder maps visual position → actual step index. If not provided, use natural order.
   const orderedIndices = (stepOrder ?? steps.map((_, i) => i)).filter((idx) => idx >= 0 && idx < steps.length);
   const visualPosition = new Map(orderedIndices.map((idx, pos) => [idx, pos]));
   const currentVisualPos = visualPosition.get(stepIndex) ?? 0;
   const progress = ((currentVisualPos + 1) / steps.length) * 100;
 
+  const PrevIcon = isRTL ? ChevronRight : ChevronLeft;
+  const NextIcon = isRTL ? ChevronLeft : ChevronRight;
+
   return (
-    <div className="flex flex-col gap-4 w-full" dir="rtl">
+    <div className="flex flex-col gap-4 w-full" dir={direction}>
       <Card className="border-muted shadow-sm">
         <CardHeader className="py-3">
           <CardTitle className="text-base font-bold text-foreground">{title}</CardTitle>
@@ -70,7 +73,7 @@ export function WizardShell({
         </CardHeader>
 
         <CardContent className="pt-0">
-          <div className="flex items-center justify-between gap-2 overflow-x-auto pb-1">
+          <div className="flex items-center justify-between gap-1 sm:gap-2 overflow-x-auto pb-1 custom-scrollbar">
             {orderedIndices.map((idx, pos) => {
               const s = steps[idx];
               const active = idx === stepIndex;
@@ -81,8 +84,8 @@ export function WizardShell({
                   type="button"
                   key={s.id}
                   className={cn(
-                    "flex flex-1 flex-col items-center gap-1 min-w-[3.5rem] transition-colors",
-                    clickable && "cursor-pointer hover:bg-muted/50 rounded-lg",
+                    "flex flex-1 flex-col items-center gap-1 min-w-[3rem] sm:min-w-[3.5rem] transition-colors p-1 rounded-lg",
+                    clickable && "cursor-pointer hover:bg-muted/50",
                   )}
                   onClick={() => clickable && onStepClick?.(idx)}
                   disabled={!clickable}
@@ -91,21 +94,21 @@ export function WizardShell({
                 >
                   <div
                     className={cn(
-                      "flex items-center justify-center w-8 h-8 rounded-full border-2 shadow-sm transition-all",
+                      "flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-full border-2 shadow-sm transition-all text-xs",
                       active
-                        ? "bg-primary border-blue-600 text-white ring-4 ring-primary/20"
+                        ? "bg-primary border-blue-600 text-white ring-4 ring-primary/20 font-bold"
                         : passed
-                          ? "bg-success/100 border-success text-white"
+                          ? "bg-success border-success text-white"
                           : "bg-white border-muted text-muted-foreground",
                     )}
                     title={s.label}
                     aria-current={active ? "step" : undefined}
                   >
-                    {passed ? <Check className="w-4 h-4 stroke-[3]" /> : <span className="text-xs font-bold font-mono">{pos + 1}</span>}
+                    {passed ? <Check className="w-4 h-4 stroke-[3]" /> : <span className="text-2xs sm:text-xs font-bold font-mono">{pos + 1}</span>}
                   </div>
                   <span
                     className={cn(
-                      "text-2xs font-semibold truncate max-w-full",
+                      "text-[10px] sm:text-2xs font-semibold truncate max-w-full hidden xs:block sm:block",
                       active ? "text-primary" : passed ? "text-success" : "text-muted-foreground",
                     )}
                   >
@@ -129,7 +132,7 @@ export function WizardShell({
         <CardContent className="pt-4">{children}</CardContent>
       </Card>
 
-      <div className="flex items-center justify-between border-t border-muted pt-3">
+      <div className="flex items-center justify-between border-t border-muted pt-3 gap-2 flex-wrap sm:flex-nowrap">
         <Button
           variant="outline"
           size="sm"
@@ -137,7 +140,7 @@ export function WizardShell({
           disabled={!canPrev || stepIndex === 0}
           className="border-muted text-foreground font-bold"
         >
-               <ChevronRight className="w-4 h-4 ms-1.5" /> {t("openingBalance.prevButton", { namespace: "accounting",  })}
+          <PrevIcon className="w-4 h-4 me-1 ms-1" /> {t("openingBalance.prevButton", { namespace: "accounting",  })}
         </Button>
         <span className="text-xs font-semibold text-muted-foreground tabular-nums">
           {t("openingBalance.progressStep", { namespace: "accounting", vars: { current: currentVisualPos + 1, total: steps.length },  })}
@@ -155,7 +158,7 @@ export function WizardShell({
           className="bg-primary hover:bg-primary/80 text-white font-bold"
         >
           {isNexting ? t("openingBalance.executingShort", { namespace: "accounting",  }) : (nextLabel || (isFinal ? t("openingBalance.finishButton", { namespace: "accounting",  }) : t("openingBalance.nextButton", { namespace: "accounting",  })))}
-          {!isFinal && <ChevronLeft className="w-4 h-4 me-1.5" />}
+          {!isFinal && <NextIcon className="w-4 h-4 me-1 ms-1" />}
         </Button>
       </div>
     </div>

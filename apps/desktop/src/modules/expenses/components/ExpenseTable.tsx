@@ -16,6 +16,7 @@ interface ExpenseTableProps {
   loading: boolean;
   search: string;
   onSearchChange: (val: string) => void;
+  onExportExcel?: () => void;
   onView: (e: AccountDto) => void;
   onEdit: (e: AccountDto) => void;
   onDelete?: (id: string) => void;
@@ -33,7 +34,7 @@ const codeSuffix = (code: string, prefix?: string) => {
   return code;
 };
 
-export function ExpenseTable({ expenses, loading, search, onSearchChange, onView, onEdit, onDelete, onJournal, onDocument, selectedId, parentCode, onVisibleColumnsChange }: ExpenseTableProps) {
+export function ExpenseTable({ expenses, loading, search, onSearchChange, onExportExcel, onView, onEdit, onDelete, onJournal, onDocument, selectedId, parentCode, onVisibleColumnsChange }: ExpenseTableProps) {
   const { t, language } = useLocalization();
   const { currencies, formatAmount, toBase } = useCurrencyContext();
   const { isBaseCurrency, currencySuffix: cs } = useBaseCurrencyColumns();
@@ -190,6 +191,7 @@ export function ExpenseTable({ expenses, loading, search, onSearchChange, onView
       onColumnsReset={resetToDefault}
       columnsModified={isModified}
       showToolbar={true}
+      onExportExcel={onExportExcel}
     >
       <UnifiedTable
         data={sortedExpenses}
