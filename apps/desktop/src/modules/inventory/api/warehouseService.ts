@@ -16,20 +16,13 @@ export const warehouseService = {
 
   async ensureDefaultWarehouse(): Promise<WarehouseDto> {
     const settings: CompanySettings = await settingsService.getSettings();
-    const companyName = settings.company_name || 'الشركة';
-    const warehouseName = `مستودع ${companyName}`;
+    const warehouseName =
+      settings.company_name?.trim() ||
+      settings.company_name_en?.trim() ||
+      "Default Warehouse";
 
     const existingDefault = await this.getDefaultWarehouse();
     if (existingDefault) {
-      if (existingDefault.name !== warehouseName) {
-        return await this.update({
-          id: existingDefault.id,
-          name: warehouseName,
-          address: existingDefault.address,
-          is_active: existingDefault.is_active,
-          is_default: true,
-        });
-      }
       return existingDefault;
     }
 

@@ -8,6 +8,12 @@ import type { CategoryDto } from "@erp/shared-types";
 import { categoryService } from '@modules/inventory/api/categoryService';
 import { toast } from "sonner";
 import { useLocalization } from "@app/providers/LocalizationProvider";
+import {
+  findGeneralSubcategory,
+  isGeneralSubcategory,
+  isUncategorizedCategory,
+  resolveCategoryName,
+} from "@shared/lib/system-labels";
 
 interface CategoryFormProps {
   /** Whether the form panel is open */
@@ -44,12 +50,12 @@ export function CategoryForm({
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const uncategorizedName = t("materials.uncategorized", { namespace: "inventory" });
-  const isUncategorized = !!selected && selected.name === uncategorizedName && !selected.parent_id;
+  const isUncategorized = !!selected && isUncategorizedCategory(selected);
+  const isSystemGeneralSub = !!selected && isGeneralSubcategory(selected);
   const isRoot = !!selected && !!selected.parent_id === false && !isUncategorized;
 
   const getGeneralSubPrefix = useCallback((rootId: string) => {
-    const generalSub = allCategories.find((c) => c.parent_id === rootId && c.name.endsWith("عام"));
+    const generalSub = findGeneralSubcategory(allCategories, rootId);
     return generalSub?.code_prefix || "";
   }, [allCategories]);
 
@@ -66,7 +72,7 @@ export function CategoryForm({
     setError(null);
     setSaving(false);
     if (mode === "edit_cat" && selected) {
-      setName(selected.name);
+      setName(resolveCategoryName(selected, t));
       if (isUncategorized && !selected.code_prefix) setCodePrefix(language === "ar" ? "غ" : "U");
       else if (isRoot) setCodePrefix(getGeneralSubPrefix(selected.id));
       else setCodePrefix(selected.code_prefix || "");
@@ -74,7 +80,7 @@ export function CategoryForm({
       setName("");
       setCodePrefix(mode === "create_cat" ? suggestPrefix() : "");
     }
-  }, [open, mode, selected, isRoot, isUncategorized, getGeneralSubPrefix, suggestPrefix, language]);
+  }, [open, mode, selected, isRoot, isUncategorized, getGeneralSubPrefix, suggestPrefix, language, t]);
 
   const handleSave = async () => {
     if (!name.trim()) { setError(t("categories.form.nameRequired", { namespace: "inventory",  })); return; }
@@ -94,7 +100,7 @@ export function CategoryForm({
             return;
           }
         } else {
-          if (allCategories.some((c) => !c.parent_id && c.name === trimmedName && c.name !== uncategorizedName)) {
+          if (allCategories.some((c) => !c.parent_id && c.name === trimmedName && !isUncategorizedCategory(c))) {
             setError(t("categories.form.duplicateRoot", { namespace: "inventory", vars: { name: trimmedName },  }));
             return;
           }
@@ -107,7 +113,7 @@ export function CategoryForm({
         toast.success(t("categories.form.categoryCreated", { namespace: "inventory",  }));
       } else if (mode === "edit_cat" && selected) {
         if (isRoot) {
-          if (allCategories.some((c) => !c.parent_id && c.name === trimmedName && c.name !== uncategorizedName && c.id !== selected.id)) {
+          if (allCategories.some((c) => !c.parent_id && c.name === trimmedName && !isUncategorizedCategory(c) && c.id !== selected.id)) {
             setError(t("categories.form.duplicateRoot", { namespace: "inventory", vars: { name: trimmedName },  }));
             return;
           }
@@ -117,24 +123,31 @@ export function CategoryForm({
             is_active: selected.is_active,
             code_prefix: null,
           });
-          const generalSub = allCategories.find((c) => c.parent_id === selected.id && c.name.endsWith("عام"));
+          const generalSub = findGeneralSubcategory(allCategories, selected.id);
           if (generalSub) {
             await categoryService.updateCategory({
               id: generalSub.id,
-              name: `${trimmedName} عام`,
+              name: trimmedName,
               is_active: generalSub.is_active,
               code_prefix: codePrefix.trim().toUpperCase() || null,
             });
           }
         } else {
           const siblingParent = parentId || selected.parent_id;
-          if (siblingParent && allCategories.some((c) => c.parent_id === siblingParent && c.name === trimmedName && c.id !== selected.id)) {
+          const effectiveName = isSystemGeneralSub
+            ? allCategories.find((c) => c.id === siblingParent)?.name ?? selected.name
+            : trimmedName;
+
+          if (
+            siblingParent &&
+            allCategories.some((c) => c.parent_id === siblingParent && c.name === effectiveName && c.id !== selected.id)
+          ) {
             setError(t("categories.form.duplicateSub", { namespace: "inventory", vars: { name: trimmedName },  }));
             return;
           }
           await categoryService.updateCategory({
             id: selected.id,
-            name: trimmedName,
+            name: effectiveName,
             parent_id: parentId || undefined,
             is_active: selected.is_active,
             code_prefix: codePrefix.trim().toUpperCase() || null,
@@ -184,7 +197,7 @@ export function CategoryForm({
             onChange={(e) => setName(e.target.value)}
             placeholder={t("categories.form.namePlaceholder", { namespace: "inventory",  })}
             className="bg-card"
-            disabled={isUncategorized && mode === "edit_cat"}
+            disabled={(isUncategorized || isSystemGeneralSub) && mode === "edit_cat"}
           />
         </div>
         <div className="space-y-1">

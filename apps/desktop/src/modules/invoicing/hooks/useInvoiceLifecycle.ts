@@ -55,7 +55,6 @@ export interface InvoiceHeaderState {
 
 const DEFAULT_HEADER = (
   invoiceType: "Sales" | "Purchase",
-  t: (key: string, options?: Record<string, unknown>) => string,
 ): InvoiceHeaderState => ({
   invoice_number: "...",
   issued_at: new Date().toISOString().split("T")[0],
@@ -70,8 +69,8 @@ const DEFAULT_HEADER = (
   exchange_rate: "1",
   paid_amount: "0",
   ...(invoiceType === "Sales"
-    ? { customer_id: "", customer_name: t("invoice.cashCustomerName", { namespace: "invoicing" }) }
-    : { supplier_id: "", supplier_name: t("invoice.cashSupplierName", { namespace: "invoicing" }), extra_paid_amount: "0" }),
+    ? { customer_id: "", customer_name: "" }
+    : { supplier_id: "", supplier_name: "", extra_paid_amount: "0" }),
 });
 
 interface UseInvoiceLifecycleProps {
@@ -109,7 +108,7 @@ export function useInvoiceLifecycle({
   const [search, setSearch] = useState("");
 
   const [headerState, setHeaderState] = useState<InvoiceHeaderState>(
-    DEFAULT_HEADER(invoiceType, t),
+    DEFAULT_HEADER(invoiceType),
   );
 
   const defaultWarehouseId = appSettings
@@ -231,7 +230,7 @@ export function useInvoiceLifecycle({
   // Synchronise state based on route parameter modifications (e.g. going from edit/view to list)
   useEffect(() => {
     if (isNew) {
-      setHeaderState(DEFAULT_HEADER(invoiceType, t));
+      setHeaderState(DEFAULT_HEADER(invoiceType));
 
       invoiceService.getNextInvoiceNumber(invoiceType).then((num) => {
         setHeaderState((s) => ({ ...s, invoice_number: num, status: "Draft" }));
@@ -261,11 +260,11 @@ export function useInvoiceLifecycle({
             ...(invoiceType === "Sales"
               ? {
                   customer_id: inv.customer_id ?? "",
-                  customer_name: inv.customer_name ?? t("invoice.cashCustomerName", { namespace: "invoicing" }),
+                  customer_name: inv.customer_name ?? "",
                 }
               : {
                   supplier_id: inv.supplier_id ?? "",
-                  supplier_name: inv.supplier_name ?? t("invoice.cashSupplierName", { namespace: "invoicing" }),
+                  supplier_name: inv.supplier_name ?? "",
                 }),
           });
           const loadedLines: GridLine[] = (inv.lines ?? []).map((l) => {

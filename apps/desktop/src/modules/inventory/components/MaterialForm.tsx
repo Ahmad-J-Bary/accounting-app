@@ -21,6 +21,11 @@ import { AddUnitForm } from './AddUnitForm';
 import { useBarcodeScanner } from "@app/providers/BarcodeScannerProvider";
 import { useLocalization } from "@app/providers/LocalizationProvider";
 import { DEFAULT_CATEGORY_ID } from "@modules/inventory/hooks/useCategoryTree";
+import {
+  isUncategorizedCategory,
+  resolveCategoryName,
+  isGeneralSubcategory,
+} from "@shared/lib/system-labels";
 
 interface MaterialFormProps {
   open: boolean;
@@ -74,9 +79,14 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
     { id: 'semi_wholesale', label: t("saleTiers.semi_wholesale", { namespace: "inventory" }) },
     { id: 'wholesale', label: t("saleTiers.wholesale", { namespace: "inventory" }) },
   ], [t]);
-  const uncategorizedName = t("materials.uncategorized", { namespace: "inventory" });
-  const uncategorizedCat = useMemo(() => categories.find(c => c.name === uncategorizedName && !c.parent_id), [categories, uncategorizedName]);
-  const mainCategories = useMemo(() => categories.filter(c => !c.parent_id && c.name !== uncategorizedName && !c.is_hybrid), [categories, uncategorizedName]);
+  const uncategorizedCat = useMemo(
+    () => categories.find((c) => isUncategorizedCategory(c)),
+    [categories],
+  );
+  const mainCategories = useMemo(
+    () => categories.filter((c) => !c.parent_id && !isUncategorizedCategory(c) && !c.is_hybrid),
+    [categories],
+  );
 
   const emptyForm = useMemo(() => getEmptyForm(t), [t]);
   const [formData, setFormData] = useState(emptyForm);
@@ -109,10 +119,12 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
     const q = categorySearch.trim().toLowerCase();
     if (!q) return mainCategories;
     return mainCategories.filter(main => {
-      if (main.name.toLowerCase().includes(q)) return true;
-      return categories.some(c => c.parent_id === main.id && c.name.toLowerCase().includes(q));
+      if (resolveCategoryName(main, t).toLowerCase().includes(q)) return true;
+      return categories.some(
+        (c) => c.parent_id === main.id && resolveCategoryName(c, t).toLowerCase().includes(q),
+      );
     });
-  }, [categorySearch, mainCategories, categories]);
+  }, [categorySearch, mainCategories, categories, t]);
 
   const toggleMain = useCallback((id: string) => {
     setExpandedMains(prev => {
@@ -158,7 +170,7 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
       // Pull the freshly-created sub from the backend (it was created server-side).
       const freshList = await categoryService.listCategories();
       const generalSub = freshList.find(
-        (c) => c.parent_id === main.id && c.name === `${newCatName.trim()} عام`
+        (c) => c.parent_id === main.id && isGeneralSubcategory(c),
       );
 
       if (generalSub) {
@@ -772,7 +784,7 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
                         >
                           <div className="px-3 py-1.5 font-bold text-foreground text-xs flex items-center gap-1.5">
                             <ChevronDown className={cn("w-3 h-3 text-muted-foreground transition-transform duration-200", !isExpanded && "-rotate-90")} />
-                            {main.name}
+                            {resolveCategoryName(main, t)}
                           </div>
                           <div className="px-3 py-1.5">
                             {isExpanded ? (
@@ -794,7 +806,7 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
                                     )}>
                                       {formData.selectedCategoryIds.includes(sub.id) && <Check className="w-1.5 h-1.5 text-white" />}
                                     </div>
-                                    {sub.name}
+                                    {resolveCategoryName(sub, t)}
                                   </div>
                                 ))}
                                 {visibleSubs.length === 0 && (
@@ -811,8 +823,15 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
                           <div className="pl-1 flex items-center justify-center">
                             <button
                               type="button"
-                              onClick={(e) => { e.stopPropagation(); openInlineCreate({ type: "sub", parentId: main.id, parentName: main.name }); }}
-                              title={t("materials.form.addSubFor", { namespace: "inventory", vars: { name: main.name } })}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openInlineCreate({
+                                  type: "sub",
+                                  parentId: main.id,
+                                  parentName: resolveCategoryName(main, t),
+                                });
+                              }}
+                              title={t("materials.form.addSubFor", { namespace: "inventory", vars: { name: resolveCategoryName(main, t) } })}
                               className="opacity-0 group-hover:opacity-100 w-6 h-6 rounded-lg border border-dashed border-border text-muted-foreground hover:border-primary hover:text-primary hover:bg-primary/10 flex items-center justify-center transition-all"
                             >
                               <Plus className="w-3 h-3" />

@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 interface UseEntityListProps<T, Req> {
   queryKey: string[];
@@ -25,19 +26,23 @@ export function useEntityList<T, Req>({
   deleteData,
   searchFields,
   searchPredicate,
-  errorLabel = "خطأ في جلب البيانات",
-  successLabel = "تم الحفظ بنجاح",
+  errorLabel,
+  successLabel,
   manageFormState = true,
   readonly = false,
   enabled = true,
   dependencies = [],
   initialSearch = "",
 }: UseEntityListProps<T, Req>) {
+  const { t } = useLocalization();
   const qc = useQueryClient();
   const [search, setSearch] = useState(initialSearch);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [editItem, setEditItem] = useState<T | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
+
+  const resolvedErrorLabel = errorLabel ?? t("toasts.fetchFailed", { namespace: "common" });
+  const resolvedSuccessLabel = successLabel ?? t("toasts.saveSuccess", { namespace: "common" });
 
   const {
     data: items = [],
@@ -49,7 +54,7 @@ export function useEntityList<T, Req>({
     queryKey: [...queryKey, ...dependencies],
     queryFn: fetchData,
     enabled,
-    meta: { errorMessage: errorLabel },
+    meta: { errorMessage: resolvedErrorLabel },
   });
 
   const refresh = useCallback(
@@ -106,35 +111,35 @@ export function useEntityList<T, Req>({
       await createMutation.mutateAsync(payload, {
         onSuccess: () => {
           qc.invalidateQueries({ queryKey });
-          toast.success(successLabel);
+          toast.success(resolvedSuccessLabel);
           if (manageFormState) {
             setIsFormOpen(false);
           }
         },
         onError: (e: Error) => {
-          toast.error("فشل الحفظ: " + e.message);
+          toast.error(t("toasts.saveFailed", { namespace: "common", vars: { error: e.message } }));
         },
       });
     },
-    [readonly, saveData, createMutation, qc, queryKey, successLabel, manageFormState]
+    [readonly, saveData, createMutation, qc, queryKey, resolvedSuccessLabel, manageFormState, t]
   );
 
   const handleDelete = useCallback(
     async (id: string) => {
       if (readonly || !deleteData) return;
-      if (!confirm("هل أنت متأكد من الحذف؟")) return;
+      if (!confirm(t("confirmations.delete", { namespace: "common" }))) return;
       await deleteMutation.mutateAsync(id, {
         onSuccess: () => {
           qc.invalidateQueries({ queryKey });
-          toast.success("تم الحذف بنجاح");
+          toast.success(t("toasts.deleteSuccess", { namespace: "common" }));
           setSelectedId(null);
         },
         onError: (e: Error) => {
-          toast.error("فشل الحذف: " + e.message);
+          toast.error(t("toasts.deleteFailed", { namespace: "common", vars: { error: e.message } }));
         },
       });
     },
-    [readonly, deleteData, deleteMutation, qc, queryKey]
+    [readonly, deleteData, deleteMutation, qc, queryKey, t]
   );
 
   return {

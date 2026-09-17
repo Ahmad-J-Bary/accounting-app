@@ -1,7 +1,9 @@
 import { ReactNode, useRef } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from '@shared/lib/utils';
 import { useSidePanelSettings } from "@shared/hooks";
 import { useIsMobile, useIsTablet, useContainerQuery } from "@shared/hooks/useResponsive";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 interface MasterDetailLayoutProps {
   master: ReactNode;
@@ -46,10 +48,12 @@ export function MasterDetailLayout({
   const isMobile = useIsMobile();
   const isTablet = useIsTablet();
   const { getSidebarWidth } = useSidePanelSettings();
+  const { direction, t } = useLocalization();
 
   const isNarrow = isMobile || isTablet;
   const showDetailAsOverlay = isNarrow && isDetailOpen;
   const detailWidth = getSidebarWidth();
+  const BackIcon = direction === "rtl" ? ChevronRight : ChevronLeft;
 
   return (
     <div
@@ -59,7 +63,7 @@ export function MasterDetailLayout({
         className,
       )}
       role="region"
-      aria-label={masterLabel || detailLabel ? "Master-detail layout" : undefined}
+      aria-label={masterLabel || detailLabel ? t("accessibility.masterDetailLayout", { namespace: "common" }) : undefined}
     >
       {/* Master Panel */}
       <div
@@ -103,11 +107,9 @@ export function MasterDetailLayout({
         <button
           onClick={onDetailClose}
           className="absolute top-2 start-2 z-40 p-2 rounded-xl bg-card border border-border shadow-lg"
-          aria-label="Back to list"
+          aria-label={t("accessibility.backToList", { namespace: "common" })}
         >
-          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
+          <BackIcon className="w-5 h-5" />
         </button>
       )}
     </div>

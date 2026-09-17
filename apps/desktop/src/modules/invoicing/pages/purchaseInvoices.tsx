@@ -287,9 +287,9 @@ export default function PurchaseInvoices() {
                 parties={suppliers}
                 readOnly={isReadOnly}
                 selectedId={headerState.supplier_id || ""}
-                selectedName={headerState.supplier_name || t("invoice.cashSupplierName", { namespace: "invoicing",  })}
+                selectedName={headerState.supplier_name || ""}
                 onSelect={(id, name) => setHeaderState(s => ({ ...s, supplier_id: id, supplier_name: name }))}
-                onClear={() => setHeaderState(s => ({ ...s, supplier_id: "", supplier_name: t("invoice.cashSupplierName", { namespace: "invoicing" }) }))}
+                onClear={() => setHeaderState(s => ({ ...s, supplier_id: "", supplier_name: "" }))}
                 hideLabel
                 noBorder
                 onSearchActive={setIsSearchingParty}
@@ -347,7 +347,7 @@ export default function PurchaseInvoices() {
             onExtraCostsChange={(value) => setHeaderState(s => ({ ...s, extra_costs: value }))}
             extraPaidAmount={headerState.extra_paid_amount}
             onExtraPaidAmountChange={(amount) => setHeaderState(s => ({ ...s, extra_paid_amount: amount }))}
-            isCashParty={!isSearchingParty && (!headerState.supplier_name || headerState.supplier_name === t("invoice.cashSupplierName", { namespace: "invoicing" }))}
+            isCashParty={!isSearchingParty && !headerState.supplier_id}
           />
         }
         sidebar={

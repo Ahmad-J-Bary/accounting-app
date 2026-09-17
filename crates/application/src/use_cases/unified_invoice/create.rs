@@ -24,6 +24,19 @@ use crate::errors::AppError;
 use crate::use_cases::customer::CreateCustomerUseCase;
 use crate::use_cases::supplier::CreateSupplierUseCase;
 
+fn is_cash_party_name(name: &str, party_type: &str) -> bool {
+    let normalized = name.trim();
+    if normalized.is_empty() {
+        return true;
+    }
+
+    match party_type {
+        "customer" => matches!(normalized, "زبون نقدي" | "Cash Customer"),
+        "supplier" => matches!(normalized, "مورد نقدي" | "Cash Supplier"),
+        _ => false,
+    }
+}
+
 pub struct CreateInvoiceUseCase {
     repo: Arc<dyn UnifiedInvoiceRepository>,
     customer_repo: Arc<dyn CustomerRepository>,
@@ -76,7 +89,7 @@ impl CreateInvoiceUseCase {
 
         if customer_id.is_none() && invoice_type == InvoiceType::Sales {
             if let Some(name) = req.customer_name.clone() {
-                if name != "زبون نقدي" && !name.trim().is_empty() {
+                if !is_cash_party_name(&name, "customer") {
                     // Auto-create customer
                     let create_customer = CreateCustomerUseCase::new(
                         self.customer_repo.clone(),
@@ -96,7 +109,7 @@ impl CreateInvoiceUseCase {
                             opening_balance: None,
                             currency: Some(req.currency_code.clone()),
                             exchange_rate: Some(req.exchange_rate.clone()),
-                            notes: Some("تم إنشاؤه تلقائياً من فاتورة مبيعات".into()),
+                            notes: None,
                         })
                         .await?;
                     customer_id = Some(CustomerId::from_str(&customer_dto.id).unwrap());
@@ -113,7 +126,7 @@ impl CreateInvoiceUseCase {
 
         if supplier_id.is_none() && invoice_type == InvoiceType::Purchase {
             if let Some(name) = req.supplier_name.clone() {
-                if name != "مورد نقدي" && !name.trim().is_empty() {
+                if !is_cash_party_name(&name, "supplier") {
                     // Auto-create supplier
                     let create_supplier = CreateSupplierUseCase::new(
                         self.supplier_repo.clone(),
@@ -133,7 +146,7 @@ impl CreateInvoiceUseCase {
                             opening_balance: None,
                             currency: Some(req.currency_code.clone()),
                             exchange_rate: Some(req.exchange_rate.clone()),
-                            notes: Some("تم إنشاؤه تلقائياً من فاتورة مشتريات".into()),
+                            notes: None,
                         })
                         .await?;
                     supplier_id = Some(SupplierId::from_str(&supplier_dto.id).unwrap());

@@ -21,7 +21,8 @@ describe("StatusBadge", () => {
   it("applies the tone class for a known status", () => {
     const { container } = render(<StatusBadge status="Posted" />);
     const badge = container.querySelector("span");
-    expect(badge?.className).toContain("bg-green-50");
+    expect(badge?.className).toContain("bg-success/10");
+    expect(badge?.className).toContain("ring-success/20");
   });
 
   it("applies the sm size class by default and md when requested", () => {

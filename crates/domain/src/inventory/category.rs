@@ -51,10 +51,10 @@ impl MaterialCategory {
         })
     }
 
-    /// Returns the auto-generated default sub-category name for a root category.
-    /// e.g. "ساعات" → "ساعات عام"
+    /// Returns the persisted name for the auto-generated system sub-category.
+    /// We keep it language-neutral and let the UI resolve the semantic label.
     pub fn default_sub_name(&self) -> String {
-        format!("{} عام", self.name.trim())
+        self.name.trim().to_string()
     }
 
     pub fn is_default(&self) -> bool {

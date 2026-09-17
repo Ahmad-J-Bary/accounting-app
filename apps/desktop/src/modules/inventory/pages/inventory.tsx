@@ -13,6 +13,7 @@ import { useStockMovements, useMaterials } from "@shared/hooks/queries/useMateri
 import { useWarehouses } from "@shared/hooks/queries/useWarehouseQueries";
 import { useCompanyCapabilities } from "@shared/hooks";
 import { useLocalization } from "@app/providers/LocalizationProvider";
+import { resolveWarehouseDisplayName } from "@shared/lib/system-labels";
 
 export default function Inventory() {
   const { t } = useLocalization();
@@ -211,7 +212,9 @@ export default function Inventory() {
                   value={selectedWarehouseId || 'all'}
                   onValueChange={(v) => setSelectedWarehouseId(v === 'all' ? null : v)}
                   includeAll={!isSingleWarehouse}
-                  placeholder={isSingleWarehouse ? (warehouses[0]?.name || t('warehouses.companyDefault', { namespace: "inventory",  })) : t('warehouses.all', { namespace: "inventory",  })}
+                  placeholder={isSingleWarehouse && warehouses[0]
+                    ? resolveWarehouseDisplayName(warehouses[0], t)
+                    : t('warehouses.all', { namespace: "inventory",  })}
                 />
               </div>
               <MovementTypeFilter value={selectedTypes} onChange={setSelectedTypes} excludeKeys={canAccessOpeningWorkflow ? undefined : ['OpeningBalance']} />

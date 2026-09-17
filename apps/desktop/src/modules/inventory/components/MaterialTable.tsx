@@ -12,6 +12,7 @@ import { TableActions } from '@widgets/table-shell/TableActions';
 import type { SummaryColumn } from '@widgets/table-shell/TableSummary';
 import { useUnifiedColumns, useSortable, useBaseCurrencyColumns } from '@shared/hooks';
 import { toLocalString } from '@shared/lib/format';
+import { resolveCategoryName } from "@shared/lib/system-labels";
 
 interface MaterialTableProps {
   materials: MaterialDto[];
@@ -157,7 +158,7 @@ export function MaterialTable({
                     className={cn("text-[10px] font-medium px-2 py-0.5 border-muted", cat.is_hybrid && "border-purple-200 bg-purple-50 text-purple-700")}
                   >
                     {cat.is_hybrid && <Shuffle className="w-2.5 h-2.5 ml-1 inline" />}
-                    {cat.name}
+                    {resolveCategoryName(cat, t)}
                   </Badge>
                 );
               })
@@ -214,12 +215,16 @@ export function MaterialTable({
           const val = unitCostBase(m);
           if (val <= 0) return "";
           if (m.costing_method === "FIFO") {
-            return <span title="آخر سعر شراء (FIFO)">{formatAmount(val, { currencyCode: curr.code })}</span>;
+            return (
+              <span title={`${t("tooltip.lastPurchasePrice", { namespace: "common" })} (FIFO)`}>
+                {formatAmount(val, { currencyCode: curr.code })}
+              </span>
+            );
           }
           const raw = rawPriceBase(m);
           if (raw > 0) {
             const extra = extraCostBase(m);
-            const hint = `متوسط: ${formatAmount(raw, { currencyCode: curr.code })} + تكاليف: ${formatAmount(extra, { currencyCode: curr.code })}`;
+            const hint = `${t("materials.costingMethods.average", { namespace: "inventory" })}: ${formatAmount(raw, { currencyCode: curr.code })} + ${t("materials.columns.extraCosts", { namespace: "inventory" })}: ${formatAmount(extra, { currencyCode: curr.code })}`;
             return <span title={hint}>{formatAmount(val, { currencyCode: curr.code })}</span>;
           }
           return <>{formatAmount(val, { currencyCode: curr.code })}</>;
@@ -381,7 +386,9 @@ export function MaterialTable({
             ? "bg-purple-50 text-purple-700 border-purple-200" 
             : "bg-muted text-foreground border-muted"
         )}>
-          {m.costing_method === "FIFO" ? "FIFO" : "متوسط"}
+          {m.costing_method === "FIFO"
+            ? "FIFO"
+            : t("materials.costingMethods.average", { namespace: "inventory" })}
         </span>
       ),
       className: "text-center"

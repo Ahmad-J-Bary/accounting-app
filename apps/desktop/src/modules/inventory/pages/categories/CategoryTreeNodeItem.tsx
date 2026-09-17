@@ -4,9 +4,11 @@ import { Badge } from "@shared/ui/badge";
 import { TreeItem } from '@widgets/tree-sidebar/TreeItem';
 import type { CategoryDto } from "@erp/shared-types";
 import { useLocalization } from "@app/providers/LocalizationProvider";
+import { isUncategorizedCategory, resolveCategoryName } from "@shared/lib/system-labels";
 
 interface CategoryTreeNode extends CategoryDto {
   children: CategoryTreeNode[];
+  displayName?: string;
   isMaterial?: boolean; // Flag injected by buildTree
 }
 
@@ -31,8 +33,7 @@ export function CategoryTreeNodeItem({
 }: CategoryTreeNodeItemProps) {
   const { t } = useLocalization();
   const isVirtualRoot = node.id === VIRTUAL_ROOT_ID;
-  const uncategorizedName = t("materials.uncategorized", { namespace: "inventory" });
-  const isDefault = node.name === uncategorizedName && !node.parent_id;
+  const isDefault = isUncategorizedCategory(node);
   const isRoot = !node.parent_id && !isVirtualRoot;
 
   const renderIcon = (n: CategoryTreeNode, expanded: boolean) => {
@@ -68,7 +69,7 @@ export function CategoryTreeNodeItem({
           !isRoot && !isVirtualRoot && "text-foreground",
           isRoot && !isDefault && "text-foreground"
         )}>
-          {n.name}
+          {n.displayName ?? resolveCategoryName(n, t)}
         </span>
         {n.code_prefix && (
           <Badge variant="outline" className="text-[10px] py-0 px-1.5 border-primary/20 bg-primary/10 text-primary font-mono gap-1">

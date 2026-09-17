@@ -8,6 +8,7 @@ import { Input } from "@shared/ui/input";
 import { Button } from "@shared/ui/button";
 import { decomposeUnits, formatDecomposition } from "@modules/inventory/lib/stockUtils";
 import { useLocalization } from "@app/providers/LocalizationProvider";
+import { resolveWarehouseDisplayName } from "@shared/lib/system-labels";
 
 interface WarehouseMaterialListProps {
   open: boolean;
@@ -70,7 +71,7 @@ export function WarehouseMaterialList({
   return (
     <SidebarShell isOpen={open} onClose={onClose}>
       <SidebarHeader
-        title={warehouse.name}
+        title={resolveWarehouseDisplayName(warehouse, t)}
         subtitle={t("warehouses.materialList.subtitle", { namespace: "inventory",  })}
         icon={<WarehouseIcon className="w-4 h-4 text-primary" />}
         onClose={onClose}
@@ -90,12 +91,12 @@ export function WarehouseMaterialList({
 
         {/* Search */}
         <div className="relative mb-4">
-          <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+          <Search className="absolute end-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder={t("warehouses.materialList.searchPlaceholder", { namespace: "inventory",  })}
             value={search}
             onChange={e => setSearch(e.target.value)}
-            className="pr-9 h-9 text-xs bg-white border-muted"
+            className="h-9 bg-white pe-9 text-xs border-muted"
           />
         </div>
 

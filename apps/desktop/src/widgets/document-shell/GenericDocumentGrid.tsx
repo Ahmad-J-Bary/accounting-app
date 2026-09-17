@@ -26,6 +26,7 @@ import {
   formatWithLocale,
   useCurrencyContext,
 } from "@app/providers/CurrencyContext";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 export interface DocumentColumn {
   key: string;
@@ -97,6 +98,7 @@ export function GenericDocumentGrid({
   onVisibleColumnsChange,
 }: GenericDocumentGridProps) {
   const { baseCurrency, convertBetween, currencies } = useCurrencyContext();
+  const { t } = useLocalization();
   const { settings, getDensityPadding } = useTableSettings();
 
   const [activeCell, setActiveCell] = useState<{
@@ -458,7 +460,7 @@ export function GenericDocumentGrid({
                 ? "text-amber-600 hover:text-amber-700 hover:bg-amber-50"
                 : "text-muted-foreground hover:text-primary hover:bg-primary/10",
             )}
-            title="إظهار / إخفاء الأعمدة"
+            title={t("tooltip.showHideColumns", { namespace: "common" })}
           >
             <Columns className="w-3.5 h-3.5" />
           </button>
@@ -466,7 +468,7 @@ export function GenericDocumentGrid({
         <DropdownMenuContent align="start" className="w-64 max-h-[420px] overflow-y-auto shadow-xl">
           <DropdownMenuLabel className="flex items-center justify-between text-right gap-2">
             <span className="text-2xs font-black uppercase text-muted-foreground tracking-widest">
-              إظهار / إخفاء الأعمدة
+              {t("tooltip.showHideColumns", { namespace: "common" })}
             </span>
             <span className={cn(
               "text-2xs tabular-nums font-bold px-1.5 py-0.5 rounded",
@@ -497,7 +499,7 @@ export function GenericDocumentGrid({
                 className="flex-row-reverse text-primary focus:text-primary disabled:text-muted-foreground disabled:opacity-50"
               >
                 <RotateCcw className="w-4 h-4 ml-2" />
-                استعادة الأعمدة الافتراضية
+                {t("actions.restoreDefaultColumns", { namespace: "common" })}
               </DropdownMenuItem>
             </>
           )}
@@ -571,7 +573,7 @@ export function GenericDocumentGrid({
                   <button
                     onClick={() => onRemoveLine(rowIdx)}
                     className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                    title="حذف السطر (Ctrl+Del)"
+                    title={t("grid.deleteRow", { namespace: "inventory" })}
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>

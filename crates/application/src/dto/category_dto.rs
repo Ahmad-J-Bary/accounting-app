@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 pub struct CategoryDto {
     pub id: String,
     pub name: String,
+    pub system_key: Option<String>,
     pub parent_id: Option<String>,
     pub is_active: bool,
     pub is_hybrid: bool,
@@ -54,6 +55,7 @@ impl From<MaterialCategory> for CategoryDto {
         Self {
             id: category.id.0.to_string(),
             name: category.name,
+            system_key: None,
             parent_id: category.parent_id.map(|id| id.0.to_string()),
             is_active: category.is_active,
             is_hybrid: category.is_hybrid,

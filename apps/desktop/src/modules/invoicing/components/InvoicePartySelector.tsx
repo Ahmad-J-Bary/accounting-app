@@ -41,7 +41,7 @@ export function InvoicePartySelector({
   onSearchActive,
   onCreateParty,
 }: InvoicePartySelectorProps) {
-  const { t, language } = useLocalization();
+  const { t, language, direction } = useLocalization();
   const [isEditing, setIsEditing] = useState(!selectedId);
   const [inputValue, setInputValue] = useState("");
   const [debouncedValue, setDebouncedValue] = useState("");
@@ -261,7 +261,7 @@ export function InvoicePartySelector({
       )}
 
       {!readOnly && !disabled && (
-        <div className="flex items-center gap-1 mr-auto">
+        <div className="ms-auto flex items-center gap-1">
           <button
             type="button"
             onClick={handleClear}
@@ -286,7 +286,7 @@ export function InvoicePartySelector({
         <input
           ref={inputRef}
           disabled={disabled || readOnly || creating}
-          className="flex-1 text-sm bg-transparent outline-none text-right font-semibold placeholder:text-muted-foreground/40"
+          className="flex-1 bg-transparent text-sm font-semibold text-start outline-none placeholder:text-muted-foreground/40"
           placeholder={placeholder}
           value={inputValue}
           onChange={e => {
@@ -328,7 +328,7 @@ export function InvoicePartySelector({
       {open && (
         <div
           ref={dropdownRef}
-          className="absolute z-[100] top-full mt-1 right-0 w-full bg-popover border border-border rounded-lg shadow-lg overflow-hidden"
+          className="absolute top-full z-[100] mt-1 w-full overflow-hidden rounded-lg border border-border bg-popover shadow-lg end-0"
         >
           <div className="max-h-60 overflow-y-auto">
             {filtered.map(p => (
@@ -336,8 +336,8 @@ export function InvoicePartySelector({
                 key={p.id}
                 type="button"
                 className={cn(
-                  "w-full flex items-center justify-between px-3 py-2.5 hover:bg-accent border-b border-border last:border-0 text-right transition-colors",
-                  p.id === selectedId && "bg-accent border-r-4 border-r-primary"
+                  "flex w-full items-center justify-between border-b border-border px-3 py-2.5 text-start transition-colors last:border-0 hover:bg-accent",
+                  p.id === selectedId && "border-e-4 border-e-primary bg-accent"
                 )}
                 onMouseDown={(e) => {
                   e.preventDefault();
@@ -404,7 +404,7 @@ export function InvoicePartySelector({
   );
 
   return (
-    <div className="relative w-full" dir="rtl">
+    <div className="relative w-full" dir={direction}>
       {!hideLabel && (
         <label className="text-xs font-semibold text-muted-foreground">
           {label}

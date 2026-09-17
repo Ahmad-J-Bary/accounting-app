@@ -23,6 +23,11 @@ import { useCategories } from "@shared/hooks/queries/useCategoryQueries";
 import { useMaterials } from "@shared/hooks/queries/useMaterialQueries";
 import { QUERY_KEYS, INVENTORY_MUTATION_KEYS, invalidateKeys } from "@shared/hooks/queryClient";
 import { useLocalization } from "@app/providers/LocalizationProvider";
+import {
+  findGeneralSubcategory,
+  isGeneralSubcategory,
+  resolveCategoryName,
+} from "@shared/lib/system-labels";
 
 /** What the side panel should render for the current selection. */
 type PanelAction =
@@ -64,7 +69,13 @@ export default function Categories() {
   const [materialSaving, setMaterialSaving] = useState(false);
 
   const hasLoadedOnceRef = useRef(false);
-  const { filteredTree } = useCategoryTree(categories, materials, search, t("categories.title", { namespace: "inventory" }));
+  const { filteredTree } = useCategoryTree(
+    categories,
+    materials,
+    search,
+    t,
+    t("categories.title", { namespace: "inventory" }),
+  );
 
   // Expand all root categories on first successful load
   useEffect(() => {
@@ -157,24 +168,24 @@ export default function Categories() {
     if (materialCount === 0) return { type: "sub_empty" };
 
     const root = categories.find(c => c.id === node.parent_id);
-    const isGeneralSub = !!root && node.name === `${root.name} عام`;
+    const isGeneralSub = isGeneralSubcategory(node);
 
     if (isGeneralSub) {
       const defaultCat = categories.find(c => c.id === DEFAULT_CATEGORY_ID);
       return {
         type: "sub_with_materials",
         materialCount,
-        targetName: defaultCat?.name || t("inventory.materials.uncategorized", { namespace: "inventory" }),
+        targetName: defaultCat ? resolveCategoryName(defaultCat, t) : t("materials.uncategorized", { namespace: "inventory" }),
         isGeneralSub: true,
       };
     }
 
-    const generalSub = root ? categories.find(c => c.parent_id === root.id && c.name === `${root.name} عام`) : undefined;
+    const generalSub = root ? findGeneralSubcategory(categories, root.id) : undefined;
     if (generalSub) {
       return {
         type: "sub_with_materials",
         materialCount,
-        targetName: generalSub.name,
+        targetName: resolveCategoryName(generalSub, t),
         isGeneralSub: false,
       };
     }
@@ -183,7 +194,7 @@ export default function Categories() {
     return {
       type: "sub_with_materials",
       materialCount,
-      targetName: defaultCat?.name || t("inventory.materials.uncategorized", { namespace: "inventory" }),
+      targetName: defaultCat ? resolveCategoryName(defaultCat, t) : t("materials.uncategorized", { namespace: "inventory" }),
       isGeneralSub: true,
     };
   }, [categories, t]);
@@ -199,14 +210,14 @@ export default function Categories() {
     }
 
     const root = categories.find(c => c.id === node.parent_id);
-    const isGeneralSub = !!root && node.name === `${root.name} عام`;
+    const isGeneralSub = isGeneralSubcategory(node);
 
     if (isGeneralSub) {
       const defaultCat = categories.find(c => c.id === DEFAULT_CATEGORY_ID);
       return defaultCat?.id ?? null;
     }
 
-    const generalSub = root ? categories.find(c => c.parent_id === root.id && c.name === `${root.name} عام`) : undefined;
+    const generalSub = root ? findGeneralSubcategory(categories, root.id) : undefined;
     if (generalSub) return generalSub.id;
 
     const defaultCat = categories.find(c => c.id === DEFAULT_CATEGORY_ID);
@@ -259,7 +270,11 @@ export default function Categories() {
       return;
     }
     setDeleteKind(kind);
-    setPendingCategoryDelete({ id: selected.id, name: selected.name, targetId });
+    setPendingCategoryDelete({
+      id: selected.id,
+      name: resolveCategoryName(selected, t),
+      targetId,
+    });
     setDeleteOpen(true);
   }, [canOperate, selected, computeDeleteKind, computeReassignTargetId, t]);
 
@@ -386,7 +401,7 @@ export default function Categories() {
             category={panelSelected}
             prefix={
               panelSelected.code_prefix ??
-              categories.find(c => c.parent_id === panelSelected.id && c.name.endsWith("عام"))?.code_prefix ??
+              findGeneralSubcategory(categories, panelSelected.id)?.code_prefix ??
               undefined
             }
           />

@@ -2,6 +2,7 @@ import { ReactNode } from "react";
 import { cn } from "@shared/lib/utils";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { useIsLaptop, useIsTablet } from "@shared/hooks/useResponsive";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 export interface SettingsNavItem {
   id: string;
@@ -46,6 +47,7 @@ export function SettingsNavigation({
 }: SettingsNavigationProps) {
   const isLaptop = useIsLaptop();
   const isTablet = useIsTablet();
+  const { t } = useLocalization();
 
   const resolvedMode = mode === "sidebar"
     ? (isLaptop ? "compact" : isTablet ? "drawer" : "sidebar")
@@ -129,7 +131,7 @@ export function SettingsNavigation({
         className
       )}
       role="navigation"
-      aria-label="Settings navigation"
+      aria-label={t("accessibility.settingsNavigation", { namespace: "common" })}
     >
       {items.map(item => renderItem(item))}
       {renderGroup()}

@@ -121,6 +121,7 @@ export const inventory: Record<AppLanguage, TranslationTree> = {
     },
     categories: {
       title: "تصنيفات المواد",
+      generalSubName: "عام",
       newCategory: "تصنيف جديد",
       newMaterial: "مادة جديدة",
       expand: "توسيع",
@@ -763,6 +764,7 @@ export const inventory: Record<AppLanguage, TranslationTree> = {
     },
     categories: {
       title: "Material Categories",
+      generalSubName: "General",
       newCategory: "New Category",
       newMaterial: "New Material",
       expand: "Expand",

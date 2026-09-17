@@ -3,6 +3,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { cn } from "@shared/lib/utils";
 import type { WarehouseDto } from "@erp/shared-types";
 import { useLocalization } from "@app/providers/LocalizationProvider";
+import { resolveWarehouseDisplayName } from "@shared/lib/system-labels";
 
 interface WarehouseSelectorProps {
   warehouses: WarehouseDto[];
@@ -20,11 +21,11 @@ export function WarehouseSelector({
   onValueChange,
   includeAll = false,
   disabled = false,
-  placeholder = "اختر مستودع",
+  placeholder,
   className,
 }: WarehouseSelectorProps) {
-  const { t } = useLocalization();
-  const effectivePlaceholder = placeholder === "اختر مستودع" ? t("warehouses.selector.placeholder", { namespace: "inventory",  }) : placeholder;
+  const { t, direction } = useLocalization();
+  const effectivePlaceholder = placeholder ?? t("warehouses.selector.placeholder", { namespace: "inventory" });
   const effectiveIncludeAll = includeAll && warehouses.length > 1;
 
   const effectiveValue = useMemo(() => {
@@ -34,7 +35,7 @@ export function WarehouseSelector({
   }, [value, warehouses]);
 
   return (
-    <Select dir="rtl" value={effectiveValue} onValueChange={onValueChange} disabled={disabled || warehouses.length === 0}>
+    <Select dir={direction} value={effectiveValue} onValueChange={onValueChange} disabled={disabled || warehouses.length === 0}>
       <SelectTrigger className={cn("w-[200px] bg-white border-muted h-9", className)}>
         <SelectValue placeholder={effectivePlaceholder} />
       </SelectTrigger>
@@ -42,7 +43,7 @@ export function WarehouseSelector({
         {effectiveIncludeAll && <SelectItem value="all">{t("warehouses.all", { namespace: "inventory",  })}</SelectItem>}
         {warehouses.map((w) => (
           <SelectItem key={w.id} value={w.id}>
-            {w.name}
+            {resolveWarehouseDisplayName(w, t)}
           </SelectItem>
         ))}
       </SelectContent>

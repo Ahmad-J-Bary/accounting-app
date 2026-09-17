@@ -11,6 +11,7 @@ import {
 import { useLocalization } from "@app/providers/LocalizationProvider";
 import type { DocumentColumn } from "./GenericDocumentGrid";
 import type { GridLine } from "@modules/invoicing/lib/invoiceUtils";
+import { resolveWarehouseDisplayName } from "@shared/lib/system-labels";
 
 import type { MaterialPriceHistoryDto } from "@erp/shared-types";
 
@@ -200,7 +201,9 @@ export function DocumentGridCell({
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="center" className="min-w-[140px] shadow-xl">
-            <DropdownMenuLabel className="text-right text-3xs font-black text-muted-foreground uppercase">نوع السعر</DropdownMenuLabel>
+            <DropdownMenuLabel className="text-right text-3xs font-black text-muted-foreground uppercase">
+              {t("grid.priceTypeLabel", { namespace: "inventory" })}
+            </DropdownMenuLabel>
             <DropdownMenuSeparator />
             {tiers.map((t) => {
               const salePrice = material?.sale_prices?.find(
@@ -218,7 +221,7 @@ export function DocumentGridCell({
                   <span className="flex items-center gap-2 w-full">
                     <span>{t.label}</span>
                     {priceStr && <span className="tabular-nums text-muted-foreground font-medium">{priceStr}</span>}
-                    {maxQty > 0 && <span className="text-4xs text-purple-500 font-bold mr-auto">&le;{maxQty}</span>}
+                    {maxQty > 0 && <span className="me-auto text-4xs font-bold text-purple-500">&le;{maxQty}</span>}
                   </span>
                 </DropdownMenuCheckboxItem>
               );
@@ -316,7 +319,7 @@ export function DocumentGridCell({
                 ? "bg-violet-50 text-violet-600 border-violet-100 hover:bg-violet-100 cursor-pointer"
                 : "bg-muted text-muted-foreground border-border cursor-default",
             )}>
-              {currentWarehouse?.name || t("grid.selectWarehouse", { namespace: "inventory" })}
+              {currentWarehouse ? resolveWarehouseDisplayName(currentWarehouse, t) : t("grid.selectWarehouse", { namespace: "inventory" })}
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="center" className="min-w-[140px] shadow-xl">
@@ -329,7 +332,7 @@ export function DocumentGridCell({
                 onCheckedChange={() => onUpdateLine(rowIdx, { warehouse_id: w.id })}
                 className="text-right flex-row-reverse gap-2 text-2xs font-bold py-1.5"
               >
-                {w.name}
+                {resolveWarehouseDisplayName(w, t)}
               </DropdownMenuCheckboxItem>
             ))}
           </DropdownMenuContent>
@@ -384,7 +387,9 @@ export function DocumentGridCell({
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="center" className="min-w-[140px] shadow-xl">
-              <DropdownMenuLabel className="text-right text-3xs font-black text-muted-foreground uppercase">نوع السعر</DropdownMenuLabel>
+              <DropdownMenuLabel className="text-right text-3xs font-black text-muted-foreground uppercase">
+                {t("grid.priceTypeLabel", { namespace: "inventory" })}
+              </DropdownMenuLabel>
               <DropdownMenuSeparator />
               {tiers.map((t) => (
                 <DropdownMenuCheckboxItem

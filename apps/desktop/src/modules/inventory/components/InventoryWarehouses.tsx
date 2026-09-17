@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import { Warehouse, Plus, Pencil, Trash2, MapPin, Package, Hash } from "lucide-react";
 import { cn } from "@shared/lib/utils";
 import { Button } from "@shared/ui/button";
@@ -8,6 +8,7 @@ import { warehouseService } from "@modules/inventory/api/warehouseService";
 import { toast } from "sonner";
 import { toLocalString } from "@shared/lib/format";
 import { useLocalization } from "@app/providers/LocalizationProvider";
+import { resolveWarehouseDisplayName } from "@shared/lib/system-labels";
 
 export type DisplayStyle = 'cards-small' | 'cards-medium' | 'cards-large' | 'list' | 'rows';
 
@@ -67,6 +68,11 @@ export function InventoryWarehouses({
     return map;
   }, [search, products, stockByWarehouse, warehouses]);
 
+  const displayName = useCallback(
+    (warehouse: WarehouseDto) => resolveWarehouseDisplayName(warehouse, t),
+    [t],
+  );
+
   if (loading) {
     const skeletonCount = displayStyle === 'rows' ? 5 : 3;
     return (
@@ -124,7 +130,7 @@ export function InventoryWarehouses({
           <Package className="w-3.5 h-3.5 ml-1.5 shrink-0" />{t("warehouses.materials", { namespace: "inventory",  })}
         </Button>
       )}
-      <Button variant="outline" size="sm" className={cn("flex-1", w.is_default ? "text-muted-foreground border-border cursor-not-allowed" : "text-destructive hover:bg-destructive/10 border-destructive/20 hover:border-destructive/30")} onClick={() => handleDelete(w.id, w.name)} disabled={w.is_default} title={w.is_default ? t('warehouses.deleteMainDisabled', { namespace: 'inventory',  }) : ''}>
+      <Button variant="outline" size="sm" className={cn("flex-1", w.is_default ? "text-muted-foreground border-border cursor-not-allowed" : "text-destructive hover:bg-destructive/10 border-destructive/20 hover:border-destructive/30")} onClick={() => handleDelete(w.id, displayName(w))} disabled={w.is_default} title={w.is_default ? t('warehouses.deleteMainDisabled', { namespace: 'inventory',  }) : ''}>
         <Trash2 className="w-3.5 h-3.5 ml-1.5 shrink-0" />{t("labels.delete", { namespace: "inventory",  })}
       </Button>
     </div>
@@ -172,8 +178,8 @@ export function InventoryWarehouses({
                       <Warehouse className={cn("w-4 h-4", w.is_default ? "text-success" : "text-primary")} />
                     </div>
                     <div>
-                      <span className="font-bold text-foreground text-sm">{w.name}</span>
-                      {w.is_default && <span className="mr-2 text-[9px] font-black text-success bg-success/10 px-1.5 py-0.5 rounded">{t("labels.main", { namespace: "inventory",  })}</span>}
+                      <span className="font-bold text-foreground text-sm">{displayName(w)}</span>
+                      {w.is_default && <span className="ms-2 text-[9px] font-black text-success bg-success/10 px-1.5 py-0.5 rounded">{t("labels.main", { namespace: "inventory",  })}</span>}
                     </div>
                   </div>
                   {renderMatchedItems(w)}
@@ -194,7 +200,7 @@ export function InventoryWarehouses({
                         <Package className="w-3.5 h-3.5" />
                       </Button>
                     )}
-                    <Button variant="ghost" size="sm" className={cn("h-8 px-2", w.is_default ? "text-muted-foreground cursor-not-allowed" : "text-muted-foreground hover:text-destructive hover:bg-destructive/10")} onClick={() => handleDelete(w.id, w.name)} disabled={w.is_default}>
+                    <Button variant="ghost" size="sm" className={cn("h-8 px-2", w.is_default ? "text-muted-foreground cursor-not-allowed" : "text-muted-foreground hover:text-destructive hover:bg-destructive/10")} onClick={() => handleDelete(w.id, displayName(w))} disabled={w.is_default}>
                       <Trash2 className="w-3.5 h-3.5" />
                     </Button>
                   </div>
@@ -220,7 +226,7 @@ export function InventoryWarehouses({
                 </div>
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="font-bold text-foreground">{w.name}</span>
+                    <span className="font-bold text-foreground">{displayName(w)}</span>
                     <span className={cn("text-[9px] font-bold px-1.5 py-0.5 rounded-full", w.is_active ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive")}>
                       {w.is_active ? t('labels.active', { namespace: 'inventory',  }) : t('labels.inactive', { namespace: 'inventory',  })}
                     </span>
@@ -238,7 +244,7 @@ export function InventoryWarehouses({
                     <Package className="w-3.5 h-3.5 ml-1" />{t("warehouses.materials", { namespace: "inventory",  })}
                   </Button>
                 )}
-                <Button variant="ghost" size="sm" className={cn("h-8", w.is_default ? "text-muted-foreground cursor-not-allowed" : "text-destructive hover:bg-destructive/10")} onClick={() => handleDelete(w.id, w.name)} disabled={w.is_default}>
+                <Button variant="ghost" size="sm" className={cn("h-8", w.is_default ? "text-muted-foreground cursor-not-allowed" : "text-destructive hover:bg-destructive/10")} onClick={() => handleDelete(w.id, displayName(w))} disabled={w.is_default}>
                   <Trash2 className="w-3.5 h-3.5 ml-1" />{t("labels.delete", { namespace: "inventory",  })}
                 </Button>
               </div>
@@ -290,7 +296,7 @@ export function InventoryWarehouses({
           <h3 className={cn(
             "font-black text-foreground",
             isSmall ? "text-base mb-1" : isLarge ? "text-2xl mb-3" : "text-xl mb-2"
-          )}>{w.name}</h3>
+          )}>{displayName(w)}</h3>
 
           {/* Address */}
           {w.address && (

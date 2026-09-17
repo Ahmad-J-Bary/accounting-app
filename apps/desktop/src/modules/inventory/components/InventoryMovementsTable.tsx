@@ -12,6 +12,7 @@ import { getMovementType } from '../constants/movementTypes';
 import { Download } from "lucide-react";
 import { Button } from "@shared/ui/button";
 import { useLocalization } from "@app/providers/LocalizationProvider";
+import { resolveWarehouseDisplayName } from "@shared/lib/system-labels";
 
 const getCleanNotes = (m: StockMovement): string => {
   const type = m.movement_type.replace('MovementType::', '');
@@ -81,9 +82,14 @@ export function InventoryMovementsTable({
   const defaultWh = useMemo(() => warehouses.find(wh => wh.is_default), [warehouses]);
 
   const warehouseName = useMemo(() => (m: StockMovement) => {
-    if (!m.warehouse_id) return defaultWh?.name || t("movements.noWarehouse", { namespace: "inventory" });
+    if (!m.warehouse_id) {
+      return defaultWh ? resolveWarehouseDisplayName(defaultWh, t) : t("movements.noWarehouse", { namespace: "inventory" });
+    }
     const w = warehouses.find(wh => wh.id === m.warehouse_id);
-    return w?.name || defaultWh?.name || t("movements.noWarehouse", { namespace: "inventory" });
+    if (w) {
+      return resolveWarehouseDisplayName(w, t);
+    }
+    return defaultWh ? resolveWarehouseDisplayName(defaultWh, t) : t("movements.noWarehouse", { namespace: "inventory" });
   }, [warehouses, defaultWh, t]);
 
   const warehouseClass = useMemo(() => (m: StockMovement) => {

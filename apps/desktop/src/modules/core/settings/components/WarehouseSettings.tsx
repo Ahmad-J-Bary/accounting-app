@@ -10,6 +10,7 @@ import { warehouseService } from "@modules/inventory/api/warehouseService";
 import { settingsService } from '@modules/core/api/settingsService';
 import { toast } from "sonner";
 import { useLocalization } from "@app/providers/LocalizationProvider";
+import { resolveWarehouseDisplayName } from "@shared/lib/system-labels";
 
 interface WarehouseSettingsProps {
   settings: CompanySettingsType;
@@ -73,9 +74,9 @@ export function WarehouseSettings({ settings, onChange }: WarehouseSettingsProps
               <SelectValue placeholder={t("warehouses.selectPlaceholder", { namespace: "settings" })} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="__default" className="font-bold text-muted-foreground">{t("warehouses.defaultOption", { namespace: "settings" })}{defaultWarehouse ? ` (${defaultWarehouse.name})` : ""}</SelectItem>
+              <SelectItem value="__default" className="font-bold text-muted-foreground">{t("warehouses.defaultOption", { namespace: "settings" })}{defaultWarehouse ? ` (${resolveWarehouseDisplayName(defaultWarehouse, t)})` : ""}</SelectItem>
               {otherWarehouses.map((w) => (
-                <SelectItem key={w.id} value={w.id} className="font-bold">{w.name}</SelectItem>
+                <SelectItem key={w.id} value={w.id} className="font-bold">{resolveWarehouseDisplayName(w, t)}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -94,9 +95,9 @@ export function WarehouseSettings({ settings, onChange }: WarehouseSettingsProps
               <SelectValue placeholder={t("warehouses.selectPlaceholder", { namespace: "settings" })} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="__default" className="font-bold text-muted-foreground">{t("warehouses.defaultOption", { namespace: "settings" })}{defaultWarehouse ? ` (${defaultWarehouse.name})` : ""}</SelectItem>
+              <SelectItem value="__default" className="font-bold text-muted-foreground">{t("warehouses.defaultOption", { namespace: "settings" })}{defaultWarehouse ? ` (${resolveWarehouseDisplayName(defaultWarehouse, t)})` : ""}</SelectItem>
               {otherWarehouses.map((w) => (
-                <SelectItem key={w.id} value={w.id} className="font-bold">{w.name}</SelectItem>
+                <SelectItem key={w.id} value={w.id} className="font-bold">{resolveWarehouseDisplayName(w, t)}</SelectItem>
               ))}
             </SelectContent>
           </Select>

@@ -1,5 +1,6 @@
 import type { CategoryDto } from "@erp/shared-types";
 import { useLocalization } from "@app/providers/LocalizationProvider";
+import { resolveCategoryName } from "@shared/lib/system-labels";
 
 interface CategoryDetailsPanelProps {
   /** Selected category (real node only, never the virtual root). */
@@ -18,12 +19,13 @@ export function CategoryDetailsPanel({ category, prefix }: CategoryDetailsPanelP
   if (!category) return null;
 
   const displayPrefix = prefix ?? category.code_prefix ?? "";
+  const displayName = resolveCategoryName(category, t);
 
   return (
     <div className="grid gap-3">
       <div className="rounded-md border bg-muted p-3">
         <p className="text-[11px] text-muted-foreground mb-1">{t("categories.details.categoryName", { namespace: "inventory",  })}</p>
-        <p className="font-semibold text-foreground">{category.name}</p>
+        <p className="font-semibold text-foreground">{displayName}</p>
       </div>
       {displayPrefix && (
         <div className="rounded-md border bg-muted p-3">

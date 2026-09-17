@@ -1,6 +1,7 @@
 export interface CategoryDto {
   id: string;
   name: string;
+  system_key?: string | null;
   parent_id: string | null;
   is_active: boolean;
   is_hybrid: boolean;

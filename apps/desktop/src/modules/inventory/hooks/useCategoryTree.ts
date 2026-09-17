@@ -1,21 +1,34 @@
 import { useMemo } from "react";
 import type { CategoryDto, MaterialDto } from "@erp/shared-types";
+import { resolveCategoryName } from "@shared/lib/system-labels";
 
 export const VIRTUAL_ROOT_ID = "__categories_root__";
 export const DEFAULT_CATEGORY_ID = "00000000-0000-0000-0000-000000000001";
 
 export interface CategoryTreeNode extends CategoryDto {
   children: CategoryTreeNode[];
+  displayName?: string;
   isMaterial?: boolean;
   materialData?: MaterialDto;
 }
 
-function buildTree(cats: CategoryDto[], materials: MaterialDto[], virtualRootName?: string): CategoryTreeNode {
+type TranslateFn = (key: string, options?: { namespace?: string }) => string;
+
+function buildTree(
+  cats: CategoryDto[],
+  materials: MaterialDto[],
+  t: TranslateFn,
+  virtualRootName?: string,
+): CategoryTreeNode {
   const map = new Map<string, CategoryTreeNode>();
   
   // 1. Initialize map with clones
   const normalCats = cats.filter(c => !c.is_hybrid);
-  normalCats.forEach(c => map.set(c.id, { ...c, children: [] }));
+  normalCats.forEach(c => map.set(c.id, {
+    ...c,
+    displayName: resolveCategoryName(c, t),
+    children: [],
+  }));
   
   // 2. Attach materials
   materials.forEach(m => {
@@ -31,6 +44,7 @@ function buildTree(cats: CategoryDto[], materials: MaterialDto[], virtualRootNam
       children: [],
       isMaterial: true,
       materialData: m,
+      displayName: m.name,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
@@ -102,14 +116,23 @@ function buildTree(cats: CategoryDto[], materials: MaterialDto[], virtualRootNam
   return virtualRoot;
 }
 
-export function useCategoryTree(categories: CategoryDto[], materials: MaterialDto[], search: string, virtualRootName?: string) {
-  const tree = useMemo(() => buildTree(categories, materials, virtualRootName), [categories, materials, virtualRootName]);
+export function useCategoryTree(
+  categories: CategoryDto[],
+  materials: MaterialDto[],
+  search: string,
+  t: TranslateFn,
+  virtualRootName?: string,
+) {
+  const tree = useMemo(
+    () => buildTree(categories, materials, t, virtualRootName),
+    [categories, materials, t, virtualRootName],
+  );
   
   const filteredTree = useMemo(() => {
     if (!search) return tree;
     const filterNode = (node: CategoryTreeNode): CategoryTreeNode | null => {
       const filteredChildren = node.children.map(filterNode).filter(Boolean) as CategoryTreeNode[];
-      const matches = node.name.toLowerCase().includes(search.toLowerCase());
+      const matches = (node.displayName ?? node.name).toLowerCase().includes(search.toLowerCase());
       if (matches || filteredChildren.length > 0) {
         return { ...node, children: filteredChildren };
       }

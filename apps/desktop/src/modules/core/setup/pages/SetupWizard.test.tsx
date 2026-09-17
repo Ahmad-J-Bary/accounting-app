@@ -73,8 +73,8 @@ describe("SetupWizard company type", () => {
     await screen.findByText("نوع الشركة");
     const existingCard = screen.getByLabelText("شركة قائمة").closest("label");
     const newCard = screen.getByLabelText("شركة جديدة").closest("label");
-    expect(existingCard?.className).toContain("ring-emerald-200");
-    expect(newCard?.className).not.toContain("ring-emerald-200");
+    expect(existingCard?.className).toContain("ring-success/20");
+    expect(newCard?.className).not.toContain("ring-success/20");
   });
 
   it("moves the clear selected state when NEW is picked", async () => {
@@ -91,8 +91,8 @@ describe("SetupWizard company type", () => {
 
     const existingCard = screen.getByLabelText("شركة قائمة").closest("label");
     const newCard = screen.getByLabelText("شركة جديدة").closest("label");
-    expect(existingCard?.className).not.toContain("ring-emerald-200");
-    expect(newCard?.className).toContain("ring-emerald-200");
+    expect(existingCard?.className).not.toContain("ring-success/20");
+    expect(newCard?.className).toContain("ring-success/20");
   });
 
   it("persists the chosen company type in the update settings payload", async () => {
