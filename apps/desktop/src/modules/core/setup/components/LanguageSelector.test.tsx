@@ -90,8 +90,10 @@ describe("FirstLaunchLanguageGate — LanguageSelector", () => {
     expect(container.firstChild).toBeTruthy();
   });
 
-  it("shows 'You can change this later in Settings' text", () => {
+  it("shows the localized hint text", () => {
     render(<LanguageSelector onComplete={() => {}} />);
-    expect(screen.getByText("You can change this later in Settings")).toBeInTheDocument();
+    expect(
+      screen.getByText(/يمكنك تغيير هذا لاحقاً من الإعدادات|You can change this later in Settings/i),
+    ).toBeInTheDocument();
   });
 });

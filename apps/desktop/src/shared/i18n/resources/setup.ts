@@ -5,6 +5,10 @@ export const setup: Record<AppLanguage, TranslationTree> = {
     language: {
       title: "اختر اللغة",
       subtitle: "Choose Language",
+      arabic: "العربية",
+      english: "English",
+      continue: "التالي",
+      changeLaterHint: "يمكنك تغيير هذا لاحقاً من الإعدادات",
     },
     welcome: {
       title: "مرحباً بك في نظام المحاسبة",
@@ -53,6 +57,10 @@ export const setup: Record<AppLanguage, TranslationTree> = {
     language: {
       title: "Choose Language",
       subtitle: "اختر اللغة",
+      arabic: "العربية",
+      english: "English",
+      continue: "Next",
+      changeLaterHint: "You can change this later in Settings",
     },
     welcome: {
       title: "Welcome to the Accounting System",

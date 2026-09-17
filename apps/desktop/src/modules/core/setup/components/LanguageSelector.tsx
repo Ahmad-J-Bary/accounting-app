@@ -1,5 +1,10 @@
 import { useState } from "react";
 import { Globe, ArrowLeft, ArrowRight, Loader2 } from "lucide-react";
+import {
+  DIRECTION_BY_LANGUAGE,
+  getNestedTranslation,
+} from "@shared/i18n/resources";
+import { setup } from "@shared/i18n/resources/setup";
 import type { AppLanguage } from "@shared/types/i18n";
 
 interface LanguageSelectorProps {
@@ -21,17 +26,20 @@ export function LanguageSelector({
     onComplete(selected);
   };
 
-  const isRtl = selected === "ar";
+  const direction = DIRECTION_BY_LANGUAGE[selected];
+  const isRtl = direction === "rtl";
+  const text = (key: string, fallback: string) =>
+    getNestedTranslation(setup[selected], key) ?? fallback;
 
   return (
-    <div dir="rtl" className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-slate-100">
+    <div dir={direction} className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-slate-100">
       <div className="w-full max-w-sm mx-4">
         <div className="text-center mb-8">
           <div className="mx-auto w-16 h-16 rounded-2xl bg-primary text-white flex items-center justify-center mb-5 shadow-lg shadow-primary/20">
             <Globe className="w-8 h-8" />
           </div>
-          <h1 className="text-2xl font-black text-foreground mb-1">اختر اللغة</h1>
-          <p className="text-sm text-muted-foreground font-medium">Choose Language</p>
+          <h1 className="text-2xl font-black text-foreground mb-1">{text("language.title", "اختر اللغة")}</h1>
+          <p className="text-sm text-muted-foreground font-medium">{text("language.subtitle", "Choose Language")}</p>
         </div>
 
         <div className="space-y-3">
@@ -46,7 +54,7 @@ export function LanguageSelector({
             }`}
           >
             <span className="text-2xl">🇸🇦</span>
-            <span className="font-bold text-lg text-foreground">العربية</span>
+            <span className="font-bold text-lg text-foreground">{text("language.arabic", "العربية")}</span>
           </button>
 
           <button
@@ -60,7 +68,7 @@ export function LanguageSelector({
             }`}
           >
             <span className="text-2xl">🇬🇧</span>
-            <span className="font-bold text-lg text-foreground">English</span>
+            <span className="font-bold text-lg text-foreground">{text("language.english", "English")}</span>
           </button>
         </div>
 
@@ -74,7 +82,7 @@ export function LanguageSelector({
             <Loader2 className="w-5 h-5 animate-spin" />
           ) : (
             <>
-              {isRtl ? "التالي" : "Next"}
+              {text("language.continue", isRtl ? "التالي" : "Next")}
               {isRtl ? (
                 <ArrowLeft className="w-4 h-4" />
               ) : (
@@ -85,7 +93,7 @@ export function LanguageSelector({
         </button>
 
         <p className="text-center text-[11px] text-muted-foreground mt-6">
-          You can change this later in Settings
+          {text("language.changeLaterHint", "You can change this later in Settings")}
         </p>
       </div>
     </div>

@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { NAV_GROUPS } from '@app/shell/sidebarConfig';
+import { useLocalization } from '@app/providers/LocalizationProvider';
 import { useAppearance } from '@shared/hooks/useAppearance';
+import { useNavLabels } from '@shared/hooks';
 import { cn } from '@shared/lib/utils';
 
 const MAX_VISIBLE_ITEMS = 4;
@@ -10,6 +12,8 @@ export function MobileNav() {
   const navigate = useNavigate();
   const location = useLocation();
   const { settings } = useAppearance();
+  const { t } = useLocalization();
+  const { itemLabel } = useNavLabels();
   const [showOverflow, setShowOverflow] = useState(false);
 
   const items = NAV_GROUPS.flatMap((group) => group.items);
@@ -43,6 +47,7 @@ export function MobileNav() {
         <div className="flex items-center justify-around h-14 px-1">
           {visibleItems.map((item) => {
             const isActive = location.pathname === item.to;
+            const label = itemLabel({ id: item.id, defaultLabel: item.label });
             return (
               <button
                 key={item.id}
@@ -54,7 +59,7 @@ export function MobileNav() {
                 aria-current={isActive ? 'page' : undefined}
               >
                 <span className="text-lg shrink-0"><item.icon /></span>
-                <span className="text-[9px] leading-tight truncate max-w-[48px]">{item.label}</span>
+                <span className="text-[9px] leading-tight truncate max-w-[48px]">{label}</span>
               </button>
             );
           })}
@@ -68,7 +73,7 @@ export function MobileNav() {
                   showOverflow ? activeClass : inactiveClass,
                 )}
                 aria-expanded={showOverflow}
-                aria-label="More navigation"
+                aria-label={t("accessibility.moreNavigation")}
               >
                 <span className="text-lg shrink-0">
                   <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
@@ -77,7 +82,7 @@ export function MobileNav() {
                     <circle cx="16" cy="10" r="1.5" />
                   </svg>
                 </span>
-                <span className="text-[9px] leading-tight">More</span>
+                <span className="text-[9px] leading-tight">{t("actions.more")}</span>
               </button>
 
               {showOverflow && (
@@ -91,6 +96,7 @@ export function MobileNav() {
                 >
                   {overflowItems.map((item) => {
                     const isActive = location.pathname === item.to;
+                    const label = itemLabel({ id: item.id, defaultLabel: item.label });
                     return (
                       <button
                         key={item.id}
@@ -102,7 +108,7 @@ export function MobileNav() {
                         role="menuitem"
                       >
                         <item.icon />
-                        <span>{item.label}</span>
+                        <span>{label}</span>
                       </button>
                     );
                   })}

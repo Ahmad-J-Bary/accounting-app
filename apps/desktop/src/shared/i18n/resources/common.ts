@@ -7,6 +7,7 @@ export const common: Record<AppLanguage, TranslationTree> = {
       close: "إغلاق",
       confirm: "تأكيد",
       save: "حفظ",
+      new: "جديد",
       open: "فتح",
       search: "بحث",
       add: "إضافة",
@@ -83,6 +84,7 @@ export const common: Record<AppLanguage, TranslationTree> = {
     labels: {
       name: "الاسم",
       code: "الكود",
+      level: "المستوى",
       date: "التاريخ",
       amount: "المبلغ",
       quantity: "الكمية",
@@ -199,6 +201,15 @@ export const common: Record<AppLanguage, TranslationTree> = {
       first: "أول",
       last: "آخر",
     },
+    accessibility: {
+      close: "إغلاق",
+      pagination: "ترقيم الصفحات",
+      goToPreviousPage: "الانتقال إلى الصفحة السابقة",
+      goToNextPage: "الانتقال إلى الصفحة التالية",
+      morePages: "صفحات إضافية",
+      moreNavigation: "مزيد من عناصر التنقل",
+      toggleSidebar: "تبديل الشريط الجانبي",
+    },
     confirmations: {
       delete: "هل أنت متأكد من الحذف؟",
       save: "هل تريد حفظ التغييرات؟",
@@ -217,6 +228,7 @@ export const common: Record<AppLanguage, TranslationTree> = {
       close: "Close",
       confirm: "Confirm",
       save: "Save",
+      new: "New",
       open: "Open",
       search: "Search",
       add: "Add",
@@ -293,6 +305,7 @@ export const common: Record<AppLanguage, TranslationTree> = {
     labels: {
       name: "Name",
       code: "Code",
+      level: "Level",
       date: "Date",
       amount: "Amount",
       quantity: "Quantity",
@@ -408,6 +421,15 @@ export const common: Record<AppLanguage, TranslationTree> = {
       materialNameAr: "Material (Arabic)",
       first: "First",
       last: "Last",
+    },
+    accessibility: {
+      close: "Close",
+      pagination: "Pagination",
+      goToPreviousPage: "Go to previous page",
+      goToNextPage: "Go to next page",
+      morePages: "More pages",
+      moreNavigation: "More navigation items",
+      toggleSidebar: "Toggle sidebar",
     },
     confirmations: {
       delete: "Are you sure you want to delete?",

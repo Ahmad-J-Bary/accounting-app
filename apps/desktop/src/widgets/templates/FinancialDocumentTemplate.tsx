@@ -1,7 +1,7 @@
 import { ReactNode } from "react";
 import { cn } from "@shared/lib/utils";
-import { useSidePanelSettings } from "@shared/hooks";
 import { PageHeader } from "./PageHeader";
+import { TemplateDetailPanel } from "./TemplateDetailPanel";
 
 interface FinancialDocumentTemplateProps {
   title: string;
@@ -21,8 +21,6 @@ export function FinancialDocumentTemplate({
   title, subtitle, statusBadge, toolbar, headerFields,
   lineItemsGrid, summaryPanel, sidebar, isSidebarOpen = false, footer, className
 }: FinancialDocumentTemplateProps) {
-  const { getSidebarWidth } = useSidePanelSettings();
-
   return (
     <div className={cn("flex flex-col h-full w-full bg-muted/30", className)} dir="rtl">
       <PageHeader title={title} subtitle={subtitle} badge={statusBadge} actions={toolbar} pinAction pinLabel={title} />
@@ -41,13 +39,9 @@ export function FinancialDocumentTemplate({
         </div>
 
         {sidebar && (
-          <aside className={cn(
-            "flex flex-col overflow-hidden transition-all duration-300 shrink-0 rounded-xl border border-border bg-card shadow-lg",
-            isSidebarOpen ? "opacity-100" : "w-0 opacity-0 border-none p-0 overflow-hidden",
-            isSidebarOpen && "max-lg:absolute max-lg:inset-y-0 max-lg:end-0 max-lg:z-30 max-lg:w-full sm:max-lg:w-[320px] max-lg:shadow-2xl",
-          )} style={{ width: isSidebarOpen ? getSidebarWidth() : '0px', minWidth: isSidebarOpen ? getSidebarWidth() : '0px' }}>
-            <div className="flex-1 overflow-auto">{sidebar}</div>
-          </aside>
+          <TemplateDetailPanel isOpen={isSidebarOpen}>
+            {sidebar}
+          </TemplateDetailPanel>
         )}
       </div>
     </div>
