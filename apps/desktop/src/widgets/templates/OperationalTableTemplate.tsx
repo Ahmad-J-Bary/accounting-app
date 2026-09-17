@@ -3,11 +3,13 @@ import { cn } from "@shared/lib/utils";
 import { PageHeader } from "./PageHeader";
 import { TemplateDetailPanel } from "./TemplateDetailPanel";
 import { useLocalization } from "@app/providers/LocalizationProvider";
+import type { ResponsiveActionItem } from "@widgets/page-header/ResponsiveActions";
 
 interface OperationalTableTemplateProps {
   title: string;
   badge?: ReactNode;
   toolbar?: ReactNode;
+  toolbarActions?: ResponsiveActionItem[];
   filterBar?: ReactNode;
   headerWidgets?: ReactNode;
   tableContent: ReactNode;
@@ -23,6 +25,7 @@ export function OperationalTableTemplate({
   title,
   badge,
   toolbar,
+  toolbarActions,
   filterBar,
   headerWidgets,
   tableContent,
@@ -36,7 +39,14 @@ export function OperationalTableTemplate({
   const { direction } = useLocalization();
   return (
     <div className={cn("flex flex-col h-full w-full bg-muted/30", className)} dir={direction}>
-      <PageHeader title={title} badge={badge} actions={toolbar} pinAction pinLabel={title} />
+      <PageHeader
+        title={title}
+        badge={badge}
+        actions={toolbar}
+        actionItems={toolbarActions}
+        pinAction
+        pinLabel={title}
+      />
 
       <div className="print-clean-parent flex-1 flex overflow-hidden p-2 sm:p-3 md:p-4 gap-2 sm:gap-3 md:gap-4">
         

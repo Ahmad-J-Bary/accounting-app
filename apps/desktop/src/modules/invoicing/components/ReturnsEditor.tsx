@@ -1,7 +1,6 @@
 import { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import { useQueryClient } from '@tanstack/react-query';
 import { SALE_KEYS, PURCHASE_KEYS, invalidateKeys } from "@shared/hooks/queryClient";
-import { Button } from "@shared/ui/button";
 
 import { Save, X, Loader2, Download } from "lucide-react";
 import { toast } from "sonner";
@@ -23,6 +22,7 @@ import { buildInvoiceLineExportColumns } from "../lib/invoice-export-columns";
 import type { GridLine } from "@modules/invoicing/lib/invoiceUtils";
 import type { CustomerDto, SupplierDto, MaterialDto, SalesReturnLineDto, PurchaseReturnLineDto, WarehouseDto, SalesReturnDto, PurchaseReturnDto } from "@erp/shared-types";
 import type { DocumentColumn } from "@widgets/document-shell/GenericDocumentGrid";
+import type { ResponsiveActionItem } from "@widgets/page-header/ResponsiveActions";
 
 interface ReturnsEditorProps {
   returnType: "PurchaseReturn" | "SalesReturn";
@@ -466,7 +466,7 @@ export function ReturnsEditor({ returnType, partyType, parties, materials, wareh
     return parseFloat((party as SupplierDto).credit || "0");
   }, [partyId, parties, isSales]);
 
-  const handleSave = async () => {
+  const handleSave = useCallback(async () => {
     if (!partyId && isSales) { toast.error(t("return.chooseCustomer", { namespace: "invoicing",  })); return; }
     if (!partyId && !isSales) { toast.error(t("return.chooseSupplier", { namespace: "invoicing",  })); return; }
     const validLines = lines.filter(l => l.material_id);
@@ -512,7 +512,22 @@ export function ReturnsEditor({ returnType, partyType, parties, materials, wareh
     } finally {
       setSaving(false);
     }
-  };
+  }, [
+    isSales,
+    lines,
+    onSaved,
+    partyId,
+    partyName,
+    queryClient,
+    returnDate,
+    returnId,
+    returnNumber,
+    settlementCash,
+    settlementMode,
+    t,
+    notes,
+    isPaid,
+  ]);
 
   const editorTitle = readOnly
     ? `${t("return.viewPrefix", { namespace: "invoicing",  })}${returnType === "SalesReturn" ? t("return.salesSheetTitle", { namespace: "invoicing",  }) : t("return.purchaseSheetTitle", { namespace: "invoicing",  })}${returnNumber ? ` - ${returnNumber}` : ""}`
@@ -520,17 +535,47 @@ export function ReturnsEditor({ returnType, partyType, parties, materials, wareh
       ? `${t("return.editPrefix", { namespace: "invoicing",  })}${returnType === "SalesReturn" ? t("return.salesSheetTitle", { namespace: "invoicing",  }) : t("return.purchaseSheetTitle", { namespace: "invoicing",  })}${returnNumber ? ` - ${returnNumber}` : ""}`
       : returnType === "SalesReturn" ? t("return.newSalesReturn", { namespace: "invoicing",  }) : t("return.newPurchaseReturn", { namespace: "invoicing",  });
 
+  const toolbarActions = useMemo<ResponsiveActionItem[]>(() => [
+    {
+      id: "close-editor",
+      label: readOnly ? t("actions.close", { namespace: "invoicing" }) : t("actions.cancel", { namespace: "invoicing" }),
+      icon: X,
+      priority: "secondary",
+      variant: "outline",
+      onClick: onClose,
+    },
+    ...(!readOnly ? [{
+      id: "save-return",
+      label: saving ? t("return.saving", { namespace: "invoicing" }) : t("return.saveReturn", { namespace: "invoicing" }),
+      icon: Save,
+      priority: "primary" as const,
+      loading: saving,
+      onClick: handleSave,
+    }] : []),
+    {
+      id: "export-return",
+      label: t("actions.exportExcel", { namespace: "invoicing" }),
+      icon: Download,
+      priority: "overflow",
+      variant: "outline",
+      onClick: handleExport,
+    },
+  ], [handleExport, handleSave, onClose, readOnly, saving, t]);
+
   if (loadingExisting) {
     return (
       <FinancialDocumentTemplate
         title={editorTitle}
-        toolbar={
-          <div className="flex items-center gap-2">
-            <Button size="sm" variant="outline" onClick={onClose} className="h-9 border-border hover:bg-accent">
-              <X className="w-4 h-4 ml-2" /> {t("actions.cancel", { namespace: "invoicing",  })}
-            </Button>
-          </div>
-        }
+        toolbarActions={[
+          {
+            id: "close-loading",
+            label: t("actions.cancel", { namespace: "invoicing" }),
+            icon: X,
+            priority: "primary",
+            variant: "outline",
+            onClick: onClose,
+          },
+        ]}
         headerFields={<div className="flex items-center gap-2 text-muted-foreground py-8"><Loader2 className="w-5 h-5 animate-spin" /> {t("return.loadingReturn", { namespace: "invoicing",  })}</div>}
         lineItemsGrid={null}
         summaryPanel={null}
@@ -542,21 +587,7 @@ export function ReturnsEditor({ returnType, partyType, parties, materials, wareh
   return (
     <FinancialDocumentTemplate
       title={editorTitle}
-      toolbar={
-        <div className="flex items-center gap-2">
-          <Button size="sm" variant="outline" onClick={onClose} className="h-9 border-border hover:bg-accent">
-            <X className="w-4 h-4 ml-2" /> {readOnly ? t("actions.close", { namespace: "invoicing",  }) : t("actions.cancel", { namespace: "invoicing",  })}
-          </Button>
-          {!readOnly && (
-            <Button size="sm" onClick={handleSave} disabled={saving} className="h-9 bg-primary hover:bg-primary/80 shadow-lg shadow-primary/20">
-              <Save className="w-4 h-4 ml-2" /> {saving ? t("return.saving", { namespace: "invoicing",  }) : t("return.saveReturn", { namespace: "invoicing",  })}
-            </Button>
-          )}
-          <Button variant="outline" size="sm" onClick={handleExport} className="h-9 border-border hover:bg-accent">
-            <Download className="w-4 h-4 ml-2" /> {t("actions.exportExcel", { namespace: "invoicing",  })}
-          </Button>
-        </div>
-      }
+      toolbarActions={toolbarActions}
       headerFields={
         <>
           <HeaderField label={t("return.returnDateLabel", { namespace: "invoicing",  })} type="date" value={returnDate} onChange={setReturnDate} disabled={readOnly} inputClassName="font-bold" />

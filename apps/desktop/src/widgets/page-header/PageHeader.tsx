@@ -1,6 +1,10 @@
 import { ChevronLeft } from "lucide-react";
 import { Link } from "react-router-dom";
 import { SidebarAddAction } from "@shared/components/SidebarAddAction";
+import {
+  ResponsiveActions,
+  type ResponsiveActionItem,
+} from "./ResponsiveActions";
 
 interface Crumb {
   label: string;
@@ -13,9 +17,11 @@ interface PageHeaderProps {
   subtitle?: string;
   breadcrumbs?: Crumb[];
   actions?: React.ReactNode;
+  actionItems?: ResponsiveActionItem[];
 }
 
-export function PageHeader({ title, subtitle, breadcrumbs, actions }: PageHeaderProps) {
+export function PageHeader({ title, subtitle, breadcrumbs, actions, actionItems }: PageHeaderProps) {
+  const hasResponsiveActions = Boolean(actionItems?.length);
   return (
     <div className="mb-6">
       {breadcrumbs && breadcrumbs.length > 0 && (
@@ -42,7 +48,15 @@ export function PageHeader({ title, subtitle, breadcrumbs, actions }: PageHeader
           </div>
           {subtitle && <p className="text-sm text-muted-foreground mt-1">{subtitle}</p>}
         </div>
-        {actions && <div className="flex items-center gap-2 flex-wrap">{actions}</div>}
+        {(hasResponsiveActions || actions) && (
+          <div className="min-w-[12rem] max-w-full">
+            {hasResponsiveActions ? (
+              <ResponsiveActions actions={actionItems ?? []} />
+            ) : (
+              <div className="flex items-center gap-2 flex-wrap">{actions}</div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

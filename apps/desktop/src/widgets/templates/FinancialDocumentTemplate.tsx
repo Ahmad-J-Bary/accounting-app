@@ -3,12 +3,14 @@ import { cn } from "@shared/lib/utils";
 import { PageHeader } from "./PageHeader";
 import { TemplateDetailPanel } from "./TemplateDetailPanel";
 import { useLocalization } from "@app/providers/LocalizationProvider";
+import type { ResponsiveActionItem } from "@widgets/page-header/ResponsiveActions";
 
 interface FinancialDocumentTemplateProps {
   title: string;
   subtitle?: string;
   statusBadge?: ReactNode;
   toolbar?: ReactNode;
+  toolbarActions?: ResponsiveActionItem[];
   headerFields: ReactNode;
   lineItemsGrid: ReactNode;
   summaryPanel: ReactNode;
@@ -19,13 +21,21 @@ interface FinancialDocumentTemplateProps {
 }
 
 export function FinancialDocumentTemplate({
-  title, subtitle, statusBadge, toolbar, headerFields,
+  title, subtitle, statusBadge, toolbar, toolbarActions, headerFields,
   lineItemsGrid, summaryPanel, sidebar, isSidebarOpen = false, footer, className
 }: FinancialDocumentTemplateProps) {
   const { direction } = useLocalization();
   return (
     <div className={cn("flex flex-col h-full w-full bg-muted/30", className)} dir={direction}>
-      <PageHeader title={title} subtitle={subtitle} badge={statusBadge} actions={toolbar} pinAction pinLabel={title} />
+      <PageHeader
+        title={title}
+        subtitle={subtitle}
+        badge={statusBadge}
+        actions={toolbar}
+        actionItems={toolbarActions}
+        pinAction
+        pinLabel={title}
+      />
       <div className="flex-1 flex overflow-hidden p-1 sm:p-1.5 gap-1 sm:gap-1.5 md:gap-2">
         <div className="flex-1 flex flex-col min-w-0 gap-1.5 sm:gap-2 overflow-hidden">
           <div className="bg-card border border-border rounded-lg shadow-sm p-1.5 sm:p-2 shrink-0 border-t-2 border-t-primary/5">

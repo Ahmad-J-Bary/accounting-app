@@ -3,11 +3,13 @@ import { cn } from "@shared/lib/utils";
 import { PageHeader } from "./PageHeader";
 import { TemplateDetailPanel } from "./TemplateDetailPanel";
 import { useLocalization } from "@app/providers/LocalizationProvider";
+import type { ResponsiveActionItem } from "@widgets/page-header/ResponsiveActions";
 
 interface HierarchicalTreeTemplateProps {
   title: string;
   badge?: ReactNode;
   toolbar?: ReactNode;
+  toolbarActions?: ResponsiveActionItem[];
   treeContent: ReactNode;
   treeHeaderTitle?: string;
   treeHeaderActions?: ReactNode;
@@ -22,6 +24,7 @@ export function HierarchicalTreeTemplate({
   title,
   badge,
   toolbar,
+  toolbarActions,
   treeContent,
   treeHeaderTitle,
   treeHeaderActions,
@@ -35,7 +38,14 @@ export function HierarchicalTreeTemplate({
   const resolvedTreeHeaderTitle = treeHeaderTitle ?? t('labels.hierarchicalTree');
   return (
     <div className={cn("flex h-full w-full flex-col bg-muted/30", className)} dir={direction}>
-      <PageHeader title={title} badge={badge} actions={toolbar} pinAction pinLabel={title} />
+      <PageHeader
+        title={title}
+        badge={badge}
+        actions={toolbar}
+        actionItems={toolbarActions}
+        pinAction
+        pinLabel={title}
+      />
 
       <div className="flex-1 flex overflow-hidden p-2 sm:p-3 md:p-4 gap-2 sm:gap-3 md:gap-4">
         {/* Tree Column */}

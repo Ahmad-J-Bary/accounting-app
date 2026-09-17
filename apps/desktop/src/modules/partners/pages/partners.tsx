@@ -1,15 +1,16 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
+  Plus,
   TrendingUp,
   PieChart as PieChartIcon,
+  Coins,
 } from "lucide-react";
 import { partnerService, type PartnerDto, type PartnerRequest } from '@modules/partners/api/partnerService';
 import { settingsService } from '@modules/core/api/settingsService';
 
 import { OperationalTableTemplate } from '@widgets/templates/OperationalTableTemplate';
 import { PartnerTable } from '../components/PartnerTable';
-import { PartnersToolbar } from '../components/PartnersToolbar';
 import { PartnersSidePanel } from '../components/PartnersSidePanel';
 import { ChartCard } from '@modules/partners/components/ChartCard';
 import { CapitalSourceDialog, type CapitalSource } from '../components/CapitalSourceDialog';
@@ -24,6 +25,7 @@ import { usePartnerRatios } from '@modules/partners/hooks/usePartnerRatios';
 import { queryClient, PARTNER_MUTATION_KEYS, invalidateKeys } from "@shared/hooks/queryClient";
 import { START_MODE_EXISTING } from "@modules/opening-balance/lib/wizard-types";
 import { useLocalization } from "@app/providers/LocalizationProvider";
+import type { ResponsiveActionItem } from "@widgets/page-header/ResponsiveActions";
 
 export default function Partners() {
   const { t } = useLocalization();
@@ -183,34 +185,93 @@ export default function Partners() {
 
   const isLoading = loading;
 
+  const toolbarActions = useMemo<ResponsiveActionItem[]>(() => [
+    {
+      id: "add-partner",
+      label: t("toolbar.addPartner", { namespace: "partners" }),
+      icon: Plus,
+      priority: "primary",
+      onClick: () => {
+        setEditPartner(null);
+        setActivePanel("edit");
+        setSelectedId("new");
+      },
+    },
+    {
+      id: "drawings-ledger",
+      label: t("toolbar.drawings", { namespace: "partners" }),
+      icon: TrendingUp,
+      priority: "secondary",
+      variant: "outline",
+      disabled: !selectedPartner,
+      onClick: () => {
+        if (!selectedPartner?.drawings_account_id) {
+          toast.error(t("toast.noDrawingsAccount", { namespace: "partners" }));
+          return;
+        }
+        openTab({
+          id: `ledger-${selectedPartner.drawings_account_id}`,
+          title: t("page.ledgerTab", {
+            namespace: "partners",
+            vars: { name: selectedPartner.name },
+          }),
+          path: `/accounting/account-ledger/${selectedPartner.drawings_account_id}`,
+          closable: true,
+        });
+      },
+    },
+    {
+      id: "drawings-voucher",
+      label: t("toolbar.drawingsVoucher", { namespace: "partners" }),
+      icon: PieChartIcon,
+      priority: "secondary",
+      variant: "outline",
+      disabled: !selectedPartner,
+      onClick: () => {
+        if (!selectedPartner?.drawings_account_id) {
+          toast.error(t("toast.noDrawingsAccount", { namespace: "partners" }));
+          return;
+        }
+        setActivePanel("drawings");
+      },
+    },
+    {
+      id: "partner-statement",
+      label: t("toolbar.statement", { namespace: "partners" }),
+      icon: TrendingUp,
+      priority: "tertiary",
+      variant: "outline",
+      onClick: () =>
+        openTab({
+          id: "partner-rights",
+          title: t("page.statementTab", { namespace: "partners" }),
+          path: "/accounting/reports/partners",
+          closable: true,
+        }),
+    },
+    {
+      id: "profit-distribution",
+      label: t("toolbar.profitDistribution", { namespace: "partners" }),
+      icon: Coins,
+      priority: "tertiary",
+      variant: "outline",
+      onClick: () => setActivePanel("profit-distribution"),
+    },
+    {
+      id: "export-partners",
+      label: t("toolbar.exportExcel", { namespace: "partners" }),
+      icon: TrendingUp,
+      priority: "overflow",
+      variant: "outline",
+      onClick: () => toast.info(t("toolbar.exporting", { namespace: "partners" })),
+    },
+  ], [openTab, selectedPartner, t]);
+
   return (
     <>
       <OperationalTableTemplate
       title={t("page.title", { namespace: "partners",  })}
-      toolbar={
-        <PartnersToolbar
-          selectedPartner={selectedPartner}
-          onOpenDrawingsLedger={(_id, accountId, name) =>
-            openTab({
-              id: `ledger-${accountId}`,
-              title: t("page.ledgerTab", { namespace: "partners", vars: { name },  }),
-              path: `/accounting/account-ledger/${accountId}`,
-              closable: true,
-            })
-          }
-          onOpenDrawingsForm={() => setActivePanel("drawings")}
-          onAddPartner={() => { setEditPartner(null); setActivePanel("edit"); setSelectedId("new"); }}
-          onOpenPartnerStatement={() =>
-            openTab({
-              id: "partner-rights",
-              title: t("page.statementTab", { namespace: "partners",  }),
-              path: "/accounting/reports/partners",
-              closable: true,
-            })
-          }
-          onOpenProfitDistribution={() => setActivePanel("profit-distribution")}
-        />
-      }
+      toolbarActions={toolbarActions}
 
       tableContent={
         <PartnerTable

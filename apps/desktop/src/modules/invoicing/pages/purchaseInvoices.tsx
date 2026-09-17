@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useLocation } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
-import { DocumentToolbar } from "@widgets/document-shell/DocumentToolbar";
+import { buildDocumentToolbarActions } from "@widgets/document-shell/documentToolbarActions";
 import type { SupplierDto, CategoryDto, CreateMaterialRequest, UpdateMaterialRequest, InvoiceDto } from "@erp/shared-types";
 import { materialService } from "@modules/inventory/api/materialService";
 import { categoryService } from "@modules/inventory/api/categoryService";
@@ -254,27 +254,31 @@ export default function PurchaseInvoices() {
       <FinancialDocumentTemplate
         title={t("invoice.purchaseTitle", { namespace: "invoicing",  })}
         statusBadge={<DocumentStatusBadge status={headerState.status} />}
-        toolbar={
-          <DocumentToolbar
-            status={headerState.status}
-            isReadOnly={isReadOnly}
-            saving={saving}
-            onNewMaterial={() => setMaterialFormOpen(true)}
-            onEdit={isReadOnly && headerState.id ? () => {
+        toolbarActions={buildDocumentToolbarActions(
+          {
+            status: headerState.status,
+            isReadOnly,
+            saving,
+            onNewMaterial: () => setMaterialFormOpen(true),
+            onEdit: isReadOnly && headerState.id ? () => {
               closeTab(activeTabId);
               openTab({
                 id: `/purchase-invoices/${headerState.id}`,
-                title: t("invoice.editPurchaseTabTitle", { namespace: "invoicing", vars: { number: headerState.invoice_number },  }),
+                title: t("invoice.editPurchaseTabTitle", {
+                  namespace: "invoicing",
+                  vars: { number: headerState.invoice_number },
+                }),
                 path: `/purchase-invoices/${headerState.id}`,
                 closable: true,
               });
-            } : undefined}
-            onSaveDraft={() => handleSave(false)}
-            onSaveAndPost={() => handleSave(true)}
-            onReopen={handleReopen}
-            onExport={handleExport}
-          />
-        }
+            } : undefined,
+            onSaveDraft: () => handleSave(false),
+            onSaveAndPost: () => handleSave(true),
+            onReopen: handleReopen,
+            onExport: handleExport,
+          },
+          t,
+        )}
         headerFields={
           <>
             <HeaderField label={t("document.invoiceNumber", { namespace: "invoicing",  })} value={headerState.invoice_number} readOnly inputClassName="font-mono font-bold" />

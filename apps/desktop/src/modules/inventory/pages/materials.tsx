@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { Button } from "@shared/ui/button";
 import { Plus, Layers, ShoppingCart, TrendingUp, AlertTriangle, Undo2, ArrowRightLeft, Scale, Download } from "lucide-react";
 import { materialService } from '@modules/inventory/api/materialService';
 import { categoryService } from '@modules/inventory/api/categoryService';
@@ -24,6 +23,7 @@ import { DamagedForm } from '@modules/inventory/components/DamagedForm';
 import { TransferForm } from '@modules/inventory/components/TransferForm';
 import { ReturnFromMaterialPanel } from '@modules/inventory/components/ReturnFromMaterialPanel';
 import { AdjustmentForm } from '@modules/inventory/components/AdjustmentForm';
+import type { ResponsiveActionItem } from "@widgets/page-header/ResponsiveActions";
 import { useTabs } from "@app/providers/TabContext";
 import { buildStockByWarehouse } from '@modules/inventory/lib/stockUtils';
 import { QUERY_KEYS, queryClient, INVENTORY_MUTATION_KEYS, invalidateKeys } from "@shared/hooks/queryClient";
@@ -396,7 +396,7 @@ export default function Materials() {
     });
   }, [materials, currencies, currencyMode, baseCurrency, rateMap, categories, formatAmount, visibleColumnIds, rawPriceBase, extraCostBase, totalReceived, exportData, hasSecondaryCurrencies, cs, ratesSheet, t]);
 
-  const handleOpenReturn = () => {
+  const handleOpenReturn = useCallback(() => {
     if (!selectedMaterial) return;
     setIsReturnOpen(true);
     setIsFormOpen(false);
@@ -404,158 +404,161 @@ export default function Materials() {
     setManagingUnitsMaterial(null);
     setTransferFormOpen(false);
     setShowUnitsPanel(false);
-  };
+  }, [selectedMaterial, setIsFormOpen]);
+
+  const toolbarActions = useMemo<ResponsiveActionItem[]>(() => [
+    {
+      id: "new-material",
+      label: t("materials.new", { namespace: "inventory" }),
+      icon: Plus,
+      priority: "primary",
+      onClick: handleOpenAdd,
+    },
+    {
+      id: "material-lots",
+      label: t("materials.lots", { namespace: "inventory" }),
+      icon: Layers,
+      priority: "secondary",
+      variant: "outline",
+      disabled: !selectedId,
+      onClick: () => {
+        if (!selectedId) return;
+        setLotsPanelActive(true);
+        setIsFormOpen(false);
+        setShowDamagedPanel(false);
+        setManagingUnitsMaterial(null);
+        setTransferFormOpen(false);
+        setIsReturnOpen(false);
+        setShowUnitsPanel(false);
+        setShowAdjustmentPanel(false);
+      },
+    },
+    {
+      id: "transfer-stock",
+      label: t("materials.transferStock", { namespace: "inventory" }),
+      icon: ArrowRightLeft,
+      priority: "secondary",
+      variant: "outline",
+      disabled: !selectedId,
+      onClick: () => handleOpenTransfer({}),
+    },
+    {
+      id: "material-purchases",
+      label: t("materials.purchasesAction", { namespace: "inventory" }),
+      icon: ShoppingCart,
+      priority: "secondary",
+      variant: "outline",
+      disabled: !selectedId,
+      onClick: () => {
+        if (!selectedId || !selectedMaterial) return;
+        openTab({
+          id: `purchases-${selectedId}`,
+          title: t("materials.purchasesTabTitle", {
+            namespace: "inventory",
+            vars: { name: selectedMaterial.name },
+          }),
+          path: `/inventory/purchases/${selectedId}`,
+          closable: true,
+        });
+      },
+    },
+    {
+      id: "material-sales",
+      label: t("materials.salesAction", { namespace: "inventory" }),
+      icon: TrendingUp,
+      priority: "tertiary",
+      variant: "outline",
+      disabled: !selectedId,
+      onClick: () => {
+        if (!selectedId || !selectedMaterial) return;
+        openTab({
+          id: `sales-${selectedId}`,
+          title: t("materials.salesTabTitle", {
+            namespace: "inventory",
+            vars: { name: selectedMaterial.name },
+          }),
+          path: `/inventory/sales/${selectedId}`,
+          closable: true,
+        });
+      },
+    },
+    {
+      id: "material-return",
+      label: t("materials.return", { namespace: "inventory" }),
+      icon: Undo2,
+      priority: "tertiary",
+      variant: "outline",
+      disabled: !selectedId,
+      onClick: handleOpenReturn,
+    },
+    {
+      id: "material-units",
+      label: t("materials.units", { namespace: "inventory" }),
+      icon: Layers,
+      priority: "tertiary",
+      variant: "outline",
+      disabled: !selectedId,
+      onClick: () => {
+        setManagingUnitsMaterial(selectedMaterial);
+        setShowUnitsPanel(true);
+      },
+    },
+    {
+      id: "register-damaged",
+      label: t("damaged.register", { namespace: "inventory" }),
+      icon: AlertTriangle,
+      priority: "overflow",
+      variant: "outline",
+      destructive: true,
+      disabled: !selectedId,
+      onClick: () => {
+        setShowDamagedPanel(true);
+        setIsFormOpen(false);
+        setManagingUnitsMaterial(null);
+      },
+    },
+    {
+      id: "stock-adjustment",
+      label: t("movementTypes.Adjustment", { namespace: "inventory" }),
+      icon: Scale,
+      priority: "overflow",
+      variant: "outline",
+      disabled: !selectedId,
+      onClick: () => {
+        setShowAdjustmentPanel(true);
+        setIsFormOpen(false);
+        setManagingUnitsMaterial(null);
+        setTransferFormOpen(false);
+        setIsReturnOpen(false);
+        setShowDamagedPanel(false);
+        setShowUnitsPanel(false);
+      },
+    },
+    {
+      id: "export-materials",
+      label: t("labels.exportExcel", { namespace: "inventory" }),
+      icon: Download,
+      priority: "overflow",
+      variant: "outline",
+      onClick: handleExport,
+    },
+  ], [
+    handleExport,
+    handleOpenAdd,
+    handleOpenReturn,
+    handleOpenTransfer,
+    openTab,
+    selectedId,
+    selectedMaterial,
+    setIsFormOpen,
+    t,
+  ]);
 
   return (
     <>
       <OperationalTableTemplate
         title={t("materials.title", { namespace: "inventory",  })}
-        toolbar={
-          <>
-            <Button size="sm" onClick={handleOpenAdd} className="bg-primary hover:bg-primary/80 shadow-lg shadow-primary/20">
-              <Plus className="w-4 h-4 ml-2" /> {t("materials.new", { namespace: "inventory",  })}
-            </Button>
-
-            <Button
-              size="sm"
-              variant="outline"
-              className="bg-white border-muted text-foreground hover:bg-muted"
-              disabled={!selectedId}
-              onClick={() => {
-                if (selectedId) {
-                  setLotsPanelActive(true);
-                  setIsFormOpen(false);
-                  setShowDamagedPanel(false);
-                  setManagingUnitsMaterial(null);
-                  setTransferFormOpen(false);
-                  setIsReturnOpen(false);
-                  setShowUnitsPanel(false);
-                  setShowAdjustmentPanel(false);
-                }
-              }}
-            >
-              <Layers className="w-4 h-4 ml-2 text-indigo-600" />
-              {t("materials.lots", { namespace: "inventory",  })}
-            </Button>
-
-            <div className="h-6 w-px bg-muted mx-1" />
-
-            <Button
-              size="sm"
-              variant="outline"
-              className="bg-white border-amber-200 text-amber-700 hover:bg-amber-50"
-              disabled={!selectedId}
-              onClick={() => handleOpenTransfer({})}
-            >
-              <ArrowRightLeft className="w-4 h-4 ml-2 text-amber-600" />
-              {t("materials.transferStock", { namespace: "inventory",  })}
-            </Button>
-
-            <div className="h-6 w-px bg-muted mx-1" />
-
-            <Button
-              size="sm"
-              variant="outline"
-              className="bg-white border-muted text-foreground hover:bg-muted"
-              disabled={!selectedId}
-              onClick={() => selectedMaterial && openTab({
-                id: `purchases-${selectedId}`,
-                title: t("materials.purchasesTabTitle", { namespace: "inventory", vars: { name: selectedMaterial.name },  }),
-                path: `/inventory/purchases/${selectedId}`,
-                closable: true,
-              })}
-            >
-              <ShoppingCart className="w-4 h-4 ml-2 text-success" />
-              {t("materials.purchasesAction", { namespace: "inventory",  })}
-            </Button>
-
-            <Button
-              size="sm"
-              variant="outline"
-              className="bg-white border-muted text-foreground hover:bg-muted"
-              disabled={!selectedId}
-              onClick={() => selectedMaterial && openTab({
-                id: `sales-${selectedId}`,
-                title: t("materials.salesTabTitle", { namespace: "inventory", vars: { name: selectedMaterial.name },  }),
-                path: `/inventory/sales/${selectedId}`,
-                closable: true,
-              })}
-            >
-              <TrendingUp className="w-4 h-4 ml-2 text-primary" />
-              {t("materials.salesAction", { namespace: "inventory",  })}
-            </Button>
-
-            <Button
-              size="sm"
-              variant="outline"
-              className="bg-white border-muted text-foreground hover:bg-muted"
-              disabled={!selectedId}
-              onClick={handleOpenReturn}
-            >
-              <Undo2 className="w-4 h-4 ml-2 text-amber-500" />
-              {t("materials.return", { namespace: "inventory",  })}
-            </Button>
-
-            <Button
-              size="sm"
-              variant="outline"
-              className="bg-white border-muted text-foreground hover:bg-muted"
-              disabled={!selectedId}
-              onClick={() => {
-                setManagingUnitsMaterial(selectedMaterial);
-                setShowUnitsPanel(true);
-              }}
-            >
-              <Layers className="w-4 h-4 ml-2 text-purple-600" />
-              {t("materials.units", { namespace: "inventory",  })}
-            </Button>
-
-            <Button
-              size="sm"
-              variant="outline"
-              className="bg-white border-destructive/20 text-destructive hover:bg-destructive/10"
-              disabled={!selectedId}
-              onClick={() => {
-                setShowDamagedPanel(true);
-                setIsFormOpen(false);
-                setManagingUnitsMaterial(null);
-              }}
-            >
-              <AlertTriangle className="w-4 h-4 ml-2 text-destructive" />
-              {t("damaged.register", { namespace: "inventory",  })}
-            </Button>
-
-            <Button
-              size="sm"
-              variant="outline"
-              className="bg-white border-teal-200 text-teal-700 hover:bg-teal-50"
-              disabled={!selectedId}
-              onClick={() => {
-                setShowAdjustmentPanel(true);
-                setIsFormOpen(false);
-                setManagingUnitsMaterial(null);
-                setTransferFormOpen(false);
-                setIsReturnOpen(false);
-                setShowDamagedPanel(false);
-                setShowUnitsPanel(false);
-              }}
-            >
-              <Scale className="w-4 h-4 ml-2 text-teal-600" />
-              {t("movementTypes.Adjustment", { namespace: "inventory",  })}
-            </Button>
-
-            <div className="h-6 w-px bg-muted mx-1" />
-
-            <Button
-              size="sm"
-              variant="outline"
-              className="bg-white border-muted text-foreground hover:bg-muted"
-              onClick={handleExport}
-            >
-              <Download className="w-4 h-4 ml-2 text-muted-foreground" /> {t("labels.exportExcel", { namespace: "inventory",  })}
-            </Button>
-          </>
-        }
+        toolbarActions={toolbarActions}
 
         tableContent={
           <MaterialTable 

@@ -9,7 +9,6 @@ import type { CreateMaterialRequest, UpdateMaterialRequest } from "@erp/shared-t
 
 // Refactored Components & Hooks
 import { HierarchicalTreeTemplate } from '@widgets/templates/HierarchicalTreeTemplate';
-import { Button } from "@shared/ui/button";
 import { ConfirmDialog } from "@shared/ui/confirm-dialog";
 import { CategoryTreeNodeItem } from "./categories/CategoryTreeNodeItem";
 import { CategoryForm } from "./categories/CategoryForm";
@@ -23,6 +22,7 @@ import { useCategories } from "@shared/hooks/queries/useCategoryQueries";
 import { useMaterials } from "@shared/hooks/queries/useMaterialQueries";
 import { QUERY_KEYS, INVENTORY_MUTATION_KEYS, invalidateKeys } from "@shared/hooks/queryClient";
 import { useLocalization } from "@app/providers/LocalizationProvider";
+import type { ResponsiveActionItem } from "@widgets/page-header/ResponsiveActions";
 import {
   findGeneralSubcategory,
   isGeneralSubcategory,
@@ -468,40 +468,66 @@ export default function Categories() {
     }
   };
 
+  const toolbarActions = useMemo<ResponsiveActionItem[]>(() => {
+    const actions: ResponsiveActionItem[] = [];
+
+    if (isMaterialSelected) {
+      actions.push({
+        id: "manage-units",
+        label: t("materials.units", { namespace: "inventory" }),
+        icon: Scale,
+        priority: "primary",
+        onClick: handleOpenUnits,
+      });
+    } else {
+      actions.push({
+        id: "create",
+        label: newButtonLabel,
+        icon: Plus,
+        priority: "primary",
+        onClick: handleOpenNew,
+      });
+    }
+
+    actions.push(
+      {
+        id: "edit",
+        label: t("actions.edit", { namespace: "common" }),
+        icon: Edit,
+        priority: "secondary",
+        variant: "outline",
+        disabled: !canOperate,
+        onClick: handleOpenEdit,
+      },
+      {
+        id: "delete",
+        label: t("actions.delete", { namespace: "common" }),
+        icon: Trash2,
+        priority: "overflow",
+        variant: "outline",
+        destructive: true,
+        disabled: !canDelete,
+        onClick: handleDeleteRequest,
+      },
+    );
+
+    return actions;
+  }, [
+    canDelete,
+    canOperate,
+    handleDeleteRequest,
+    handleOpenEdit,
+    handleOpenNew,
+    handleOpenUnits,
+    isMaterialSelected,
+    newButtonLabel,
+    t,
+  ]);
+
   return (
     <HierarchicalTreeTemplate
       title={t("categories.title", { namespace: "inventory",  })}
-      toolbar={
-        <>
-          {isMaterialSelected ? (
-            <Button size="sm" onClick={handleOpenUnits} className="bg-primary hover:bg-primary/80 shadow-lg shadow-primary/20">
-              <Scale className="w-4 h-4 ml-2" /> {t("materials.units", { namespace: "inventory",  })}
-            </Button>
-          ) : (
-            <Button size="sm" onClick={handleOpenNew} className="bg-primary hover:bg-primary/80 shadow-lg shadow-primary/20">
-              <Plus className="w-4 h-4 ml-2" /> {newButtonLabel}
-            </Button>
-          )}
-          <Button
-            size="sm"
-            variant="outline"
-            className="bg-card border-border text-foreground hover:bg-accent"
-            disabled={!canOperate}
-            onClick={handleOpenEdit}
-          >
-            <Edit className="w-4 h-4 ml-2" /> {t("actions.edit", { namespace: "common",  })}
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            className="bg-card border-destructive/20 text-destructive hover:bg-destructive/10"
-            disabled={!canDelete}
-            onClick={handleDeleteRequest}
-          >
-            <Trash2 className="w-4 h-4 ml-2 text-destructive" /> {t("actions.delete", { namespace: "common",  })}
-          </Button>
-        </>
-      }
+      toolbarActions={toolbarActions}
       treeHeaderActions={
         <>
           <button

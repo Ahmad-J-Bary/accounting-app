@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { useParams, Navigate } from "react-router-dom";
 import { useTabs } from "@app/providers/TabContext";
 import { useTabLocation } from "@app/providers/TabLocationContext";
-import { DocumentToolbar } from "@widgets/document-shell/DocumentToolbar";
+import { buildDocumentToolbarActions } from "@widgets/document-shell/documentToolbarActions";
 import { invoiceService } from "@modules/invoicing/api/invoiceService";
 import { materialService } from "@modules/inventory/api/materialService";
 import { categoryService } from "@modules/inventory/api/categoryService";
@@ -406,13 +406,13 @@ export default function OpeningBalance() {
     <FinancialDocumentTemplate
       title={t("openingBalance.title", { namespace: "accounting",  })}
       statusBadge={<DocumentStatusBadge status={header.status} />}
-      toolbar={
-        <DocumentToolbar
-          status={header.status}
-          isReadOnly={isReadOnly}
-          saving={saving}
-          onNewMaterial={() => setMaterialFormOpen(true)}
-          onEdit={isReadOnly && header.id ? () => {
+      toolbarActions={buildDocumentToolbarActions(
+        {
+          status: header.status,
+          isReadOnly,
+          saving,
+          onNewMaterial: () => setMaterialFormOpen(true),
+          onEdit: isReadOnly && header.id ? () => {
             closeTab(activeTabId);
             openTab({
               id: `/opening-balance/${header.id}`,
@@ -420,14 +420,15 @@ export default function OpeningBalance() {
               path: `/opening-balance/${header.id}`,
               closable: true,
             });
-          } : undefined}
-          onSaveDraft={() => handleSave(false)}
-          onSaveAndPost={() => handleSave(true)}
-          onReopen={handleReopen}
-          onExport={handleExport}
-          saveAndPostLabel={t("openingBalance.saveAndPostLabel", { namespace: "accounting",  })}
-        />
-      }
+          } : undefined,
+          onSaveDraft: () => handleSave(false),
+          onSaveAndPost: () => handleSave(true),
+          onReopen: handleReopen,
+          onExport: handleExport,
+          saveAndPostLabel: t("openingBalance.saveAndPostLabel", { namespace: "accounting",  }),
+        },
+        t,
+      )}
       headerFields={
         <>
           <HeaderField label={t("openingBalance.entryNumber", { namespace: "accounting",  })} value={formatNumber(parseInt(header.docNumber) || 0)} readOnly inputClassName="font-mono font-bold" />
