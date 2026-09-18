@@ -270,18 +270,31 @@ export function UnifiedTable<T>({
     [renderColumns],
   );
 
-  // ── Row cell style — centered, no ellipsis. The grid column widens to
-  //    fit the content; neighboring columns absorb the remaining change
-  //    so total width stays constant.
-  const getCellStyle = (): React.CSSProperties => ({
-    minWidth: 0,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    textAlign: "center",
-    fontSize: `${settings.fontSize}px`,
-    fontFamily: settings.fontFamily,
-  });
+  // ── Row cell style — respects col.align (start/center/end). The grid
+  //    column widens to fit the content; neighboring columns absorb the
+  //    remaining change so total width stays constant.
+  const getCellStyle = (col?: UnifiedColumn<T>): React.CSSProperties => {
+    let justifyContent: React.CSSProperties["justifyContent"] = "center";
+    let textAlign: React.CSSProperties["textAlign"] = "center";
+
+    if (col?.align === "left") {
+      justifyContent = "flex-start";
+      textAlign = "start";
+    } else if (col?.align === "right") {
+      justifyContent = "flex-end";
+      textAlign = "end";
+    }
+
+    return {
+      minWidth: 0,
+      display: "flex",
+      alignItems: "center",
+      justifyContent,
+      textAlign,
+      fontSize: `${settings.fontSize}px`,
+      fontFamily: settings.fontFamily,
+    };
+  };
 
   // ── Row renderer ──────────────────────────────────────────────────────────
   const renderRows = () => {
@@ -303,10 +316,10 @@ export function UnifiedTable<T>({
                 className={cn(
                   "h-3.5 rounded",
                   col.align === "left"
-                    ? "ms-auto me-0 w-3/4"
+                    ? "ms-0 me-auto w-3/4"
                     : col.align === "center"
                     ? "mx-auto w-1/2"
-                    : "me-auto ms-0 w-3/4",
+                    : "ms-auto me-0 w-3/4",
                 )}
               />
             </div>
@@ -351,9 +364,10 @@ export function UnifiedTable<T>({
                   getDensityPadding(),
                   cellBorderClass,
                   "text-muted-foreground transition-colors group-hover:text-foreground",
+                  col.align === "right" && "tabular-nums",
                   col.className,
                 )}
-                style={getCellStyle()}
+                style={getCellStyle(col)}
               >
                 {typeof col.accessor === "function"
                   ? col.accessor(row, rowIdx)
@@ -458,7 +472,7 @@ export function UnifiedTable<T>({
 
       {/* Pagination – outside scroll, fixed at bottom */}
       {pagination && settings.showPagination && (
-        <div className="shrink-0 border-t border-slate-100 bg-slate-50/30 px-4 py-2">
+        <div className="shrink-0 border-t border-border bg-card/60 px-4 py-2">
           <TablePagination
             currentPage={pagination.currentPage}
             totalPages={pagination.totalPages}

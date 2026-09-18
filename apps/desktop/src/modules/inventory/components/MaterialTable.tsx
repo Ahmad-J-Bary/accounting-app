@@ -246,13 +246,15 @@ export function MaterialTable({
         header: t("materials.columns.code", { namespace: "inventory" }),
         label: t("materials.columns.code", { namespace: "inventory" }),
         accessor: (m) => m.code || "",
-        className: "font-black text-foreground text-center"
+        align: "center",
+        className: "font-black text-foreground"
       },
       {
         id: "barcode",
         header: t("materials.columns.barcode", { namespace: "inventory" }),
         label: t("materials.columns.barcode", { namespace: "inventory" }),
         accessor: (m) => m.barcode || "",
+        align: "center",
         className: "font-mono font-medium text-muted-foreground"
       },
       {
@@ -260,6 +262,7 @@ export function MaterialTable({
         header: t("materials.columns.materialName", { namespace: "inventory" }),
         label: t("materials.columns.materialName", { namespace: "inventory" }),
         accessor: (m) => m.name,
+        align: "left",
         className: "font-bold text-foreground"
       },
       {
@@ -267,6 +270,7 @@ export function MaterialTable({
         header: t("materials.columns.nameEn", { namespace: "inventory" }),
         label: t("materials.columns.nameEn", { namespace: "inventory" }),
         accessor: (m) => m.name_en || "",
+        align: "left",
         className: "text-muted-foreground italic"
       },
       {
@@ -309,6 +313,7 @@ export function MaterialTable({
           const raw = rawPriceBase(m);
           return raw > 0 ? formatAmount(raw, { currencyCode: curr.code }) : "";
         },
+        align: "right",
         className: isBase
           ? "tabular-nums font-black text-foreground"
           : "tabular-nums font-medium text-muted-foreground"
@@ -385,6 +390,7 @@ export function MaterialTable({
       header: t("materials.columns.totalReceived", { namespace: "inventory" }),
       label: t("materials.columns.totalReceived", { namespace: "inventory" }),
       accessor: (m) => toLocalString(totalReceived(m)),
+      align: "right",
       className: "tabular-nums text-success font-bold"
     });
 
@@ -393,6 +399,7 @@ export function MaterialTable({
       header: t("materials.columns.totalSold", { namespace: "inventory" }),
       label: t("materials.columns.totalSold", { namespace: "inventory" }),
       accessor: (m) => toLocalString(parseFloat(m.total_sold || "0")),
+      align: "right",
       className: "tabular-nums text-primary font-bold"
     });
 
@@ -401,6 +408,7 @@ export function MaterialTable({
       header: t("materials.columns.totalDamaged", { namespace: "inventory" }),
       label: t("materials.columns.totalDamaged", { namespace: "inventory" }),
       accessor: (m) => toLocalString(parseFloat(m.total_damaged || "0")),
+      align: "right",
       className: "tabular-nums text-destructive font-bold"
     });
 
@@ -409,6 +417,7 @@ export function MaterialTable({
       header: t("materials.columns.totalAvailable", { namespace: "inventory" }),
       label: t("materials.columns.totalAvailable", { namespace: "inventory" }),
       accessor: (m) => toLocalString(parseFloat(m.total_available)),
+      align: "right",
       className: "tabular-nums font-bold text-foreground"
     });
 
@@ -501,6 +510,7 @@ export function MaterialTable({
         const isLow = avail <= min;
         return <span className={cn("tabular-nums", isLow ? "text-destructive font-bold" : "text-muted-foreground font-medium")}>{toLocalString(min)}</span>;
       },
+      align: "right",
       className: "tabular-nums"
     });
 
@@ -595,6 +605,7 @@ export function MaterialTable({
       header: t("materials.columns.notes", { namespace: "inventory" }),
       label: t("materials.columns.notes", { namespace: "inventory" }),
       accessor: (m) => m.notes || "",
+      align: "left",
       className: "text-muted-foreground italic"
     });
 

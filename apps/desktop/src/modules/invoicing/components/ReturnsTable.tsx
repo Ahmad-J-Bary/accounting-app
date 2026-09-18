@@ -59,13 +59,15 @@ export function ReturnsTable({
         id: "return_number",
         header: t("return.colNumber", { namespace: "invoicing",  }),
         label: t("return.labelNumber", { namespace: "invoicing",  }),
+        align: "center",
         accessor: (ret) => formatNumber(parseInt(ret.return_number) || 0),
-        className: "font-black text-slate-900 text-center"
+        className: "font-black text-foreground"
       },
       {
         id: "partner_name",
         header: partnerLabel,
         label: partnerLabel,
+        align: "left",
         accessor: (ret) => {
           if (isSalesReturn(ret)) return ret.customer_name || "";
           if (isPurchaseReturn(ret)) return ret.supplier_name || "";
@@ -79,13 +81,14 @@ export function ReturnsTable({
           id: `total_amount_${curr.code}`,
           header: `${t("return.totalBase", { namespace: "invoicing",  })}${cs(curr.symbol || curr.code)}`,
           label: `${t("return.totalBase", { namespace: "invoicing",  })}${cs(curr.symbol || curr.code)}`,
+          align: "right" as const,
           accessor: (ret: SalesReturnDto | PurchaseReturnDto) => {
             const val = parseFloat(ret.total_amount || "0");
             if (val === 0) return "";
             return formatAmount(val, { currencyCode: curr.code });
           },
           className: isBase
-            ? "tabular-nums font-black text-slate-900"
+            ? "tabular-nums font-black text-foreground"
             : "tabular-nums font-medium text-muted-foreground"
         };
       }),
@@ -93,6 +96,7 @@ export function ReturnsTable({
         id: "notes",
         header: t("return.colDescription", { namespace: "invoicing",  }),
         label: t("return.colDescription", { namespace: "invoicing",  }),
+        align: "left",
         accessor: (ret) => ret.notes || "",
         className: "text-muted-foreground italic"
       },
@@ -100,6 +104,7 @@ export function ReturnsTable({
         id: "return_date",
         header: t("return.colDate", { namespace: "invoicing",  }),
         label: t("return.colDate", { namespace: "invoicing",  }),
+        align: "center",
         accessor: (ret) => formatDateTime(ret.return_date),
         className: "text-muted-foreground tabular-nums"
       },
@@ -107,6 +112,7 @@ export function ReturnsTable({
         id: "actions",
         header: t("return.colActions", { namespace: "invoicing",  }),
         label: t("return.colActions", { namespace: "invoicing",  }),
+        align: "center" as const,
         accessor: (ret: SalesReturnDto | PurchaseReturnDto) => {
           return (
             <TableActions

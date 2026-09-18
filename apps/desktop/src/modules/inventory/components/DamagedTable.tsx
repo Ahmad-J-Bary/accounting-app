@@ -95,6 +95,7 @@ export function DamagedTable({
         header: t("labels.material", { namespace: "inventory",  }),
         label: t("labels.material", { namespace: "inventory",  }),
         accessor: (i) => i.material_name || i.material_id || "",
+        align: "left",
         className: "font-bold text-foreground"
       },
 {
@@ -102,6 +103,7 @@ export function DamagedTable({
         header: t("labels.quantity", { namespace: "inventory",  }),
         label: t("damaged.quantityLabel", { namespace: "inventory",  }),
         accessor: (i) => toLocalString(Math.round(parseFloat(i.quantity || "0"))),
+        align: "right",
         className: "tabular-nums font-black text-amber-600"
       },
       {
@@ -109,6 +111,7 @@ export function DamagedTable({
         header: t("damaged.lossCol", { namespace: "inventory",  }),
         label: t("damaged.lossOriginal", { namespace: "inventory",  }),
         accessor: (i) => originalLossLabel(i),
+        align: "right",
         className: "tabular-nums font-black text-destructive"
       },
     ];
@@ -123,6 +126,7 @@ export function DamagedTable({
           const val = parseFloat(i.loss_base || i.cost_impact_base || "0");
           return val > 0 ? formatAmount(val, { currencyCode: curr.code }) : "";
         },
+        align: 'right',
         className: isBase
           ? "tabular-nums font-black text-destructive"
           : "tabular-nums font-medium text-destructive/60"
@@ -134,6 +138,7 @@ export function DamagedTable({
         header: t("damaged.reason", { namespace: "inventory",  }),
         label: t("damaged.reason", { namespace: "inventory",  }),
       accessor: (i) => i.reason || "",
+      align: "left",
       className: "text-muted-foreground italic"
     });
     cols.push({
@@ -141,6 +146,7 @@ export function DamagedTable({
         header: t("labels.date", { namespace: "inventory",  }),
         label: t("damaged.registerDate", { namespace: "inventory",  }),
       accessor: (i) => formatDateTime(i.damage_date),
+      align: "right",
       className: "text-muted-foreground tabular-nums"
     });
 

@@ -51,9 +51,9 @@ export const TableShell: React.FC<TableShellProps> = ({
   const { settings } = useTableSettings();
 
   return (
-    <div className={cn("flex flex-col h-full bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden", className)}>
+    <div className={cn("flex flex-col h-full bg-card rounded-xl shadow-sm border border-border overflow-hidden", className)}>
       {showToolbar && settings.showToolbar && (
-        <div className="no-print px-4 py-2 border-b border-slate-100 bg-slate-50/30">
+        <div className="no-print px-4 py-2 border-b border-border bg-muted/20">
           <TableToolbar
             title={title}
             search={search}
@@ -77,7 +77,7 @@ export const TableShell: React.FC<TableShellProps> = ({
       </div>
 
       {footer && (
-        <div className="p-4 border-t border-slate-100 bg-slate-50/30">
+        <div className="p-4 border-t border-border bg-muted/20">
           {footer}
         </div>
       )}

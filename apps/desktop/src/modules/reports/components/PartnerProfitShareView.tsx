@@ -53,7 +53,7 @@ function usePartnerProfitShareColumns(formatValue: (value: number) => string) {
       header: t("partnerRights.profitShare.colPartnerName", { namespace: "reports",  }),
       label: t("partnerRights.profitShare.colPartnerName", { namespace: "reports",  }),
       accessor: (row) => <span className="font-bold text-foreground">{row.partnerName}</span>,
-      align: "right",
+      align: "left",
       className: "justify-start",
     },
     {
@@ -61,7 +61,7 @@ function usePartnerProfitShareColumns(formatValue: (value: number) => string) {
       header: t("partnerRights.profitShare.colCapitalRatio", { namespace: "reports",  }),
       label: t("partnerRights.profitShare.colCapitalRatio", { namespace: "reports",  }),
       accessor: (row) => toFixed(row.capitalRatio, 2) + "%",
-      align: "left",
+      align: "right",
       className: "justify-end tabular-nums text-muted-foreground font-bold",
     },
     {
@@ -69,7 +69,7 @@ function usePartnerProfitShareColumns(formatValue: (value: number) => string) {
       header: t("partnerRights.profitShare.colCapitalAmount", { namespace: "reports",  }),
       label: t("partnerRights.profitShare.colCapitalAmount", { namespace: "reports",  }),
       accessor: (row) => formatValue(row.capitalAmount),
-      align: "left",
+      align: "right",
       className: "justify-end tabular-nums font-black text-foreground",
     },
     {
@@ -77,7 +77,7 @@ function usePartnerProfitShareColumns(formatValue: (value: number) => string) {
       header: t("partnerRights.profitShare.colProfitShareRatio", { namespace: "reports",  }),
       label: t("partnerRights.profitShare.colProfitShareRatio", { namespace: "reports",  }),
       accessor: (row) => toFixed(row.profitShareRatio, 2) + "%",
-      align: "left",
+      align: "right",
       className: "justify-end tabular-nums text-muted-foreground font-bold",
     },
     {
@@ -85,7 +85,7 @@ function usePartnerProfitShareColumns(formatValue: (value: number) => string) {
       header: t("partnerRights.profitShare.colProfitShareAmount", { namespace: "reports",  }),
       label: t("partnerRights.profitShare.colProfitShareAmount", { namespace: "reports",  }),
       accessor: (row) => formatValue(row.profitShareAmount),
-      align: "left",
+      align: "right",
       className: "justify-end tabular-nums font-black text-success",
     },
     {
@@ -93,7 +93,7 @@ function usePartnerProfitShareColumns(formatValue: (value: number) => string) {
       header: t("partnerRights.profitShare.colCurrentYearShare", { namespace: "reports",  }),
       label: t("partnerRights.profitShare.colCurrentYearShare", { namespace: "reports",  }),
       accessor: (row) => formatValue(row.currentYearProfitShare),
-      align: "left",
+      align: "right",
       className: "justify-end tabular-nums font-black text-success",
     },
     {
@@ -101,7 +101,7 @@ function usePartnerProfitShareColumns(formatValue: (value: number) => string) {
       header: t("partnerRights.profitShare.colTotalAllocated", { namespace: "reports",  }),
       label: t("partnerRights.profitShare.colTotalAllocated", { namespace: "reports",  }),
       accessor: (row) => formatValue(row.totalProfitAllocated),
-      align: "left",
+      align: "right",
       className: "justify-end tabular-nums font-black text-success",
     },
     {
@@ -109,7 +109,7 @@ function usePartnerProfitShareColumns(formatValue: (value: number) => string) {
       header: t("partnerRights.profitShare.colDrawings", { namespace: "reports",  }),
       label: t("partnerRights.profitShare.colDrawings", { namespace: "reports",  }),
       accessor: (row) => formatValue(row.drawings),
-      align: "left",
+      align: "right",
       className: "justify-end tabular-nums font-black text-destructive",
     },
     {
@@ -117,15 +117,15 @@ function usePartnerProfitShareColumns(formatValue: (value: number) => string) {
       header: t("partnerRights.profitShare.colFinalAmount", { namespace: "reports",  }),
       label: t("partnerRights.profitShare.colFinalAmount", { namespace: "reports",  }),
       accessor: (row) => formatValue(row.finalAmount),
-      align: "left",
-      className: "justify-end tabular-nums font-black text-indigo-700",
+      align: "right",
+      className: "justify-end tabular-nums font-black text-primary",
     },
     {
       id: "inventoryShare",
       header: t("partnerRights.profitShare.colInventoryShare", { namespace: "reports",  }),
       label: t("partnerRights.profitShare.colInventoryShare", { namespace: "reports",  }),
       accessor: (row) => formatValue(row.inventoryShare),
-      align: "left",
+      align: "right",
       className: "justify-end tabular-nums font-medium text-warning",
     },
     {
@@ -133,15 +133,15 @@ function usePartnerProfitShareColumns(formatValue: (value: number) => string) {
       header: t("partnerRights.profitShare.colFixedAssetsShare", { namespace: "reports",  }),
       label: t("partnerRights.profitShare.colFixedAssetsShare", { namespace: "reports",  }),
       accessor: (row) => formatValue(row.fixedAssetsShare),
-      align: "left",
-      className: "justify-end tabular-nums font-medium text-violet-700",
+      align: "right",
+      className: "justify-end tabular-nums font-medium text-primary",
     },
     {
       id: "operationalAssetShare",
       header: t("partnerRights.profitShare.colOperationalShare", { namespace: "reports",  }),
       label: t("partnerRights.profitShare.colOperationalShare", { namespace: "reports",  }),
       accessor: (row) => formatValue(row.operationalAssetShare),
-      align: "left",
+      align: "right",
       className: "justify-end tabular-nums font-medium text-foreground",
     },
   ], [formatValue, t]);
@@ -198,40 +198,40 @@ export function PartnerProfitShareView(props: PartnerProfitShareViewProps) {
   const summaryColumns = useMemo<SummaryColumn[]>(() => {
     return enrichedColumns.map((col) => {
       if (col.id === "partnerName") {
-        return { id: "count", columnId: "partnerName", align: "right", label: "", value: t("partnerRights.profitShare.countPartners", { namespace: "reports", vars: { count: totals.count } }), className: "text-muted-foreground font-medium" };
+        return { id: "count", columnId: "partnerName", align: "left", label: "", value: t("partnerRights.profitShare.countPartners", { namespace: "reports", vars: { count: totals.count } }), className: "text-muted-foreground font-medium" };
       }
       if (col.id === "capitalRatio") {
-        return { id: "capitalRatio_summary", columnId: "capitalRatio", align: "left", label: t("partnerRights.profitShare.summaryCapitalRatio", { namespace: "reports",  }), value: toFixed(totals.capitalRatio, 2) + "%", className: "text-foreground font-bold" };
+        return { id: "capitalRatio_summary", columnId: "capitalRatio", align: "right", label: t("partnerRights.profitShare.summaryCapitalRatio", { namespace: "reports",  }), value: toFixed(totals.capitalRatio, 2) + "%", className: "text-foreground font-bold" };
       }
       if (col.id === "capitalAmount") {
-        return { id: "capitalAmount_summary", columnId: "capitalAmount", align: "left", label: t("partnerRights.profitShare.summaryCapital", { namespace: "reports",  }), value: formatValue(totals.capitalAmount), className: "text-indigo-700 font-black" };
+        return { id: "capitalAmount_summary", columnId: "capitalAmount", align: "right", label: t("partnerRights.profitShare.summaryCapital", { namespace: "reports",  }), value: formatValue(totals.capitalAmount), className: "text-foreground font-black" };
       }
       if (col.id === "profitShareRatio") {
-        return { id: "profitShareRatio_summary", columnId: "profitShareRatio", align: "left", label: t("partnerRights.profitShare.summaryProfitRatio", { namespace: "reports",  }), value: toFixed(totals.profitShareRatio, 2) + "%", className: "text-foreground font-bold" };
+        return { id: "profitShareRatio_summary", columnId: "profitShareRatio", align: "right", label: t("partnerRights.profitShare.summaryProfitRatio", { namespace: "reports",  }), value: toFixed(totals.profitShareRatio, 2) + "%", className: "text-foreground font-bold" };
       }
       if (col.id === "profitShareAmount") {
-        return { id: "profitShareAmount_summary", columnId: "profitShareAmount", align: "left", label: t("partnerRights.profitShare.summaryDistributed", { namespace: "reports",  }), value: formatValue(totals.profitShareAmount), className: "text-success font-black" };
+        return { id: "profitShareAmount_summary", columnId: "profitShareAmount", align: "right", label: t("partnerRights.profitShare.summaryDistributed", { namespace: "reports",  }), value: formatValue(totals.profitShareAmount), className: "text-success font-black" };
       }
       if (col.id === "currentYearProfitShare") {
-        return { id: "currentYearProfitShare_summary", columnId: "currentYearProfitShare", align: "left", label: t("partnerRights.profitShare.summaryCurrentYearShare", { namespace: "reports",  }), value: formatValue(totals.currentYearProfitShare), className: "text-success font-black" };
+        return { id: "currentYearProfitShare_summary", columnId: "currentYearProfitShare", align: "right", label: t("partnerRights.profitShare.summaryCurrentYearShare", { namespace: "reports",  }), value: formatValue(totals.currentYearProfitShare), className: "text-success font-black" };
       }
       if (col.id === "totalProfitAllocated") {
-        return { id: "totalProfitAllocated_summary", columnId: "totalProfitAllocated", align: "left", label: t("partnerRights.profitShare.summaryTotalAllocated", { namespace: "reports",  }), value: formatValue(totals.totalProfitAllocated), className: "text-success font-black" };
+        return { id: "totalProfitAllocated_summary", columnId: "totalProfitAllocated", align: "right", label: t("partnerRights.profitShare.summaryTotalAllocated", { namespace: "reports",  }), value: formatValue(totals.totalProfitAllocated), className: "text-success font-black" };
       }
       if (col.id === "drawings") {
-        return { id: "drawings_summary", columnId: "drawings", align: "left", label: t("partnerRights.profitShare.summaryDrawings", { namespace: "reports",  }), value: formatValue(totals.drawings), className: "text-destructive font-black" };
+        return { id: "drawings_summary", columnId: "drawings", align: "right", label: t("partnerRights.profitShare.summaryDrawings", { namespace: "reports",  }), value: formatValue(totals.drawings), className: "text-destructive font-black" };
       }
       if (col.id === "finalAmount") {
-        return { id: "finalAmount_summary", columnId: "finalAmount", align: "left", label: t("partnerRights.profitShare.summaryFinalAmount", { namespace: "reports",  }), value: formatValue(totals.finalAmount), className: "text-indigo-700 font-black" };
+        return { id: "finalAmount_summary", columnId: "finalAmount", align: "right", label: t("partnerRights.profitShare.summaryFinalAmount", { namespace: "reports",  }), value: formatValue(totals.finalAmount), className: "text-primary font-black" };
       }
       if (col.id === "inventoryShare") {
-        return { id: "inventoryShare_summary", columnId: "inventoryShare", align: "left", label: t("partnerRights.profitShare.summaryInventoryShare", { namespace: "reports",  }), value: formatValue(totals.inventoryShare), className: "text-warning font-bold" };
+        return { id: "inventoryShare_summary", columnId: "inventoryShare", align: "right", label: t("partnerRights.profitShare.summaryInventoryShare", { namespace: "reports",  }), value: formatValue(totals.inventoryShare), className: "text-warning font-bold" };
       }
       if (col.id === "fixedAssetsShare") {
-        return { id: "fixedAssetsShare_summary", columnId: "fixedAssetsShare", align: "left", label: t("partnerRights.profitShare.summaryFixedAssetsShare", { namespace: "reports",  }), value: formatValue(totals.fixedAssetsShare), className: "text-violet-700 font-bold" };
+        return { id: "fixedAssetsShare_summary", columnId: "fixedAssetsShare", align: "right", label: t("partnerRights.profitShare.summaryFixedAssetsShare", { namespace: "reports",  }), value: formatValue(totals.fixedAssetsShare), className: "text-primary font-bold" };
       }
       if (col.id === "operationalAssetShare") {
-        return { id: "operationalAssetShare_summary", columnId: "operationalAssetShare", align: "left", label: t("partnerRights.profitShare.summaryOperationalShare", { namespace: "reports",  }), value: formatValue(totals.operationalAssetShare), className: "text-foreground font-bold" };
+        return { id: "operationalAssetShare_summary", columnId: "operationalAssetShare", align: "right", label: t("partnerRights.profitShare.summaryOperationalShare", { namespace: "reports",  }), value: formatValue(totals.operationalAssetShare), className: "text-foreground font-bold" };
       }
       return createSummarySpacer(col.id);
     });

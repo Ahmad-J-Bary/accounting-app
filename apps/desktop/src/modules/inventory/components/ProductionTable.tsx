@@ -29,6 +29,7 @@ export function ProductionTable({ data, loading, search, onSearchChange, onVisib
       header: t("production.columns.productionDate", { namespace: "inventory",  }),
       label: t("production.columns.productionDate", { namespace: "inventory",  }),
       accessor: (o) => formatDateTime(o.production_date),
+      align: "right",
       className: "tabular-nums text-muted-foreground"
     },
     {
@@ -56,6 +57,7 @@ export function ProductionTable({ data, loading, search, onSearchChange, onVisib
       header: t("production.columns.totalCost", { namespace: "inventory",  }),
       label: t("production.columns.totalCostLabel", { namespace: "inventory",  }),
       accessor: (o) => formatCurrency(parseFloat(o.total_cost)),
+      align: "right",
       className: "tabular-nums font-black text-foreground"
     },
     {

@@ -177,7 +177,8 @@ export function JournalTable({
             formatNumber(parseInt(e.entry_number) || 0)
           )
         ) : "",
-        className: "font-black text-slate-900 text-center"
+        align: "center",
+        className: "font-black text-foreground"
       },
       {
         id: "journal_type",
@@ -245,9 +246,10 @@ export function JournalTable({
           if (e.side !== "debit") return "";
           return e.amount_base > 0 ? formatAmount(e.amount_base, { currencyCode: curr.code }) : "";
         },
+        align: 'right',
         className: isBase
-          ? "tabular-nums font-black text-blue-700"
-          : "tabular-nums font-medium text-blue-300"
+          ? "tabular-nums font-black text-primary"
+          : "tabular-nums font-medium text-primary/40"
       });
     });
 
@@ -262,6 +264,7 @@ export function JournalTable({
           if (e.side !== "credit") return "";
           return e.amount_base > 0 ? formatAmount(e.amount_base, { currencyCode: curr.code }) : "";
         },
+        align: 'right',
         className: isBase
           ? "tabular-nums font-black text-success"
           : "tabular-nums font-medium text-success/60"
@@ -274,6 +277,7 @@ export function JournalTable({
         header: t("journal.table.colDescription", { namespace: "accounting",  }),
         label: t("journal.table.colDescription", { namespace: "accounting",  }),
         accessor: (e) => e.isFirstInGroup ? e.description : "",
+        align: 'left',
         className: "text-foreground font-bold"
       },
       {
@@ -285,12 +289,14 @@ export function JournalTable({
             {e.account_name}
           </span>
         ),
+        align: 'left',
       },
       {
         id: "entry_date",
         header: t("journal.table.colDate", { namespace: "accounting",  }),
         label: t("journal.table.colDate", { namespace: "accounting",  }),
         accessor: (e) => e.isFirstInGroup ? formatDateTime(e.entry_date) : "",
+        align: 'right',
         className: "text-muted-foreground tabular-nums"
       },
     );
@@ -314,7 +320,8 @@ export function JournalTable({
         ) : (
           formatNumber(parseInt(e.entry_number) || 0)
         ),
-        className: "font-black text-slate-900 text-center"
+        align: "center",
+        className: "font-black text-foreground"
       },
       {
         id: "journal_type",
@@ -380,9 +387,10 @@ export function JournalTable({
         label: t("journal.table.debitHeader", { namespace: "accounting", vars: { currency: cs(symbol) },  }),
         accessor: (e: JournalSingleLineTableRow) =>
           e.debit_amount_base > 0 ? formatAmount(e.debit_amount_base, { currencyCode: curr.code }) : "",
+        align: 'right',
         className: isBase
-          ? "tabular-nums font-black text-blue-700"
-          : "tabular-nums font-medium text-blue-300"
+          ? "tabular-nums font-black text-primary"
+          : "tabular-nums font-medium text-primary/40"
       });
     });
 
@@ -395,6 +403,7 @@ export function JournalTable({
         label: t("journal.table.creditHeader", { namespace: "accounting", vars: { currency: cs(symbol) },  }),
         accessor: (e: JournalSingleLineTableRow) =>
           e.credit_amount_base > 0 ? formatAmount(e.credit_amount_base, { currencyCode: curr.code }) : "",
+        align: 'right',
         className: isBase
           ? "tabular-nums font-black text-success"
           : "tabular-nums font-medium text-success/60"
@@ -406,6 +415,7 @@ export function JournalTable({
         header: t("journal.table.colDescription", { namespace: "accounting",  }),
         label: t("journal.table.colDescription", { namespace: "accounting",  }),
         accessor: (e) => e.description,
+        align: 'left',
         className: "text-foreground font-bold"
       },
       {
@@ -415,6 +425,7 @@ export function JournalTable({
         accessor: (e: JournalSingleLineTableRow) => (
           <span className="text-primary font-bold">{e.debit_account_names}</span>
         ),
+        align: 'left',
       },
       {
         id: "credit_accounts",
@@ -423,12 +434,14 @@ export function JournalTable({
         accessor: (e: JournalSingleLineTableRow) => (
           <span className="text-success font-bold">{e.credit_account_names}</span>
         ),
+        align: 'left',
       },
       {
         id: "entry_date",
         header: t("journal.table.colDate", { namespace: "accounting",  }),
         label: t("journal.table.colDate", { namespace: "accounting",  }),
         accessor: (e) => formatDateTime(e.entry_date),
+        align: 'right',
         className: "text-muted-foreground tabular-nums"
       },
     );

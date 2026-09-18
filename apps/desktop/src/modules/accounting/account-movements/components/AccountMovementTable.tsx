@@ -218,7 +218,8 @@ export function AccountMovementTable({
         header: t("ledger.table.colEntryNumber", { namespace: "accounting",  }),
         label: t("ledger.table.colEntryNumber", { namespace: "accounting",  }),
         accessor: (r) => (r.isBeginning ? "" : formatNumber(parseInt(r.entry_number) || 0)),
-        className: "font-black text-slate-900 text-center"
+        align: "center",
+        className: "font-black text-foreground"
       },
       {
         id: "journal_type",
@@ -246,7 +247,7 @@ export function AccountMovementTable({
         id: `debit_${curr.code}`,
         header: t("ledger.table.debitHeader", { namespace: "accounting", vars: { currency: currencySuffix(symbol) },  }),
         label: t("ledger.table.debitHeader", { namespace: "accounting", vars: { currency: currencySuffix(symbol) },  }),
-        align: "center",
+        align: "right",
         accessor: (r) => {
           if (r.side !== "debit") return "";
           return r.amount_base > 0 ? formatAmount(r.amount_base, { currencyCode: curr.code }) : "";
@@ -264,7 +265,7 @@ export function AccountMovementTable({
         id: `credit_${curr.code}`,
         header: t("ledger.table.creditHeader", { namespace: "accounting", vars: { currency: currencySuffix(symbol) },  }),
         label: t("ledger.table.creditHeader", { namespace: "accounting", vars: { currency: currencySuffix(symbol) },  }),
-        align: "center",
+        align: "right",
         accessor: (r) => {
           if (r.side !== "credit") return "";
           return r.amount_base > 0 ? formatAmount(r.amount_base, { currencyCode: curr.code }) : "";
@@ -281,13 +282,13 @@ export function AccountMovementTable({
         id: "balance",
         header: t("ledger.table.balanceHeader", { namespace: "accounting", vars: { currency: currencySuffix(baseSymbol) },  }),
         label: t("ledger.table.balanceHeader", { namespace: "accounting", vars: { currency: currencySuffix(baseSymbol) },  }),
-        align: "center",
+        align: "right",
         accessor: (r) => {
           const b = r.balance ?? 0;
-          if (b === 0) return <span className="text-slate-300">—</span>;
+          if (b === 0) return <span className="text-muted-foreground/50">—</span>;
           const formatted = formatAmount(Math.abs(b), { currencyCode: baseCurrency?.code || "" });
           return b > 0
-            ? <span className="tabular-nums font-black text-blue-700">{formatted}</span>
+            ? <span className="tabular-nums font-black text-primary">{formatted}</span>
             : <span className="tabular-nums font-black text-success">−{formatted}</span>;
         },
         className: "tabular-nums font-black",
@@ -297,6 +298,7 @@ export function AccountMovementTable({
         header: t("ledger.table.colDescription", { namespace: "accounting",  }),
         label: t("ledger.table.colDescription", { namespace: "accounting",  }),
         accessor: (r) => r.description,
+        align: "left",
         className: "text-foreground font-bold"
       },
       {
@@ -304,6 +306,7 @@ export function AccountMovementTable({
         header: t("ledger.table.colDate", { namespace: "accounting",  }),
         label: t("ledger.table.colDate", { namespace: "accounting",  }),
         accessor: (r) => formatDateTime(r.date),
+        align: "right",
         className: "text-muted-foreground tabular-nums"
       },
     );

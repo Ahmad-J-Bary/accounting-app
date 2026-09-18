@@ -96,7 +96,7 @@ export function WarehouseMaterialList({
             placeholder={t("warehouses.materialList.searchPlaceholder", { namespace: "inventory",  })}
             value={search}
             onChange={e => setSearch(e.target.value)}
-            className="h-9 bg-white pe-9 text-xs border-muted"
+            className="h-9 bg-card pe-9 text-xs border-muted"
           />
         </div>
 
@@ -117,7 +117,7 @@ export function WarehouseMaterialList({
             {filtered.map(({ material, quantity, qtyText }) => (
               <div
                 key={material.id}
-                className="group rounded-xl border border-muted bg-white hover:bg-primary/10 hover:border-primary/20 transition-all duration-150 p-3"
+                className="group rounded-xl border border-muted bg-card hover:bg-primary/10 hover:border-primary/20 transition-all duration-150 p-3"
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-start gap-2.5 min-w-0">
@@ -136,7 +136,7 @@ export function WarehouseMaterialList({
                     </div>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    <div className="text-left">
+                    <div className="text-end">
                       <p className={cn(
                         "text-sm font-black tabular-nums leading-tight",
                         quantity > 0 ? "text-success" : "text-destructive"

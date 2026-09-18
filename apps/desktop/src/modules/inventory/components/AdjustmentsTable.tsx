@@ -100,6 +100,7 @@ export function AdjustmentsTable({ data, loading, search, onSearchChange, onExpo
         header: t("labels.material", { namespace: "inventory",  }),
         label: t("labels.material", { namespace: "inventory",  }),
         accessor: (a) => a.material_name ?? a.material_id,
+        align: "left",
         className: "font-bold text-foreground"
       },
       {
@@ -107,6 +108,7 @@ export function AdjustmentsTable({ data, loading, search, onSearchChange, onExpo
         header: t("adjustments.systemQuantity", { namespace: "inventory",  }),
         label: t("adjustments.systemQuantity", { namespace: "inventory",  }),
         accessor: (a) => toFixed(parseFloat(a.system_quantity), 2),
+        align: "right",
         className: "tabular-nums text-foreground"
       },
       {
@@ -114,6 +116,7 @@ export function AdjustmentsTable({ data, loading, search, onSearchChange, onExpo
         header: t("adjustments.actualQuantity", { namespace: "inventory",  }),
         label: t("adjustments.actualQuantity", { namespace: "inventory",  }),
         accessor: (a) => toFixed(parseFloat(a.actual_quantity), 2),
+        align: "right",
         className: "tabular-nums font-bold text-foreground"
       },
       {
@@ -147,6 +150,7 @@ export function AdjustmentsTable({ data, loading, search, onSearchChange, onExpo
               <span className="text-muted-foreground">—</span>
             );
           },
+          align: 'right',
           className: "tabular-nums",
         } as UnifiedColumn<StockAdjustment>;
       }),
@@ -155,6 +159,7 @@ export function AdjustmentsTable({ data, loading, search, onSearchChange, onExpo
         header: t("labels.note", { namespace: "inventory",  }),
         label: t("labels.note", { namespace: "inventory",  }),
         accessor: (a) => a.notes ?? a.reason ?? "",
+        align: "left",
         className: "text-muted-foreground"
       },
       {
@@ -162,6 +167,7 @@ export function AdjustmentsTable({ data, loading, search, onSearchChange, onExpo
         header: t("labels.date", { namespace: "inventory",  }),
         label: t("adjustments.dateLabel", { namespace: "inventory",  }),
         accessor: (a) => formatDateTime(a.adjustment_date),
+        align: "right",
         className: "tabular-nums text-muted-foreground"
       },
     ];

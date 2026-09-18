@@ -222,7 +222,8 @@ export function PartyTable<T extends { id: string; name: string; code?: string; 
         header: "#",
         label: t("columns.accountNumber", { namespace: "partners",  }),
         accessor: (item) => formatNumber(parseInt(item.code || "0", 10) || 0),
-        className: "font-black text-foreground text-center",
+        align: "center",
+        className: "font-black text-foreground",
       },
       {
         id: "name",
@@ -236,12 +237,14 @@ export function PartyTable<T extends { id: string; name: string; code?: string; 
             <span className="font-bold text-foreground">{resolvePartnerDisplayName(item.name, item.code || "", entityName, language, t)}</span>
           </div>
         ),
+        align: "left",
       },
       {
         id: "phone",
         header: t("columns.phone", { namespace: "partners",  }),
         label: t("columns.phone", { namespace: "partners",  }),
         accessor: (item) => item.phone || "",
+        align: "left",
         className: "tabular-nums text-muted-foreground",
       },
     ];
@@ -253,11 +256,12 @@ export function PartyTable<T extends { id: string; name: string; code?: string; 
       if (m && !isBaseCurrency(m[1])) {
         return {
           ...c,
+          align: 'right' as const,
           className: "tabular-nums font-medium text-muted-foreground",
           label: `${c.label}`,
         };
       }
-      return c;
+      return { ...c, align: 'right' as const };
     });
     cols.push(...(balanceCols as UnifiedColumn<T>[]));
 

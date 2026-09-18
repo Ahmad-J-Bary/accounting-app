@@ -67,13 +67,15 @@ export function ExpenseTable({ expenses, loading, search, onSearchChange, onExpo
             : code;
           return suffix ? formatNumber(parseInt(suffix) || 0) : "";
         },
-        className: "font-black text-slate-900 text-center"
+        align: "center",
+        className: "font-black text-foreground"
       },
       {
         id: "name",
         header: t("expense.itemName", { namespace: "invoicing",  }),
         label: t("expense.itemName", { namespace: "invoicing",  }),
         accessor: (c) => language === "ar" ? (c.name_ar || "") : (c.name_en || c.name_ar || ""),
+        align: "left",
         className: "font-bold text-foreground"
       },
     ];
@@ -93,8 +95,9 @@ export function ExpenseTable({ expenses, loading, search, onSearchChange, onExpo
           const baseAmount = toBase(absBal, c.currency || "");
           return formatAmount(baseAmount, { currencyCode: curr.code });
         },
+        align: 'right',
         className: isBase
-          ? "tabular-nums font-black text-slate-900"
+          ? "tabular-nums font-black text-foreground"
           : "tabular-nums font-medium text-muted-foreground"
       });
     });

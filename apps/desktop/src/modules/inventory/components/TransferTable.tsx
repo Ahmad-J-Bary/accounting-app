@@ -145,6 +145,7 @@ export function TransferTable({ movements, warehouses, className, onView, onEdit
     {
       id: 'material_name', header: t('labels.material', { namespace: 'inventory',  }), label: t('labels.material', { namespace: 'inventory',  }),
       accessor: (r) => r.material_name || '—',
+      align: 'left',
       className: 'font-bold text-foreground'
     },
     {
@@ -170,6 +171,7 @@ export function TransferTable({ movements, warehouses, className, onView, onEdit
           {toLocalString(parseFloat(r.quantity))}
         </span>
       ),
+      align: 'right',
     },
     {
       id: 'reference', header: t('labels.reference', { namespace: 'inventory',  }), label: t('labels.reference', { namespace: 'inventory',  }),
@@ -178,15 +180,18 @@ export function TransferTable({ movements, warehouses, className, onView, onEdit
           {formatNumber(parseInt(r.reference) || 0)}
         </span>
       ),
+      align: 'center',
     },
     {
       id: 'notes', header: t('labels.note', { namespace: 'inventory',  }), label: t('labels.note', { namespace: 'inventory',  }),
       accessor: (r) => r.notes || '—',
+      align: 'left',
       className: 'text-foreground text-xs max-w-[200px] truncate',
     },
     {
       id: 'date', header: t('labels.date', { namespace: 'inventory',  }), label: t('labels.date', { namespace: 'inventory',  }),
       accessor: (r) => formatDateTime(r.transfer_date),
+      align: 'right',
       className: 'tabular-nums text-muted-foreground font-medium'
     },
     ];

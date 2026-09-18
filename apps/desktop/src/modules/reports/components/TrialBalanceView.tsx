@@ -75,6 +75,7 @@ export function TrialBalanceView({ data, loading }: TrialBalanceViewProps) {
         id: "name",
         header: t("trialBalance.colAccountName", { namespace: "reports",  }),
         label: t("trialBalance.colAccountName", { namespace: "reports",  }),
+        align: "left",
         accessor: (row) => {
           const padClass = row.depth === 0 ? "" : row.depth === 1 ? "ps-6" : row.depth === 2 ? "ps-12" : "ps-16";
           const fontClass = row.depth === 0
@@ -101,6 +102,7 @@ export function TrialBalanceView({ data, loading }: TrialBalanceViewProps) {
         id: `opening_${curr.code}`,
         header: t("trialBalance.openingHeader", { namespace: "reports", vars: { suffix: ` ${cs(symbol)}` } }),
         label: t("trialBalance.openingHeader", { namespace: "reports", vars: { suffix: ` ${cs(symbol)}` } }),
+        align: "right",
         accessor: (row) => {
           const netOpening = row.openingDebit - row.openingCredit;
           if (netOpening === 0) return <div className={cellWrap}><span className="text-muted-foreground">—</span></div>;
@@ -129,6 +131,7 @@ export function TrialBalanceView({ data, loading }: TrialBalanceViewProps) {
         id: `debit_${curr.code}`,
         header: t("trialBalance.debitHeader", { namespace: "reports", vars: { suffix: ` ${cs(symbol)}` } }),
         label: t("trialBalance.debitHeader", { namespace: "reports", vars: { suffix: ` ${cs(symbol)}` } }),
+        align: "right",
         accessor: (row) => (
           <div className={cellWrap}>
             {row.periodDebit > 0 ? (
@@ -151,6 +154,7 @@ export function TrialBalanceView({ data, loading }: TrialBalanceViewProps) {
         id: `credit_${curr.code}`,
         header: t("trialBalance.creditHeader", { namespace: "reports", vars: { suffix: ` ${cs(symbol)}` } }),
         label: t("trialBalance.creditHeader", { namespace: "reports", vars: { suffix: ` ${cs(symbol)}` } }),
+        align: "right",
         accessor: (row) => (
           <div className={cellWrap}>
             {row.periodCredit > 0 ? (
@@ -173,6 +177,7 @@ export function TrialBalanceView({ data, loading }: TrialBalanceViewProps) {
         id: `balance_${curr.code}`,
         header: t("trialBalance.closingHeader", { namespace: "reports", vars: { suffix: ` ${cs(symbol)}` } }),
         label: t("trialBalance.closingHeader", { namespace: "reports", vars: { suffix: ` ${cs(symbol)}` } }),
+        align: "right",
         accessor: (row) => {
           const val = row.balance;
           return (
@@ -196,6 +201,7 @@ export function TrialBalanceView({ data, loading }: TrialBalanceViewProps) {
       id: "status",
       header: t("trialBalance.colStatus", { namespace: "reports",  }),
       label: t("trialBalance.colStatus", { namespace: "reports",  }),
+      align: "center",
       accessor: (row) => {
         const status = isBalanceDebit(row.balance);
         if (!status) return <div className={cellWrap}><span className="text-muted-foreground">—</span></div>;

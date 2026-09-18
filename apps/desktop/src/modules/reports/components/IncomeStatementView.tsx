@@ -17,7 +17,7 @@ type IncomeStatementViewProps = {
 };
 
 function SectionHeader({ title }: { title: string }) {
-  return <h3 className="text-base font-black text-slate-900">{title}</h3>;
+  return <h3 className="text-base font-black text-foreground">{title}</h3>;
 }
 
 function SummaryCards({
@@ -48,11 +48,11 @@ function TermBox({
   variant?: "normal" | "total";
 }) {
   return (
-    <div className={`flex min-w-[120px] flex-col items-center gap-1.5 rounded-xl border-2 px-4 py-2 shadow-sm ${variant === "total" ? "border-slate-800 bg-slate-900" : "border-slate-200 bg-white"}`}>
-      <span className={`text-center text-sm font-black leading-relaxed ${variant === "total" ? "text-slate-300" : "text-slate-500"}`}>
+    <div className={`flex min-w-[120px] flex-col items-center gap-1.5 rounded-xl border px-4 py-2 shadow-sm ${variant === "total" ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card text-foreground"}`}>
+      <span className={`text-center text-sm font-black leading-relaxed ${variant === "total" ? "text-primary-foreground/90" : "text-muted-foreground"}`}>
         {label}
       </span>
-      <span className={`font-black tabular-nums leading-none ${variant === "total" ? "text-xl text-white" : "text-lg text-slate-800"}`}>
+      <span className={`font-black tabular-nums leading-none ${variant === "total" ? "text-xl text-primary-foreground" : "text-lg text-foreground"}`}>
         {value}
       </span>
     </div>
@@ -61,7 +61,7 @@ function TermBox({
 
 function OperatorSign({ sign }: { sign: string }) {
   return (
-    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-50 text-xl font-black text-amber-600 ring-2 ring-amber-300">
+    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-warning/15 text-xl font-black text-warning border border-warning/30">
       {sign}
     </span>
   );
@@ -77,7 +77,7 @@ function InlineSection({
   const rowSign = section.id === "trading" || section.id === "profit-loss" ? "-" : "+";
 
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+    <section className="rounded-2xl border border-border bg-card p-3 shadow-sm">
       <SectionHeader title={section.title} />
       <div className="mt-2 flex flex-wrap items-center justify-center gap-x-2 gap-y-2 text-sm">
         {section.rows.map((row, idx) => {

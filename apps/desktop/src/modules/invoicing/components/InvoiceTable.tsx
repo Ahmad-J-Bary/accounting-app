@@ -95,13 +95,15 @@ export function InvoiceTable({
         header: t("invoice.colNumber", { namespace: "invoicing",  }),
         label: t("document.invoiceNumber", { namespace: "invoicing",  }),
         accessor: (inv) => formatNumber(parseInt(inv.invoice_number) || 0),
-        className: "font-black text-slate-900 text-center"
+        align: "center",
+        className: "font-black text-foreground"
       },
       {
         id: partyField,
         header: partyLabel,
         label: partyLabel,
         accessor: (inv) => inv.invoice_type === "OpeningBalance" ? "" : (partyType === "supplier" ? (inv.supplier_name || defaultName) : (inv.customer_name || defaultName)),
+        align: "left",
         className: "font-bold text-foreground"
       },
       ...(showSubtotal ? currencies.map(curr => {
@@ -121,6 +123,7 @@ export function InvoiceTable({
             if (baseAmt === 0) return "";
             return formatAmount(baseAmt, { currencyCode: curr.code });
           },
+          align: 'right',
           className: isBase
             ? "font-bold tabular-nums text-foreground"
             : "font-medium tabular-nums text-muted-foreground"
@@ -206,8 +209,9 @@ export function InvoiceTable({
             if (total === 0) return "";
             return formatAmount(total, { currencyCode: curr.code });
           },
+          align: 'right',
           className: isBase
-            ? "font-black tabular-nums text-slate-900"
+            ? "font-black tabular-nums text-foreground"
             : "font-medium tabular-nums text-muted-foreground"
         };
       }),
@@ -265,6 +269,7 @@ export function InvoiceTable({
         header: t("invoice.colDescription", { namespace: "invoicing",  }),
         label: t("invoice.colDescription", { namespace: "invoicing",  }),
         accessor: (inv) => inv.notes || "",
+        align: "left",
         className: "text-muted-foreground italic"
       },
       {
@@ -272,6 +277,7 @@ export function InvoiceTable({
         header: t("invoice.colDate", { namespace: "invoicing",  }),
         label: t("invoice.labelDate", { namespace: "invoicing",  }),
         accessor: (inv) => formatDateTime(inv.issued_at),
+        align: "right",
         className: "text-muted-foreground tabular-nums"
       },
       ...extraColumns.map(c => ({

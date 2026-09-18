@@ -88,7 +88,7 @@ export function DataTable<T>({
         className={cn(
           "group transition-all duration-150 ease-out border-b border-border/40",
           onRowClick ? "cursor-pointer" : "",
-          isSelected ? "bg-blue-50/60" : onRowClick ? "hover:bg-slate-50/70 active:bg-slate-100" : "hover:bg-slate-50/30"
+          isSelected ? "bg-primary/10" : onRowClick ? "hover:bg-muted/50 active:bg-muted/70" : "hover:bg-muted/30"
         )}
         onClick={() => onRowClick?.(row)}
         onDoubleClick={() => onRowDoubleClick?.(row)}
@@ -99,7 +99,8 @@ export function DataTable<T>({
           <td
             key={colIdx}
             className={cn(
-                "px-4 py-4 text-slate-600 transition-colors group-hover:text-slate-900",
+                "px-4 py-3 text-muted-foreground transition-colors group-hover:text-foreground",
+                align === "right" && "tabular-nums",
                 getAlignmentClass(align),
               col.className
             )}
@@ -116,10 +117,10 @@ export function DataTable<T>({
   };
 
   return (
-    <div className={cn("border border-border/80 rounded-2xl overflow-hidden bg-white shadow-sm ring-1 ring-slate-100/10", className)}>
+    <div className={cn("border border-border rounded-xl overflow-hidden bg-card shadow-sm", className)}>
       <div className="overflow-x-auto">
         <table className="min-w-[800px] w-full border-collapse text-sm" dir={direction}>
-          <thead className="bg-slate-50/50 backdrop-blur-md border-b border-border/80 sticky top-0 z-10">
+          <thead className="bg-muted/30 backdrop-blur-md border-b border-border sticky top-0 z-10">
             <tr>
               {columns.map((col, idx) => {
                 const align = getAlignment(idx, col.align);
@@ -127,7 +128,7 @@ export function DataTable<T>({
                 <th
                   key={idx}
                   className={cn(
-                    "px-4 py-4 font-bold text-slate-700 tracking-tight",
+                    "px-4 py-3 font-bold text-foreground tracking-tight",
                     getAlignmentClass(align),
                     col.headerClassName
                   )}

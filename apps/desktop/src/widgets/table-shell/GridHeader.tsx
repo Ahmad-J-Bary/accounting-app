@@ -122,7 +122,7 @@ export const GridHeader: React.FC<GridHeaderProps> = ({
           className={cn(
             getDensityPadding(),
             'relative text-foreground font-black uppercase tracking-wider select-text flex items-center',
-            'justify-center',
+            col.align === 'left' ? 'justify-start text-start' : col.align === 'right' ? 'justify-end text-end' : 'justify-center text-center',
             getLeftBorderClass(borderStyle ?? ""),
             !useGrid && !columnWidths[col.id] && col.width,
           )}
@@ -131,13 +131,14 @@ export const GridHeader: React.FC<GridHeaderProps> = ({
             fontSize: `${fontSize}px`,
             fontFamily: fontFamily || 'inherit',
             ...(useGrid ? { minWidth: 0 } : {}),
-            textAlign: 'center',
+            textAlign: col.align === 'left' ? 'start' : col.align === 'right' ? 'end' : 'center',
           }}
           onClick={() => onHeaderCellClick?.(col.id)}
         >
           <div
             className={cn(
-              'flex-1 min-w-0 whitespace-normal break-words leading-tight hyphens-auto text-center',
+              'flex-1 min-w-0 whitespace-normal break-words leading-tight hyphens-auto',
+              col.align === 'left' ? 'text-start' : col.align === 'right' ? 'text-end' : 'text-center',
             )}
             style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}
           >

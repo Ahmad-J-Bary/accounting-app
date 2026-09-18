@@ -221,6 +221,7 @@ export function InventoryMovementsTable({
         header: t("movements.columns.material", { namespace: "inventory" }),
         label: t("movements.columns.material", { namespace: "inventory" }),
         accessor: (m) => m.material_name || '—',
+        align: 'left',
         className: 'font-bold text-foreground'
       },
       {
@@ -287,6 +288,7 @@ export function InventoryMovementsTable({
             </span>
           );
         },
+        align: 'right',
       },
     ];
 
@@ -315,6 +317,7 @@ export function InventoryMovementsTable({
             </div>
           );
         },
+        align: 'right',
         className: isBase
           ? "tabular-nums font-black text-foreground"
           : "tabular-nums font-medium text-muted-foreground"
@@ -339,6 +342,7 @@ export function InventoryMovementsTable({
         header: t("movements.columns.date", { namespace: "inventory" }),
         label: t("movements.columns.date", { namespace: "inventory" }),
         accessor: (m) => formatDateTime(m.movement_date),
+        align: 'right',
         className: 'tabular-nums text-muted-foreground font-medium'
       },
     );

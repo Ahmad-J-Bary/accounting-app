@@ -130,7 +130,8 @@ export function PaymentsTable({
         header: t("payment.journalEntryNo", { namespace: "invoicing",  }),
         label: t("payment.journalEntryNo", { namespace: "invoicing",  }),
         accessor: (p) => formatNumber(parseInt(p.journal_entry_number) || 0),
-        className: "font-black text-indigo-700 tabular-nums",
+        align: "center",
+        className: "font-black text-primary tabular-nums",
       },
       {
         id: "payment_type",
@@ -165,8 +166,9 @@ export function PaymentsTable({
             const signed = signedBaseAmount(baseAmount, p.payment_type);
             return formatAmount(signed, { currencyCode: curr.code });
           },
+          align: 'right' as const,
           className: isBase
-            ? "tabular-nums font-black text-slate-900"
+            ? "tabular-nums font-black text-foreground"
             : "tabular-nums font-medium text-muted-foreground"
         };
       }),
@@ -175,6 +177,7 @@ export function PaymentsTable({
         header: t("payment.statement", { namespace: "invoicing",  }),
         label: t("payment.statement", { namespace: "invoicing",  }),
         accessor: (p) => p.notes || "",
+        align: "left",
         className: "text-muted-foreground italic",
       },
       {
@@ -188,6 +191,7 @@ export function PaymentsTable({
           }
           return "";
         },
+        align: "left",
         className: "font-medium text-foreground text-sm",
       },
       {
@@ -201,6 +205,7 @@ export function PaymentsTable({
           }
           return "";
         },
+        align: "left",
         className: "font-medium text-foreground text-sm",
       },
       {
@@ -208,6 +213,7 @@ export function PaymentsTable({
         header: t("labels.date", { namespace: "common",  }),
         label: t("labels.date", { namespace: "common",  }),
         accessor: (p) => formatDateTime(p.payment_date),
+        align: "right",
         className: "tabular-nums text-muted-foreground",
       },
       {

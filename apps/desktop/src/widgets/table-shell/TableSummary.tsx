@@ -159,8 +159,8 @@ export const TableSummary: React.FC<TableSummaryProps> = ({
       <div
         dir={direction}
         className={cn(
-          "relative bg-slate-50/90 dark:bg-slate-900/90 backdrop-blur-md border-t-2 border-slate-200 dark:border-slate-800",
-          "shadow-[0_-4px_16px_-4px_rgba(15,23,42,0.08)] dark:shadow-[0_-4px_16px_-4px_rgba(0,0,0,0.3)]",
+          "relative bg-card/95 backdrop-blur-md border-t-2 border-border",
+          "shadow-sm",
           sticky && "sticky bottom-0 z-10",
           className,
         )}
@@ -168,16 +168,16 @@ export const TableSummary: React.FC<TableSummaryProps> = ({
         {hasAnyActive && (
           <div
             className={cn(
-              "absolute top-0 -translate-y-1/2 rounded-full bg-slate-800 dark:bg-slate-200 px-2.5 py-0.5 text-3xs font-black uppercase tracking-wider text-slate-100 dark:text-slate-900 shadow-sm flex items-center gap-1 z-20",
+              "absolute top-0 -translate-y-1/2 rounded-full bg-foreground px-2.5 py-0.5 text-3xs font-black uppercase tracking-wider text-background shadow-xs flex items-center gap-1.5 z-20",
               direction === "rtl" ? "right-4" : "left-4"
             )}
           >
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
             {t("labels.summary", { namespace: "common" })}
           </div>
         )}
         {labelRow}
-        <div className={cn("border-t", asPageFooter ? "border-slate-200/70 dark:border-slate-800/70" : "border-blue-200/40")} />
+        <div className="border-t border-border/60" />
         {valueRow}
       </div>
     );
@@ -187,17 +187,14 @@ export const TableSummary: React.FC<TableSummaryProps> = ({
     <div
       dir={direction}
       className={cn(
-        "relative",
-        cn(
-          "bg-gradient-to-b from-blue-50/40 to-white dark:from-slate-900/40 dark:to-slate-950",
-          hasBorder && [
-            'border-t-[3px] border-blue-300/60 dark:border-blue-800/60',
-            'border-b border-slate-100 dark:border-slate-800',
-          ],
-          settings.borderStyle === 'full' && 'border-b border-slate-200 dark:border-slate-800',
-          settings.borderStyle === 'none' && 'border-t-0 border-b-0',
-          "shadow-[0_-4px_12px_-4px_rgba(59,130,246,0.18)]",
-        ),
+        "relative bg-muted/40 backdrop-blur-md",
+        hasBorder && [
+          'border-t-2 border-border',
+          'border-b border-border',
+        ],
+        settings.borderStyle === 'full' && 'border-b border-border',
+        settings.borderStyle === 'none' && 'border-t-0 border-b-0',
+        "shadow-sm",
         sticky && "sticky bottom-0 z-10",
         className
       )}
@@ -205,15 +202,16 @@ export const TableSummary: React.FC<TableSummaryProps> = ({
       {hasAnyActive && (
         <div
           className={cn(
-            "absolute top-0 -translate-y-1/2 rounded-full bg-slate-800 dark:bg-slate-200 px-2.5 py-0.5 text-3xs font-black uppercase tracking-wider text-slate-100 dark:text-slate-900 shadow-sm flex items-center gap-1 z-20",
+            "absolute top-0 -translate-y-1/2 rounded-full bg-foreground px-2.5 py-0.5 text-3xs font-black uppercase tracking-wider text-background shadow-xs flex items-center gap-1.5 z-20",
             direction === "rtl" ? "right-4" : "left-4"
           )}
         >
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+          <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
           {t("labels.summary", { namespace: "common" })}
         </div>
       )}
       {labelRow}
+      <div className="border-t border-border/60" />
       {valueRow}
     </div>
   );

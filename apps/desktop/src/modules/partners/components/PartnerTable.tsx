@@ -115,6 +115,7 @@ export function PartnerTable({
         id: "name",
         header: t("columns.partnerName", { namespace: "partners",  }),
         label: t("columns.partnerName", { namespace: "partners",  }),
+        align: "left",
         accessor: (p: PartnerWithRatios) => (
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary shrink-0">
@@ -133,6 +134,7 @@ export function PartnerTable({
         id: `amount_${curr.code}`,
         header: t("columns.capital", { namespace: "partners", vars: { currency: cs(symbol) },  }),
         label: t("columns.capital", { namespace: "partners", vars: { currency: cs(symbol) },  }),
+        align: "right",
         accessor: (p: PartnerWithRatios) => {
           if (p.displayAmountBase === 0) return "";
           return formatAmount(p.displayAmountBase, { currencyCode: curr.code });
@@ -148,6 +150,7 @@ export function PartnerTable({
         id: "capital_ratio",
         header: t("columns.capitalRatio", { namespace: "partners",  }),
         label: t("columns.capitalRatioFull", { namespace: "partners",  }),
+        align: "right",
         accessor: (p: PartnerWithRatios) => (
           <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-black tabular-nums">
             {toFixed(p.calculatedCapitalRatio, 2)}%
@@ -158,6 +161,7 @@ export function PartnerTable({
         id: "ratio",
         header: t("columns.profitRatio", { namespace: "partners",  }),
         label: t("columns.profitRatioFull", { namespace: "partners",  }),
+        align: "right",
         accessor: (p: PartnerWithRatios) => (
           <span className="px-2 py-0.5 rounded-full bg-success/10 text-success text-[10px] font-black tabular-nums">
             {toFixed(p.calculatedRatio, 2)}%
@@ -168,6 +172,7 @@ export function PartnerTable({
         id: "actions",
         header: t("columns.actions", { namespace: "partners",  }),
         label: t("columns.actions", { namespace: "partners",  }),
+        align: "center",
         accessor: (p: PartnerWithRatios) => (
           <TableActions
             actions={rowActions}

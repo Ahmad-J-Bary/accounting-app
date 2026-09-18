@@ -172,21 +172,24 @@ export default function FixedAssetsPage() {
           id: "code",
           header: t("table.colCode", { namespace: "fixedAssets",  }),
           accessor: "code",
+          align: "center",
           className: "font-mono w-24",
         },
-        { id: "name", header: t("table.colName", { namespace: "fixedAssets",  }), accessor: "name" },
+        { id: "name", header: t("table.colName", { namespace: "fixedAssets",  }), accessor: "name", align: "left" },
         {
           id: "category",
           header: t("table.colCategory", { namespace: "fixedAssets",  }),
           accessor: (r: FixedAssetDto) => categoryMap.get(r.category_id) || "-",
-          className: "w-32 text-center",
+          align: "center",
+          className: "w-32",
         },
         {
           id: "warehouse",
           header: t("table.colWarehouse", { namespace: "fixedAssets",  }),
           accessor: (r: FixedAssetDto) =>
             r.warehouse_id ? warehouseMap.get(r.warehouse_id) || "-" : "-",
-          className: "w-28 text-center",
+          align: "center",
+          className: "w-28",
         },
       ];
 
@@ -227,6 +230,7 @@ export default function FixedAssetsPage() {
             const base = val / rate;
             return formatAmount(base, { currencyCode: curr.code });
           },
+          align: 'right',
           className: "tabular-nums font-black text-foreground",
         });
       });
@@ -248,6 +252,7 @@ export default function FixedAssetsPage() {
             const base = nbv / rate;
             return formatAmount(base, { currencyCode: curr.code });
           },
+          align: 'right',
           className: "tabular-nums font-black text-foreground",
         });
       });
@@ -257,13 +262,15 @@ export default function FixedAssetsPage() {
           id: "notes",
           header: t("table.colNotes", { namespace: "fixedAssets",  }),
           accessor: (r: FixedAssetDto) => r.notes || "—",
+          align: "left",
           className: "max-w-[200px] truncate text-xs",
         },
         {
           id: "purchase_date",
           header: t("table.colAcquisitionDate", { namespace: "fixedAssets",  }),
           accessor: (r: FixedAssetDto) => toLocalDateStr(r.purchase_date),
-          className: "w-36 text-center text-xs tabular-nums",
+          align: "right",
+          className: "w-36 text-xs tabular-nums",
         },
         {
           id: "actions",
