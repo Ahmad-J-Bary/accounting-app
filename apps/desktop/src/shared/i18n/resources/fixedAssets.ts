@@ -36,6 +36,7 @@ export const fixedAssets: Record<AppLanguage, TranslationTree> = {
       addButton: "أصل جديد",
       rotateButton: "تدوير الحسابات",
       exportButton: "تصدير إكسل",
+      countSummary: "{{count}} أصل",
     },
     export: {
       sheetName: "الأصول الثابتة",
@@ -140,6 +141,7 @@ export const fixedAssets: Record<AppLanguage, TranslationTree> = {
       addButton: "New Asset",
       rotateButton: "Rotate Accounts",
       exportButton: "Export Excel",
+      countSummary: "{{count}} asset(s)",
     },
     export: {
       sheetName: "Fixed Assets",

@@ -222,14 +222,24 @@ export function TransferTable({ movements, warehouses, className, onView, onEdit
   }, [visibleColumns, onVisibleColumnsChange]);
 
   const summaryColumns = useMemo<SummaryColumn[]>(() => {
+    const totalQty = sortedData.reduce((sum, r) => sum + (parseFloat(r.quantity) || 0), 0);
     return enrichedColumns.map(col => {
       const id = col.id;
       if (id === "material_name") {
-        return { id: "count", columnId: id, label: "", value: `${sortedData.length} تحويل`, className: "text-muted-foreground font-medium" };
+        return { id: "count", columnId: id, label: "", value: t("transfers.table.countSummary", { namespace: "inventory", count: sortedData.length }), className: "text-muted-foreground font-medium" };
+      }
+      if (id === "quantity") {
+        return {
+          id: "total_qty",
+          columnId: id,
+          label: t("labels.total", { namespace: "inventory" }),
+          value: totalQty > 0 ? toLocalString(totalQty) : "—",
+          className: "text-amber-600 font-black tabular-nums"
+        };
       }
       return { id: `${id}_spacer`, columnId: id, label: "", value: "" };
     });
-  }, [sortedData, enrichedColumns]);
+  }, [sortedData, enrichedColumns, t]);
 
   return (
     <TableShell

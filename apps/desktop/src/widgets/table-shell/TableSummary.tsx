@@ -166,7 +166,7 @@ export const TableSummary: React.FC<TableSummaryProps> = ({
         )}
       >
         {hasAnyActive && (
-          <div className="absolute end-4 top-0 -translate-y-1/2 rounded-full bg-slate-800 dark:bg-slate-200 px-2.5 py-0.5 text-3xs font-black uppercase tracking-wider text-slate-100 dark:text-slate-900 shadow-sm flex items-center gap-1">
+          <div className="absolute start-4 top-0 -translate-y-1/2 rounded-full bg-slate-800 dark:bg-slate-200 px-2.5 py-0.5 text-3xs font-black uppercase tracking-wider text-slate-100 dark:text-slate-900 shadow-sm flex items-center gap-1 z-20">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
             {t("labels.summary", { namespace: "common" })}
           </div>
@@ -197,6 +197,12 @@ export const TableSummary: React.FC<TableSummaryProps> = ({
         className
       )}
     >
+      {hasAnyActive && (
+        <div className="absolute start-4 top-0 -translate-y-1/2 rounded-full bg-slate-800 dark:bg-slate-200 px-2.5 py-0.5 text-3xs font-black uppercase tracking-wider text-slate-100 dark:text-slate-900 shadow-sm flex items-center gap-1 z-20">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+          {t("labels.summary", { namespace: "common" })}
+        </div>
+      )}
       {labelRow}
       {valueRow}
     </div>

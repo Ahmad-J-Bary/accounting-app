@@ -21,6 +21,7 @@ import { FixedAssetForm } from "@modules/fixed-assets/components/FixedAssetForm"
 import { FixedAssetDetailPanel } from "@modules/fixed-assets/components/FixedAssetDetailPanel";
 import { useLocalization } from "@app/providers/LocalizationProvider";
 import type { UnifiedColumn } from "@widgets/table-shell/UnifiedTable";
+import type { SummaryColumn } from "@widgets/table-shell/TableSummary";
 import { TableActions } from "@widgets/table-shell/TableActions";
 import { WarehouseSelector } from "@modules/inventory/components/WarehouseSelector";
 import {
@@ -443,6 +444,79 @@ export default function FixedAssetsPage() {
     },
   ], [handleRunRotation, t]);
 
+  const summaryColumns = useMemo<SummaryColumn[]>(() => {
+    let totalPurchaseCostBase = 0;
+    let totalAccumulatedDepBase = 0;
+    let totalNetBookValueBase = 0;
+
+    assets.forEach(r => {
+      const pCost = parseFloat(r.purchase_cost.amount) || 0;
+      const rate = parseFloat(r.fx_rate) || 1;
+      const pCostBase = baseCode === r.purchase_cost.currency.code ? pCost : pCost / rate;
+      totalPurchaseCostBase += pCostBase;
+
+      const accDep = parseFloat(r.accumulated_depreciation.amount) || 0;
+      const accDepBase = baseCode === r.accumulated_depreciation.currency.code ? accDep : accDep / rate;
+      totalAccumulatedDepBase += accDepBase;
+
+      totalNetBookValueBase += (pCostBase - accDepBase);
+    });
+
+    return columns.map((col) => {
+      const id = col.id;
+      if (id === "name") {
+        return {
+          id: "count",
+          columnId: id,
+          label: "",
+          value: t("table.countSummary", { namespace: "fixedAssets", count: assets.length }),
+          className: "text-muted-foreground font-medium",
+        };
+      }
+
+      const pMatch = id.match(/^purchase_cost_(.+)$/);
+      if (pMatch) {
+        const currCode = pMatch[1];
+        const isBase = isBaseCurrency(currCode);
+        return {
+          id: `${id}_summary`,
+          columnId: id,
+          label: t("table.colCost", { namespace: "fixedAssets", vars: { suffix: "" } }),
+          value: totalPurchaseCostBase !== 0 ? formatAmount(totalPurchaseCostBase, { currencyCode: currCode }) : "—",
+          className: isBase ? "text-foreground font-black" : "text-muted-foreground font-extrabold",
+        };
+      }
+
+      const depMatch = id.match(/^accumulated_depreciation_(.+)$/);
+      if (depMatch) {
+        const currCode = depMatch[1];
+        const isBase = isBaseCurrency(currCode);
+        return {
+          id: `${id}_summary`,
+          columnId: id,
+          label: t("table.colAccumulatedDepreciation", { namespace: "fixedAssets", vars: { suffix: "" } }),
+          value: totalAccumulatedDepBase !== 0 ? formatAmount(totalAccumulatedDepBase, { currencyCode: currCode }) : "—",
+          className: isBase ? "text-foreground font-black" : "text-muted-foreground font-extrabold",
+        };
+      }
+
+      const nbvMatch = id.match(/^net_book_value_(.+)$/);
+      if (nbvMatch) {
+        const currCode = nbvMatch[1];
+        const isBase = isBaseCurrency(currCode);
+        return {
+          id: `${id}_summary`,
+          columnId: id,
+          label: t("table.colNetBookValue", { namespace: "fixedAssets", vars: { suffix: "" } }),
+          value: totalNetBookValueBase !== 0 ? formatAmount(totalNetBookValueBase, { currencyCode: currCode }) : "—",
+          className: isBase ? "text-foreground font-black text-primary" : "text-muted-foreground font-extrabold",
+        };
+      }
+
+      return { id: `${id}_spacer`, columnId: id, label: "", value: "" };
+    });
+  }, [assets, columns, baseCode, formatAmount, isBaseCurrency, t]);
+
   return (
     <OperationalTableTemplate
       title={t("title", { namespace: "fixedAssets",  })}
@@ -461,6 +535,7 @@ export default function FixedAssetsPage() {
           onVisibleColumnsChange={setVisibleColumnIds}
           onExportExcel={handleExport}
           rowActions={rowActions}
+          summary={summaryColumns}
           filterBar={
             <div className="flex items-center gap-2">
               <Select
