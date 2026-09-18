@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@shared/ui/button";
-import { X, Plus, Scale, Boxes, Shuffle } from "lucide-react";
+import { X, Plus, Scale, Boxes } from "lucide-react";
 import { toast } from "sonner";
 import { materialService } from '@modules/inventory/api/materialService';
 import type { MaterialDto, MaterialUnitDto } from "@erp/shared-types";
@@ -134,7 +134,7 @@ export function MaterialUnitsManager({ material, onClose, onUnitsUpdated }: Mate
         {/* Secondary Units Section */}
         <div>
           <div className="flex items-center justify-between border-b pb-2">
-            <h3 className="text-sm font-bold text-foreground">{t("materials.unitsManager.currentUnits", { namespace: "inventory",  })} ({secondaryUnits.length})</h3>
+            <h3 className="text-sm font-bold text-foreground">{t("materials.unitsManager.currentUnits", { namespace: "inventory", count: secondaryUnits.length })}</h3>
             <Button type="button" size="sm" onClick={() => setShowAddForm(true)} className="bg-primary hover:bg-primary/80 gap-1.5 h-8 text-xs font-bold rounded-lg shadow-sm"><Plus className="w-3.5 h-3.5" /> {t("materials.form.addUnit", { namespace: "inventory",  })}</Button>
           </div>
 
@@ -180,14 +180,6 @@ export function MaterialUnitsManager({ material, onClose, onUnitsUpdated }: Mate
               )}
             </div>
           )}
-        </div>
-
-        {/* Info box */}
-        <div className="bg-amber-50/55 border border-amber-100 p-3.5 rounded-2xl flex gap-3 text-right">
-          <Shuffle className="w-4.5 h-4.5 text-amber-600 shrink-0 mt-0.5" />
-          <p className="text-[10px] text-amber-800 leading-relaxed font-semibold">
-            <strong>{t("labels.warning", { namespace: "inventory",  })}</strong> {t("materials.form.unitsNotice", { namespace: "inventory",  })}
-          </p>
         </div>
       </div>
     </div>

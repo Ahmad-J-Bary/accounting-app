@@ -11,7 +11,7 @@ import { SidebarSection } from "@widgets/sidebar-shell/SidebarSection";
 import { FieldLabel } from "@widgets/sidebar-shell/FieldLabel";
 import { toast } from "sonner";
 import { cn } from "@shared/lib/utils";
-import { Plus, Edit, Hash, Barcode, Package, Layers, Shuffle, Check, Scale, Package2, FileText, Globe, Image as ImageIcon, DollarSign, Tag, TrendingUp, Search, ChevronDown, Warehouse, ScanLine } from "lucide-react";
+import { Plus, Edit, Hash, Barcode, Package, Layers, Check, Scale, Package2, FileText, Globe, Image as ImageIcon, DollarSign, Tag, TrendingUp, Search, ChevronDown, Warehouse, ScanLine } from "lucide-react";
 import type { MaterialDto, CategoryDto, CreateMaterialRequest, UpdateMaterialRequest } from "@erp/shared-types";
 import { materialCodeService } from "@modules/inventory/api/materialCodeService";
 import { categoryService } from "@modules/inventory/api/categoryService";
@@ -969,13 +969,6 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
                 onCancel={() => setShowUnitForm(false)}
               />
             )}
-          </div>
-
-          <div className="bg-amber-50/55 border border-amber-100 p-3.5 rounded-2xl flex gap-3 text-right">
-            <Shuffle className="w-4.5 h-4.5 text-amber-600 flex-shrink-0 mt-0.5" />
-            <p className="text-[10px] text-amber-800 leading-relaxed font-semibold">
-              <strong>{t("labels.warning", { namespace: "inventory" })}</strong> {t("materials.form.unitsNotice", { namespace: "inventory" })} <strong>{t("materials.form.baseUnitWord", { namespace: "inventory" })}</strong> {t("materials.form.unitsNoticeTail", { namespace: "inventory" })}
-            </p>
           </div>
         </TabsContent>
 

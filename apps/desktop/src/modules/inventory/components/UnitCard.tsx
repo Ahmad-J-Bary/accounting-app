@@ -176,7 +176,6 @@ export function UnitCard({
             min="0"
             step="any"
           />
-          {isBase && <p className="text-[8px] text-primary font-bold mt-0.5">{t("materials.form.unitsNotice", { namespace: "inventory",  })}</p>}
         </div>
         <div className="space-y-1.5">
           <p className="text-[10px] font-bold text-muted-foreground">{t("materials.addUnit.barcodeOptional", { namespace: "inventory",  })}</p>
