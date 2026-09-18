@@ -35,8 +35,8 @@ export const inventory: Record<AppLanguage, TranslationTree> = {
       category: "التصنيف",
       warehouse: "المستودع",
       noResults: "لا توجد نتائج للبحث",
-      noResultsMatch: "لا توجد نتائج تطابق معايير البحث",
-      loading: "جاري التحميل...",
+      movement: "حركة",
+      movements: "حركات",
       materialsCount: "عدد المواد",
     },
     errors: {
@@ -680,6 +680,8 @@ export const inventory: Record<AppLanguage, TranslationTree> = {
       noResults: "No search results",
       noResultsMatch: "No results match the search criteria",
       loading: "Loading...",
+      movement: "Movement",
+      movements: "Movements",
       materialsCount: "Materials Count",
     },
     errors: {

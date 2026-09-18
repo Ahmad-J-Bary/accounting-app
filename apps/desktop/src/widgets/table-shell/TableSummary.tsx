@@ -53,6 +53,16 @@ export const TableSummary: React.FC<TableSummaryProps> = ({
 
   if (!hasAnyActive) return null;
 
+  const getAlignStyle = (align?: "right" | "left" | "center"): React.CSSProperties => {
+    if (align === "left") {
+      return { justifyContent: "flex-start", textAlign: "start" };
+    }
+    if (align === "right") {
+      return { justifyContent: "flex-end", textAlign: "end" };
+    }
+    return { justifyContent: "center", textAlign: "center" };
+  };
+
   const labelRow = (
     <div
       dir={direction}
@@ -64,12 +74,13 @@ export const TableSummary: React.FC<TableSummaryProps> = ({
     >
       {columns.map(col => {
         const hasValue = !!col.value;
+        const alignStyle = getAlignStyle(col.align);
         return (
           <div
             key={`${col.id}-label`}
             data-summary-col={col.columnId ?? col.id}
             className={cn(
-              "px-2 py-1.5 flex items-center justify-center text-center select-none transition-colors",
+              "px-2 py-1.5 flex items-center select-none transition-colors",
               hasValue
                 ? asPageFooter
                   ? "text-2xs font-black text-muted-foreground uppercase tracking-wider"
@@ -78,11 +89,13 @@ export const TableSummary: React.FC<TableSummaryProps> = ({
               !asPageFooter && cellBorderClass,
               asPageFooter && hasBorder && cellBorderClass,
             )}
-            style={
-              gridTemplate
-                ? { minWidth: 0, fontFamily: settings.fontFamily }
-                : { flex: columnWidths && col.columnId && columnWidths[col.columnId] ? `0 0 ${columnWidths[col.columnId]}px` : 1 }
-            }
+            style={{
+              fontFamily: settings.fontFamily,
+              ...alignStyle,
+              ...(gridTemplate
+                ? { minWidth: 0 }
+                : { flex: columnWidths && col.columnId && columnWidths[col.columnId] ? `0 0 ${columnWidths[col.columnId]}px` : 1 }),
+            }}
           >
             {hasValue ? col.label : ""}
           </div>
@@ -102,13 +115,14 @@ export const TableSummary: React.FC<TableSummaryProps> = ({
     >
       {columns.map(col => {
         const hasValue = !!col.value;
+        const alignStyle = getAlignStyle(col.align);
         return (
           <div
             key={`${col.id}-value`}
             data-summary-col={col.columnId ?? col.id}
             className={cn(
               getDensityPadding(),
-              "tabular-nums flex items-center justify-center text-center transition-colors",
+              "tabular-nums flex items-center transition-colors",
               hasValue
                 ? asPageFooter
                   ? "font-extrabold text-foreground"
@@ -118,25 +132,20 @@ export const TableSummary: React.FC<TableSummaryProps> = ({
               asPageFooter && hasBorder && cellBorderClass,
               col.className,
             )}
-            style={
-              gridTemplate
+            style={{
+              fontSize: `${settings.fontSize}px`,
+              fontFamily: settings.fontFamily,
+              ...alignStyle,
+              ...(gridTemplate
                 ? {
-                    fontSize: `${settings.fontSize}px`,
-                    fontFamily: settings.fontFamily,
                     minWidth: 0,
-                    textAlign: 'center',
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: 'center',
                   }
                 : {
                     flex: columnWidths && col.columnId && columnWidths[col.columnId]
                       ? `0 0 ${columnWidths[col.columnId]}px`
                       : 1,
-                    fontSize: `${settings.fontSize}px`,
-                    fontFamily: settings.fontFamily,
-                  }
-            }
+                  }),
+            }}
           >
             {hasValue ? col.value : ""}
           </div>
@@ -148,20 +157,22 @@ export const TableSummary: React.FC<TableSummaryProps> = ({
   if (asPageFooter) {
     return (
       <div
+        dir={direction}
         className={cn(
-          "relative bg-slate-50/80 border-t-2 border-slate-200",
-          "shadow-[0_-2px_10px_-4px_rgba(15,23,42,0.1)]",
+          "relative bg-slate-50/90 dark:bg-slate-900/90 backdrop-blur-md border-t-2 border-slate-200 dark:border-slate-800",
+          "shadow-[0_-4px_16px_-4px_rgba(15,23,42,0.08)] dark:shadow-[0_-4px_16px_-4px_rgba(0,0,0,0.3)]",
           sticky && "sticky bottom-0 z-10",
           className,
         )}
       >
         {hasAnyActive && (
-          <div className="absolute end-4 top-0 -translate-y-1/2 rounded-full bg-slate-700 px-2 py-0.5 text-3xs font-black uppercase tracking-wider text-white shadow-sm">
+          <div className="absolute end-4 top-0 -translate-y-1/2 rounded-full bg-slate-800 dark:bg-slate-200 px-2.5 py-0.5 text-3xs font-black uppercase tracking-wider text-slate-100 dark:text-slate-900 shadow-sm flex items-center gap-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
             {t("labels.summary", { namespace: "common" })}
           </div>
         )}
         {labelRow}
-        <div className={cn("border-t", asPageFooter ? "border-slate-200/70" : "border-blue-200/40")} />
+        <div className={cn("border-t", asPageFooter ? "border-slate-200/70 dark:border-slate-800/70" : "border-blue-200/40")} />
         {valueRow}
       </div>
     );
@@ -169,15 +180,16 @@ export const TableSummary: React.FC<TableSummaryProps> = ({
 
   return (
     <div
+      dir={direction}
       className={cn(
         "relative",
         cn(
-          "bg-gradient-to-b from-blue-50/40 to-white",
+          "bg-gradient-to-b from-blue-50/40 to-white dark:from-slate-900/40 dark:to-slate-950",
           hasBorder && [
-            'border-t-[3px] border-blue-300/60',
-            'border-b border-slate-100',
+            'border-t-[3px] border-blue-300/60 dark:border-blue-800/60',
+            'border-b border-slate-100 dark:border-slate-800',
           ],
-          settings.borderStyle === 'full' && 'border-b border-slate-200',
+          settings.borderStyle === 'full' && 'border-b border-slate-200 dark:border-slate-800',
           settings.borderStyle === 'none' && 'border-t-0 border-b-0',
           "shadow-[0_-4px_12px_-4px_rgba(59,130,246,0.18)]",
         ),

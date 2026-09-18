@@ -106,7 +106,11 @@ export function LocalizationProvider({ children }: { children: React.ReactNode }
         `${namespace}.${candidate}`,
         translated || options?.fallback || key,
       );
-      return interpolate(resolved, options?.vars);
+      const vars = {
+        ...(options?.count !== undefined ? { count: options.count } : {}),
+        ...options?.vars,
+      };
+      return interpolate(resolved, vars);
     },
     [language, resolveLabel],
   );

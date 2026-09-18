@@ -208,7 +208,7 @@ export function AdjustmentsTable({ data, loading, search, onSearchChange, onExpo
     return enrichedColumns.map(col => {
       const id = col.id;
       if (id === "material_name") {
-        return { id: "count", columnId: id, label: "", value: `${sortedData.length} ${t("adjustments.countSummary", { namespace: "inventory",  })}`, className: "text-muted-foreground font-medium" };
+        return { id: "count", columnId: id, label: "", value: t("adjustments.countSummary", { namespace: "inventory", count: sortedData.length }), className: "text-muted-foreground font-medium" };
       }
       if (id.startsWith("total_cost_")) {
         const total = sortedData.reduce((s, a) => s + parseFloat(a.total_cost_base || "0"), 0);

@@ -177,7 +177,7 @@ export function DamagedTable({
     const colIds = allColumns.map(c => c.id);
     return colIds.map(id => {
       if (id === "material_name") {
-        return { id: 'count', columnId: id, label: '', value: `${items.length} ${t("damaged.countSummary", { namespace: "inventory",  })}`, className: 'text-muted-foreground font-medium' };
+        return { id: 'count', columnId: id, label: '', value: t("damaged.countSummary", { namespace: "inventory", count: items.length }), className: 'text-muted-foreground font-medium' };
       }
       const costMatch = id.match(/^cost_(.+)$/);
       if (costMatch) {
@@ -187,7 +187,7 @@ export function DamagedTable({
         return {
           id: `${id}_summary`,
           columnId: id,
-          label: `${t("damaged.totalLoss", { namespace: "inventory",  })} ${cs(sym)}`,
+          label: t("damaged.totalLoss", { namespace: "inventory", vars: { sym: cs(sym) } }),
           value: totalCost > 0 ? formatAmount(totalCost, { currencyCode: currCode }) : "—",
           className: isBase ? 'text-destructive font-black' as const : 'text-destructive/60 font-bold' as const,
         };

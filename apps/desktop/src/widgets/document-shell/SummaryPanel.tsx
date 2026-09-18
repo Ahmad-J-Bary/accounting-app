@@ -274,7 +274,7 @@ export function SummaryPanel({
               </div>
 
               {/* Bracket merging into المبلغ كاملاً */}
-              <div className="flex items-center select-none text-primary/30 font-light -mx-1 shrink-0">
+              <div className={cn("flex items-center select-none text-primary/30 font-light -mx-1 shrink-0", direction === "rtl" && "scale-x-[-1]")}>
                 <svg className="w-3.5 h-12" viewBox="0 0 16 48" fill="none">
                   <path
                     d="M0 6C6 6 8 14 8 24C8 34 6 42 0 42M8 24H16"
@@ -314,7 +314,7 @@ export function SummaryPanel({
                   {safeExtra > 0 ? (
                     <>
                       {/* Connection branching out to مدفوع الفاتورة & مدفوع التكاليف */}
-                      <div className="flex items-center select-none text-primary/30 font-light -mx-1 shrink-0">
+                      <div className={cn("flex items-center select-none text-primary/30 font-light -mx-1 shrink-0", direction === "rtl" && "scale-x-[-1]")}>
                         <svg
                           className="w-3.5 h-12"
                           viewBox="0 0 16 48"

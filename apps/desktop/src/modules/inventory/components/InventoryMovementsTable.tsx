@@ -442,7 +442,7 @@ export function InventoryMovementsTable({
     return enrichedColumns.map(col => {
       const id = col.id;
       if (id === "product_name") {
-        return { id: "count", columnId: id, label: "", value: `${sortedData.length} ${t("labels.movement", { namespace: "inventory", count: sortedData.length })}`, className: "text-muted-foreground font-medium" };
+        return { id: "count", columnId: id, label: "", value: t("movements.countSummary", { namespace: "inventory", count: sortedData.length }), className: "text-muted-foreground font-medium" };
       }
       if (id === "quantity") {
         return { id: "qty_spacer", columnId: id, label: "", value: "" };

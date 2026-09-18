@@ -377,12 +377,20 @@ export function UnifiedTable<T>({
 
   const filteredSummary = useMemo(() => {
     if (!summary?.length) return undefined;
-    if (isPrinting) return summary;
-    return summary.filter(s => {
+    const baseSummary = isPrinting ? summary : summary.filter(s => {
       if (!s.columnId) return true;
       return visibleColumnIds.has(s.columnId);
     });
-  }, [summary, visibleColumnIds, isPrinting]);
+
+    return baseSummary.map(s => {
+      const colId = s.columnId || s.id;
+      const matchingCol = visibleColumns.find(c => c.id === colId);
+      if (matchingCol?.align && !s.align) {
+        return { ...s, align: matchingCol.align };
+      }
+      return s;
+    });
+  }, [summary, visibleColumnIds, visibleColumns, isPrinting]);
 
   const showSummary = !!(
     filteredSummary?.length && settings.showSummary && data.length > 0
