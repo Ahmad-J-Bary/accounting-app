@@ -98,15 +98,7 @@ export default function Warehouses() {
         setWarehouseFormOpen(true);
       },
     },
-    {
-      id: "export-warehouses",
-      label: t("labels.exportExcel", { namespace: "inventory" }),
-      icon: Download,
-      priority: "secondary",
-      variant: "outline",
-      onClick: handleExport,
-    },
-  ], [handleExport, t]);
+  ], [t]);
 
   return (
     <OperationalTableTemplate
@@ -114,35 +106,49 @@ export default function Warehouses() {
       toolbarActions={toolbarActions}
       tableContent={
         <div className="flex flex-col h-full">
-          <div className="flex items-start gap-3 px-6 pt-4 pb-2 shrink-0">
-            <div className="relative flex-1">
-              <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <div className="flex flex-wrap items-center justify-between gap-3 px-4 sm:px-6 pt-4 pb-2 shrink-0 border-b border-border/50">
+            <div className="relative flex-1 min-w-[200px] max-w-md">
+              <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
                 placeholder={t("warehouses.searchPlaceholder", { namespace: "inventory",  })}
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                className="pr-10 h-9 bg-white border-muted"
+                className="ps-9 pe-3 h-9 bg-background border-border text-xs sm:text-sm"
               />
               {search && (
-                <div className="text-[11px] text-muted-foreground mt-1.5 px-1">
+                <div className="text-[11px] text-muted-foreground mt-1 px-1">
                   {t("warehouses.countOf", { namespace: "inventory", vars: { count: filteredWarehouses.length, total: warehouses.length },  })}
                 </div>
               )}
             </div>
-            <div className="shrink-0" style={{ minWidth: '150px' }}>
-              <Select value={displayStyle} onValueChange={(v) => setDisplayStyle(v as DisplayStyle)}>
-                <SelectTrigger className="h-9 bg-white border-muted text-xs">
-                  <LayoutGrid className="w-3.5 h-3.5 ml-2 text-muted-foreground" />
-                  <SelectValue placeholder={t("warehouses.viewPlaceholder", { namespace: "inventory",  })} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="cards-small" className="text-xs">{t("warehouses.display.cardsSmall", { namespace: "inventory",  })}</SelectItem>
-                  <SelectItem value="cards-medium" className="text-xs">{t("warehouses.display.cardsMedium", { namespace: "inventory",  })}</SelectItem>
-                  <SelectItem value="cards-large" className="text-xs">{t("warehouses.display.cardsLarge", { namespace: "inventory",  })}</SelectItem>
-                  <SelectItem value="list" className="text-xs">{t("warehouses.display.list", { namespace: "inventory",  })}</SelectItem>
-                  <SelectItem value="rows" className="text-xs">{t("warehouses.display.rows", { namespace: "inventory",  })}</SelectItem>
-                </SelectContent>
-              </Select>
+
+            <div className="flex items-center gap-2 ms-auto shrink-0">
+              <div className="w-[140px] sm:w-[160px]">
+                <Select value={displayStyle} onValueChange={(v) => setDisplayStyle(v as DisplayStyle)}>
+                  <SelectTrigger className="h-9 bg-background border-border text-xs">
+                    <LayoutGrid className="w-3.5 h-3.5 me-2 text-muted-foreground" />
+                    <SelectValue placeholder={t("warehouses.viewPlaceholder", { namespace: "inventory",  })} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="cards-small" className="text-xs">{t("warehouses.display.cardsSmall", { namespace: "inventory",  })}</SelectItem>
+                    <SelectItem value="cards-medium" className="text-xs">{t("warehouses.display.cardsMedium", { namespace: "inventory",  })}</SelectItem>
+                    <SelectItem value="cards-large" className="text-xs">{t("warehouses.display.cardsLarge", { namespace: "inventory",  })}</SelectItem>
+                    <SelectItem value="list" className="text-xs">{t("warehouses.display.list", { namespace: "inventory",  })}</SelectItem>
+                    <SelectItem value="rows" className="text-xs">{t("warehouses.display.rows", { namespace: "inventory",  })}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleExport}
+                className="h-9 px-3 text-xs flex items-center gap-1.5 border-border hover:bg-muted text-muted-foreground hover:text-foreground"
+                title={t("labels.exportExcel", { namespace: "inventory" })}
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">{t("labels.exportExcel", { namespace: "inventory" })}</span>
+              </Button>
             </div>
           </div>
           <div className="flex-1 overflow-auto px-6 pb-6">

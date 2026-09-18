@@ -1,5 +1,5 @@
 import { useMemo, useCallback, useEffect } from "react";
-import { Plus, Shuffle, Image } from "lucide-react";
+import { Plus, Shuffle, Image, Eye, Edit, Trash2, Layers, ArrowRightLeft, ShoppingCart, TrendingUp, Undo2, AlertTriangle, Scale } from "lucide-react";
 import { cn } from '@shared/lib/utils';
 import type { MaterialDto, CategoryDto } from "@erp/shared-types";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
@@ -13,6 +13,7 @@ import type { SummaryColumn } from '@widgets/table-shell/TableSummary';
 import { useUnifiedColumns, useSortable, useBaseCurrencyColumns } from '@shared/hooks';
 import { toLocalString } from '@shared/lib/format';
 import { resolveCategoryName } from "@shared/lib/system-labels";
+import type { RowActionDescriptor } from "@shared/types/row-actions";
 
 interface MaterialTableProps {
   materials: MaterialDto[];
@@ -24,6 +25,13 @@ interface MaterialTableProps {
   onEdit: (m: MaterialDto) => void;
   onDelete: (id: string, name: string) => void;
   onManageUnits?: (material: MaterialDto) => void;
+  onOpenLots?: (material: MaterialDto) => void;
+  onTransfer?: (material: MaterialDto) => void;
+  onPurchases?: (material: MaterialDto) => void;
+  onSales?: (material: MaterialDto) => void;
+  onReturn?: (material: MaterialDto) => void;
+  onDamaged?: (material: MaterialDto) => void;
+  onAdjustment?: (material: MaterialDto) => void;
   selectedId?: string | null;
   onRowClick?: (material: MaterialDto) => void;
   stockTotal?: Map<string, number>;
@@ -42,6 +50,13 @@ export function MaterialTable({
   onEdit,
   onDelete,
   onManageUnits,
+  onOpenLots,
+  onTransfer,
+  onPurchases,
+  onSales,
+  onReturn,
+  onDamaged,
+  onAdjustment,
   selectedId,
   onRowClick,
   stockTotal,
@@ -50,6 +65,117 @@ export function MaterialTable({
   const { formatAmount, currencies } = useCurrencyContext();
   const { isBaseCurrency, currencySuffix: cs } = useBaseCurrencyColumns();
   const { t } = useLocalization();
+
+  const getRowActions = useCallback((m: MaterialDto): RowActionDescriptor<MaterialDto>[] => {
+    const actions: RowActionDescriptor<MaterialDto>[] = [
+      {
+        id: "view",
+        label: t("actions.view", { namespace: "common" }),
+        icon: Eye,
+        priority: "primary",
+        onClick: () => onRowClick?.(m),
+      },
+      {
+        id: "edit",
+        label: t("actions.edit", { namespace: "common" }),
+        icon: Edit,
+        priority: "secondary",
+        onClick: () => onEdit(m),
+      },
+    ];
+
+    if (onManageUnits) {
+      actions.push({
+        id: "manage-units",
+        label: t("materials.units", { namespace: "inventory" }),
+        icon: Scale,
+        priority: "secondary",
+        onClick: () => onManageUnits(m),
+      });
+    }
+
+    if (onOpenLots) {
+      actions.push({
+        id: "lots",
+        label: t("materials.lots", { namespace: "inventory" }),
+        icon: Layers,
+        priority: "secondary",
+        onClick: () => onOpenLots(m),
+      });
+    }
+
+    if (onTransfer) {
+      actions.push({
+        id: "transfer",
+        label: t("materials.transferStock", { namespace: "inventory" }),
+        icon: ArrowRightLeft,
+        priority: "secondary",
+        onClick: () => onTransfer(m),
+      });
+    }
+
+    if (onPurchases) {
+      actions.push({
+        id: "purchases",
+        label: t("materials.purchasesAction", { namespace: "inventory" }),
+        icon: ShoppingCart,
+        priority: "secondary",
+        onClick: () => onPurchases(m),
+      });
+    }
+
+    if (onSales) {
+      actions.push({
+        id: "sales",
+        label: t("materials.salesAction", { namespace: "inventory" }),
+        icon: TrendingUp,
+        priority: "secondary",
+        onClick: () => onSales(m),
+      });
+    }
+
+    if (onReturn) {
+      actions.push({
+        id: "return",
+        label: t("materials.return", { namespace: "inventory" }),
+        icon: Undo2,
+        priority: "secondary",
+        onClick: () => onReturn(m),
+      });
+    }
+
+    if (onDamaged) {
+      actions.push({
+        id: "damaged",
+        label: t("damaged.register", { namespace: "inventory" }),
+        icon: AlertTriangle,
+        priority: "secondary",
+        onClick: () => onDamaged(m),
+      });
+    }
+
+    if (onAdjustment) {
+      actions.push({
+        id: "adjustment",
+        label: t("movementTypes.Adjustment", { namespace: "inventory" }),
+        icon: Scale,
+        priority: "secondary",
+        onClick: () => onAdjustment(m),
+      });
+    }
+
+    actions.push({
+      id: "delete",
+      label: t("actions.delete", { namespace: "common" }),
+      icon: Trash2,
+      priority: "overflow",
+      destructive: true,
+      separator: "before",
+      onClick: () => onDelete(m.id, m.name),
+    });
+
+    return actions;
+  }, [onRowClick, onEdit, onManageUnits, onOpenLots, onTransfer, onPurchases, onSales, onReturn, onDamaged, onAdjustment, onDelete, t]);
 
   const { sortedData: sortedMaterials, sortField, sortDirection, handleSort } = useSortable({
     data: materials,
@@ -478,15 +604,13 @@ export function MaterialTable({
       label: t("materials.columns.actions", { namespace: "inventory" }),
       accessor: (m) => (
         <TableActions
-          onView={() => onRowClick?.(m)}
-          onEdit={() => onEdit(m)}
-          onDelete={() => onDelete(m.id, m.name)}
+          actions={getRowActions(m)}
         />
       )
     });
 
     return cols;
-  }, [categories, onManageUnits, formatAmount, currencies, onEdit, onDelete, onRowClick, rawPriceBase, unitCostBase, extraCostBase, totalReceived, totalAvailable, isBaseCurrency, cs, t]);
+  }, [categories, formatAmount, currencies, rawPriceBase, unitCostBase, extraCostBase, totalReceived, totalAvailable, isBaseCurrency, cs, t, getRowActions, onManageUnits]);
 
   // Default visible: only base currency's money columns are shown.
   const defaultVisible = useMemo(() => {
@@ -592,6 +716,7 @@ export function MaterialTable({
         sortDirection={sortDirection}
         onRowClick={onRowClick}
         selectedId={selectedId}
+        rowActions={getRowActions}
         onHeaderClick={(col) => {
           const sortableFields: SortField[] = ["code", "name", "total_received", "total_sold", "total_available", "minimum_stock"];
           if (sortableFields.includes(col.id as SortField)) {

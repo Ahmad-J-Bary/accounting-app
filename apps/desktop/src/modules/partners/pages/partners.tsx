@@ -13,24 +13,26 @@ import { OperationalTableTemplate } from '@widgets/templates/OperationalTableTem
 import { PartnerTable } from '../components/PartnerTable';
 import { PartnersSidePanel } from '../components/PartnersSidePanel';
 import { ChartCard } from '@modules/partners/components/ChartCard';
-import { CapitalSourceDialog, type CapitalSource } from '../components/CapitalSourceDialog';
-import { useDataTable } from '@shared/hooks';
+import { useDataTable, useExportSetup } from '@shared/hooks';
+import { executeExport, type ExcelExportColumn } from "@shared/lib/excel";
 import { useTabs } from "@app/providers/TabContext";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@shared/ui/select";
 import { toast } from "sonner";
 import { paymentService } from '@modules/payments/api/paymentService';
 import { type CreatePaymentRequest } from '@erp/shared-types';
-import { usePartnerRatios } from '@modules/partners/hooks/usePartnerRatios';
+import { usePartnerRatios, type PartnerWithRatios } from '@modules/partners/hooks/usePartnerRatios';
 import { queryClient, PARTNER_MUTATION_KEYS, invalidateKeys } from "@shared/hooks/queryClient";
 import { START_MODE_EXISTING } from "@modules/opening-balance/lib/wizard-types";
 import { useLocalization } from "@app/providers/LocalizationProvider";
 import type { ResponsiveActionItem } from "@widgets/page-header/ResponsiveActions";
+import { CapitalSourceDialog, type CapitalSource } from "../components/CapitalSourceDialog";
 
 export default function Partners() {
   const { t } = useLocalization();
   const { openTab } = useTabs();
   const { formatAmount, baseCurrency, currencies } = useCurrencyContext();
+  const { exportData, ratesSheet } = useExportSetup();
   const [searchParams, setSearchParams] = useSearchParams();
   const [globalStrategy, setGlobalStrategy] = useState(() => localStorage.getItem("partnerProfitStrategy") || "auto");
   const persistStrategy = (v: string) => { setGlobalStrategy(v); localStorage.setItem("partnerProfitStrategy", v); };
@@ -185,6 +187,32 @@ export default function Partners() {
 
   const isLoading = loading;
 
+  const handleExport = useCallback(async () => {
+    const exportColumns: ExcelExportColumn[] = [
+      { id: "name", label: t("table.name", { namespace: "partners" }), accessor: (row) => String((row as unknown as PartnerWithRatios).name ?? "") },
+      { id: "capital_ratio", label: t("table.capitalRatio", { namespace: "partners" }), accessor: (row) => `${((row as unknown as PartnerWithRatios).calculatedCapitalRatio ?? 0).toFixed(2)}%` },
+      { id: "ratio", label: t("table.profitRatio", { namespace: "partners" }), accessor: (row) => `${((row as unknown as PartnerWithRatios).calculatedRatio ?? 0).toFixed(2)}%` },
+      ...currencies.map((curr) => ({
+        id: `amount_${curr.code}`,
+        label: `${t("table.amount", { namespace: "partners" })} (${curr.symbol || curr.code})`,
+        accessor: (row: Record<string, unknown>) => {
+          const p = row as unknown as PartnerWithRatios;
+          return p.displayAmountBase ? formatAmount(p.displayAmountBase, { currencyCode: curr.code }) : "";
+        },
+      })),
+      { id: "phone", label: t("table.phone", { namespace: "partners" }), accessor: (row) => String((row as Record<string, unknown>).phone ?? "") },
+      { id: "notes", label: t("table.notes", { namespace: "partners" }), accessor: (row) => String((row as unknown as PartnerWithRatios).notes ?? "") },
+    ];
+
+    await executeExport(exportData, {
+      sheetName: t("page.title", { namespace: "partners" }),
+      filename: t("page.title", { namespace: "partners" }),
+      data: partnersWithRatios as unknown as Record<string, unknown>[],
+      columns: exportColumns,
+      currencyRatesSheet: ratesSheet,
+    });
+  }, [exportData, ratesSheet, t, currencies, formatAmount, partnersWithRatios]);
+
   const toolbarActions = useMemo<ResponsiveActionItem[]>(() => [
     {
       id: "add-partner",
@@ -215,7 +243,7 @@ export default function Partners() {
       id: "profit-distribution",
       label: t("toolbar.profitDistribution", { namespace: "partners" }),
       icon: Coins,
-      priority: "tertiary",
+      priority: "secondary",
       variant: "outline",
       onClick: () => setActivePanel("profit-distribution"),
     },
@@ -233,6 +261,7 @@ export default function Partners() {
           loading={isLoading}
           search={search}
           onSearchChange={setSearch}
+          onExportExcel={handleExport}
           filterBar={
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider whitespace-nowrap">{t("filter.distribution", { namespace: "partners",  })}</span>

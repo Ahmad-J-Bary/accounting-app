@@ -9,8 +9,6 @@ import { formatDateTime, formatNumber, toLocalString } from '@shared/lib/format'
 import { dateCol, executeExport, currencyAmountCols } from "@shared/lib/excel";
 import type { ExcelExportColumn } from "@shared/lib/excel";
 import { getMovementType } from '../constants/movementTypes';
-import { Download } from "lucide-react";
-import { Button } from "@shared/ui/button";
 import { useLocalization } from "@app/providers/LocalizationProvider";
 import { resolveWarehouseDisplayName } from "@shared/lib/system-labels";
 
@@ -488,17 +486,7 @@ export function InventoryMovementsTable({
       columnsModified={isModified}
       showToolbar={true}
       className={className}
-      actions={
-        <Button
-          size="sm"
-          variant="outline"
-          className="h-8 border-muted bg-white text-foreground hover:bg-muted"
-          onClick={handleExport}
-        >
-          <Download className="w-3.5 h-3.5 ml-1.5 text-muted-foreground" />
-          {t("movements.columns.exportToExcel", { namespace: "inventory" })}
-        </Button>
-      }
+      onExportExcel={handleExport}
     >
       <UnifiedTable
         data={sortedData}

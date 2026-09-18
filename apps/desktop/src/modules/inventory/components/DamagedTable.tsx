@@ -1,4 +1,5 @@
-import { useMemo } from "react";
+import { useMemo, useCallback } from "react";
+import { Eye, Edit, Trash2 } from "lucide-react";
 import { SharedTable } from '@widgets/table-shell/SharedTable';
 import type { UnifiedColumn } from '@widgets/table-shell/UnifiedTable';
 import { TableActions } from '@widgets/table-shell/TableActions';
@@ -8,6 +9,7 @@ import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { useBaseCurrencyColumns } from "@shared/hooks";
 import { useLocalization } from "@app/providers/LocalizationProvider";
 import type { DamagedItem } from "@erp/shared-types";
+import type { RowActionDescriptor } from "@shared/types/row-actions";
 
 interface DamagedTableProps {
   items: DamagedItem[];
@@ -44,6 +46,40 @@ export function DamagedTable({
     if (!amount || !code) return "";
     return formatCurrency(amount, code);
   };
+
+  const getRowActions = useCallback((i: DamagedItem): RowActionDescriptor<DamagedItem>[] => {
+    const actions: RowActionDescriptor<DamagedItem>[] = [];
+    if (onView) {
+      actions.push({
+        id: "view",
+        label: t("actions.view", { namespace: "common" }),
+        icon: Eye,
+        priority: "primary",
+        onClick: () => onView(i),
+      });
+    }
+    if (onEdit) {
+      actions.push({
+        id: "edit",
+        label: t("actions.edit", { namespace: "common" }),
+        icon: Edit,
+        priority: "secondary",
+        onClick: () => onEdit(i),
+      });
+    }
+    if (onDelete) {
+      actions.push({
+        id: "delete",
+        label: t("actions.delete", { namespace: "common" }),
+        icon: Trash2,
+        priority: "overflow",
+        destructive: true,
+        separator: "before",
+        onClick: () => onDelete(i.id),
+      });
+    }
+    return actions;
+  }, [onView, onEdit, onDelete, t]);
 
   const allColumns = useMemo<UnifiedColumn<DamagedItem>[]>(() => {
     const cols: UnifiedColumn<DamagedItem>[] = [
@@ -115,16 +151,14 @@ export function DamagedTable({
         label: t("labels.actions", { namespace: "inventory",  }),
         accessor: (i) => (
           <TableActions
-            onView={onView ? () => onView(i) : undefined}
-            onEdit={onEdit ? () => onEdit(i) : undefined}
-            onDelete={onDelete ? () => onDelete(i.id) : undefined}
+            actions={getRowActions(i)}
           />
         ),
       });
     }
 
     return cols;
-  }, [formatAmount, currencies, isBaseCurrency, onView, onEdit, onDelete, cs, t]);
+  }, [formatAmount, currencies, isBaseCurrency, onView, onEdit, onDelete, cs, t, getRowActions]);
 
   const defaultVisible = useMemo(() => {
     const ids: string[] = ["id", "material_name", "quantity", "loss_original"];
@@ -187,6 +221,7 @@ export function DamagedTable({
       sortableFields={["material_name", "damage_date", "quantity", "cost_impact"]}
       selectedId={selectedId}
       onRowClick={onView}
+      rowActions={getRowActions}
       emptyMessage={search ? t("labels.noResultsMatch", { namespace: "inventory",  }) : t("damaged.empty", { namespace: "inventory",  })}
       summary={summaryColumns}
       onVisibleColumnsChange={onVisibleColumnsChange}

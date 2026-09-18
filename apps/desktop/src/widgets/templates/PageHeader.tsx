@@ -46,11 +46,11 @@ export function PageHeader({
       </div>
 
       {(hasResponsiveActions || actions) && (
-        <div className="no-print min-w-0">
+        <div className="no-print min-w-0 flex-1 flex justify-end">
           {hasResponsiveActions ? (
-            <ResponsiveActions actions={actionItems ?? []} />
+            <ResponsiveActions actions={actionItems ?? []} className="w-full flex justify-end" />
           ) : (
-            <div className="flex items-center gap-1 sm:gap-1.5 md:gap-2 shrink-0 flex-wrap">{actions}</div>
+            <div className="flex items-center gap-1 sm:gap-1.5 md:gap-2 shrink-0 flex-wrap justify-end">{actions}</div>
           )}
         </div>
       )}

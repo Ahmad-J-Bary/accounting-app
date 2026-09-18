@@ -31,8 +31,7 @@ export function HierarchicalTreeTemplate({
   sidePanel,
   isPanelOpen = false,
   className,
-  children,
-  treePresentation = "default",
+  children = "default",
 }: HierarchicalTreeTemplateProps) {
   const { t, direction } = useLocalization();
   const resolvedTreeHeaderTitle = treeHeaderTitle ?? t('labels.hierarchicalTree');
@@ -55,28 +54,15 @@ export function HierarchicalTreeTemplate({
           sidePanel && isPanelOpen ? "max-lg:hidden" : "",
         )}>
           <aside
-            className={cn(
-              "flex-1 rounded-xl border shadow-sm flex flex-col overflow-hidden transition-all hover:shadow-md",
-              treePresentation === "explorer"
-                ? "bg-slate-950 text-slate-100 border-slate-800"
-                : "bg-card border-border",
-            )}
+            className="flex-1 rounded-xl border border-border bg-card shadow-sm flex flex-col overflow-hidden transition-all hover:shadow-md"
           >
             <div
-              className={cn(
-                "px-3 sm:px-4 py-2.5 sm:py-3 border-b flex items-center justify-between gap-2 shrink-0",
-                treePresentation === "explorer"
-                  ? "border-slate-800 bg-slate-900/80"
-                  : "border-border bg-muted/30",
-              )}
+              className="px-3 sm:px-4 py-2.5 sm:py-3 border-b border-border bg-muted/30 flex items-center justify-between gap-2 shrink-0"
             >
               <div className="flex items-center gap-2 min-w-0">
                 <div className="w-2 h-2 rounded-full bg-primary animate-pulse shrink-0" />
                 <h2
-                  className={cn(
-                    "text-xs sm:text-sm font-black uppercase tracking-wider truncate",
-                    treePresentation === "explorer" ? "text-slate-100" : "text-foreground",
-                  )}
+                  className="text-xs sm:text-sm font-black uppercase tracking-wider truncate text-foreground"
                 >
                   {resolvedTreeHeaderTitle}
                 </h2>
@@ -88,10 +74,7 @@ export function HierarchicalTreeTemplate({
               )}
             </div>
             <div
-              className={cn(
-                "flex-1 overflow-auto p-2 sm:p-3 custom-scrollbar",
-                treePresentation === "explorer" && "bg-slate-950",
-              )}
+              className="flex-1 overflow-auto p-2 sm:p-3 custom-scrollbar"
             >
               {treeContent}
             </div>

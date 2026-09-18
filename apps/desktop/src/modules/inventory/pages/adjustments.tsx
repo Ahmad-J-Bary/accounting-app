@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useQueryClient } from '@tanstack/react-query';
 import { INVENTORY_MUTATION_KEYS, invalidateKeys } from "@shared/hooks/queryClient";
-import { Plus, Eye, Settings2, Trash2 } from "lucide-react";
+import { Plus } from "lucide-react";
 import { adjustmentService } from '@modules/inventory/api/adjustmentService';
 import { materialService } from '@modules/inventory/api/materialService';
 import type { StockAdjustment, CreateStockAdjustmentRequest, UpdateStockAdjustmentRequest, MaterialDto } from "@erp/shared-types";
@@ -191,41 +191,7 @@ export default function AdjustmentsPage() {
       priority: "primary",
       onClick: handleNewClick,
     },
-    {
-      id: "view-adjustment",
-      label: t("actions.view", { namespace: "common" }),
-      icon: Eye,
-      priority: "secondary",
-      variant: "outline",
-      disabled: !selectedItem,
-      onClick: () => {
-        if (selectedItem) handleView(selectedItem);
-      },
-    },
-    {
-      id: "edit-adjustment",
-      label: t("actions.edit", { namespace: "common" }),
-      icon: Settings2,
-      priority: "secondary",
-      variant: "outline",
-      disabled: !selectedItem,
-      onClick: () => {
-        if (selectedItem) handleEditClick(selectedItem);
-      },
-    },
-    {
-      id: "delete-adjustment",
-      label: t("actions.delete", { namespace: "common" }),
-      icon: Trash2,
-      priority: "overflow",
-      variant: "outline",
-      destructive: true,
-      disabled: !selectedItem,
-      onClick: () => {
-        if (selectedItem) void handleDelete(selectedItem.id);
-      },
-    },
-  ], [handleDelete, handleEditClick, handleNewClick, handleView, selectedItem, t]);
+  ], [handleNewClick, t]);
 
   return (
     <OperationalTableTemplate

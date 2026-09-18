@@ -1,4 +1,5 @@
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useCallback } from "react";
+import { Eye, Edit, Trash2 } from "lucide-react";
 import type { StockMovement, WarehouseDto } from "@erp/shared-types";
 import { UnifiedTable, type UnifiedColumn } from '@widgets/table-shell/UnifiedTable';
 import { TableShell } from '@widgets/table-shell/TableShell';
@@ -7,6 +8,7 @@ import type { SummaryColumn } from '@widgets/table-shell/TableSummary';
 import { useUnifiedColumns, useSortable } from "@shared/hooks";
 import { formatDateTime, formatNumber, toLocalString } from '@shared/lib/format';
 import { useLocalization } from "@app/providers/LocalizationProvider";
+import type { RowActionDescriptor } from "@shared/types/row-actions";
 
 export interface TransferRow {
   reference: string;
@@ -104,6 +106,40 @@ export function TransferTable({ movements, warehouses, className, onView, onEdit
     sortFn,
   });
 
+  const getRowActions = useCallback((r: TransferRow): RowActionDescriptor<TransferRow>[] => {
+    const actions: RowActionDescriptor<TransferRow>[] = [];
+    if (onView) {
+      actions.push({
+        id: "view",
+        label: t("actions.view", { namespace: "common" }),
+        icon: Eye,
+        priority: "primary",
+        onClick: () => onView(r),
+      });
+    }
+    if (onEdit) {
+      actions.push({
+        id: "edit",
+        label: t("actions.edit", { namespace: "common" }),
+        icon: Edit,
+        priority: "secondary",
+        onClick: () => onEdit(r),
+      });
+    }
+    if (onDelete) {
+      actions.push({
+        id: "delete",
+        label: t("actions.delete", { namespace: "common" }),
+        icon: Trash2,
+        priority: "overflow",
+        destructive: true,
+        separator: "before",
+        onClick: () => onDelete(r.reference),
+      });
+    }
+    return actions;
+  }, [onView, onEdit, onDelete, t]);
+
   const columns = useMemo<UnifiedColumn<TransferRow>[]>(() => {
     const cols: UnifiedColumn<TransferRow>[] = [
     {
@@ -161,15 +197,13 @@ export function TransferTable({ movements, warehouses, className, onView, onEdit
         label: t('labels.actions', { namespace: 'inventory',  }),
         accessor: (r) => (
           <TableActions
-            onView={onView ? () => onView(r) : undefined}
-            onEdit={onEdit ? () => onEdit(r) : undefined}
-            onDelete={onDelete ? () => onDelete(r.reference) : undefined}
+            actions={getRowActions(r)}
           />
         ),
       });
     }
     return cols;
-  }, [onView, onEdit, onDelete, t]);
+  }, [onView, onEdit, onDelete, t, getRowActions]);
 
   const defaultVisible = useMemo(() => {
     const ids = ["material_name", "source", "dest", "quantity", "reference", "notes", "date"];
@@ -218,6 +252,7 @@ export function TransferTable({ movements, warehouses, className, onView, onEdit
         tableId="transfers"
         sortField={sortField}
         sortDirection={sortDirection}
+        rowActions={getRowActions}
         onHeaderClick={(col) => {
           if (["date", "material_name", "reference", "quantity", "notes"].includes(col.id)) {
             handleSort(col.id as TransferSortField);

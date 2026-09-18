@@ -5,6 +5,7 @@ import { TableShell } from './TableShell';
 import type { SummaryColumn } from './TableSummary';
 import { useUnifiedColumns, useSortable } from '@shared/hooks';
 import { useLocalization } from "@app/providers/LocalizationProvider";
+import type { RowActionDescriptor } from '@shared/types/row-actions';
 
 type SortDirection = 'asc' | 'desc';
 
@@ -26,6 +27,7 @@ interface SharedTableProps<T> {
   sortConfig?: SortConfig<T>;
   selectedId?: string | null;
   onRowClick?: (row: T) => void;
+  rowActions?: (row: T) => RowActionDescriptor<T>[];
   sortableFields?: string[];
   emptyMessage?: string;
   summary?: SummaryColumn[];
@@ -51,6 +53,7 @@ export function SharedTable<T>({
   sortConfig,
   selectedId,
   onRowClick,
+  rowActions,
   sortableFields,
   emptyMessage,
   summary,
@@ -111,6 +114,7 @@ export function SharedTable<T>({
         sortDirection={sortDirection}
         selectedId={selectedId}
         onRowClick={onRowClick}
+        rowActions={rowActions}
         onHeaderClick={(col) => {
           if (sortableFields && sortableFields.includes(col.id)) {
             handleSort(col.id);

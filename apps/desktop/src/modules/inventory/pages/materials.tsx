@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { Plus, Layers, ShoppingCart, TrendingUp, AlertTriangle, Undo2, ArrowRightLeft, Scale } from "lucide-react";
+import { Plus } from "lucide-react";
 import { materialService } from '@modules/inventory/api/materialService';
 import { categoryService } from '@modules/inventory/api/categoryService';
 import { damagedService } from '@modules/inventory/api/damagedService';
@@ -414,136 +414,7 @@ export default function Materials() {
       priority: "primary",
       onClick: handleOpenAdd,
     },
-    {
-      id: "material-lots",
-      label: t("materials.lots", { namespace: "inventory" }),
-      icon: Layers,
-      priority: "secondary",
-      variant: "outline",
-      disabled: !selectedId,
-      onClick: () => {
-        if (!selectedId) return;
-        setLotsPanelActive(true);
-        setIsFormOpen(false);
-        setShowDamagedPanel(false);
-        setManagingUnitsMaterial(null);
-        setTransferFormOpen(false);
-        setIsReturnOpen(false);
-        setShowUnitsPanel(false);
-        setShowAdjustmentPanel(false);
-      },
-    },
-    {
-      id: "transfer-stock",
-      label: t("materials.transferStock", { namespace: "inventory" }),
-      icon: ArrowRightLeft,
-      priority: "secondary",
-      variant: "outline",
-      disabled: !selectedId,
-      onClick: () => handleOpenTransfer({}),
-    },
-    {
-      id: "material-purchases",
-      label: t("materials.purchasesAction", { namespace: "inventory" }),
-      icon: ShoppingCart,
-      priority: "secondary",
-      variant: "outline",
-      disabled: !selectedId,
-      onClick: () => {
-        if (!selectedId || !selectedMaterial) return;
-        openTab({
-          id: `purchases-${selectedId}`,
-          title: t("materials.purchasesTabTitle", {
-            namespace: "inventory",
-            vars: { name: selectedMaterial.name },
-          }),
-          path: `/inventory/purchases/${selectedId}`,
-          closable: true,
-        });
-      },
-    },
-    {
-      id: "material-sales",
-      label: t("materials.salesAction", { namespace: "inventory" }),
-      icon: TrendingUp,
-      priority: "tertiary",
-      variant: "outline",
-      disabled: !selectedId,
-      onClick: () => {
-        if (!selectedId || !selectedMaterial) return;
-        openTab({
-          id: `sales-${selectedId}`,
-          title: t("materials.salesTabTitle", {
-            namespace: "inventory",
-            vars: { name: selectedMaterial.name },
-          }),
-          path: `/inventory/sales/${selectedId}`,
-          closable: true,
-        });
-      },
-    },
-    {
-      id: "material-return",
-      label: t("materials.return", { namespace: "inventory" }),
-      icon: Undo2,
-      priority: "tertiary",
-      variant: "outline",
-      disabled: !selectedId,
-      onClick: handleOpenReturn,
-    },
-    {
-      id: "material-units",
-      label: t("materials.units", { namespace: "inventory" }),
-      icon: Layers,
-      priority: "tertiary",
-      variant: "outline",
-      disabled: !selectedId,
-      onClick: () => {
-        setManagingUnitsMaterial(selectedMaterial);
-        setShowUnitsPanel(true);
-      },
-    },
-    {
-      id: "register-damaged",
-      label: t("damaged.register", { namespace: "inventory" }),
-      icon: AlertTriangle,
-      priority: "overflow",
-      variant: "outline",
-      destructive: true,
-      disabled: !selectedId,
-      onClick: () => {
-        setShowDamagedPanel(true);
-        setIsFormOpen(false);
-        setManagingUnitsMaterial(null);
-      },
-    },
-    {
-      id: "stock-adjustment",
-      label: t("movementTypes.Adjustment", { namespace: "inventory" }),
-      icon: Scale,
-      priority: "overflow",
-      variant: "outline",
-      disabled: !selectedId,
-      onClick: () => {
-        setShowAdjustmentPanel(true);
-        setIsFormOpen(false);
-        setManagingUnitsMaterial(null);
-        setTransferFormOpen(false);
-        setIsReturnOpen(false);
-        setShowDamagedPanel(false);
-        setShowUnitsPanel(false);
-      },
-    },
-  ], [
-    handleOpenAdd,
-    handleOpenReturn,
-    handleOpenTransfer,
-    openTab,
-    selectedId,
-    selectedMaterial,
-    setIsFormOpen,
-    t,
-  ]);
+  ], [handleOpenAdd, t]);
 
   return (
     <>
@@ -564,6 +435,63 @@ export default function Materials() {
             onManageUnits={(m) => {
               setManagingUnitsMaterial(m);
               setShowUnitsPanel(true);
+            }}
+            onOpenLots={(m) => {
+              setSelectedId(m.id);
+              setLotsPanelActive(true);
+              setIsFormOpen(false);
+              setShowDamagedPanel(false);
+              setManagingUnitsMaterial(null);
+              setTransferFormOpen(false);
+              setIsReturnOpen(false);
+              setShowUnitsPanel(false);
+              setShowAdjustmentPanel(false);
+            }}
+            onTransfer={(m) => {
+              setSelectedId(m.id);
+              handleOpenTransfer({});
+            }}
+            onPurchases={(m) => {
+              openTab({
+                id: `purchases-${m.id}`,
+                title: t("materials.purchasesTabTitle", {
+                  namespace: "inventory",
+                  vars: { name: m.name },
+                }),
+                path: `/inventory/purchases/${m.id}`,
+                closable: true,
+              });
+            }}
+            onSales={(m) => {
+              openTab({
+                id: `sales-${m.id}`,
+                title: t("materials.salesTabTitle", {
+                  namespace: "inventory",
+                  vars: { name: m.name },
+                }),
+                path: `/inventory/sales/${m.id}`,
+                closable: true,
+              });
+            }}
+            onReturn={(m) => {
+              setSelectedId(m.id);
+              handleOpenReturn();
+            }}
+            onDamaged={(m) => {
+              setSelectedId(m.id);
+              setShowDamagedPanel(true);
+              setIsFormOpen(false);
+              setManagingUnitsMaterial(null);
+            }}
+            onAdjustment={(m) => {
+              setSelectedId(m.id);
+              setShowAdjustmentPanel(true);
+              setIsFormOpen(false);
+              setManagingUnitsMaterial(null);
+              setTransferFormOpen(false);
+              setIsReturnOpen(false);
+              setShowDamagedPanel(false);
+              setShowUnitsPanel(false);
             }}
             selectedId={selectedId}
             onRowClick={(m) => setSelectedId(m.id)}

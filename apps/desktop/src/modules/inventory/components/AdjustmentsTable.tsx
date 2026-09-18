@@ -1,5 +1,5 @@
-import { useMemo, useEffect } from "react";
-import { ArrowUpCircle, ArrowDownCircle, Minus } from "lucide-react";
+import { useMemo, useEffect, useCallback } from "react";
+import { ArrowUpCircle, ArrowDownCircle, Minus, Eye, Edit, Trash2 } from "lucide-react";
 import { cn } from '@shared/lib/utils';
 import type { StockAdjustment } from "@erp/shared-types";
 import { UnifiedTable, type UnifiedColumn } from '@widgets/table-shell/UnifiedTable';
@@ -11,6 +11,7 @@ import { formatDateTime, formatNumber, toFixed } from '@shared/lib/format';
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { useBaseCurrencyColumns } from "@shared/hooks";
 import { useLocalization } from "@app/providers/LocalizationProvider";
+import type { RowActionDescriptor } from "@shared/types/row-actions";
 
 interface AdjustmentsTableProps {
   data: StockAdjustment[];
@@ -50,6 +51,40 @@ export function AdjustmentsTable({ data, loading, search, onSearchChange, onExpo
       return direction === "asc" ? comparison : -comparison;
     }
   });
+
+  const getRowActions = useCallback((a: StockAdjustment): RowActionDescriptor<StockAdjustment>[] => {
+    const actions: RowActionDescriptor<StockAdjustment>[] = [];
+    if (onView) {
+      actions.push({
+        id: "view",
+        label: t("actions.view", { namespace: "common" }),
+        icon: Eye,
+        priority: "primary",
+        onClick: () => onView(a),
+      });
+    }
+    if (onEdit) {
+      actions.push({
+        id: "edit",
+        label: t("actions.edit", { namespace: "common" }),
+        icon: Edit,
+        priority: "secondary",
+        onClick: () => onEdit(a),
+      });
+    }
+    if (onDelete) {
+      actions.push({
+        id: "delete",
+        label: t("actions.delete", { namespace: "common" }),
+        icon: Trash2,
+        priority: "overflow",
+        destructive: true,
+        separator: "before",
+        onClick: () => onDelete(a.id),
+      });
+    }
+    return actions;
+  }, [onView, onEdit, onDelete, t]);
 
   const allColumns = useMemo<UnifiedColumn<StockAdjustment>[]>(() => {
     const cols: UnifiedColumn<StockAdjustment>[] = [
@@ -138,16 +173,14 @@ export function AdjustmentsTable({ data, loading, search, onSearchChange, onExpo
         label: t("labels.actions", { namespace: "inventory",  }),
         accessor: (a) => (
           <TableActions
-            onView={onView ? () => onView(a) : undefined}
-            onEdit={onEdit ? () => onEdit(a) : undefined}
-            onDelete={onDelete ? () => onDelete(a.id) : undefined}
+            actions={getRowActions(a)}
           />
         ),
       });
     }
 
     return cols;
-  }, [onView, onEdit, onDelete, formatAmount, currencies, cs, t]);
+  }, [onView, onEdit, onDelete, formatAmount, currencies, cs, t, getRowActions]);
 
   const defaultVisible = useMemo(() => {
     const ids: string[] = ["id", "material_name", "system_quantity", "actual_quantity",
@@ -226,6 +259,7 @@ export function AdjustmentsTable({ data, loading, search, onSearchChange, onExpo
         tableId="adjustments"
         sortField={sortField}
         sortDirection={sortDirection}
+        rowActions={getRowActions}
         onHeaderClick={(col) => {
           if (sortableFields.includes(col.id as SortField)) {
             handleSort(col.id as SortField);

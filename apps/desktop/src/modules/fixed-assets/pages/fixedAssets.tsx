@@ -1,7 +1,6 @@
 import { useState, useMemo, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Button } from "@shared/ui/button";
-import { Plus, Download } from "lucide-react";
+import { Plus, Eye, Pencil, Trash2 } from "lucide-react";
 import { fixedAssetService } from "@modules/fixed-assets/api/fixedAssetService";
 import { CHART_MUTATION_KEYS, ALL_INVENTORY_KEYS, invalidateKeys, queryClient } from "@shared/hooks/queryClient";
 import { warehouseService } from "@modules/inventory/api/warehouseService";
@@ -395,24 +394,33 @@ export default function FixedAssetsPage() {
     return undefined;
   }, [assetTypeFilter, typeCategoryIds]);
 
-  const toolbarActions = useMemo<ResponsiveActionItem[]>(() => [
-    {
-      id: "rotation-run",
-      label: t("table.rotateButton", { namespace: "fixedAssets" }),
-      priority: "secondary",
-      variant: "outline",
-      onClick: () => {
-        void handleRunRotation();
+  const rowActions = useCallback(
+    (asset: FixedAssetDto) => [
+      {
+        id: "view",
+        label: t("actions.view", { namespace: "common" }),
+        icon: Eye,
+        onClick: () => handleRowClick(asset),
       },
-    },
-    {
-      id: "export-assets",
-      label: t("table.exportButton", { namespace: "fixedAssets" }),
-      icon: Download,
-      priority: "tertiary",
-      variant: "outline",
-      onClick: handleExport,
-    },
+      {
+        id: "edit",
+        label: t("actions.edit", { namespace: "common" }),
+        icon: Pencil,
+        onClick: () => handleEdit(asset),
+      },
+      {
+        id: "delete",
+        label: t("actions.delete", { namespace: "common" }),
+        icon: Trash2,
+        variant: "destructive" as const,
+        separator: "before" as const,
+        onClick: () => handleDelete(asset),
+      },
+    ],
+    [handleRowClick, handleEdit, handleDelete, t]
+  );
+
+  const toolbarActions = useMemo<ResponsiveActionItem[]>(() => [
     {
       id: "add-asset",
       label: t("table.addButton", { namespace: "fixedAssets" }),
@@ -424,7 +432,16 @@ export default function FixedAssetsPage() {
         setShowForm(true);
       },
     },
-  ], [handleExport, handleRunRotation, t]);
+    {
+      id: "rotation-run",
+      label: t("table.rotateButton", { namespace: "fixedAssets" }),
+      priority: "secondary",
+      variant: "outline",
+      onClick: () => {
+        void handleRunRotation();
+      },
+    },
+  ], [handleRunRotation, t]);
 
   return (
     <OperationalTableTemplate
@@ -442,6 +459,8 @@ export default function FixedAssetsPage() {
           selectedId={selectedAsset?.id}
           onRowClick={handleRowClick}
           onVisibleColumnsChange={setVisibleColumnIds}
+          onExportExcel={handleExport}
+          rowActions={rowActions}
           filterBar={
             <div className="flex items-center gap-2">
               <Select
