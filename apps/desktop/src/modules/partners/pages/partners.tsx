@@ -264,9 +264,9 @@ export default function Partners() {
           onExportExcel={handleExport}
           filterBar={
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider whitespace-nowrap">{t("filter.distribution", { namespace: "partners",  })}</span>
+              <span className="text-[10px] font-black text-muted-foreground uppercase tracking-wider whitespace-nowrap">{t("filter.distribution", { namespace: "partners",  })}</span>
               <Select value={globalStrategy} onValueChange={persistStrategy}>
-                <SelectTrigger className="w-[120px] h-8 bg-white font-bold shadow-sm border-slate-200 text-xs">
+                <SelectTrigger className="w-[120px] h-8 bg-card font-bold shadow-xs border-border text-xs text-foreground">
                   <SelectValue placeholder={t("filter.select", { namespace: "partners",  })} />
                 </SelectTrigger>
                 <SelectContent>

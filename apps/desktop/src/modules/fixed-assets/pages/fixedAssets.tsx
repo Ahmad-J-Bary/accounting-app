@@ -544,16 +544,15 @@ export default function FixedAssetsPage() {
           rowActions={rowActions}
           summary={summaryColumns}
           filterBar={
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Select
-                dir="rtl"
                 value={assetTypeFilter}
                 onValueChange={(v: "all" | "buildings_land" | "automotive" | "equipment" | "furniture") => {
                   setAssetTypeFilter(v);
                   setWarehouseFilter("all");
                 }}
               >
-                <SelectTrigger className="w-[180px] bg-white border-muted h-8 text-xs font-bold text-foreground">
+                <SelectTrigger className="w-[180px] bg-card border-border h-8 text-xs font-bold text-foreground shadow-xs">
                   <SelectValue placeholder={t("table.assetTypePlaceholder", { namespace: "fixedAssets",  })} />
                 </SelectTrigger>
                 <SelectContent>
