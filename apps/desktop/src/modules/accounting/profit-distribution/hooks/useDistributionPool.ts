@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { fiscalPeriodService } from "@modules/accounting/api/fiscalPeriodService";
+import { accountingService } from "@modules/accounting/api/accountingService";
 import { parseSafeNumber } from "@shared/lib/parseSafeNumber";
 import { QUERY_KEYS } from "@shared/hooks/queryClient";
 import type { ProfitDistributionSource } from "@modules/accounting/api/openingBalanceService";
@@ -20,7 +20,7 @@ export function useDistributionPool(
 ): UseDistributionPoolResult {
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: QUERY_KEYS.distributableProfit(windowStart, windowEnd),
-    queryFn: () => fiscalPeriodService.getDistributableProfit(windowStart, windowEnd),
+    queryFn: () => accountingService.getDistributableProfit(windowStart, windowEnd),
     enabled: !!source && !!windowStart && !!windowEnd,
   });
 

@@ -26,14 +26,9 @@ export interface CompanyLifecycleMigrationLike {
   status?: string;
 }
 
-export interface CompanyLifecyclePeriodLike {
-  status?: string;
-}
-
 export interface CompanyLifecycleInput {
   settings?: CompanyLifecycleSettingsLike | null;
   migrations?: CompanyLifecycleMigrationLike[];
-  periods?: CompanyLifecyclePeriodLike[];
 }
 
 // Node ids of the opening pages in the sidebar page registry. For a NEW company
@@ -162,11 +157,8 @@ export function deriveCompanyInitState(input: CompanyLifecycleInput): CompanyIni
   if (rank === 3) return "OPENING_VALIDATED";
   if (rank === 4) return "OPENING_POSTED";
 
-  // rank 5 = migration locked; once the first fiscal period exists the company
-  // is fully active, otherwise the wizard finished but the first period is
-  // still awaited.
-  const hasPeriod = (input.periods ?? []).length > 0;
-  return hasPeriod ? "ACTIVE" : "OPENING_LOCKED";
+  // rank 5 = migration locked
+  return "ACTIVE";
 }
 
 // Generalized nav hiding driven by both the persisted company type and the

@@ -1,5 +1,5 @@
 import { invoke } from '@shared/lib/invoke';
-import type { AccountDto, AccountLedgerDto, BalanceSheetDto, ReceivablesPayablesSummary, SaveAccountCommand, TrialBalanceDto, ProfitLossDto } from "@erp/shared-types";
+import type { AccountDto, AccountLedgerDto, BalanceSheetDto, ReceivablesPayablesSummary, SaveAccountCommand, TrialBalanceDto, ProfitLossDto, DistributableProfitDto } from "@erp/shared-types";
 
 export type AccountType =
   | "Assets"
@@ -59,5 +59,9 @@ export const accountingService = {
 
   async getBalanceSheet(): Promise<BalanceSheetDto> {
     return await invoke<BalanceSheetDto>("get_balance_sheet");
+  },
+
+  async getDistributableProfit(periodStart: string, periodEnd: string): Promise<DistributableProfitDto> {
+    return await invoke<DistributableProfitDto>("get_distributable_profit", { periodStart, periodEnd });
   },
 };

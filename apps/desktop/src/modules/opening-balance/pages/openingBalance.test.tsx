@@ -11,7 +11,6 @@ import { TabContext } from "@app/providers/TabContext";
 import { TableSettingsContext } from "@shared/context/TableSettingsContext";
 import { settingsService } from "@modules/core/api/settingsService";
 import { openingBalanceService } from "@modules/accounting/api/openingBalanceService";
-import { fiscalPeriodService } from "@modules/accounting/api/fiscalPeriodService";
 import { START_MODE_EXISTING, START_MODE_NEW } from "@modules/opening-balance/lib/wizard-types";
 
 vi.mock("@modules/core/api/settingsService", () => ({
@@ -175,7 +174,6 @@ describe("openingBalance (فاتورة أول المدة) company-type gate", ()
         locked_at: new Date().toISOString(),
       },
     ] as never);
-    vi.mocked(fiscalPeriodService.listFiscalPeriods).mockResolvedValue([] as never);
     renderPage();
     expect(await screen.findByText("DASHBOARD_ROOT")).toBeInTheDocument();
     expect(screen.queryByText("بضاعة أول المدة")).not.toBeInTheDocument();
@@ -194,9 +192,6 @@ describe("openingBalance (فاتورة أول المدة) company-type gate", ()
         locked_at: new Date().toISOString(),
       },
     ] as never);
-    vi.mocked(fiscalPeriodService.listFiscalPeriods).mockResolvedValue([
-      { id: "p1", status: "Open", start_date: "2026-01-01", end_date: "2026-12-31" } as never,
-    ]);
     renderPage();
     expect(await screen.findByText("DASHBOARD_ROOT")).toBeInTheDocument();
     expect(screen.queryByText("بضاعة أول المدة")).not.toBeInTheDocument();

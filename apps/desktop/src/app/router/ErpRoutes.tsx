@@ -1,4 +1,4 @@
-﻿import type { ReactElement } from 'react';
+import type { ReactElement } from 'react';
 import { useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useCompanyTypeSettings, useCompanyInitState } from '@shared/hooks';
@@ -47,8 +47,6 @@ import IncomeStatementReport from '@modules/reports/pages/IncomeStatementReport'
 import TrialBalanceReport from '@modules/reports/pages/TrialBalanceReport';
 import BalanceSheetReport from '@modules/reports/pages/BalanceSheetReport';
 import PartnerRightsReport from '@modules/reports/pages/PartnerRightsReport';
-import FiscalPeriodsPage from '@modules/accounting/fiscal-periods/pages/FiscalPeriodsPage';
-import FiscalYearsPage from '@modules/accounting/fiscal-years/pages/FiscalYearsPage';
 
 // While an EXISTING company is still in its opening workflow
 // (before OPENING_LOCKED), daily-log transactional pages are blocked and
@@ -96,9 +94,6 @@ export function ErpRoutes({ location }: { location?: string | Partial<Location> 
       <Route path="/accounting/reports/partner-profit-share" element={<Navigate to="/accounting/reports/partners" replace />} />
       <Route path="/accounting/reports/partner-statement" element={<Navigate to="/accounting/reports/partners" replace />} />
       <Route path="/accounting/reports/partners" element={<PartnerRightsReport />} />
-      <Route path="/accounting/fiscal-periods" element={<FiscalPeriodsPage />} />
-      <Route path="/accounting/fiscal-years" element={<FiscalYearsPage />} />
-      <Route path="/accounting/reports/fiscal-periods" element={<Navigate to="/accounting/fiscal-periods" replace />} />
       <Route path="/accounting/account-ledger/:accountId" element={<AccountMovement />} />
       <Route path="/journal" element={<OpeningTransactionGate><Journal /></OpeningTransactionGate>} />
       <Route path="/journal/new/*" element={<OpeningTransactionGate><JournalEntryCreatePage /></OpeningTransactionGate>} />

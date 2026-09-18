@@ -1,7 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { settingsService } from "@modules/core/api/settingsService";
 import { openingBalanceService } from "@modules/accounting/api/openingBalanceService";
-import { fiscalPeriodService } from "@modules/accounting/api/fiscalPeriodService";
 import { QUERY_KEYS } from "@shared/hooks/queryClient";
 import {
   companyTypeOf,
@@ -40,14 +39,14 @@ export function useCompanyCapabilities(): CompanyCapabilities {
 
 export interface CompanyInitStateResult {
   initState: CompanyInitState;
-  // True once settings + migrations + fiscal periods have all resolved; consumers
+  // True once settings + migrations have resolved; consumers
   // should fall back to the permissive "ACTIVE" state until then so nothing
   // flashes as blocked during startup.
   isReady: boolean;
 }
 
 // Derived (never stored) initialization state of the company lifecycle: company
-// type plus opening-migration progress plus first-fiscal-period existence.
+// type plus opening-migration progress.
 // NEW companies are always ACTIVE, so their lifecycle queries are skipped
 // entirely (no opening requests for companies that never had an opening setup).
 export function useCompanyInitState(): CompanyInitStateResult {
@@ -58,18 +57,13 @@ export function useCompanyInitState(): CompanyInitStateResult {
     queryFn: () => openingBalanceService.listMigrations(),
     enabled: !isNewCompany,
   });
-  const { data: periods, isSuccess: periodsLoaded } = useQuery({
-    queryKey: QUERY_KEYS.fiscalPeriods,
-    queryFn: () => fiscalPeriodService.listFiscalPeriods(),
-    enabled: !isNewCompany,
-  });
 
   if (isNewCompany) {
     return { initState: "ACTIVE" as const, isReady: Boolean(settings) };
   }
 
   return {
-    initState: deriveCompanyInitState({ settings, migrations, periods }),
-    isReady: Boolean(settings) && migrationsLoaded && periodsLoaded,
+    initState: deriveCompanyInitState({ settings, migrations }),
+    isReady: Boolean(settings) && migrationsLoaded,
   };
 }

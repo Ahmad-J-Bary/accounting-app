@@ -32,16 +32,14 @@ import { START_MODE_NEW, START_MODE_EXISTING } from "@modules/opening-balance/li
 interface SeedOptions {
   mode?: "existing" | "new";
   migrations?: { status: string }[];
-  periods?: unknown[];
 }
 
 function seedLifecycle(qc: QueryClient, opts: SeedOptions = {}) {
-  const { mode = "existing", migrations = [], periods = [] } = opts;
+  const { mode = "existing", migrations = [] } = opts;
   qc.setQueryData(QUERY_KEYS.settings, {
     accounting_start_mode: mode === "new" ? START_MODE_NEW : START_MODE_EXISTING,
   });
   qc.setQueryData(QUERY_KEYS.openingBalanceMigrations, migrations);
-  qc.setQueryData(QUERY_KEYS.fiscalPeriods, periods);
 }
 
 function renderAt(path: string, seed: SeedOptions) {
@@ -61,7 +59,7 @@ function renderAt(path: string, seed: SeedOptions) {
 
 const midOpening: SeedOptions = { migrations: [{ status: "Draft" }] };
 const locked: SeedOptions = { migrations: [{ status: "Locked" }] };
-const active: SeedOptions = { migrations: [{ status: "Locked" }], periods: [{}] };
+const active: SeedOptions = { migrations: [{ status: "Locked" }] };
 
 describe("OpeningTransactionGate (route-level)", () => {
   it("blocks /journal while EXISTING is mid-opening → redirects to the migration page", () => {

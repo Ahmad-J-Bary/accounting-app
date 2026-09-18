@@ -79,7 +79,6 @@ export function renderWithCompanyType(
   });
   qc.setQueryData(QUERY_KEYS.settings, { accounting_start_mode: companyType });
   qc.setQueryData(QUERY_KEYS.openingBalanceMigrations, migrations ?? []);
-  qc.setQueryData(QUERY_KEYS.fiscalPeriods, []);
   const expectedInitState: "ACTIVE" | "NOT_STARTED" =
     companyType === START_MODE_EXISTING ? "NOT_STARTED" : "ACTIVE";
 

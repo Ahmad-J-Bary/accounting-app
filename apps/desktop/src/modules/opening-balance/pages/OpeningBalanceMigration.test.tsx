@@ -10,7 +10,6 @@ import { SidebarLayoutProvider } from "@app/providers/SidebarLayoutProvider";
 import { TabProvider } from "@app/providers/TabProvider";
 import { LocalizationProvider } from "@app/providers/LocalizationProvider";
 import { settingsService } from "@modules/core/api/settingsService";
-import { fiscalPeriodService } from "@modules/accounting/api/fiscalPeriodService";
 import { openingBalanceService } from "@modules/accounting/api/openingBalanceService";
 import { START_MODE_EXISTING, START_MODE_NEW } from "@modules/opening-balance/lib/wizard-types";
 
@@ -21,26 +20,6 @@ vi.mock("@modules/core/api/settingsService", () => ({
   },
 }));
 
-vi.mock("@modules/accounting/api/fiscalPeriodService", () => ({
-  fiscalPeriodService: {
-    listFiscalPeriods: vi.fn().mockResolvedValue([]),
-    createFiscalPeriod: vi.fn(),
-    closeFiscalPeriod: vi.fn(),
-    lockFiscalPeriod: vi.fn(),
-    reopenFiscalPeriod: vi.fn(),
-    computePeriodNetProfit: vi.fn(),
-    getDistributableProfit: vi.fn().mockResolvedValue({
-      current_period_profit: "0",
-      retained_earnings_balance: "45",
-      allocated_to_date: "0",
-      distributable: "45",
-    }),
-  },
-  periodWindowFromDateInput: (start: string, end: string) => ({
-    start_date: new Date(`${start}T00:00:00Z`).toISOString(),
-    end_date: new Date(`${end}T23:59:59Z`).toISOString(),
-  }),
-}));
 
 vi.mock("@modules/accounting/api/openingBalanceService", () => ({
   openingBalanceService: {
@@ -165,9 +144,6 @@ describe("OpeningBalanceMigration company-type gate", () => {
         updated_at: new Date().toISOString(),
       },
     ] as never);
-    vi.mocked(fiscalPeriodService.listFiscalPeriods).mockResolvedValue([
-      { id: "p1", status: "Open", start_date: "2026-01-01", end_date: "2026-12-31" } as never,
-    ]);
     const user = userEvent.setup();
     const { qc } = renderPage();
     await waitFor(() => expect(qc.getQueryData(QUERY_KEYS.openingBalanceMigrations)).toBeTruthy());
@@ -204,7 +180,6 @@ describe("OpeningBalanceMigration company-type gate", () => {
         updated_at: new Date().toISOString(),
       },
     ] as never);
-    vi.mocked(fiscalPeriodService.listFiscalPeriods).mockResolvedValue([] as never);
     const { qc } = renderPage();
     await waitFor(() => expect(qc.getQueryData(QUERY_KEYS.openingBalanceMigrations)).toBeTruthy());
     // The wizard shows the done/completion step directly; opening management controls vanish.

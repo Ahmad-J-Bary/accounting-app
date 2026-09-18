@@ -2,14 +2,12 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Navigate } from "react-router-dom";
 import { RefreshCw } from "lucide-react";
-import { Button } from "@shared/ui/button";
 import { ConfirmDialog } from "@shared/ui/confirm-dialog";
 import { Badge } from "@shared/ui/badge";
 import { ErrorBoundary } from "@shared/ui/ErrorBoundary";
 import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTemplate";
 import { toast } from "sonner";
 import { settingsService } from "@modules/core/api/settingsService";
-import { fiscalPeriodService } from "@modules/accounting/api/fiscalPeriodService";
 import {
   openingBalanceService,
   type OpeningBalanceMigrationDto,
@@ -44,12 +42,7 @@ export default function OpeningBalanceMigration() {
     queryFn: () => settingsService.getSettings(),
   });
 
-  const { data: fiscalPeriods = [] } = useQuery({
-    queryKey: QUERY_KEYS.fiscalPeriods,
-    queryFn: () => fiscalPeriodService.listFiscalPeriods(),
-  });
-
-  const initState = deriveCompanyInitState({ settings, migrations, periods: fiscalPeriods });
+  const initState = deriveCompanyInitState({ settings, migrations });
 
   const handleCancel = async (id: string) => {
     setCancellingId(id);

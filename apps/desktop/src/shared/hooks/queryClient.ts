@@ -80,8 +80,7 @@ export const QUERY_KEYS = {
   openingBalanceMigrations: ["opening-balance-migrations"] as const,
   openingDraft: ["opening-wizard-draft"] as const,
   residualClassificationSpec: ["opening-balance", "residual-classification-spec"] as const,
-  fiscalPeriods: ["fiscal-periods"] as const,
-  distributableProfit: (start?: string, end?: string) => ["fiscal-periods", "distributable-profit", start, end] as const,
+  distributableProfit: (start?: string, end?: string) => ["distributable-profit", start, end] as const,
 } as const;
 
 /** All report/ledger query keys that should be invalidated after any accounting mutation. */
@@ -126,7 +125,6 @@ export const ALL_ACCOUNTING_MUTATION_KEYS: readonly (readonly unknown[])[] = [
   ...ALL_INVENTORY_KEYS,
   ...ALL_INVOICE_KEYS,
   QUERY_KEYS.openingBalanceMigrations,
-  QUERY_KEYS.fiscalPeriods,
 ];
 
 /** Keys every financial report/dashboard/ledger view depends on. More than one
@@ -216,13 +214,6 @@ export const PARTNER_MUTATION_KEYS: readonly (readonly unknown[])[] = [
 
 /** Opening-balance lifecycle (create/post/lock) touches everything financial. */
 export const OPENING_MUTATION_KEYS: readonly (readonly unknown[])[] = ALL_ACCOUNTING_MUTATION_KEYS;
-
-/** Fiscal-period create/close/lock/reopen. */
-export const FISCAL_MUTATION_KEYS: readonly (readonly unknown[])[] = [
-  QUERY_KEYS.fiscalPeriods,
-  QUERY_KEYS.distributableProfit(),
-  ...REPORT_CORE_KEYS,
-];
 
 /** Profit distribution posts a journal entry — near-umbrella invalidation. */
 export const PROFIT_DISTRIBUTION_KEYS: readonly (readonly unknown[])[] = [

@@ -172,3 +172,5 @@ export function CapitalSourceDialog({
     </Dialog>
   );
 }
+
+export default CapitalSourceDialog;

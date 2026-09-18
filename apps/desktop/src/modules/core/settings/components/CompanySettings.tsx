@@ -10,7 +10,6 @@ import type { CompanySettings as CompanySettingsType } from "@erp/shared-types";
 import { toast } from "sonner";
 import { settingsService } from '@modules/core/api/settingsService';
 import { openingBalanceService } from "@modules/accounting/api/openingBalanceService";
-import { fiscalPeriodService } from "@modules/accounting/api/fiscalPeriodService";
 import { QUERY_KEYS } from "@shared/hooks/queryClient";
 import { COMPANY_TYPE_EXISTING, COMPANY_TYPE_NEW } from "@modules/opening-balance/lib/wizard-types";
 import {
@@ -30,11 +29,7 @@ export function CompanySettings({ settings, onChange }: CompanySettingsProps) {
     queryKey: QUERY_KEYS.openingBalanceMigrations,
     queryFn: () => openingBalanceService.listMigrations(),
   });
-  const { data: fiscalPeriods = [] } = useQuery({
-    queryKey: QUERY_KEYS.fiscalPeriods,
-    queryFn: () => fiscalPeriodService.listFiscalPeriods(),
-  });
-  const initState = deriveCompanyInitState({ settings, migrations, periods: fiscalPeriods });
+  const initState = deriveCompanyInitState({ settings, migrations });
   const canChangeType = initState === "NOT_STARTED";
 
   const handleSave = async () => {

@@ -35,49 +35,42 @@ describe("companyTypeOf", () => {
 
 describe("deriveCompanyInitState", () => {
   it("a NEW company is always ACTIVE (no opening balance ever)", () => {
-    expect(deriveCompanyInitState({ settings: NEW, migrations: [], periods: [] })).toBe("ACTIVE");
+    expect(deriveCompanyInitState({ settings: NEW, migrations: [] })).toBe("ACTIVE");
     expect(
-      deriveCompanyInitState({ settings: NEW, migrations: [{ status: "Approved" }], periods: [] }),
+      deriveCompanyInitState({ settings: NEW, migrations: [{ status: "Approved" }] }),
     ).toBe("ACTIVE");
   });
 
   it("an EXISTING company with no migration is NOT_STARTED", () => {
-    expect(deriveCompanyInitState({ settings: EXISTING, migrations: [], periods: [] })).toBe(
+    expect(deriveCompanyInitState({ settings: EXISTING, migrations: [] })).toBe(
       "NOT_STARTED",
     );
   });
 
   it("cancelled-only migrations are treated as not started", () => {
     expect(
-      deriveCompanyInitState({ settings: EXISTING, migrations: [{ status: "Cancelled" }], periods: [] }),
+      deriveCompanyInitState({ settings: EXISTING, migrations: [{ status: "Cancelled" }] }),
     ).toBe("NOT_STARTED");
   });
 
   it("maps migration status to the initialization state", () => {
     expect(
-      deriveCompanyInitState({ settings: EXISTING, migrations: [{ status: "Draft" }], periods: [] }),
+      deriveCompanyInitState({ settings: EXISTING, migrations: [{ status: "Draft" }] }),
     ).toBe("OPENING_IN_PROGRESS");
     expect(
-      deriveCompanyInitState({ settings: EXISTING, migrations: [{ status: "Validated" }], periods: [] }),
+      deriveCompanyInitState({ settings: EXISTING, migrations: [{ status: "Validated" }] }),
     ).toBe("OPENING_IN_PROGRESS");
     expect(
-      deriveCompanyInitState({ settings: EXISTING, migrations: [{ status: "Approved" }], periods: [] }),
+      deriveCompanyInitState({ settings: EXISTING, migrations: [{ status: "Approved" }] }),
     ).toBe("OPENING_VALIDATED");
     expect(
-      deriveCompanyInitState({ settings: EXISTING, migrations: [{ status: "Posted" }], periods: [] }),
+      deriveCompanyInitState({ settings: EXISTING, migrations: [{ status: "Posted" }] }),
     ).toBe("OPENING_POSTED");
   });
 
-  it("a locked migration without a fiscal period is OPENING_LOCKED, with one it is ACTIVE", () => {
+  it("a locked migration is ACTIVE", () => {
     expect(
-      deriveCompanyInitState({ settings: EXISTING, migrations: [{ status: "Locked" }], periods: [] }),
-    ).toBe("OPENING_LOCKED");
-    expect(
-      deriveCompanyInitState({
-        settings: EXISTING,
-        migrations: [{ status: "Locked" }],
-        periods: [{ status: "Open" }],
-      }),
+      deriveCompanyInitState({ settings: EXISTING, migrations: [{ status: "Locked" }] }),
     ).toBe("ACTIVE");
   });
 
@@ -86,7 +79,6 @@ describe("deriveCompanyInitState", () => {
       deriveCompanyInitState({
         settings: EXISTING,
         migrations: [{ status: "Draft" }, { status: "Locked" }],
-        periods: [{ status: "Open" }],
       }),
     ).toBe("ACTIVE");
   });

@@ -20,7 +20,7 @@ import {
 import { fmtMoney } from "@shared/lib/format";
 import { parseSafeNumber } from "@shared/lib/parseSafeNumber";
 import { PROFIT_DISTRIBUTION_KEYS, invalidateKeys, QUERY_KEYS } from "@shared/hooks/queryClient";
-import { fiscalPeriodService } from "@modules/accounting/api/fiscalPeriodService";
+import { accountingService } from "@modules/accounting/api/accountingService";
 import { useLocalization } from "@app/providers/LocalizationProvider";
 import {
   openingBalanceService,
@@ -78,7 +78,7 @@ export function ProfitDistributionWorkflow({
 
   const { data: distributable, refetch: refetchDistributable } = useQuery({
     queryKey: QUERY_KEYS.distributableProfit(windowStart, windowEnd),
-    queryFn: () => fiscalPeriodService.getDistributableProfit(windowStart, windowEnd),
+    queryFn: () => accountingService.getDistributableProfit(windowStart, windowEnd),
     enabled: !!windowStart && !!windowEnd,
   });
 

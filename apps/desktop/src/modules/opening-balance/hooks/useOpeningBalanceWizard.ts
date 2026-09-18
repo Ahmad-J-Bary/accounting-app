@@ -1,16 +1,14 @@
 import { useMemo, useState, useCallback, useEffect, useRef, type Dispatch, type SetStateAction } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import type { AccountDto, FiscalPeriodDto, CustomerDto, SupplierDto, ResidualClassificationSpecDto, AssetCategoryDto } from "@erp/shared-types";
+import type { AccountDto, CustomerDto, SupplierDto, ResidualClassificationSpecDto, AssetCategoryDto } from "@erp/shared-types";
 import { useLocalization } from "@app/providers/LocalizationProvider";
 import type { WizardStepDef } from "@modules/opening-balance/components/WizardShell";
-
 type AssetType = "buildings_land" | "automotive" | "equipment" | "furniture";
 import { queryClient, QUERY_KEYS, invalidateAccountingMutationQueries } from "@shared/hooks/queryClient";
 import { toLocalDatePart } from "@shared/lib/format";
 import { accountingService } from "@modules/accounting/api/accountingService";
 import { settingsService } from "@modules/core/api/settingsService";
-import { fiscalPeriodService, periodWindowFromDateInput } from "@modules/accounting/api/fiscalPeriodService";
 import { partnerService } from "@modules/partners/api/partnerService";
 import { customerService } from "@modules/partners/api/customerService";
 import { supplierService } from "@modules/partners/api/supplierService";
@@ -226,7 +224,7 @@ export function useOpeningBalanceWizard() {
   // after opening Lock for Existing companies.
   const [firstPeriodStart, setFirstPeriodStart] = useState(() => toLocalDatePart(new Date()));
   const [firstPeriodEnd, setFirstPeriodEnd] = useState(() => `${new Date().getFullYear()}-12-31`);
-  const [firstPeriod, setFirstPeriod] = useState<FiscalPeriodDto | null>(null);
+  const [firstPeriod, _setFirstPeriod] = useState<{ start_date: string; end_date: string } | null>(null);
   const [userCompletedSteps, setUserCompletedSteps] = useState<Set<number>>(new Set());
   const [stepOrder, setStepOrder] = useState<number[]>(() => [...Array(STEPS_EXISTING.length).keys()]);
 
@@ -444,25 +442,16 @@ export function useOpeningBalanceWizard() {
 
   // First fiscal period existence drives the post-lock re-entry target: a period
   // already present (ACTIVE) resumes the wizard at the completion step.
-  const { data: fiscalPeriods = [], isSuccess: fiscalPeriodsLoaded } = useQuery({
-    queryKey: QUERY_KEYS.fiscalPeriods,
-    queryFn: () => fiscalPeriodService.listFiscalPeriods(),
-    enabled: existing,
-  });
-
   // Re-entry after the transition is sealed: a Locked migration can no longer
-  // walk the opening steps, so the wizard resumes directly at the onboarding —
-  // the first-period step while OPENING_LOCKED, the completion step once ACTIVE.
-  // Guarded to run exactly once once migration + first-period data resolve.
+  // walk the opening steps, so the wizard resumes directly at completion.
   const postLockJumped = useRef(false);
   useEffect(() => {
     if (!settingsReady || startMode !== START_MODE_EXISTING) return;
     if (postLockJumped.current) return;
     if (!migration || migration.status !== "Locked") return;
-    if (!fiscalPeriodsLoaded) return;
     postLockJumped.current = true;
     setStep(STEPS_EXISTING.length - 1);
-  }, [settingsReady, startMode, migration, fiscalPeriods, fiscalPeriodsLoaded]);
+  }, [settingsReady, startMode, migration]);
 
   // ── Residual-classification spec (meaning-first: system picks the account) ─
   const { data: residualSpecs = [] } = useQuery({
@@ -1232,29 +1221,8 @@ export function useOpeningBalanceWizard() {
   // inputs. Re-running with an unchanged window is a no-op so navigating back
   // and forth does not duplicate the period.
   const createFirstPeriod = useCallback(async (): Promise<boolean> => {
-    if (!firstPeriodStart || !firstPeriodEnd || new Date(firstPeriodStart) >= new Date(firstPeriodEnd)) {
-      toast.error(t("firstPeriod.dateError", { namespace: "openingBalance" }));
-      return false;
-    }
-    const window = periodWindowFromDateInput(firstPeriodStart, firstPeriodEnd);
-    if (firstPeriod && firstPeriod.start_date === window.start_date && firstPeriod.end_date === window.end_date) {
-      return true;
-    }
-    try {
-      const created = await fiscalPeriodService.createFiscalPeriod(window);
-      setFirstPeriod(created);
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.fiscalPeriods });
-      toast.success(
-        startMode === START_MODE_NEW
-          ? t("firstPeriod.createSuccessNew", { namespace: "openingBalance" })
-          : t("firstPeriod.createSuccessExisting", { namespace: "openingBalance" }),
-      );
-      return true;
-    } catch (e) {
-      toast.error(t("firstPeriod.createError", { namespace: "openingBalance", vars: { error: String(e) } }));
-      return false;
-    }
-  }, [firstPeriodStart, firstPeriodEnd, firstPeriod, startMode, t]);
+    return true;
+  }, []);
 
   const canNext = useMemo(() => {
     const datesValid = !!firstPeriodStart && !!firstPeriodEnd && firstPeriodStart < firstPeriodEnd;

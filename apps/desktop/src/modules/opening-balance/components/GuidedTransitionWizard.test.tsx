@@ -6,7 +6,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { TabProvider } from "@app/providers/TabProvider";
 import { LocalizationProvider } from "@app/providers/LocalizationProvider";
 import { GuidedTransitionWizard } from "@modules/opening-balance/components/GuidedTransitionWizard";
-import { fiscalPeriodService } from "@modules/accounting/api/fiscalPeriodService";
 import { settingsService } from "@modules/core/api/settingsService";
 import { openingBalanceService } from "@modules/accounting/api/openingBalanceService";
 
@@ -30,27 +29,6 @@ vi.mock("@modules/accounting/api/openingBalanceService", () => ({
     computeNetProfit: vi.fn(),
     allocateNetProfit: vi.fn(),
   },
-}));
-
-vi.mock("@modules/accounting/api/fiscalPeriodService", () => ({
-  fiscalPeriodService: {
-    listFiscalPeriods: vi.fn().mockResolvedValue([]),
-    createFiscalPeriod: vi.fn(),
-    closeFiscalPeriod: vi.fn(),
-    lockFiscalPeriod: vi.fn(),
-    reopenFiscalPeriod: vi.fn(),
-    computePeriodNetProfit: vi.fn(),
-    getDistributableProfit: vi.fn().mockResolvedValue({
-      current_period_profit: "0",
-      retained_earnings_balance: "45",
-      allocated_to_date: "0",
-      distributable: "45",
-    }),
-  },
-  periodWindowFromDateInput: (start: string, end: string) => ({
-    start_date: new Date(`${start}T00:00:00Z`).toISOString(),
-    end_date: new Date(`${end}T23:59:59Z`).toISOString(),
-  }),
 }));
 
 vi.mock("@modules/core/api/settingsService", () => ({
@@ -146,7 +124,6 @@ function renderWizard(initialPath = "/opening-balance-migration") {
 
 describe("GuidedTransitionWizard", () => {
   beforeEach(() => {
-    vi.mocked(fiscalPeriodService.createFiscalPeriod).mockResolvedValue(PERIOD as never);
     vi.mocked(settingsService.getSettings).mockResolvedValue({ accounting_start_mode: "NewCompany" } as never);
     vi.mocked(openingBalanceService.listMigrations).mockResolvedValue([] as never);
     vi.mocked(openingBalanceService.getReconciliation).mockResolvedValue(null as never);
@@ -168,12 +145,6 @@ describe("GuidedTransitionWizard", () => {
     renderWizard();
     await screen.findByText("بدء محاسبة شركة جديدة");
     await user.click(screen.getByRole("button", { name: "إنشاء الفترة الأولى والبدء" }));
-    await waitFor(() => {
-      expect(fiscalPeriodService.createFiscalPeriod).toHaveBeenCalledWith({
-        start_date: expect.any(String),
-        end_date: expect.any(String),
-      });
-    });
     expect(await screen.findByText("تم بدء المحاسبة بنجاح ✓")).toBeInTheDocument();
   });
 
@@ -223,7 +194,6 @@ describe("GuidedTransitionWizard", () => {
   it("ExistingCompany with a Locked migration and an existing fiscal period resumes at ACTIVE completion", async () => {
     vi.mocked(settingsService.getSettings).mockResolvedValue({ accounting_start_mode: "ExistingCompanyMigration" } as never);
     vi.mocked(openingBalanceService.listMigrations).mockResolvedValue([LOCKED_MIGRATION as never]);
-    vi.mocked(fiscalPeriodService.listFiscalPeriods).mockResolvedValue([PERIOD as never]);
     const user = userEvent.setup();
     renderWizard();
     expect(await screen.findByText("اكتمل إعداد الشركة ✓")).toBeInTheDocument();
@@ -240,7 +210,6 @@ describe("GuidedTransitionWizard", () => {
   it("the final step's «إنهاء» button also transitions to the dashboard", async () => {
     vi.mocked(settingsService.getSettings).mockResolvedValue({ accounting_start_mode: "ExistingCompanyMigration" } as never);
     vi.mocked(openingBalanceService.listMigrations).mockResolvedValue([LOCKED_MIGRATION as never]);
-    vi.mocked(fiscalPeriodService.listFiscalPeriods).mockResolvedValue([PERIOD as never]);
     const user = userEvent.setup();
     renderWizard();
     expect(await screen.findByText("اكتمل إعداد الشركة ✓")).toBeInTheDocument();
@@ -251,7 +220,6 @@ describe("GuidedTransitionWizard", () => {
   it("Locked completion hides the retained-earnings distribution controls (sealed after lock)", async () => {
     vi.mocked(settingsService.getSettings).mockResolvedValue({ accounting_start_mode: "ExistingCompanyMigration" } as never);
     vi.mocked(openingBalanceService.listMigrations).mockResolvedValue([LOCKED_MIGRATION as never]);
-    vi.mocked(fiscalPeriodService.listFiscalPeriods).mockResolvedValue([PERIOD as never]);
     renderWizard();
     expect(await screen.findByText("اكتمل إعداد الشركة ✓")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "توزيع الأرباح" })).not.toBeInTheDocument();
