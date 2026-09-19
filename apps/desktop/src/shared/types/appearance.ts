@@ -35,7 +35,7 @@ export type UIScale = 'small' | 'default' | 'large';
 // ── Density ──────────────────────────────────────────────────
 export type DensityMode = 'compact' | 'comfortable' | 'spacious';
 export type TabStyleMode = 'default' | 'browser' | 'vscode';
-export type MotionMode = 'full' | 'reduced';
+export type MotionMode = 'none' | 'light' | 'standard' | 'high';
 
 // ── Primary Color ────────────────────────────────────────────
 export interface PrimaryColorPreset {
@@ -135,7 +135,7 @@ export const DEFAULT_APPEARANCE: AppearanceSettings = {
   density: 'comfortable',
   uiScale: 'default',
   tabStyle: 'default',
-  motion: 'full',
+  motion: 'standard',
   navMenuType: 'sidenav',
   sidenavShape: 'default',
   topnavShape: 'default',

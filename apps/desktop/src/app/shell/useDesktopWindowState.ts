@@ -31,6 +31,7 @@ function canUseTauriWindow() {
 export function useDesktopWindowState(): DesktopWindowState {
   const isTauriWindow = useMemo(canUseTauriWindow, []);
   const windowRef = useRef<TauriWindow | null>(null);
+  const deniedActionsRef = useRef<Set<string>>(new Set());
   const [ready, setReady] = useState(!isTauriWindow);
   const [isMaximized, setIsMaximized] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -86,15 +87,29 @@ export function useDesktopWindowState(): DesktopWindowState {
     };
   }, [isTauriWindow]);
 
-  const invokeWindow = useCallback(async (action: (currentWindow: TauriWindow) => Promise<void>) => {
+  const invokeWindow = useCallback(async (
+    actionName: string,
+    action: (currentWindow: TauriWindow) => Promise<void>,
+  ) => {
     const currentWindow = windowRef.current;
-    if (!currentWindow) return;
-    await action(currentWindow);
+    if (!currentWindow || deniedActionsRef.current.has(actionName)) return;
+
+    try {
+      await action(currentWindow);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (message.includes("not allowed")) {
+        deniedActionsRef.current.add(actionName);
+        console.warn(`[desktop-window] Skipping unauthorized Tauri window action: ${actionName}`);
+        return;
+      }
+      throw error;
+    }
   }, []);
 
   const setWindowTitle = useCallback(
     async (title: string) => {
-      await invokeWindow((currentWindow) => currentWindow.setTitle(title));
+      await invokeWindow("setTitle", (currentWindow) => currentWindow.setTitle(title));
     },
     [invokeWindow],
   );
@@ -105,9 +120,9 @@ export function useDesktopWindowState(): DesktopWindowState {
     isFullscreen,
     isFocused,
     ready,
-    minimize: useCallback(() => invokeWindow((currentWindow) => currentWindow.minimize()), [invokeWindow]),
-    toggleMaximize: useCallback(() => invokeWindow((currentWindow) => currentWindow.toggleMaximize()), [invokeWindow]),
-    close: useCallback(() => invokeWindow((currentWindow) => currentWindow.close()), [invokeWindow]),
+    minimize: useCallback(() => invokeWindow("minimize", (currentWindow) => currentWindow.minimize()), [invokeWindow]),
+    toggleMaximize: useCallback(() => invokeWindow("toggleMaximize", (currentWindow) => currentWindow.toggleMaximize()), [invokeWindow]),
+    close: useCallback(() => invokeWindow("close", (currentWindow) => currentWindow.close()), [invokeWindow]),
     setWindowTitle,
   };
 }

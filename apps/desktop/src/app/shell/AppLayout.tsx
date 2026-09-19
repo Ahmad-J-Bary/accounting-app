@@ -14,6 +14,10 @@ import { VerticalLayout } from './layouts/VerticalLayout';
 import { TopNavLayout } from './layouts/TopNavLayout';
 import { HorizontalLayout } from './layouts/HorizontalLayout';
 import { ComboLayout } from './layouts/ComboLayout';
+import { DefaultVerticalLayout } from './layouts/DefaultVerticalLayout';
+import { DefaultTopNavLayout } from './layouts/DefaultTopNavLayout';
+import { DefaultHorizontalLayout } from './layouts/DefaultHorizontalLayout';
+import { DefaultComboLayout } from './layouts/DefaultComboLayout';
 import { MobileNav } from './MobileNav';
 import { UpdateProvider } from '@modules/core/update/context/UpdateContext';
 import { useGlobalSearch } from '@app/providers/useGlobalSearch';
@@ -23,7 +27,9 @@ import { VoiceAssistantOverlay } from './VoiceAssistantOverlay';
 import { BarcodeScanDialog } from '@shared/ui/BarcodeScanDialog';
 import { useLocalization } from '@app/providers/LocalizationProvider';
 import { WorkspaceTabContext } from '@app/providers/WorkspaceTabContext';
-import { BrowserChrome } from './BrowserChrome';
+import { DefaultWorkspace } from './DefaultWorkspace';
+import { BrowserWorkspace } from './BrowserWorkspace';
+import { VSCodeWorkspace } from './VSCodeWorkspace';
 
 interface AppLayoutProps {
   title?: string;
@@ -51,12 +57,12 @@ export function AppLayout({ title, subtitle }: AppLayoutProps) {
     return true;
   });
 
-  const toggleExchange = () => {
-    setIsExchangeVisible(prev => {
+  const toggleExchange = useCallback(() => {
+    setIsExchangeVisible((prev) => {
       localStorage.setItem('erp_exchange_visible', String(!prev));
       return !prev;
     });
-  };
+  }, []);
 
   const shortcuts = useMemo(() => [
     { key: 'k', ctrlKey: true, action: () => openSearch(), description: t('shortcuts.openSearch', { namespace: 'shell' }) },
@@ -69,96 +75,162 @@ export function AppLayout({ title, subtitle }: AppLayoutProps) {
   useKeyboardShortcuts(shortcuts);
 
   const handleToggleSidebar = useCallback(() => {
-    setSidebarOpen(prev => !prev);
+    setSidebarOpen((prev) => !prev);
   }, []);
 
-  // Render content (tabs + routes) — memoized to preserve reference across shell switches
-  const content = useMemo(() => (
-    <>
-      <main className="flex-1 relative bg-muted overflow-hidden">
-        {tabs.map((tab) => (
-          <div 
-            key={tab.id}
-            className={cn(
-              "absolute inset-0 flex flex-col transition-opacity duration-200",
-              tab.active ? "opacity-100 z-10" : "opacity-0 z-0 pointer-events-none"
+  const workspaceContent = useMemo(() => (
+    <main className="relative flex-1 overflow-hidden bg-muted">
+      {tabs.map((tab) => (
+        <div
+          key={tab.id}
+          className={cn(
+            'absolute inset-0 flex flex-col transition-opacity duration-200',
+            tab.active ? 'z-10 opacity-100' : 'pointer-events-none z-0 opacity-0',
+          )}
+        >
+          <div className="flex-1 overflow-auto p-3 md:p-6">
+            {(title || subtitle) && tab.active && (
+              <div className="mb-6">
+                {title && <h1 className="mb-1 text-2xl font-bold text-foreground">{title}</h1>}
+                {subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}
+              </div>
             )}
-          >
-            <div className="flex-1 p-3 md:p-6 overflow-auto">
-              {(title || subtitle) && tab.active && (
-                <div className="mb-6">
-                  {title && <h1 className="mb-1 text-2xl font-bold text-foreground">{title}</h1>}
-                  {subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}
-                </div>
-              )}
-              <WorkspaceTabContext.Provider value={{ tabId: tab.id, path: tab.path, active: tab.active }}>
-                <TabLocationContext.Provider value={tab.path}>
-                  <ErrorBoundary key={tab.id}>
-                    <ErpRoutes location={tab.path} />
-                  </ErrorBoundary>
-                </TabLocationContext.Provider>
-              </WorkspaceTabContext.Provider>
-            </div>
+            <WorkspaceTabContext.Provider value={{ tabId: tab.id, path: tab.path, active: tab.active }}>
+              <TabLocationContext.Provider value={tab.path}>
+                <ErrorBoundary key={tab.id}>
+                  <ErpRoutes location={tab.path} />
+                </ErrorBoundary>
+              </TabLocationContext.Provider>
+            </WorkspaceTabContext.Provider>
           </div>
-        ))}
-        {hasMultipleCurrencies && <FloatingExchangeRateWidget isVisible={isExchangeVisible} onClose={() => toggleExchange()} />}
-      </main>
+        </div>
+      ))}
+    </main>
+  ), [subtitle, tabs, title]);
+
+  const sharedOverlays = useMemo(() => (
+    <>
+      {hasMultipleCurrencies && (
+        <FloatingExchangeRateWidget
+          isVisible={isExchangeVisible}
+          onClose={toggleExchange}
+        />
+      )}
       <GlobalSearch />
       <VoiceAssistantOverlay />
       <BarcodeScanDialog />
     </>
-  ), [tabs, isExchangeVisible, title, subtitle, hasMultipleCurrencies]);
+  ), [hasMultipleCurrencies, isExchangeVisible, toggleExchange]);
 
-  return (
-    <UpdateProvider>
-      <div className="flex h-screen flex-col overflow-hidden bg-background" dir={direction} data-tab-style={settings.tabStyle}>
-        <BrowserChrome isExchangeVisible={isExchangeVisible} onToggleExchange={toggleExchange} />
-        <div className="min-h-0 flex-1 overflow-hidden">
-          {renderLayout()}
-        </div>
-      </div>
-    </UpdateProvider>
-  );
+  const effectiveSidebarOpen = isTablet ? false : sidebarOpen;
 
-  function renderLayout() {
-    // Mobile: simplified layout with bottom nav
+  const renderDefaultLayout = () => {
     if (isMobile) {
       return (
         <div className="flex h-full flex-col overflow-hidden pb-14">
           <div className="min-h-0 flex flex-1 flex-col">
-            {content}
+            {workspaceContent}
           </div>
           <MobileNav />
         </div>
       );
     }
 
-    // Tablet: force sidebar collapsed for more content space
-    const effectiveSidebarOpen = isTablet ? false : sidebarOpen;
-
-    // Desktop/Tablet: full layout with sidebar
     switch (activeLayout.shellVariant) {
       case 'topnav':
         return (
-          <TopNavLayout>{content}</TopNavLayout>
+          <DefaultTopNavLayout isExchangeVisible={isExchangeVisible} onToggleExchange={toggleExchange}>
+            {workspaceContent}
+          </DefaultTopNavLayout>
         );
       case 'horizontal':
         return (
-          <HorizontalLayout>{content}</HorizontalLayout>
+          <DefaultHorizontalLayout isExchangeVisible={isExchangeVisible} onToggleExchange={toggleExchange}>
+            {workspaceContent}
+          </DefaultHorizontalLayout>
         );
       case 'combo':
         return (
+          <DefaultComboLayout
+            sidebarOpen={effectiveSidebarOpen}
+            onToggleSidebar={handleToggleSidebar}
+            isExchangeVisible={isExchangeVisible}
+            onToggleExchange={toggleExchange}
+          >
+            {workspaceContent}
+          </DefaultComboLayout>
+        );
+      case 'vertical':
+      default:
+        return (
+          <DefaultVerticalLayout
+            sidebarOpen={effectiveSidebarOpen}
+            onToggleSidebar={handleToggleSidebar}
+            isExchangeVisible={isExchangeVisible}
+            onToggleExchange={toggleExchange}
+          >
+            {workspaceContent}
+          </DefaultVerticalLayout>
+        );
+    }
+  };
+
+  const renderStandardLayout = () => {
+    if (isMobile) {
+      return (
+        <div className="flex h-full flex-col overflow-hidden pb-14">
+          <div className="min-h-0 flex flex-1 flex-col">
+            {workspaceContent}
+          </div>
+          <MobileNav />
+        </div>
+      );
+    }
+
+    switch (activeLayout.shellVariant) {
+      case 'topnav':
+        return <TopNavLayout>{workspaceContent}</TopNavLayout>;
+      case 'horizontal':
+        return <HorizontalLayout>{workspaceContent}</HorizontalLayout>;
+      case 'combo':
+        return (
           <ComboLayout sidebarOpen={effectiveSidebarOpen} onToggleSidebar={handleToggleSidebar}>
-            {content}
+            {workspaceContent}
           </ComboLayout>
         );
       case 'vertical':
       default:
         return (
           <VerticalLayout sidebarOpen={effectiveSidebarOpen} onToggleSidebar={handleToggleSidebar}>
-            {content}
+            {workspaceContent}
           </VerticalLayout>
         );
     }
-  }
+  };
+
+  return (
+    <UpdateProvider>
+      <div className="flex h-screen flex-col overflow-hidden bg-background" dir={direction} data-tab-style={settings.tabStyle}>
+        {settings.tabStyle === 'vscode' ? (
+          <VSCodeWorkspace
+            content={workspaceContent}
+            isExchangeVisible={isExchangeVisible}
+            onToggleExchange={toggleExchange}
+          />
+        ) : settings.tabStyle === 'browser' ? (
+          <BrowserWorkspace
+            isExchangeVisible={isExchangeVisible}
+            onToggleExchange={toggleExchange}
+          >
+            {renderStandardLayout()}
+          </BrowserWorkspace>
+        ) : (
+          <DefaultWorkspace>
+            {renderDefaultLayout()}
+          </DefaultWorkspace>
+        )}
+        {sharedOverlays}
+      </div>
+    </UpdateProvider>
+  );
 }

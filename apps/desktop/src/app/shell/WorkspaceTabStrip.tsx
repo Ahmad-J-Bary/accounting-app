@@ -80,6 +80,7 @@ export function WorkspaceTabStrip({
   const [canScrollBackward, setCanScrollBackward] = useState(false);
   const [canScrollForward, setCanScrollForward] = useState(false);
   const isRtl = direction === "rtl";
+  const isBrowserPresentation = tabStyle === "browser";
 
   const visibleTabs = useMemo(() => tabs, [tabs]);
 
@@ -162,7 +163,10 @@ export function WorkspaceTabStrip({
         type="button"
         variant="ghost"
         size="icon"
-        className={presentation.scrollButtonClassName}
+        className={cn(
+          presentation.scrollButtonClassName,
+          isBrowserPresentation && "order-3",
+        )}
         onClick={() => scroll("backward")}
         disabled={!canScrollBackward}
         aria-label={t("workspace.controls.scrollBackward", { namespace: "shell" })}
@@ -175,7 +179,10 @@ export function WorkspaceTabStrip({
         type="button"
         variant="ghost"
         size="icon"
-        className={presentation.newTabButtonClassName}
+        className={cn(
+          presentation.newTabButtonClassName,
+          isBrowserPresentation && "order-2",
+        )}
         onClick={onNewTab}
         aria-label={t("workspace.controls.newTab", { namespace: "shell" })}
         title={t("workspace.controls.newTab", { namespace: "shell" })}
@@ -185,7 +192,12 @@ export function WorkspaceTabStrip({
 
       <div
         ref={scrollRef}
-        className={cn("flex-1 overflow-x-auto no-scrollbar", presentation.tabListClassName, presentation.tabGapClassName)}
+        className={cn(
+          "flex-1 overflow-x-auto no-scrollbar",
+          presentation.tabListClassName,
+          presentation.tabGapClassName,
+          isBrowserPresentation && "order-1",
+        )}
         role="tablist"
         aria-orientation="horizontal"
       >
@@ -322,65 +334,70 @@ export function WorkspaceTabStrip({
         })}
       </div>
 
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className={presentation.overflowButtonClassName}
-            aria-label={t("workspace.controls.moreTabs", { namespace: "shell" })}
-            title={t("workspace.controls.moreTabs", { namespace: "shell" })}
-          >
-            <MoreHorizontal className="h-4 w-4" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align={isRtl ? "start" : "end"} className="w-72">
-          {visibleTabs.map((tab) => {
-            const Icon = resolveIcon(tab);
-            return (
-              <DropdownMenuItem key={tab.id} onClick={() => onActivate(tab.id)} className="gap-2">
-                {presentation.showIcons && Icon && <Icon className="h-3.5 w-3.5 shrink-0" />}
-                {tab.pinned && <Pin className="h-3 w-3 shrink-0 text-primary" />}
-                {tab.dirty && renderDirtyIndicator(tab)}
-                <span className="min-w-0 flex-1 truncate">{tab.title}</span>
-                {tab.closable && (
-                  <button
-                    type="button"
-                    className="rounded p-0.5 text-muted-foreground hover:bg-accent hover:text-foreground"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      onClose(tab.id);
-                    }}
-                    aria-label={t("workspace.controls.closeTab", { namespace: "shell" })}
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                )}
+      {!isBrowserPresentation && (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className={presentation.overflowButtonClassName}
+              aria-label={t("workspace.controls.moreTabs", { namespace: "shell" })}
+              title={t("workspace.controls.moreTabs", { namespace: "shell" })}
+            >
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align={isRtl ? "start" : "end"} className="w-72">
+            {visibleTabs.map((tab) => {
+              const Icon = resolveIcon(tab);
+              return (
+                <DropdownMenuItem key={tab.id} onClick={() => onActivate(tab.id)} className="gap-2">
+                  {presentation.showIcons && Icon && <Icon className="h-3.5 w-3.5 shrink-0" />}
+                  {tab.pinned && <Pin className="h-3 w-3 shrink-0 text-primary" />}
+                  {tab.dirty && renderDirtyIndicator(tab)}
+                  <span className="min-w-0 flex-1 truncate">{tab.title}</span>
+                  {tab.closable && (
+                    <button
+                      type="button"
+                      className="rounded p-0.5 text-muted-foreground hover:bg-accent hover:text-foreground"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        onClose(tab.id);
+                      }}
+                      aria-label={t("workspace.controls.closeTab", { namespace: "shell" })}
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  )}
+                </DropdownMenuItem>
+              );
+            })}
+            {visibleTabs.length > 0 && <DropdownMenuSeparator />}
+            {onReopenLastClosed && (
+              <DropdownMenuItem onClick={() => onReopenLastClosed()} className="gap-2">
+                <RotateCcw className="h-4 w-4" />
+                {t("workspace.menu.reopenLastClosed", { namespace: "shell" })}
               </DropdownMenuItem>
-            );
-          })}
-          {visibleTabs.length > 0 && <DropdownMenuSeparator />}
-          {onReopenLastClosed && (
-            <DropdownMenuItem onClick={() => onReopenLastClosed()} className="gap-2">
-              <RotateCcw className="h-4 w-4" />
-              {t("workspace.menu.reopenLastClosed", { namespace: "shell" })}
-            </DropdownMenuItem>
-          )}
-          {onCloseAll && (
-            <DropdownMenuItem onClick={() => onCloseAll()} className="gap-2">
-              <X className="h-4 w-4" />
-              {t("workspace.menu.closeAll", { namespace: "shell" })}
-            </DropdownMenuItem>
-          )}
-        </DropdownMenuContent>
-      </DropdownMenu>
+            )}
+            {onCloseAll && (
+              <DropdownMenuItem onClick={() => onCloseAll()} className="gap-2">
+                <X className="h-4 w-4" />
+                {t("workspace.menu.closeAll", { namespace: "shell" })}
+              </DropdownMenuItem>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
 
       <Button
         type="button"
         variant="ghost"
         size="icon"
-        className={presentation.scrollButtonClassName}
+        className={cn(
+          presentation.scrollButtonClassName,
+          isBrowserPresentation && "order-4",
+        )}
         onClick={() => scroll("forward")}
         disabled={!canScrollForward}
         aria-label={t("workspace.controls.scrollForward", { namespace: "shell" })}

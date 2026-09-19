@@ -43,21 +43,21 @@ const PRESENTATIONS: Record<TabStyleMode, TabPresentationDefinition> = {
   },
   browser: {
     stripClassName:
-      "flex min-h-11 items-center gap-1 border-b border-border bg-muted/60 px-2 py-1.5",
-    tabListClassName: "flex h-full min-w-full items-end overflow-x-auto no-scrollbar scroll-smooth",
-    tabGapClassName: "gap-1.5",
+      "flex min-h-12 min-w-0 items-end gap-1.5 bg-transparent px-0 py-0",
+    tabListClassName: "flex h-12 min-w-0 items-end overflow-x-auto no-scrollbar scroll-smooth",
+    tabGapClassName: "gap-1",
     tabClassName:
-      "relative flex h-9 min-w-[156px] max-w-[260px] items-center gap-2 rounded-t-2xl border px-3 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
+      "relative flex h-11 min-w-[168px] max-w-[260px] items-center gap-2 rounded-t-2xl border px-4 text-[12px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
     activeTabClassName:
-      "border-border border-b-background bg-background text-foreground shadow-sm",
+      "border-border/70 border-b-background bg-background text-foreground shadow-sm",
     inactiveTabClassName:
-      "border-transparent bg-background/60 text-muted-foreground hover:bg-background/80 hover:text-foreground",
+      "border-transparent bg-background/55 text-muted-foreground hover:bg-background/75 hover:text-foreground",
     newTabButtonClassName:
-      "h-9 w-9 rounded-full border border-transparent bg-background/70 text-muted-foreground hover:border-border hover:bg-background hover:text-foreground",
+      "h-10 w-10 shrink-0 rounded-full border border-transparent bg-background/70 text-muted-foreground shadow-sm hover:bg-background hover:text-foreground",
     scrollButtonClassName:
-      "h-9 w-9 rounded-full border border-transparent bg-background/70 text-muted-foreground hover:border-border hover:bg-background hover:text-foreground",
+      "h-10 w-10 shrink-0 rounded-full border border-transparent bg-background/70 text-muted-foreground shadow-sm hover:bg-background hover:text-foreground",
     overflowButtonClassName:
-      "h-9 w-9 rounded-full border border-transparent bg-background/70 text-muted-foreground hover:border-border hover:bg-background hover:text-foreground",
+      "h-10 w-10 rounded-full border border-transparent bg-background/70 text-muted-foreground shadow-sm hover:bg-background hover:text-foreground",
     showIcons: true,
     showPinnedIndicator: true,
     dirtyIndicator: "dot",

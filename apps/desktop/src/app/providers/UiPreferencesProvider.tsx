@@ -22,6 +22,16 @@ import { deriveCompoundFromLayout } from "@shared/config/computeLayoutType";
 const STORAGE_KEY = "erp_ui_preferences_v2";
 type LegacyAppearanceSettings = Partial<AppearanceSettings>;
 
+function migrateMotionMode(value: string | undefined): AppearanceSettings["motion"] {
+  if (!value) return DEFAULT_APPEARANCE.motion;
+  if (value === "full") return "standard";
+  if (value === "reduced") return "light";
+  if (value === "none" || value === "light" || value === "standard" || value === "high") {
+    return value;
+  }
+  return DEFAULT_APPEARANCE.motion;
+}
+
 function parseStoredValue<T>(key: string): T | null {
   try {
     const raw = window.localStorage.getItem(key);
@@ -38,6 +48,7 @@ function migrateLegacyAppearance(value: LegacyAppearanceSettings | null): Appear
     return {
       ...DEFAULT_APPEARANCE,
       ...value,
+      motion: migrateMotionMode(value.motion),
       sidenavShape: compound.sidenavShape,
       topnavShape: compound.topnavShape,
       verticalNavbarAppearance: compound.verticalNavbarAppearance,
@@ -45,7 +56,7 @@ function migrateLegacyAppearance(value: LegacyAppearanceSettings | null): Appear
       navMenuType: value.navMenuType || compound.navMenuType,
     };
   }
-  return { ...DEFAULT_APPEARANCE, ...value };
+  return { ...DEFAULT_APPEARANCE, ...value, motion: migrateMotionMode(value.motion) };
 }
 
 function loadPreferences(): UiPreferences {
