@@ -43,11 +43,11 @@ const PRESENTATIONS: Record<TabStyleMode, TabPresentationDefinition> = {
   },
   browser: {
     stripClassName:
-      "flex min-h-12 min-w-0 items-end gap-1.5 bg-transparent px-0 py-0",
-    tabListClassName: "flex h-12 min-w-0 items-end overflow-x-auto no-scrollbar scroll-smooth",
+      "flex w-full min-h-12 min-w-0 items-end gap-1.5 bg-transparent px-0 py-0",
+    tabListClassName: "flex h-12 min-w-0 flex-1 items-end overflow-x-auto no-scrollbar scroll-smooth",
     tabGapClassName: "gap-1",
     tabClassName:
-      "relative flex h-11 min-w-[168px] max-w-[260px] items-center gap-2 rounded-t-2xl border px-4 text-[12px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
+      "relative flex h-11 min-w-[156px] max-w-[240px] items-center gap-2 rounded-t-2xl border px-4 text-[12px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
     activeTabClassName:
       "border-border/70 border-b-background bg-background text-foreground shadow-sm",
     inactiveTabClassName:

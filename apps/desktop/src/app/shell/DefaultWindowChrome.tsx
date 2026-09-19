@@ -1,18 +1,19 @@
 import { useMemo } from "react";
-import { Building2 } from "lucide-react";
 import { useLocalization } from "@app/providers/LocalizationProvider";
 import { useTabs } from "@app/providers/TabContext";
 import { cn } from "@shared/lib/utils";
 import { WindowControls } from "./WindowControls";
 import { useWindowChromeData } from "./useWindowChromeData";
+import { WindowDragRegion } from "./WindowDragRegion";
+import { WindowChromeBrand } from "./WindowChromeBrand";
 
 export function DefaultWindowChrome() {
   const { t, direction } = useLocalization();
-  const { tabs } = useTabs();
+  const { tabs, activeTabId } = useTabs();
 
   const activeTab = useMemo(
-    () => tabs.find((tab) => tab.active) ?? tabs[0],
-    [tabs],
+    () => tabs.find((tab) => tab.id === activeTabId) ?? tabs.find((tab) => tab.active) ?? tabs[0],
+    [activeTabId, tabs],
   );
 
   const appTitle = useMemo(() => {
@@ -32,41 +33,35 @@ export function DefaultWindowChrome() {
     >
       <div
         className={cn(
-          "grid grid-cols-[minmax(0,320px)_1fr_auto] items-center gap-3 px-3 py-2",
+          "grid w-full min-w-0 grid-cols-[minmax(0,320px)_minmax(0,1fr)_auto] items-center gap-3 px-3 py-2",
           chrome.windowState.isMaximized ? "pt-1" : "pt-2",
         )}
         dir="ltr"
       >
-        <div
-          data-tauri-drag-region={chrome.windowState.isTauriWindow ? true : undefined}
+        <WindowDragRegion
+          enabled={chrome.windowState.isTauriWindow}
           onDoubleClick={chrome.handleTitleBarDoubleClick}
-          className="flex min-w-0 items-center gap-3 select-none"
-          dir={direction}
+          className="flex items-center"
+          direction={direction}
           title={appTitle}
         >
-          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
-            <Building2 className="h-4 w-4" />
-          </div>
-          <div className="min-w-0">
-            <div className="truncate text-sm font-bold text-foreground">
-              {chrome.brandLabel}
-            </div>
-            <div className="truncate text-[11px] text-muted-foreground">
-              {chrome.companyLabel}
-            </div>
-          </div>
-        </div>
+          <WindowChromeBrand
+            direction={direction}
+            brandLabel={chrome.brandLabel}
+            companyLabel={chrome.companyLabel}
+          />
+        </WindowDragRegion>
 
-        <div
-          data-tauri-drag-region={chrome.windowState.isTauriWindow ? true : undefined}
+        <WindowDragRegion
+          enabled={chrome.windowState.isTauriWindow}
           onDoubleClick={chrome.handleTitleBarDoubleClick}
-          className="min-w-0 select-none px-2 text-center"
-          dir={direction}
+          className="flex min-w-0 items-center justify-center px-2 text-center"
+          direction={direction}
         >
           <div className="truncate text-sm font-semibold text-foreground">
             {activeTab?.title || t("dashboard", { namespace: "shell" })}
           </div>
-        </div>
+        </WindowDragRegion>
 
         <div className="flex justify-end">
           <WindowControls

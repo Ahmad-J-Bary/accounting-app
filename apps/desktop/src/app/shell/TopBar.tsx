@@ -305,13 +305,13 @@ export function TopBar({
   return (
     <>
       <header className={cn(
-        "sticky top-0 z-30 flex items-center gap-2 border-b px-4 backdrop-blur-sm md:px-6",
+        "sticky top-0 z-30 flex min-w-0 items-center gap-2 border-b px-4 backdrop-blur-sm md:px-6",
         isHorizontalDark
           ? "border-[hsl(var(--sidebar-border))] bg-[hsl(var(--sidebar-background))] text-[hsl(var(--sidebar-foreground))] shadow-sm"
           : "border-border bg-background/95 shadow-sm",
         merged ? (mergedSlim ? "h-10" : "h-14") : "h-14",
       )}>
-        <div className={cn("flex shrink-0 items-center gap-2.5", merged && "flex-1 justify-start")}>
+        <div className={cn("flex min-w-0 shrink-0 items-center gap-2.5", merged && "flex-1 justify-start")}>
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary/80 shadow-sm ring-1 ring-primary/20">
             <Building2 className="h-4 w-4 text-primary-foreground" />
           </div>
@@ -325,11 +325,11 @@ export function TopBar({
 
         {!merged && <UpdateBanner variant="stacked" dark={isHorizontalDark} />}
         {merged ? (
-          <div className="flex items-center gap-0.5 overflow-visible">
+          <div className="flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto no-scrollbar">
             {visibleNavGroups.map(renderNavGroup)}
           </div>
         ) : (
-          <div className="flex flex-1 justify-center">
+          <div className="flex min-w-0 flex-1 justify-center">
             {showSearch && (
               <Button
                 variant="outline"
@@ -343,7 +343,7 @@ export function TopBar({
           </div>
         )}
 
-        <div className={cn("flex shrink-0 items-center gap-1", merged && "flex-1 justify-end")}>
+        <div className={cn("flex min-w-0 shrink-0 items-center gap-1", merged && "flex-1 justify-end")}>
           {rightActions}
         </div>
       </header>

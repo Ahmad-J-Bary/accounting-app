@@ -134,11 +134,11 @@ export function Sidebar({ collapsed: _collapsed, onClose }: SidebarProps) {
     const railIconActive = isRailDark ? 'bg-primary/100/20 text-primary' : 'bg-primary/10 text-primary';
 
     return (
-      <div className="sidebar-root flex h-full overflow-hidden" dir={direction}>
+      <div className="sidebar-root flex h-full min-h-0 overflow-hidden" dir={direction}>
         {/* ── الرييل الضيق ── */}
         <div className={cn("z-10 flex w-11 shrink-0 flex-col items-center gap-0.5 border-s py-2", railBg, railBorder)}>
           {/* أيقونات المجموعات */}
-          <nav className="flex flex-col gap-0.5 flex-1 overflow-y-auto sidebar-scrollbar px-0.5">
+          <nav className="sidebar-scrollbar flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto overscroll-contain px-0.5">
             {visibleGroups.map(group => {
               const isSelected = group.id === selectedGroup?.id;
               const GroupIcon = ICON_MAP[group.icon ?? ''] ?? FolderPlus;
@@ -178,7 +178,7 @@ export function Sidebar({ collapsed: _collapsed, onClose }: SidebarProps) {
 
         {/* ── اللوحة الجانبية ── */}
         <aside className={cn(
-          "flex h-full flex-col overflow-hidden border-s transition-all duration-300",
+          "flex h-full min-h-0 flex-col overflow-hidden border-s transition-all duration-300",
           effectiveBg, effectiveTextClass, effectiveBorderClass,
         )} style={{ width: 200, minWidth: 200 }}>
           {selectedGroup && (
@@ -197,7 +197,7 @@ export function Sidebar({ collapsed: _collapsed, onClose }: SidebarProps) {
                 <span className="truncate text-[11px] font-bold">{groupTitle(selectedGroup)}</span>
               </div>
               {/* العناصر */}
-              <nav className="flex-1 overflow-y-auto sidebar-scrollbar px-1.5 py-1 space-y-0.5">
+              <nav className="sidebar-scrollbar min-h-0 flex-1 overflow-y-auto overscroll-contain px-1.5 py-1 space-y-0.5">
                 {selectedGroup.items.filter(i => i.visible).map(item => (
                   <SidebarItem
                     key={item.id}
@@ -221,7 +221,7 @@ export function Sidebar({ collapsed: _collapsed, onClose }: SidebarProps) {
   return (
     <aside
       className={cn(
-        "h-full flex flex-col transition-all duration-300 ease-in-out relative sidebar-root",
+        "sidebar-root relative flex h-full min-h-0 flex-col transition-all duration-300 ease-in-out",
         effectiveBg,
         effectiveTextClass,
         navBordered ? `border-s ${effectiveBorderClass}` : "border-none"
@@ -230,7 +230,7 @@ export function Sidebar({ collapsed: _collapsed, onClose }: SidebarProps) {
     >
       {/* Navigation */}
       <nav className={cn(
-        "flex-1 overflow-y-auto sidebar-scrollbar px-2",
+        "sidebar-scrollbar min-h-0 flex-1 overflow-y-auto overscroll-contain px-2",
         densityPadding,
         sectionSpacing,
       )}>

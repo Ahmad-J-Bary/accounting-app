@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ArrowLeft, ArrowRight, Bell, Building2, ChevronDown, Clock3, DollarSign, Mic, RefreshCw, Search, Settings as SettingsIcon, Star, Zap } from "lucide-react";
+import { ArrowLeft, ArrowRight, Bell, ChevronDown, Clock3, DollarSign, Mic, RefreshCw, Search, Settings as SettingsIcon, Star, Zap } from "lucide-react";
 import type { GlobalSearchResult } from "@shared/types/navigation";
 import { useAppearance } from "@shared/hooks/useAppearance";
+import { queryClient } from "@shared/hooks/queryClient";
 import { cn } from "@shared/lib/utils";
 import { Button } from "@shared/ui/button";
 import {
@@ -24,6 +25,8 @@ import { TabBar } from "./TabBar";
 import { WindowControls } from "./WindowControls";
 import { useDesktopWindowState } from "./useDesktopWindowState";
 import { useWindowChromeData } from "./useWindowChromeData";
+import { WindowDragRegion } from "./WindowDragRegion";
+import { WindowChromeBrand } from "./WindowChromeBrand";
 
 interface BrowserChromeProps {
   isExchangeVisible?: boolean;
@@ -96,7 +99,7 @@ function useShellChromeModel({
   const { hasMultipleCurrencies } = useCurrencyContext();
   const { openSearch, recent, activateResult } = useGlobalSearch();
   const { language, setLanguage, t, direction } = useLocalization();
-  const { tabs, openTab, switchTab } = useTabs();
+  const { tabs, openTab, switchTab, activeTabId } = useTabs();
   const voice = useVoice();
   const { executeCommand } = useCommands();
   const [notificationsOpen, setNotificationsOpen] = useState(false);
@@ -107,8 +110,8 @@ function useShellChromeModel({
   const showDetachedTabs = showTabs && settings.tabStyle !== "browser";
 
   const activeTab = useMemo(
-    () => tabs.find((tab) => tab.active) ?? tabs[0],
-    [tabs],
+    () => tabs.find((tab) => tab.id === activeTabId) ?? tabs.find((tab) => tab.active) ?? tabs[0],
+    [activeTabId, tabs],
   );
 
   const appTitle = useMemo(() => {
@@ -154,8 +157,12 @@ function useShellChromeModel({
   }, []);
 
   const refreshCurrentView = useCallback(() => {
-    window.location.reload();
-  }, []);
+    void queryClient.invalidateQueries({ refetchType: "active" });
+    window.dispatchEvent(new CustomEvent("erp:refresh-current-view", { detail: { path: activePath } }));
+    if (activeTab) {
+      switchTab(activeTab.id);
+    }
+  }, [activePath, activeTab, switchTab]);
 
   const toggleFavorite = useCallback(() => {
     if (!activeTab) return;
@@ -273,54 +280,6 @@ function useShellChromeModel({
   };
 }
 
-function ChromeIdentity({
-  compact,
-  direction,
-  brandLabel,
-  companyLabel,
-  appTitle,
-  isTauriWindow,
-  onDoubleClick,
-}: {
-  compact: boolean;
-  direction: "rtl" | "ltr";
-  brandLabel: string;
-  companyLabel: string;
-  appTitle: string;
-  isTauriWindow: boolean;
-  onDoubleClick: () => void;
-}) {
-  return (
-    <div
-      data-tauri-drag-region={isTauriWindow ? true : undefined}
-      onDoubleClick={onDoubleClick}
-      className={cn(
-        "flex min-w-0 items-center select-none",
-        compact
-          ? "h-12 gap-3 rounded-t-2xl border border-border/60 bg-background/80 px-3 shadow-sm"
-          : "gap-3",
-      )}
-      dir={direction}
-      title={appTitle}
-    >
-      <div className={cn(
-        "flex items-center justify-center bg-primary text-primary-foreground shadow-sm",
-        compact ? "h-8 w-8 rounded-xl" : "h-8 w-8 rounded-xl",
-      )}>
-        <Building2 className="h-4 w-4" />
-      </div>
-      <div className="min-w-0">
-        <div className={cn("truncate font-bold text-foreground", compact ? "text-[13px]" : "text-sm")}>
-          {brandLabel}
-        </div>
-        <div className={cn("truncate text-muted-foreground", compact ? "text-[11px]" : "text-[11px]")}>
-          {companyLabel}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function BrowserToolbar({ model }: { model: ShellChromeModel }) {
   const {
     direction,
@@ -338,9 +297,10 @@ function BrowserToolbar({ model }: { model: ShellChromeModel }) {
     activateRecent,
     activateFavorite,
   } = model;
+  const isRtl = direction === "rtl";
 
   return (
-    <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 border-t border-border/50 px-3 py-2" dir="ltr">
+    <div className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 border-t border-border/50 px-3 py-2" dir="ltr">
       <div className="flex items-center gap-1.5">
         <Button
           type="button"
@@ -350,7 +310,7 @@ function BrowserToolbar({ model }: { model: ShellChromeModel }) {
           aria-label={t("workspace.controls.scrollBackward", { namespace: "shell" })}
           className={iconButtonClassName}
         >
-          <ArrowLeft className="h-4 w-4" />
+          {isRtl ? <ArrowRight className="h-4 w-4" /> : <ArrowLeft className="h-4 w-4" />}
         </Button>
         <Button
           type="button"
@@ -360,7 +320,7 @@ function BrowserToolbar({ model }: { model: ShellChromeModel }) {
           aria-label={t("workspace.controls.scrollForward", { namespace: "shell" })}
           className={iconButtonClassName}
         >
-          <ArrowRight className="h-4 w-4" />
+          {isRtl ? <ArrowLeft className="h-4 w-4" /> : <ArrowRight className="h-4 w-4" />}
         </Button>
         <Button
           type="button"
@@ -377,7 +337,7 @@ function BrowserToolbar({ model }: { model: ShellChromeModel }) {
       <button
         type="button"
         onClick={openSearch}
-        className="flex h-11 min-w-0 items-center gap-2 rounded-full border border-border/60 bg-background px-4 text-start shadow-sm transition-colors hover:bg-card"
+        className="flex h-11 w-full min-w-0 items-center gap-2 rounded-full border border-border/60 bg-background px-4 text-start shadow-sm transition-colors hover:bg-card"
         dir={direction}
         aria-label={t("globalSearch", { namespace: "shell" })}
       >
@@ -597,35 +557,40 @@ function BrowserTitleBar({ model }: { model: ShellChromeModel }) {
     >
       <div
         className={cn(
-          "grid min-h-14 grid-cols-[auto_minmax(0,1fr)_auto] items-end gap-2 px-3 pb-0",
+          "grid min-h-14 w-full min-w-0 grid-cols-[minmax(0,260px)_minmax(0,1fr)_auto] items-end gap-2 px-3 pb-0",
           windowState.isMaximized ? "pt-1" : "pt-2",
         )}
         dir="ltr"
       >
-        <ChromeIdentity
-          compact
-          direction={direction}
-          brandLabel={t("topbar.brandName", { namespace: "shell" })}
-          companyLabel={companyLabel}
-          appTitle={appTitle}
-          isTauriWindow={windowState.isTauriWindow}
+        <WindowDragRegion
+          enabled={windowState.isTauriWindow}
           onDoubleClick={handleTitleBarDoubleClick}
-        />
+          className="flex min-w-0 items-end"
+          direction={direction}
+          title={appTitle}
+        >
+          <WindowChromeBrand
+            compact
+            direction={direction}
+            brandLabel={t("topbar.brandName", { namespace: "shell" })}
+            companyLabel={companyLabel}
+          />
+        </WindowDragRegion>
 
         <div className="flex min-w-0 items-end gap-2" data-testid="browser-titlebar-tabs">
-          <div
-            data-tauri-drag-region={windowState.isTauriWindow ? true : undefined}
+          <WindowDragRegion
+            enabled={windowState.isTauriWindow}
             onDoubleClick={handleTitleBarDoubleClick}
-            className="hidden h-12 min-w-5 xl:block"
+            className="hidden h-11 min-w-6 xl:block"
             aria-hidden="true"
           />
           <div className="min-w-0 flex-1" dir={direction}>
             <TabBar />
           </div>
-          <div
-            data-tauri-drag-region={windowState.isTauriWindow ? true : undefined}
+          <WindowDragRegion
+            enabled={windowState.isTauriWindow}
             onDoubleClick={handleTitleBarDoubleClick}
-            className="hidden h-12 min-w-5 2xl:block"
+            className="hidden h-11 min-w-10 2xl:block"
             aria-hidden="true"
           />
         </div>
@@ -674,26 +639,30 @@ function DefaultTitleBar({ model }: { model: ShellChromeModel }) {
         )}
         dir="ltr"
       >
-        <ChromeIdentity
-          compact={false}
+        <WindowDragRegion
+          enabled={windowState.isTauriWindow}
+          onDoubleClick={handleTitleBarDoubleClick}
+          className="flex items-center"
           direction={direction}
-          brandLabel={t("topbar.brandName", { namespace: "shell" })}
-          companyLabel={companyLabel}
-          appTitle={appTitle}
-          isTauriWindow={windowState.isTauriWindow}
-          onDoubleClick={handleTitleBarDoubleClick}
-        />
+          title={appTitle}
+        >
+          <WindowChromeBrand
+            direction={direction}
+            brandLabel={t("topbar.brandName", { namespace: "shell" })}
+            companyLabel={companyLabel}
+          />
+        </WindowDragRegion>
 
-        <div
-          data-tauri-drag-region={windowState.isTauriWindow ? true : undefined}
+        <WindowDragRegion
+          enabled={windowState.isTauriWindow}
           onDoubleClick={handleTitleBarDoubleClick}
-          className="flex min-w-0 items-center justify-center gap-2 px-2 text-center select-none"
-          dir={direction}
+          className="flex min-w-0 items-center justify-center gap-2 px-2 text-center"
+          direction={direction}
         >
           {activeTabDirty && <span className="h-2 w-2 rounded-full bg-warning" aria-hidden="true" />}
           <div className="min-w-0 truncate text-sm font-semibold text-foreground">{activeTabTitle}</div>
           {activeTabDirty && <span className="sr-only">{t("workspace.controls.dirty", { namespace: "shell" })}</span>}
-        </div>
+        </WindowDragRegion>
 
         <ChromeUtilityActions compact={false} model={model} />
 

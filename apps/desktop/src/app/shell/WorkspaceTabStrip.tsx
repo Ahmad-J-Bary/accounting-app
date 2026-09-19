@@ -158,7 +158,7 @@ export function WorkspaceTabStrip({
 
   return (
     <TooltipProvider delayDuration={250}>
-      <div className={cn(presentation.stripClassName, className)} data-tab-style={tabStyle}>
+      <div className={cn("min-w-0", presentation.stripClassName, className)} data-tab-style={tabStyle}>
       <Button
         type="button"
         variant="ghost"
@@ -193,7 +193,7 @@ export function WorkspaceTabStrip({
       <div
         ref={scrollRef}
         className={cn(
-          "flex-1 overflow-x-auto no-scrollbar",
+          "flex-1 overflow-x-auto overscroll-contain no-scrollbar",
           presentation.tabListClassName,
           presentation.tabGapClassName,
           isBrowserPresentation && "order-1",

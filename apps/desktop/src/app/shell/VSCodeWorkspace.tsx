@@ -16,6 +16,7 @@ import { useCompanyTypeSettings, useCompanyInitState } from "@shared/hooks";
 import { companyTypeOf, hiddenNavIds } from "@modules/opening-balance/lib/company-lifecycle";
 import { WindowSurface } from "./WindowSurface";
 import { useWindowChromeData } from "./useWindowChromeData";
+import { WindowDragRegion } from "./WindowDragRegion";
 
 interface VSCodeWorkspaceProps {
   content: React.ReactNode;
@@ -102,16 +103,16 @@ export function VSCodeWorkspace({
   const titleBar = (
     <div
       className={cn(
-        "grid min-h-11 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 border-b border-white/10 bg-[#181c25] px-3",
+        "grid min-h-11 w-full min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 border-b border-white/10 bg-[#181c25] px-3",
         chrome.windowState.isFocused ? "shadow-sm" : "opacity-95",
       )}
       data-testid="vscode-titlebar"
     >
-      <div
-        data-tauri-drag-region={chrome.windowState.isTauriWindow ? true : undefined}
+      <WindowDragRegion
+        enabled={chrome.windowState.isTauriWindow}
         onDoubleClick={chrome.handleTitleBarDoubleClick}
-        className="flex min-w-0 items-center gap-3 select-none"
-        dir={direction}
+        className="flex min-w-0 items-center gap-3"
+        direction={direction}
       >
         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/20 text-primary">
           <Sparkles className="h-4 w-4" />
@@ -120,13 +121,9 @@ export function VSCodeWorkspace({
           <div className="truncate text-xs font-semibold text-white">{titleText}</div>
           <div className="truncate text-[10px] text-white/60">{companyText}</div>
         </div>
-      </div>
+      </WindowDragRegion>
 
-      <div
-        data-tauri-drag-region={chrome.windowState.isTauriWindow ? true : undefined}
-        onDoubleClick={chrome.handleTitleBarDoubleClick}
-        className="flex min-w-0 items-center justify-center px-2"
-      >
+      <div className="flex min-w-0 items-center justify-center px-2">
         <button
           type="button"
           onClick={openSearch}
@@ -190,7 +187,7 @@ export function VSCodeWorkspace({
         {!isMobile && (
           <aside
             className={cn(
-              "flex shrink-0 flex-col overflow-hidden border-e border-white/10 bg-[#252b39]",
+              "flex min-h-0 shrink-0 flex-col overflow-hidden border-e border-white/10 bg-[#252b39]",
               isTablet ? "w-56" : "w-64",
             )}
             dir={direction}
@@ -204,7 +201,7 @@ export function VSCodeWorkspace({
                 {selectedGroup.items.length} {t("appearance.preview.vscodeActivity", { namespace: "settings" })}
               </div>
             </div>
-            <div className="flex-1 overflow-y-auto p-2">
+            <div className="sidebar-scrollbar min-h-0 flex-1 overflow-y-auto overscroll-contain p-2">
               {selectedGroup.items.map((item) => {
                 const ItemIcon = getItemIcon(item.icon);
                 const isItemActive = activeRoute?.id === item.id;
@@ -222,7 +219,7 @@ export function VSCodeWorkspace({
                   >
                     <ItemIcon className="h-4 w-4 shrink-0" />
                     <span className="truncate">{resolveRouteLabel(item.id, t)}</span>
-                    <ChevronRight className="ms-auto h-3.5 w-3.5 text-white/40" />
+                    <ChevronRight className={cn("ms-auto h-3.5 w-3.5 text-white/40", direction === "rtl" && "rotate-180")} />
                   </button>
                 );
               })}

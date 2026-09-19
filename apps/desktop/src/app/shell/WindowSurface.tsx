@@ -19,12 +19,12 @@ export function WindowSurface({
 }: WindowSurfaceProps) {
   return (
     <div
-      className={cn("flex h-screen min-h-0 w-full flex-col overflow-hidden bg-background", className)}
+      className={cn("flex h-screen min-h-0 min-w-0 w-full max-w-none flex-col overflow-hidden bg-background", className)}
       dir={direction}
       data-testid={testId}
     >
       {chrome}
-      <div className={cn("min-h-0 flex-1 overflow-hidden", contentClassName)}>
+      <div className={cn("min-h-0 min-w-0 flex-1 overflow-hidden", contentClassName)}>
         {children}
       </div>
     </div>

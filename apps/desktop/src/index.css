@@ -521,6 +521,11 @@
   background: hsl(var(--sidebar-ring));
 }
 
+.sidebar-scrollbar {
+  scrollbar-gutter: stable both-edges;
+  overscroll-behavior: contain;
+}
+
 /* ==========================================
    Container Query Utilities
    ========================================== */
