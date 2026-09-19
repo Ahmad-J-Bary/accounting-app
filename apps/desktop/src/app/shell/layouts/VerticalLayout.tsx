@@ -1,38 +1,24 @@
 import React from 'react';
 import { Sidebar } from '../Sidebar';
-import { TopBar } from '../TopBar';
-import { TabBar } from '../TabBar';
 import { useAppearance } from '@shared/hooks/useAppearance';
-import { useLocalization } from '@app/providers/LocalizationProvider';
 
 interface VerticalLayoutProps {
   children: React.ReactNode;
   sidebarOpen: boolean;
   onToggleSidebar: () => void;
-  isExchangeVisible?: boolean;
-  onToggleExchange?: () => void;
 }
 
-export function VerticalLayout({ children, sidebarOpen, onToggleSidebar, isExchangeVisible, onToggleExchange }: VerticalLayoutProps) {
+export function VerticalLayout({ children, sidebarOpen, onToggleSidebar }: VerticalLayoutProps) {
   const { settings, activeLayout } = useAppearance();
-  const { direction } = useLocalization();
   const showSidebar = settings.show.sidebar && activeLayout.sidebarMode !== 'hidden';
-  const showTopBar = settings.show.topBar && activeLayout.topBarMode !== 'hidden';
-  const showTabs = settings.show.tabs && activeLayout.showTabs;
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden" dir={direction} data-density={settings.density}>
-      {showTopBar && <TopBar onToggleSidebar={onToggleSidebar} sidebarOpen={sidebarOpen} isExchangeVisible={isExchangeVisible} onToggleExchange={onToggleExchange} />}
-      <div className="flex flex-1 overflow-hidden">
-        {showSidebar && (
-          <Sidebar collapsed={!sidebarOpen} onClose={() => sidebarOpen && onToggleSidebar()} />
-        )}
-        <div className="flex flex-col flex-1 min-w-0">
-          {showTabs && <TabBar />}
-          <div className="flex-1 flex flex-col overflow-auto">
-            {children}
-          </div>
-        </div>
+    <div className="flex flex-1 overflow-hidden" data-density={settings.density}>
+      {showSidebar && (
+        <Sidebar collapsed={!sidebarOpen} onClose={() => sidebarOpen && onToggleSidebar()} />
+      )}
+      <div className="flex min-w-0 flex-1 flex-col overflow-auto">
+        {children}
       </div>
     </div>
   );

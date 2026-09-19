@@ -12,6 +12,8 @@ async function createNativeWindow(windowId: string, route: string, title: string
     width: 1280,
     height: 860,
     resizable: true,
+    decorations: false,
+    shadow: true,
   });
 }
 

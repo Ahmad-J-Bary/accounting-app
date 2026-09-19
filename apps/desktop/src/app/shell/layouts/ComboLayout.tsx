@@ -1,57 +1,35 @@
 import React from 'react';
 import { Sidebar } from '../Sidebar';
-import { TopBar } from '../TopBar';
-import { TabBar } from '../TabBar';
 import { useAppearance } from '@shared/hooks/useAppearance';
 import { NavBar } from '../components/NavBar';
-import { useLocalization } from '@app/providers/LocalizationProvider';
 
 interface ComboLayoutProps {
   children: React.ReactNode;
   sidebarOpen: boolean;
   onToggleSidebar: () => void;
-  isExchangeVisible?: boolean;
-  onToggleExchange?: () => void;
 }
 
-export function ComboLayout({ children, sidebarOpen, onToggleSidebar, isExchangeVisible, onToggleExchange }: ComboLayoutProps) {
+export function ComboLayout({ children, sidebarOpen, onToggleSidebar }: ComboLayoutProps) {
   const { settings, activeLayout } = useAppearance();
-  const { direction } = useLocalization();
   const isStacked = settings.topnavShape === 'stacked';
-  const showTopBar = settings.show.topBar && activeLayout.topBarMode !== 'hidden';
   const showNavBar = isStacked && activeLayout.navbarMode !== 'none';
   const showSidebar = settings.show.sidebar && activeLayout.sidebarMode !== 'hidden';
-  const showTabs = settings.show.tabs && activeLayout.showTabs;
+  const showAppNav = settings.show.topBar && activeLayout.topBarMode !== 'hidden';
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden" dir={direction} data-density={settings.density}>
-      {showTopBar && (
-        isStacked ? (
-          <TopBar onToggleSidebar={onToggleSidebar} sidebarOpen={sidebarOpen} isExchangeVisible={isExchangeVisible} onToggleExchange={onToggleExchange} />
-        ) : (
-          <TopBar
-            onToggleSidebar={onToggleSidebar}
-            sidebarOpen={sidebarOpen}
-            isExchangeVisible={isExchangeVisible}
-            onToggleExchange={onToggleExchange}
-            merged
-            mergedSlim={activeLayout.navbarMode === 'slim'}
-          />
-        )
-      )}
-      {showNavBar && (
+    <div className="flex flex-1 overflow-hidden" data-density={settings.density}>
+      <div className="flex min-w-0 flex-1 overflow-hidden">
+        {showSidebar && (
+          <Sidebar collapsed={!sidebarOpen} onClose={() => sidebarOpen && onToggleSidebar()} />
+        )}
+        <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+          {showNavBar && showAppNav && (
         <NavBar
           slim={activeLayout.navbarMode === 'slim'}
           horizontalAppearance={settings.horizontalNavbarAppearance}
         />
-      )}
-      <div className="flex flex-1 overflow-hidden">
-        {showSidebar && (
-          <Sidebar collapsed={!sidebarOpen} onClose={() => sidebarOpen && onToggleSidebar()} />
-        )}
-        <div className="flex flex-col flex-1 min-w-0">
-          {showTabs && <TabBar />}
-          <div className="flex-1 flex flex-col overflow-auto">
+          )}
+          <div className="flex-1 overflow-auto">
             {children}
           </div>
         </div>

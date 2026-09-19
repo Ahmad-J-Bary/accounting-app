@@ -23,6 +23,7 @@ import { VoiceAssistantOverlay } from './VoiceAssistantOverlay';
 import { BarcodeScanDialog } from '@shared/ui/BarcodeScanDialog';
 import { useLocalization } from '@app/providers/LocalizationProvider';
 import { WorkspaceTabContext } from '@app/providers/WorkspaceTabContext';
+import { BrowserChrome } from './BrowserChrome';
 
 interface AppLayoutProps {
   title?: string;
@@ -108,14 +109,23 @@ export function AppLayout({ title, subtitle }: AppLayoutProps) {
     </>
   ), [tabs, isExchangeVisible, title, subtitle, hasMultipleCurrencies]);
 
-  return <UpdateProvider>{renderLayout()}</UpdateProvider>;
+  return (
+    <UpdateProvider>
+      <div className="flex h-screen flex-col overflow-hidden bg-background" dir={direction} data-tab-style={settings.tabStyle}>
+        <BrowserChrome isExchangeVisible={isExchangeVisible} onToggleExchange={toggleExchange} />
+        <div className="min-h-0 flex-1 overflow-hidden">
+          {renderLayout()}
+        </div>
+      </div>
+    </UpdateProvider>
+  );
 
   function renderLayout() {
     // Mobile: simplified layout with bottom nav
     if (isMobile) {
       return (
-        <div className="min-h-screen overflow-hidden bg-background" dir={direction} data-tab-style={settings.tabStyle}>
-          <div className="flex flex-col h-screen pb-14">
+        <div className="flex h-full flex-col overflow-hidden pb-14">
+          <div className="min-h-0 flex flex-1 flex-col">
             {content}
           </div>
           <MobileNav />
@@ -130,36 +140,24 @@ export function AppLayout({ title, subtitle }: AppLayoutProps) {
     switch (activeLayout.shellVariant) {
       case 'topnav':
         return (
-          <div className="min-h-screen overflow-hidden bg-background" dir={direction} data-tab-style={settings.tabStyle}>
-            <TopNavLayout isExchangeVisible={isExchangeVisible} onToggleExchange={toggleExchange}>
-              {content}
-            </TopNavLayout>
-          </div>
+          <TopNavLayout>{content}</TopNavLayout>
         );
       case 'horizontal':
         return (
-          <div className="min-h-screen overflow-hidden bg-background" dir={direction} data-tab-style={settings.tabStyle}>
-            <HorizontalLayout isExchangeVisible={isExchangeVisible} onToggleExchange={toggleExchange}>
-              {content}
-            </HorizontalLayout>
-          </div>
+          <HorizontalLayout>{content}</HorizontalLayout>
         );
       case 'combo':
         return (
-          <div className="min-h-screen overflow-hidden bg-background" dir={direction} data-tab-style={settings.tabStyle}>
-            <ComboLayout sidebarOpen={effectiveSidebarOpen} onToggleSidebar={handleToggleSidebar} isExchangeVisible={isExchangeVisible} onToggleExchange={toggleExchange}>
-              {content}
-            </ComboLayout>
-          </div>
+          <ComboLayout sidebarOpen={effectiveSidebarOpen} onToggleSidebar={handleToggleSidebar}>
+            {content}
+          </ComboLayout>
         );
       case 'vertical':
       default:
         return (
-          <div className="min-h-screen overflow-hidden bg-background" dir={direction} data-tab-style={settings.tabStyle}>
-            <VerticalLayout sidebarOpen={effectiveSidebarOpen} onToggleSidebar={handleToggleSidebar} isExchangeVisible={isExchangeVisible} onToggleExchange={toggleExchange}>
-              {content}
-            </VerticalLayout>
-          </div>
+          <VerticalLayout sidebarOpen={effectiveSidebarOpen} onToggleSidebar={handleToggleSidebar}>
+            {content}
+          </VerticalLayout>
         );
     }
   }

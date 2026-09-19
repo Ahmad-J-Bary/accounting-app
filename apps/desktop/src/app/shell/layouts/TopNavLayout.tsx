@@ -1,32 +1,24 @@
 import React from 'react';
 import { useAppearance } from '@shared/hooks/useAppearance';
-import { TopBar } from '../TopBar';
-import { TabBar } from '../TabBar';
-import { useLocalization } from '@app/providers/LocalizationProvider';
+import { NavBar } from '../components/NavBar';
 
 interface TopNavLayoutProps {
   children: React.ReactNode;
-  isExchangeVisible?: boolean;
-  onToggleExchange?: () => void;
 }
 
-export function TopNavLayout({ children, isExchangeVisible, onToggleExchange }: TopNavLayoutProps) {
+export function TopNavLayout({ children }: TopNavLayoutProps) {
   const { settings, activeLayout } = useAppearance();
-  const { direction } = useLocalization();
-  const showTabs = settings.show.tabs && activeLayout.showTabs;
+  const showNavBar = settings.show.topBar && activeLayout.topBarMode !== 'hidden';
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden" dir={direction} data-density={settings.density}>
-      <TopBar
-        onToggleSidebar={() => {}}
-        sidebarOpen={false}
-        isExchangeVisible={isExchangeVisible}
-        onToggleExchange={onToggleExchange}
-        merged
-        mergedSlim
-      />
-      {showTabs && <TabBar />}
-      <div className="flex-1 flex flex-col overflow-auto">
+    <div className="flex min-h-0 flex-1 flex-col" data-density={settings.density}>
+      {showNavBar && (
+        <NavBar
+          slim
+          horizontalAppearance={settings.horizontalNavbarAppearance}
+        />
+      )}
+      <div className="flex-1 overflow-auto">
         {children}
       </div>
     </div>

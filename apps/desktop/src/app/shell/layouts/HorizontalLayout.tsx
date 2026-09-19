@@ -1,38 +1,29 @@
 import React from 'react';
-import { TopBar } from '../TopBar';
-import { TabBar } from '../TabBar';
 import { useAppearance } from '@shared/hooks/useAppearance';
 import { NavBar } from '../components/NavBar';
-import { useLocalization } from '@app/providers/LocalizationProvider';
 
 interface HorizontalLayoutProps {
   children: React.ReactNode;
-  isExchangeVisible?: boolean;
-  onToggleExchange?: () => void;
 }
 
-export function HorizontalLayout({ children, isExchangeVisible, onToggleExchange }: HorizontalLayoutProps) {
+export function HorizontalLayout({ children }: HorizontalLayoutProps) {
   const { settings, activeLayout } = useAppearance();
-  const { direction } = useLocalization();
   const isStacked = activeLayout.id === 'horizontal-slim' || settings.topnavShape === 'stacked';
-  const showTopBar = settings.show.topBar && activeLayout.topBarMode !== 'hidden';
   const showNavBar = activeLayout.navbarMode !== 'none';
-  const showTabs = settings.show.tabs && activeLayout.showTabs;
+  const showAppNav = settings.show.topBar && activeLayout.topBarMode !== 'hidden';
 
   if (isStacked) {
     return (
-      <div className="flex flex-col h-screen overflow-hidden" dir={direction} data-density={settings.density}>
-        {showTopBar && <TopBar onToggleSidebar={() => {}} sidebarOpen={false} isExchangeVisible={isExchangeVisible} onToggleExchange={onToggleExchange} />}
-        {showNavBar && (
+      <div className="flex min-h-0 flex-1 flex-col" data-density={settings.density}>
+        {showNavBar && showAppNav && (
           <NavBar
             slim={activeLayout.navbarMode === 'slim'}
             activeBg="bg-primary"
             hoverBg="hover:bg-white/5 hover:text-white"
             horizontalAppearance={settings.horizontalNavbarAppearance}
           />
-          )}
-        {showTabs && <TabBar />}
-        <div className="flex-1 flex flex-col overflow-auto">
+        )}
+        <div className="flex-1 overflow-auto">
           {children}
         </div>
       </div>
@@ -40,17 +31,14 @@ export function HorizontalLayout({ children, isExchangeVisible, onToggleExchange
   }
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden" dir={direction} data-density={settings.density}>
-      <TopBar
-        onToggleSidebar={() => {}}
-        sidebarOpen={false}
-        isExchangeVisible={isExchangeVisible}
-        onToggleExchange={onToggleExchange}
-        merged
-        mergedSlim={activeLayout.navbarMode === 'slim'}
-      />
-      {showTabs && <TabBar />}
-      <div className="flex-1 flex flex-col overflow-auto">
+    <div className="flex min-h-0 flex-1 flex-col" data-density={settings.density}>
+      {showNavBar && showAppNav && (
+        <NavBar
+          slim={activeLayout.navbarMode === 'slim'}
+          horizontalAppearance={settings.horizontalNavbarAppearance}
+        />
+      )}
+      <div className="flex-1 overflow-auto">
         {children}
       </div>
     </div>

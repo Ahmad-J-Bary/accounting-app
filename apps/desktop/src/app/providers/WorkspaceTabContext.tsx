@@ -8,8 +8,12 @@ interface WorkspaceTabContextValue {
 
 export const WorkspaceTabContext = createContext<WorkspaceTabContextValue | null>(null);
 
+export function useOptionalWorkspaceTab() {
+  return useContext(WorkspaceTabContext);
+}
+
 export function useWorkspaceTab() {
-  const context = useContext(WorkspaceTabContext);
+  const context = useOptionalWorkspaceTab();
   if (!context) {
     throw new Error("useWorkspaceTab must be used within WorkspaceTabContext");
   }

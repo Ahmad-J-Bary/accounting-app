@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTabs } from "@app/providers/TabContext";
-import { useWorkspaceTab } from "@app/providers/WorkspaceTabContext";
+import { useOptionalWorkspaceTab } from "@app/providers/WorkspaceTabContext";
 
 function stableSerialize(value: unknown): string {
   if (value === null || value === undefined) return String(value);
@@ -33,16 +33,18 @@ export function useWorkspaceDirtyState<T>({
   enabled = true,
 }: WorkspaceDirtyStateOptions<T>) {
   const { markDirty } = useTabs();
-  const { tabId } = useWorkspaceTab();
+  const workspaceTab = useOptionalWorkspaceTab();
   const snapshot = useMemo(() => stableSerialize(value), [value]);
   const [baseline, setBaseline] = useState(snapshot);
   const latestSnapshotRef = useRef(snapshot);
+  const tabId = workspaceTab?.tabId;
 
   latestSnapshotRef.current = snapshot;
 
-  const dirty = enabled && baseline !== snapshot;
+  const dirty = Boolean(tabId) && enabled && baseline !== snapshot;
 
   useEffect(() => {
+    if (!tabId) return;
     markDirty(tabId, dirty);
 
     return () => {
@@ -52,6 +54,7 @@ export function useWorkspaceDirtyState<T>({
 
   const resetDirtyBaseline = useCallback(() => {
     setBaseline(latestSnapshotRef.current);
+    if (!tabId) return;
     markDirty(tabId, false);
   }, [markDirty, tabId]);
 

@@ -81,7 +81,7 @@ export function WorkspaceTabStrip({
   const [canScrollForward, setCanScrollForward] = useState(false);
   const isRtl = direction === "rtl";
 
-  const visibleTabs = useMemo(() => tabs.filter((tab) => tab.id !== "main-tab"), [tabs]);
+  const visibleTabs = useMemo(() => tabs, [tabs]);
 
   useEffect(() => {
     const element = scrollRef.current;
