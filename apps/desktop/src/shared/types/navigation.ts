@@ -28,6 +28,7 @@ export interface WorkspaceItem extends NavigationDestination {
 export interface WindowWorkspaceState {
   id: string;
   label: string;
+  route?: string;
   activeItemId?: string;
   permissions?: string[];
   context?: Record<string, unknown>;

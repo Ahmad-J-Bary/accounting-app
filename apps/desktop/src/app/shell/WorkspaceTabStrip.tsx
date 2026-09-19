@@ -105,6 +105,18 @@ export function WorkspaceTabStrip({
     };
   }, [visibleTabs.length, tabStyle]);
 
+  useEffect(() => {
+    const element = scrollRef.current;
+    if (!element) return;
+
+    const activeTab = element.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]');
+    activeTab?.scrollIntoView({
+      behavior: "smooth",
+      block: "nearest",
+      inline: "nearest",
+    });
+  }, [tabs]);
+
   if (!alwaysVisible && visibleTabs.length === 0) {
     return null;
   }
@@ -174,6 +186,8 @@ export function WorkspaceTabStrip({
       <div
         ref={scrollRef}
         className={cn("flex-1 overflow-x-auto no-scrollbar", presentation.tabListClassName, presentation.tabGapClassName)}
+        role="tablist"
+        aria-orientation="horizontal"
       >
         {visibleTabs.map((tab, index) => {
           const Icon = resolveIcon(tab);
@@ -189,6 +203,7 @@ export function WorkspaceTabStrip({
                   role="tab"
                   tabIndex={0}
                   aria-selected={tab.active}
+                  aria-current={tab.active ? "page" : undefined}
                   aria-label={t("workspace.menu.switchTo", {
                     namespace: "shell",
                     vars: { title: tab.title },
@@ -221,6 +236,7 @@ export function WorkspaceTabStrip({
                   )}
 
                   {renderDirtyIndicator(tab)}
+                  {tab.dirty && <span className="sr-only">{t("workspace.controls.dirty", { namespace: "shell" })}</span>}
 
                   <Tooltip>
                     <TooltipTrigger asChild>

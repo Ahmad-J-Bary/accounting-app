@@ -23,6 +23,7 @@ import type {
 import { toast } from "sonner";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { useLocalization } from "@app/providers/LocalizationProvider";
+import { useWorkspaceDirtyState } from "@shared/hooks/useWorkspaceDirtyState";
 import { useDocumentEditor } from "./useDocumentEditor";
 import {
   toBackendLines,
@@ -86,7 +87,7 @@ export function useInvoiceLifecycle({
 }: UseInvoiceLifecycleProps) {
   const { id } = useParams();
   const queryClient = useQueryClient();
-  const { openTab, closeTab, activeTabId } = useTabs();
+  const { openTab, closeTab, activeTabId, markDirty } = useTabs();
   const {
     baseCurrency,
     formatMonetaryAmount,
@@ -416,6 +417,40 @@ export function useInvoiceLifecycle({
     materials,
   });
 
+  const normalizedDraftLines = useMemo(
+    () =>
+      lines.map((line) => ({
+        id: line.id || "",
+        material_id: line.material_id || "",
+        quantity: line.quantity || "",
+        unit_id: line.unit_id || "",
+        unit_price: line.unit_price || "",
+        warehouse_id: line.warehouse_id || "",
+        expiry_date: line.expiry_date || "",
+        notes: line.notes || "",
+        discount: line.discount || "",
+      })),
+    [lines],
+  );
+
+  const isDirtyTrackingReady =
+    view === "editor" &&
+    !isReadOnly &&
+    (isNew ? headerState.invoice_number !== "..." : Boolean(headerState.id));
+
+  const { resetDirtyBaseline } = useWorkspaceDirtyState({
+    enabled: isDirtyTrackingReady,
+    value: {
+      headerState,
+      lines: normalizedDraftLines,
+    },
+  });
+
+  useEffect(() => {
+    if (!isDirtyTrackingReady) return;
+    resetDirtyBaseline();
+  }, [isDirtyTrackingReady, resetDirtyBaseline]);
+
   // Auto-set default currency to base currency for new documents
   useEffect(() => {
     if (isNew && !headerState.currency_code && baseCurrency) {
@@ -575,6 +610,9 @@ export function useInvoiceLifecycle({
         await invalidateKeys(queryClient, invoiceType === "Sales" ? SALE_KEYS : PURCHASE_KEYS);
       }
 
+      resetDirtyBaseline();
+      markDirty(activeTabId, false);
+
       const listTabId =
         invoiceType === "Sales" ? "sales-invoices" : "purchase-invoices";
       closeTab(activeTabId);
@@ -599,6 +637,8 @@ export function useInvoiceLifecycle({
       await invalidateKeys(queryClient, invoiceType === "Sales" ? SALE_KEYS : PURCHASE_KEYS);
       toast.success(t("invoice.reopenSuccess", { namespace: "invoicing" }));
       setHeaderState((s) => ({ ...s, status: "Draft" }));
+      resetDirtyBaseline();
+      markDirty(activeTabId, false);
       const invoicePath = invoiceType === "Sales"
         ? `/sales-invoices/${headerState.id}`
         : `/purchase-invoices/${headerState.id}`;

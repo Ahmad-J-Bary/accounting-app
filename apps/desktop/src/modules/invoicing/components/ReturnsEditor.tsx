@@ -16,7 +16,9 @@ import { invoiceService } from "@modules/invoicing/api/invoiceService";
 import { toReturnBackendLines, newGridLine } from "@modules/invoicing/lib/invoiceUtils";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { useLocalization } from "@app/providers/LocalizationProvider";
+import { useTabs } from "@app/providers/TabContext";
 import { useExportSetup } from "@shared/hooks";
+import { useWorkspaceDirtyState } from "@shared/hooks/useWorkspaceDirtyState";
 import { executeExport, addCurrencySummary } from "@shared/lib/excel";
 import { buildInvoiceLineExportColumns } from "../lib/invoice-export-columns";
 import type { GridLine } from "@modules/invoicing/lib/invoiceUtils";
@@ -39,6 +41,7 @@ interface ReturnsEditorProps {
 export function ReturnsEditor({ returnType, partyType, parties, materials, warehouses, onSaved, onClose, returnId, readOnly = false }: ReturnsEditorProps) {
   const queryClient = useQueryClient();
   const { t } = useLocalization();
+  const { activeTabId, markDirty } = useTabs();
   const isSales = returnType === "SalesReturn";
   const { currencies, convertBetween } = useCurrencyContext();
   const [saving, setSaving] = useState(false);
@@ -75,6 +78,41 @@ export function ReturnsEditor({ returnType, partyType, parties, materials, wareh
 
   const totalAmount = useMemo(() =>
     lines.reduce((sum, l) => sum + (parseFloat(l.quantity || "0") * parseFloat(l.unit_price || "0")), 0), [lines]);
+
+  const normalizedDraftLines = useMemo(
+    () =>
+      lines.map((line) => ({
+        id: line.id || "",
+        material_id: line.material_id || "",
+        quantity: line.quantity || "",
+        unit_id: line.unit_id || "",
+        unit_price: line.unit_price || "",
+        warehouse_id: line.warehouse_id || "",
+        notes: line.notes || "",
+        invoice_line_id: line.invoice_line_id || "",
+      })),
+    [lines],
+  );
+
+  const isDirtyTrackingReady = !readOnly && (!returnId || !loadingExisting);
+  const { resetDirtyBaseline } = useWorkspaceDirtyState({
+    enabled: isDirtyTrackingReady,
+    value: {
+      partyId,
+      partyName,
+      returnDate,
+      notes,
+      settlementMode,
+      settlementCash,
+      isPaid,
+      lines: normalizedDraftLines,
+    },
+  });
+
+  useEffect(() => {
+    if (!isDirtyTrackingReady) return;
+    resetDirtyBaseline();
+  }, [isDirtyTrackingReady, resetDirtyBaseline]);
 
   const returnGridColumns = useMemo<DocumentColumn[]>(() => [
     { key: "material_image", header: t("return.colImage", { namespace: "invoicing",  }), width: "w-[40px]", type: "image", defaultVisible: false },
@@ -506,6 +544,8 @@ export function ReturnsEditor({ returnType, partyType, parties, materials, wareh
 
       toast.success(returnId ? t("return.updateSuccess", { namespace: "invoicing",  }) : t("return.createSuccess", { namespace: "invoicing",  }));
       await invalidateKeys(queryClient, [...SALE_KEYS, ...PURCHASE_KEYS]);
+      resetDirtyBaseline();
+      markDirty(activeTabId, false);
       onSaved();
     } catch (e) {
       toast.error(returnId ? t("return.saveErrorUpdate", { namespace: "invoicing", vars: { error: String(e) },  }) : t("return.saveErrorCreate", { namespace: "invoicing", vars: { error: String(e) },  }));
@@ -524,6 +564,9 @@ export function ReturnsEditor({ returnType, partyType, parties, materials, wareh
     returnNumber,
     settlementCash,
     settlementMode,
+    resetDirtyBaseline,
+    markDirty,
+    activeTabId,
     t,
     notes,
     isPaid,

@@ -634,6 +634,17 @@ export const TabProvider = ({ children }: { children: ReactNode }) => {
     return () => window.removeEventListener("keydown", handleKeyDown, true);
   }, [closeTab, nextTab, openDashboardTab, prevTab]);
 
+  useEffect(() => {
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (!tabsRef.current.some((tab) => tab.dirty)) return;
+      event.preventDefault();
+      event.returnValue = "";
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, []);
+
   const workspaceItems = useMemo(() => tabs.map(toWorkspaceItem), [tabs]);
 
   const pendingCloseTitle = pendingCloseRequest

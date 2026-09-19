@@ -22,6 +22,7 @@ import { GlobalSearch } from './GlobalSearch';
 import { VoiceAssistantOverlay } from './VoiceAssistantOverlay';
 import { BarcodeScanDialog } from '@shared/ui/BarcodeScanDialog';
 import { useLocalization } from '@app/providers/LocalizationProvider';
+import { WorkspaceTabContext } from '@app/providers/WorkspaceTabContext';
 
 interface AppLayoutProps {
   title?: string;
@@ -89,7 +90,13 @@ export function AppLayout({ title, subtitle }: AppLayoutProps) {
                   {subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}
                 </div>
               )}
-              <TabLocationContext.Provider value={tab.path}><ErrorBoundary key={tab.id}><ErpRoutes location={tab.path} /></ErrorBoundary></TabLocationContext.Provider>
+              <WorkspaceTabContext.Provider value={{ tabId: tab.id, path: tab.path, active: tab.active }}>
+                <TabLocationContext.Provider value={tab.path}>
+                  <ErrorBoundary key={tab.id}>
+                    <ErpRoutes location={tab.path} />
+                  </ErrorBoundary>
+                </TabLocationContext.Provider>
+              </WorkspaceTabContext.Provider>
             </div>
           </div>
         ))}

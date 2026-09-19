@@ -18,6 +18,7 @@ import { executeExport, addCurrencySummary } from "@shared/lib/excel";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { formatNumber, toLocalDateStr } from "@shared/lib/format";
 import { buildInvoiceLineExportColumns } from "@modules/invoicing/lib/invoice-export-columns";
+import { useWorkspaceDirtyState } from "@shared/hooks/useWorkspaceDirtyState";
 
 import { HeaderField } from '@shared/ui/header-field';
 import { ErrorBoundary } from "@shared/ui/ErrorBoundary";
@@ -68,7 +69,7 @@ const defaultHeader = (t: LocalizationContextValue["t"]): HeaderState => ({
 export default function OpeningBalance() {
   const { t } = useLocalization();
   const { id } = useParams<{ id: string }>();
-  const { closeTab, activeTabId, openTab } = useTabs();
+  const { closeTab, activeTabId, openTab, markDirty } = useTabs();
   const tabLocation = useTabLocation();
 
   const [materials, setMaterials] = useState<MaterialDto[]>([]);
@@ -247,6 +248,8 @@ export default function OpeningBalance() {
 
       invalidateAccountingMutationQueries(queryClient);
 
+      resetDirtyBaseline();
+      markDirty(activeTabId, false);
       closeTab(activeTabId);
       openTab({
         id: "purchase-invoices",
@@ -269,6 +272,8 @@ export default function OpeningBalance() {
       toast.success(t("openingBalance.reopenSuccess", { namespace: "accounting",  }));
       setHeader(s => ({ ...s, status: "Draft" }));
       invalidateAccountingMutationQueries(queryClient);
+      resetDirtyBaseline();
+      markDirty(activeTabId, false);
     } catch (e: unknown) {
       toast.error(t("openingBalance.reopenFailed", { namespace: "accounting", vars: { error: String(e) } }));
     } finally {
@@ -332,6 +337,35 @@ export default function OpeningBalance() {
     extraColumns: extraCols,
     materials,
   });
+
+  const normalizedDraftLines = useMemo(
+    () =>
+      lines.map((line) => ({
+        id: line.id || "",
+        material_id: line.material_id || "",
+        quantity: line.quantity || "",
+        unit_id: line.unit_id || "",
+        unit_price: line.unit_price || "",
+        warehouse_id: line.warehouse_id || "",
+        expiry_date: line.expiry_date || "",
+        notes: line.notes || "",
+      })),
+    [lines],
+  );
+
+  const isDirtyTrackingReady = !isReadOnly && (id ? Boolean(header.id) : header.docNumber !== "...");
+  const { resetDirtyBaseline } = useWorkspaceDirtyState({
+    enabled: isDirtyTrackingReady,
+    value: {
+      header,
+      lines: normalizedDraftLines,
+    },
+  });
+
+  useEffect(() => {
+    if (!isDirtyTrackingReady) return;
+    resetDirtyBaseline();
+  }, [isDirtyTrackingReady, resetDirtyBaseline]);
 
   const handleExport = useCallback(async () => {
     if (enrichedLines.length === 0) {
