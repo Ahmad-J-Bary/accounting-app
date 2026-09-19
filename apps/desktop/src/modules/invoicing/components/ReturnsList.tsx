@@ -1,6 +1,5 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTemplate";
-import { Button } from "@shared/ui/button";
 import { Plus, Eye, Settings2, Trash2, Printer } from "lucide-react";
 import type { SalesReturnDto, PurchaseReturnDto } from "@erp/shared-types";
 import type { CurrencyDisplayMode } from "@app/providers/CurrencyContext";
@@ -75,12 +74,12 @@ export function ReturnsList({
     [returns, selectedId],
   );
 
-  const handleDeleteSelected = async () => {
+  const handleDeleteSelected = useCallback(async () => {
     if (!selectedId) return;
     if (!window.confirm(t("return.confirmDelete", { namespace: "invoicing",  }))) return;
     await onDelete(selectedId);
     setSelectedId(null);
-  };
+  }, [onDelete, selectedId, t]);
 
   const toolbarActions = useMemo<ResponsiveActionItem[]>(() => [
     {
