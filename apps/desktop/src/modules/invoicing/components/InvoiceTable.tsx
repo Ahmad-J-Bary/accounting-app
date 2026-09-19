@@ -12,8 +12,9 @@ import { getInvoiceBaseAmount } from "../lib/invoiceHelpers";
 import type { InvoiceDto } from "@erp/shared-types";
 import { DocumentStatusBadge } from "./DocumentStatusBadge";
 import { TableActions } from "@widgets/table-shell/TableActions";
-import { CheckCircle2, History, Filter } from "lucide-react";
+import { CheckCircle2, History, Filter, Eye, Edit, Trash2, Download } from "lucide-react";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@shared/ui/select";
+import type { RowActionDescriptor } from "@shared/types/row-actions";
 
 interface ExtraColumn {
   key: string;
@@ -87,6 +88,71 @@ export function InvoiceTable({
   const { isBaseCurrency, currencySuffix: cs } = useBaseCurrencyColumns();
 
   const partyField = partyType === "supplier" ? "supplier_name" : "customer_name";
+
+  const rowActions = useCallback((inv: InvoiceDto): RowActionDescriptor<InvoiceDto>[] => {
+    const isOpeningBalance = inv.invoice_type === "OpeningBalance";
+    const actions: RowActionDescriptor<InvoiceDto>[] = [
+      {
+        id: "view",
+        label: t("labels.viewDetails", { namespace: "common" }),
+        icon: Eye,
+        priority: "primary",
+        onClick: (row) => isOpeningBalance && onViewOpeningBalance ? onViewOpeningBalance(row) : onView(row),
+      },
+      {
+        id: "edit",
+        label: t("labels.editData", { namespace: "common" }),
+        icon: Edit,
+        priority: "primary",
+        onClick: (row) => isOpeningBalance && onEditOpeningBalance ? onEditOpeningBalance(row) : onEdit(row),
+      },
+    ];
+
+    if (inv.status === "Draft") {
+      actions.push({
+        id: "post",
+        label: t("invoice.actionPostNow", { namespace: "invoicing" }),
+        icon: CheckCircle2,
+        priority: "secondary",
+        onClick: (row) => void onPost(row.id),
+      });
+    } else if (inv.status === "Posted") {
+      actions.push({
+        id: "reopen",
+        label: t("invoice.actionReopen", { namespace: "invoicing" }),
+        icon: History,
+        priority: "secondary",
+        onClick: (row) => void onReopen(row.id),
+      });
+    }
+
+    if (onExportRow) {
+      actions.push({
+        id: "export",
+        label: t("labels.exportExcel", { namespace: "common" }),
+        icon: Download,
+        priority: "tertiary",
+        onClick: (row) => onExportRow(row),
+      });
+    }
+
+    actions.push({
+      id: "delete",
+      label: t("labels.deleteRecord", { namespace: "common" }),
+      icon: Trash2,
+      priority: "overflow",
+      variant: "destructive",
+      destructive: true,
+      separator: "before",
+      onClick: (row) => {
+        if (window.confirm(t("invoice.confirmDeleteRow", { namespace: "invoicing" }))) {
+          void onDelete(row.id);
+        }
+      },
+    });
+
+    return actions;
+  }, [onDelete, onEdit, onEditOpeningBalance, onExportRow, onPost, onReopen, onView, onViewOpeningBalance, t]);
 
   const allColumns = useMemo<UnifiedColumn<InvoiceDto>[]>(() => {
     const cols: UnifiedColumn<InvoiceDto>[] = [
@@ -292,32 +358,10 @@ export function InvoiceTable({
         header: t("actions.actions", { namespace: "invoicing",  }),
         label: t("actions.actions", { namespace: "invoicing",  }),
         accessor: (inv) => {
-          const extraActions = [];
-          if (inv.status === "Draft") {
-            extraActions.push({
-              label: t("invoice.actionPostNow", { namespace: "invoicing",  }),
-              icon: CheckCircle2,
-              onClick: () => onPost(inv.id),
-            });
-          } else if (inv.status === "Posted") {
-            extraActions.push({
-              label: t("invoice.actionReopen", { namespace: "invoicing",  }),
-              icon: History,
-              onClick: () => onReopen(inv.id),
-            });
-          }
-          const isOpeningBalance = inv.invoice_type === "OpeningBalance";
           return (
             <TableActions
-              onView={() => isOpeningBalance && onViewOpeningBalance ? onViewOpeningBalance(inv) : onView(inv)}
-              onEdit={() => isOpeningBalance && onEditOpeningBalance ? onEditOpeningBalance(inv) : onEdit(inv)}
-              onDelete={() => {
-                if (window.confirm(t("invoice.confirmDeleteRow", { namespace: "invoicing",  }))) {
-                  onDelete(inv.id);
-                }
-              }}
-              onExportRow={onExportRow ? () => onExportRow(inv) : undefined}
-              extraActions={extraActions}
+              actions={rowActions(inv)}
+              row={inv}
               align="start"
             />
           );
@@ -325,7 +369,7 @@ export function InvoiceTable({
       },
     ];
     return cols;
-  }, [formatAmount, currencies, baseCurrency, partyField, partyLabel, partyType, defaultName, showSubtotal, showDiscountGranted, showDiscount, showExtraCosts, extraColumns, onView, onEdit, onViewOpeningBalance, onEditOpeningBalance, onPost, onReopen, onDelete, onExportRow, isBaseCurrency, cs, t]);
+  }, [formatAmount, currencies, baseCurrency, partyField, partyLabel, partyType, defaultName, showSubtotal, showDiscountGranted, showDiscount, showExtraCosts, extraColumns, rowActions, isBaseCurrency, cs, t]);
 
   // Default visible: hide secondary currency columns by default.
   // User can toggle them on.
@@ -730,6 +774,7 @@ export function InvoiceTable({
         loading={loading}
         enableResize
         tableId="invoices"
+        rowActions={rowActions}
         sortField={sortField}
         sortDirection={sortDirection}
         onHeaderClick={(col) => {

@@ -254,6 +254,7 @@ export function ExpenseTable({ expenses, loading, search, onSearchChange, onExpo
         loading={loading}
         enableResize
         tableId="expenses"
+        rowActions={rowActions}
         sortField={sortField}
         sortDirection={sortDirection}
         onRowClick={onView}

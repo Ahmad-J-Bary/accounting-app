@@ -8,11 +8,12 @@ import { formatDateTime, formatNumber } from "@shared/lib/format";
 import type { ExcelExportColumn } from "@shared/lib/excel";
 import { executeExport, dateCol, buildCurrencySummary, currencyAmountCols } from "@shared/lib/excel";
 import { isIncomingPayment, signedBaseAmount, OUTGOING_PAYMENT_TYPES } from "@modules/payments/lib/payment-utils";
-import { ArrowDownCircle, ArrowUpCircle, Filter } from "lucide-react";
+import { ArrowDownCircle, ArrowUpCircle, Filter, Eye, Edit, Trash2 } from "lucide-react";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@shared/ui/select";
 import type { Payment, AccountDto } from "@erp/shared-types";
 import { useLocalization } from "@app/providers/LocalizationProvider";
 import { resolveAccountName } from "@shared/lib/system-labels";
+import type { RowActionDescriptor } from "@shared/types/row-actions";
 
 type SortField = "journal_entry_number" | "payment_date" | "payment_type" | "credit_account" | "debit_account";
 
@@ -72,6 +73,33 @@ export function PaymentsTable({
       },
     );
   }, [payments, typeFilter]);
+
+  const rowActions = useMemo<RowActionDescriptor<Payment>[]>(() => [
+    {
+      id: "view",
+      label: t("labels.viewDetails", { namespace: "common" }),
+      icon: Eye,
+      priority: "primary",
+      onClick: (row) => onRowClick(row),
+    },
+    {
+      id: "edit",
+      label: t("labels.editData", { namespace: "common" }),
+      icon: Edit,
+      priority: "primary",
+      onClick: (row) => onEdit(row),
+    },
+    {
+      id: "delete",
+      label: t("labels.deleteRecord", { namespace: "common" }),
+      icon: Trash2,
+      priority: "overflow",
+      variant: "destructive",
+      destructive: true,
+      separator: "before",
+      onClick: (row) => onDelete(row.id),
+    },
+  ], [onDelete, onEdit, onRowClick, t]);
 
   const { sortedData, sortField, sortDirection, handleSort } = useSortable({
     data: filtered,
@@ -222,9 +250,8 @@ export function PaymentsTable({
         label: t("labels.actions", { namespace: "common",  }),
         accessor: (p) => (
           <TableActions
-            onView={() => onRowClick(p)}
-            onEdit={() => onEdit(p)}
-            onDelete={() => onDelete(p.id)}
+            actions={rowActions}
+            row={p}
           />
         ),
       },
@@ -236,9 +263,7 @@ export function PaymentsTable({
       formatAmount,
       toBase,
       accounts,
-      onRowClick,
-      onEdit,
-      onDelete,
+      rowActions,
       isBaseCurrency,
       cs,
       t,
@@ -379,6 +404,7 @@ export function PaymentsTable({
         loading={loading}
         enableResize
         tableId="payments"
+        rowActions={rowActions}
         sortField={sortField}
         sortDirection={sortDirection}
         onHeaderClick={(col) => {

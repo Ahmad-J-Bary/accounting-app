@@ -10,6 +10,8 @@ import { formatDateTime, formatNumber } from "@shared/lib/format";
 
 import type { SalesReturnDto, PurchaseReturnDto } from "@erp/shared-types";
 import { TableActions } from "@widgets/table-shell/TableActions";
+import { Eye, Edit, Trash2, Download } from "lucide-react";
+import type { RowActionDescriptor } from "@shared/types/row-actions";
 
 interface ReturnsTableProps {
   items: (SalesReturnDto | PurchaseReturnDto)[];
@@ -52,6 +54,59 @@ export function ReturnsTable({
   const isPurchaseReturn = (ret: SalesReturnDto | PurchaseReturnDto): ret is PurchaseReturnDto => {
     return 'supplier_id' in ret;
   };
+
+  const rowActions = useCallback((_ret: SalesReturnDto | PurchaseReturnDto): RowActionDescriptor<SalesReturnDto | PurchaseReturnDto>[] => {
+    const actions: RowActionDescriptor<SalesReturnDto | PurchaseReturnDto>[] = [];
+
+    if (onView) {
+      actions.push({
+        id: "view",
+        label: t("labels.viewDetails", { namespace: "common" }),
+        icon: Eye,
+        priority: "primary",
+        onClick: (row) => onView(row),
+      });
+    }
+
+    if (onEdit) {
+      actions.push({
+        id: "edit",
+        label: t("labels.editData", { namespace: "common" }),
+        icon: Edit,
+        priority: "primary",
+        onClick: (row) => onEdit(row),
+      });
+    }
+
+    if (onExportRow) {
+      actions.push({
+        id: "export",
+        label: t("labels.exportExcel", { namespace: "common" }),
+        icon: Download,
+        priority: "tertiary",
+        onClick: (row) => onExportRow(row),
+      });
+    }
+
+    if (onDelete) {
+      actions.push({
+        id: "delete",
+        label: t("labels.deleteRecord", { namespace: "common" }),
+        icon: Trash2,
+        priority: "overflow",
+        variant: "destructive",
+        destructive: true,
+        separator: "before",
+        onClick: (row) => {
+          if (window.confirm(t("return.confirmDelete", { namespace: "invoicing" }))) {
+            void onDelete(row.id);
+          }
+        },
+      });
+    }
+
+    return actions;
+  }, [onDelete, onEdit, onExportRow, onView, t]);
 
   const allColumns = useMemo<UnifiedColumn<SalesReturnDto | PurchaseReturnDto>[]>(() => {
     const cols: UnifiedColumn<SalesReturnDto | PurchaseReturnDto>[] = [
@@ -116,14 +171,8 @@ export function ReturnsTable({
         accessor: (ret: SalesReturnDto | PurchaseReturnDto) => {
           return (
             <TableActions
-              onView={onView ? () => onView(ret) : undefined}
-              onEdit={onEdit ? () => onEdit(ret) : undefined}
-              onDelete={onDelete ? () => {
-                if (window.confirm(t("return.confirmDelete", { namespace: "invoicing",  }))) {
-                  onDelete(ret.id);
-                }
-              } : undefined}
-              onExportRow={onExportRow ? () => onExportRow(ret) : undefined}
+              actions={rowActions(ret)}
+              row={ret}
               align="start"
             />
           );
@@ -131,7 +180,7 @@ export function ReturnsTable({
       }] : []),
     ];
     return cols;
-  }, [currencies, formatAmount, partnerLabel, onView, onEdit, onDelete, onExportRow, isBaseCurrency, cs, t]);
+  }, [currencies, formatAmount, partnerLabel, onView, onEdit, onDelete, rowActions, isBaseCurrency, cs, t]);
 
   // Default visible: only base currency's total column shown
   const defaultVisible = useMemo(() => {
@@ -300,6 +349,7 @@ export function ReturnsTable({
         loading={loading}
         enableResize
         tableId="returns"
+        rowActions={onView || onEdit || onDelete ? rowActions : undefined}
         sortField={sortField}
         sortDirection={sortDirection}
         onHeaderClick={(col) => {
