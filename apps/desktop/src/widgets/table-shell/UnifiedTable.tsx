@@ -3,7 +3,7 @@ import { flushSync } from "react-dom";
 import { cn } from '@shared/lib/utils';
 import { Skeleton } from "@shared/ui/skeleton";
 import { useTableSettings, useGridResize, type GridResizeOptions } from "@shared/hooks";
-import { getRowBackgroundClass, getRowBorderClass, getLeftBorderClass } from "@shared/lib/table-utils";
+import { getCenteredDividerStyle, getRowBackgroundClass, getRowBorderClass, getLeftBorderClass } from "@shared/lib/table-utils";
 import type { SummaryColumn } from './TableSummary';
 import { TableSummary } from './TableSummary';
 import { TablePagination } from './TablePagination';
@@ -232,7 +232,8 @@ export function UnifiedTable<T>({
 
   const renderColumns = isPrinting ? printColumns : visibleColumns;
 
-  const cellBorderClass = getLeftBorderClass(settings.borderStyle);
+  const useCenteredDividers = settings.borderStyle === "full";
+  const cellBorderClass = useCenteredDividers ? "" : getLeftBorderClass(settings.borderStyle);
 
   // ── Single click on header → SORT ONLY (never auto-fit) ──────────────────
   const handleHeaderCellClick = useCallback(
@@ -270,27 +271,15 @@ export function UnifiedTable<T>({
     [renderColumns],
   );
 
-  // ── Row cell style — respects col.align (start/center/end). The grid
-  //    column widens to fit the content; neighboring columns absorb the
-  //    remaining change so total width stays constant.
-  const getCellStyle = (col?: UnifiedColumn<T>): React.CSSProperties => {
-    let justifyContent: React.CSSProperties["justifyContent"] = "center";
-    let textAlign: React.CSSProperties["textAlign"] = "center";
-
-    if (col?.align === "left") {
-      justifyContent = "flex-start";
-      textAlign = "start";
-    } else if (col?.align === "right") {
-      justifyContent = "flex-end";
-      textAlign = "end";
-    }
-
+  // ── Row cell style — centered by default across all shared tables so
+  //    headers, columns, and data stay visually balanced in every page.
+  const getCellStyle = (_col?: UnifiedColumn<T>): React.CSSProperties => {
     return {
       minWidth: 0,
       display: "flex",
       alignItems: "center",
-      justifyContent,
-      textAlign,
+      justifyContent: "center",
+      textAlign: "center",
       fontSize: `${settings.fontSize}px`,
       fontFamily: settings.fontFamily,
     };
@@ -306,21 +295,20 @@ export function UnifiedTable<T>({
           style={{ display: "grid", gridTemplateColumns: displayGridTemplate }}
           dir={direction}
         >
-          {renderColumns.map(col => (
+          {renderColumns.map((col, colIdx) => (
             <div
               key={col.id}
-              className={cn(getDensityPadding(), cellBorderClass)}
+              className={cn("relative", getDensityPadding(), cellBorderClass)}
               style={{ minWidth: 0 }}
             >
+              {useCenteredDividers && colIdx > 0 && (
+                <div
+                  className="pointer-events-none absolute inset-y-0 z-10 w-px bg-border"
+                  style={getCenteredDividerStyle(direction)}
+                />
+              )}
               <Skeleton
-                className={cn(
-                  "h-3.5 rounded",
-                  col.align === "left"
-                    ? "ms-0 me-auto w-3/4"
-                    : col.align === "center"
-                    ? "mx-auto w-1/2"
-                    : "ms-auto me-0 w-3/4",
-                )}
+                className="mx-auto h-3.5 w-1/2 rounded"
               />
             </div>
           ))}
@@ -356,19 +344,26 @@ export function UnifiedTable<T>({
           onClick={() => onRowClick?.(row)}
           onDoubleClick={() => onRowDoubleClick?.(row)}
         >
-          {renderColumns.map(col => (
+          {renderColumns.map((col, colIdx) => (
               <div
                 key={col.id}
                 data-col-id={col.id}
                 className={cn(
+                  "relative",
                   getDensityPadding(),
                   cellBorderClass,
-                  "text-muted-foreground transition-colors group-hover:text-foreground",
+                  "text-center text-muted-foreground transition-colors group-hover:text-foreground",
                   col.align === "right" && "tabular-nums",
                   col.className,
                 )}
                 style={getCellStyle(col)}
               >
+                {useCenteredDividers && colIdx > 0 && (
+                  <div
+                    className="pointer-events-none absolute inset-y-0 z-10 w-px bg-border"
+                    style={getCenteredDividerStyle(direction)}
+                  />
+                )}
                 {typeof col.accessor === "function"
                   ? col.accessor(row, rowIdx)
                   : (row[col.accessor] as ReactNode) || "—"}
@@ -447,6 +442,7 @@ export function UnifiedTable<T>({
           gridTemplate={displayGridTemplate}
           sortField={sortField}
           sortDirection={sortDirection}
+          direction={direction}
         />
 
         {/* ── Body rows ── */}
@@ -472,7 +468,7 @@ export function UnifiedTable<T>({
 
       {/* Pagination – outside scroll, fixed at bottom */}
       {pagination && settings.showPagination && (
-        <div className="shrink-0 border-t border-border bg-card/60 px-4 py-2">
+        <div className="shrink-0 border-t border-border bg-card/60 px-3 py-2">
           <TablePagination
             currentPage={pagination.currentPage}
             totalPages={pagination.totalPages}

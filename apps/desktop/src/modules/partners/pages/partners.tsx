@@ -299,7 +299,7 @@ export default function Partners() {
         />
       }
       bottomWidgets={
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           <ChartCard title={t("chart.capitalShares", { namespace: "partners",  })} icon={PieChartIcon} data={partnersWithRatios.map(p => ({ name: p.name, value: p.calculatedCapitalRatio }))} formatter={(v: number) => `${v.toFixed(2)}%`} />
           <ChartCard title={t("chart.profitDistribution", { namespace: "partners",  })} icon={TrendingUp} data={partnersWithRatios.map(p => ({ name: p.name, value: p.calculatedRatio }))} formatter={(v: number) => `${v.toFixed(2)}%`} />
         </div>

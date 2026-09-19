@@ -1,5 +1,4 @@
 import { useState, useMemo } from "react";
-import { Button } from "@shared/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@shared/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
 import {
@@ -22,6 +21,7 @@ import { useDashboardMetrics, type DashboardPeriod } from "@modules/dashboard/ho
 import { useCurrencyContext, type CurrencyDisplayMode } from "@app/providers/CurrencyContext";
 
 import { useLocalization } from '@app/providers/LocalizationProvider';
+import type { ResponsiveActionItem } from "@widgets/page-header/ResponsiveActions";
 
 const CHART_COLORS = ["#2563eb", "#10b981", "#f59e0b", "#64748b", "#8b5cf6", "#ec4899"];
 
@@ -140,6 +140,21 @@ export default function Dashboard() {
     CashOut: t("paymentTypes.CashOut", { namespace: "dashboard",  }),
   };
 
+  const chartActionItems = useMemo<ResponsiveActionItem[]>(() => [
+    {
+      id: "dashboard-chart-area",
+      label: t("chart.buttons.area", { namespace: "dashboard" }),
+      priority: "secondary",
+      variant: "outline",
+    },
+    {
+      id: "dashboard-chart-bars",
+      label: t("chart.buttons.bars", { namespace: "dashboard" }),
+      priority: "tertiary",
+      variant: "ghost",
+    },
+  ], [t]);
+
   return (
     <DashboardLayout
       title={t("title", { namespace: "dashboard" })}
@@ -242,12 +257,7 @@ export default function Dashboard() {
         span={8} 
         title={t("chart.title", { namespace: "dashboard",  })} 
         subtitle={t("chart.subtitle", { namespace: "dashboard",  })}
-        actions={
-          <div className="flex bg-muted p-1 rounded-xl">
-            <Button size="sm" variant="ghost" className="rounded-lg h-8 px-4 bg-card shadow-sm font-bold">{t("chart.buttons.area", { namespace: "dashboard",  })}</Button>
-            <Button size="sm" variant="ghost" className="rounded-lg h-8 px-4 text-muted-foreground font-bold">{t("chart.buttons.bars", { namespace: "dashboard",  })}</Button>
-          </div>
-        }
+        actionItems={chartActionItems}
       >
         {revenueChartData.length > 0 ? (
           <ResponsiveContainer width="100%" height={320}>
@@ -293,7 +303,7 @@ export default function Dashboard() {
               </ResponsiveContainer>
               <div className="grid grid-cols-2 gap-4 mt-6">
                 {pieData.map((d) => (
-                  <div key={d.name} className="flex items-center gap-3 p-3 rounded-2xl bg-muted border border-slate-100">
+                  <div key={d.name} className="flex items-center gap-3 rounded-2xl border border-border bg-muted/40 p-3">
                     <div className="w-2.5 h-2.5 rounded-full" style={{backgroundColor: d.color}} />
                     <div>
                       <div className="text-[10px] font-black text-muted-foreground uppercase">{d.name}</div>
@@ -327,7 +337,7 @@ export default function Dashboard() {
               </div>
               <div className="space-y-2 max-h-[200px] overflow-auto">
                 {lowStock.map(p => (
-                  <div key={p.id} className="flex items-center justify-between p-3 border-b border-slate-50 last:border-0 group hover:bg-muted rounded-lg transition-colors">
+                  <div key={p.id} className="group flex items-center justify-between rounded-lg border-b border-border/60 p-3 transition-colors hover:bg-muted last:border-0">
                     <span className="text-sm font-bold text-foreground">{p.name}</span>
                     <span className="text-xs font-black tabular-nums text-destructive bg-destructive/10 px-2 py-1 rounded-md">
                       {p.total_available} / {p.minimum_stock}
@@ -363,14 +373,14 @@ export default function Dashboard() {
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="text-muted-foreground font-black text-[10px] uppercase tracking-widest border-b border-slate-100">
+                    <tr className="border-b border-border text-[10px] font-black uppercase tracking-widest text-muted-foreground">
                       <th className="pb-4 text-start">{t("recent.journalCols.number", { namespace: "dashboard",  })}</th>
                       <th className="pb-4 text-start">{t("recent.journalCols.statement", { namespace: "dashboard",  })}</th>
                       <th className="pb-4 text-end">{t("recent.journalCols.amount", { namespace: "dashboard",  })}</th>
                       <th className="pb-4 text-end">{t("recent.journalCols.status", { namespace: "dashboard",  })}</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-50">
+                  <tbody className="divide-y divide-border/60">
                     {recentJournals.map((j) => (
                       <tr key={j.id} className="hover:bg-muted/50 transition-colors">
                         <td className="py-4 text-start font-black text-primary">{formatNumber(parseInt(j.entry_number) || 0)}</td>
@@ -398,7 +408,7 @@ export default function Dashboard() {
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="text-muted-foreground font-black text-[10px] uppercase tracking-widest border-b border-slate-100">
+                    <tr className="border-b border-border text-[10px] font-black uppercase tracking-widest text-muted-foreground">
                       <th className="pb-4 text-start">{t("recent.paymentCols.number", { namespace: "dashboard",  })}</th>
                       <th className="pb-4 text-start">{t("recent.paymentCols.type", { namespace: "dashboard",  })}</th>
                       <th className="pb-4 text-start">{t("recent.paymentCols.party", { namespace: "dashboard",  })}</th>
@@ -406,7 +416,7 @@ export default function Dashboard() {
                       <th className="pb-4 text-end">{t("recent.paymentCols.date", { namespace: "dashboard",  })}</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-50">
+                  <tbody className="divide-y divide-border/60">
                     {recentPayments.map((p) => (
                       <tr key={p.id} className="hover:bg-muted/50 transition-colors">
                         <td className="py-4 text-start font-black text-primary">{formatNumber(parseInt(p.voucher_number) || 0)}</td>

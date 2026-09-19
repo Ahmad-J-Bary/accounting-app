@@ -114,7 +114,7 @@ export default function IncomeStatementReport() {
   return (
     <OperationalTableTemplate
       title={t("incomeStatement.title", { namespace: "reports",  })}
-      toolbar={
+      filterBar={
         <ReportFilterBar
           filters={filters}
           onFiltersChange={setFilters}

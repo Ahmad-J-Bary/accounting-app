@@ -1,7 +1,7 @@
 import React from 'react';
 import { cn } from '@shared/lib/utils';
 import { useTableSettings } from '@shared/hooks';
-import { getLeftBorderClass } from "@shared/lib/table-utils";
+import { getCenteredDividerStyle, getLeftBorderClass } from "@shared/lib/table-utils";
 import { useLocalization } from "@app/providers/LocalizationProvider";
 
 export interface SummaryColumn {
@@ -46,20 +46,15 @@ export const TableSummary: React.FC<TableSummaryProps> = ({
 
   if (!settings.showSummary) return null;
 
-  const cellBorderClass = getLeftBorderClass(settings.borderStyle);
+  const useCenteredDividers = settings.borderStyle === "full";
+  const cellBorderClass = useCenteredDividers ? "" : getLeftBorderClass(settings.borderStyle);
   const hasBorder = settings.borderStyle !== 'none';
   const activeColumns = columns.filter(c => c.value);
   const hasAnyActive = activeColumns.length > 0;
 
   if (!hasAnyActive) return null;
 
-  const getAlignStyle = (align?: "right" | "left" | "center"): React.CSSProperties => {
-    if (align === "left") {
-      return { justifyContent: "flex-start", textAlign: "start" };
-    }
-    if (align === "right") {
-      return { justifyContent: "flex-end", textAlign: "end" };
-    }
+  const getAlignStyle = (_align?: "right" | "left" | "center"): React.CSSProperties => {
     return { justifyContent: "center", textAlign: "center" };
   };
 
@@ -72,7 +67,7 @@ export const TableSummary: React.FC<TableSummaryProps> = ({
       )}
       style={gridTemplate ? { gridTemplateColumns: gridTemplate } : { gap: 0 }}
     >
-      {columns.map(col => {
+      {columns.map((col, idx) => {
         const hasValue = !!col.value;
         const alignStyle = getAlignStyle(col.align);
         return (
@@ -80,7 +75,8 @@ export const TableSummary: React.FC<TableSummaryProps> = ({
             key={`${col.id}-label`}
             data-summary-col={col.columnId ?? col.id}
             className={cn(
-              "px-2 py-1.5 flex items-center select-none transition-colors",
+              "relative",
+              "flex items-center px-1.5 py-1.5 select-none transition-colors sm:px-2",
               hasValue
                 ? asPageFooter
                   ? "text-2xs font-black text-muted-foreground uppercase tracking-wider"
@@ -97,6 +93,12 @@ export const TableSummary: React.FC<TableSummaryProps> = ({
                 : { flex: columnWidths && col.columnId && columnWidths[col.columnId] ? `0 0 ${columnWidths[col.columnId]}px` : 1 }),
             }}
           >
+            {useCenteredDividers && idx > 0 && (
+              <div
+                className="pointer-events-none absolute inset-y-0 z-10 w-px bg-border"
+                style={getCenteredDividerStyle(direction)}
+              />
+            )}
             {hasValue ? col.label : ""}
           </div>
         );
@@ -113,7 +115,7 @@ export const TableSummary: React.FC<TableSummaryProps> = ({
       )}
       style={gridTemplate ? { gridTemplateColumns: gridTemplate } : { gap: 0 }}
     >
-      {columns.map(col => {
+      {columns.map((col, idx) => {
         const hasValue = !!col.value;
         const alignStyle = getAlignStyle(col.align);
         return (
@@ -121,6 +123,7 @@ export const TableSummary: React.FC<TableSummaryProps> = ({
             key={`${col.id}-value`}
             data-summary-col={col.columnId ?? col.id}
             className={cn(
+              "relative",
               getDensityPadding(),
               "tabular-nums flex items-center transition-colors",
               hasValue
@@ -147,6 +150,12 @@ export const TableSummary: React.FC<TableSummaryProps> = ({
                   }),
             }}
           >
+            {useCenteredDividers && idx > 0 && (
+              <div
+                className="pointer-events-none absolute inset-y-0 z-10 w-px bg-border"
+                style={getCenteredDividerStyle(direction)}
+              />
+            )}
             {hasValue ? col.value : ""}
           </div>
         );
@@ -167,10 +176,8 @@ export const TableSummary: React.FC<TableSummaryProps> = ({
       >
         {hasAnyActive && (
           <div
-            className={cn(
-              "absolute top-0 -translate-y-1/2 rounded-full bg-foreground px-2.5 py-0.5 text-3xs font-black uppercase tracking-wider text-background shadow-xs flex items-center gap-1.5 z-20",
-              direction === "rtl" ? "right-4" : "left-4"
-            )}
+            className="absolute top-0 z-20 flex -translate-y-1/2 items-center gap-1.5 rounded-full bg-foreground px-2.5 py-0.5 text-3xs font-black uppercase tracking-wider text-background shadow-xs"
+            style={{ insetInlineStart: "1rem" }}
           >
             <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
             {t("labels.summary", { namespace: "common" })}
@@ -202,9 +209,9 @@ export const TableSummary: React.FC<TableSummaryProps> = ({
       {hasAnyActive && (
         <div
           className={cn(
-            "absolute top-0 -translate-y-1/2 rounded-full bg-foreground px-2.5 py-0.5 text-3xs font-black uppercase tracking-wider text-background shadow-xs flex items-center gap-1.5 z-20",
-            direction === "rtl" ? "right-4" : "left-4"
+            "absolute top-0 z-20 flex -translate-y-1/2 items-center gap-1.5 rounded-full bg-foreground px-2.5 py-0.5 text-3xs font-black uppercase tracking-wider text-background shadow-xs",
           )}
+          style={{ insetInlineStart: "1rem" }}
         >
           <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
           {t("labels.summary", { namespace: "common" })}

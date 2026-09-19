@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import { cn } from "./utils";
 
 export type Align = "right" | "left" | "center";
@@ -31,6 +32,13 @@ export function getRowBorderClass(borderStyle: string): string {
 
 export function getLeftBorderClass(borderStyle: string): string {
   return borderStyle === "full" ? "border-s border-border" : "";
+}
+
+export function getCenteredDividerStyle(direction: "rtl" | "ltr"): CSSProperties {
+  return {
+    insetInlineStart: 0,
+    transform: direction === "rtl" ? "translateX(50%)" : "translateX(-50%)",
+  };
 }
 
 export function getRowBackgroundClass(

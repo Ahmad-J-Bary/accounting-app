@@ -12,7 +12,7 @@ import type { ExcelExportColumn, ExcelExportOptions } from "@shared/lib/excel";
 import { dateCol, executeExport, estimateExcelWidth, debitCreditAmountCols } from "@shared/lib/excel";
 import { formatDateTime, formatNumber } from "@shared/lib/format";
 import { cn } from "@shared/lib/utils";
-import { getLeftBorderClass, getRowBorderClass, getRowBackgroundClass } from "@shared/lib/table-utils";
+import { getCenteredDividerStyle, getLeftBorderClass, getRowBorderClass, getRowBackgroundClass } from "@shared/lib/table-utils";
 import { GroupedEntrySharedCell } from "./GroupedEntrySharedCell";
 import { getHeaderText, getPrimitiveCellValue, SHARED_COLUMN_IDS } from "./groupedTableUtils";
 
@@ -98,7 +98,7 @@ export function JournalTable({
 }: JournalTableProps) {
   const { isBaseCurrency, currencySuffix: cs, hasSecondaryCurrencies } = useBaseCurrencyColumns();
   const { settings, getDensityPadding } = useTableSettings();
-  const { t } = useLocalization();
+  const { t, direction } = useLocalization();
   const containerRef = useRef<HTMLDivElement>(null);
 
   const { exportData, baseCurrency, rateMap, sortedCurrencies, formatAmount, baseCode, ratesSheet, currencyMode } = useExportSetup();
@@ -765,7 +765,8 @@ export function JournalTable({
     filteredSummary?.length && settings.showSummary && groupedData.length > 0
   );
 
-  const cellBorderClass = getLeftBorderClass(settings.borderStyle);
+  const useCenteredDividers = settings.borderStyle === "full";
+  const cellBorderClass = useCenteredDividers ? "" : getLeftBorderClass(settings.borderStyle);
 
   const getCellStyle = useCallback((): React.CSSProperties => ({
     minWidth: 0,
@@ -965,6 +966,8 @@ export function JournalTable({
                 columnPosition={columnPosition}
                 densityClassName={getDensityPadding()}
                 borderClassName={cellBorderClass}
+                      showDivider={useCenteredDividers && colIdx > 0}
+                      dividerDirection={direction}
                 className={col.className}
                 fontSize={settings.fontSize}
                 fontFamily={settings.fontFamily}
@@ -994,12 +997,19 @@ export function JournalTable({
                   ...getCellStyle(),
                 }}
                 className={cn(
+                  "relative",
                   getDensityPadding(),
                   cellBorderClass,
                   "text-slate-600",
                   col.className,
                 )}
               >
+                {useCenteredDividers && colIdx > 0 && (
+                  <div
+                    className="pointer-events-none absolute inset-y-0 z-10 w-px bg-border"
+                    style={getCenteredDividerStyle(direction)}
+                  />
+                )}
                 {val || ""}
               </div>
             );
@@ -1016,7 +1026,7 @@ export function JournalTable({
           key={`skeleton-${idx}`}
           className={cn("animate-pulse", getRowBorderClass(settings.borderStyle))}
           style={{ display: "grid", gridTemplateColumns }}
-          dir="rtl"
+          dir={direction}
         >
           {visibleColumns.map(col => (
             <div
@@ -1079,12 +1089,13 @@ export function JournalTable({
           gridTemplate={gridTemplateColumns}
           sortField={sortField === "created_at" ? "entry_date" : sortField}
           sortDirection={sortDirection}
+          direction={direction}
         />
 
         {renderBody()}
 
         {auditGroupedData.length > 0 && (
-          <div dir="rtl">
+          <div dir={direction}>
             <div className="flex items-center justify-between px-4 py-2 bg-amber-50 border-y-2 border-amber-300" style={{ fontFamily: settings.fontFamily, fontSize: settings.fontSize }}>
               <span className="text-sm font-black text-amber-800">{t("journal.table.auditTitle", { namespace: "accounting",  })}</span>
               <span className="text-xs font-bold text-amber-700">{t("journal.table.auditCount", { namespace: "accounting", vars: { count: (auditEntries || []).length },  })}</span>

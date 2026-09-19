@@ -1,7 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { useTabs } from "@app/providers/TabContext";
-import { Button } from "@shared/ui/button";
 import { Printer, PlusCircle, ShoppingCart, ArrowUpRight, ArrowDownLeft, FileText, Landmark } from "lucide-react";
 import { formatCurrency } from "@shared/lib/format";
 import { DateRangePicker } from "@widgets/reports";
@@ -31,6 +30,7 @@ import { toast } from "sonner";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { useLocalization } from "@app/providers/LocalizationProvider";
 import { ErrorBoundary } from "@shared/ui/ErrorBoundary";
+import type { ResponsiveActionItem } from "@widgets/page-header/ResponsiveActions";
 
 import { PaymentForm, PAYMENT_CONFIGS } from "@modules/partners/components/PaymentForm";
 import { ExpenseVoucherForm } from "@modules/expenses/components/ExpenseVoucherForm";
@@ -39,14 +39,6 @@ function getDescendantIds(accountId: string, accounts: AccountDto[]): string[] {
   const children = accounts.filter(a => a.parent_id === accountId);
   return [accountId, ...children.flatMap(c => getDescendantIds(c.id, accounts))];
 }
-
-const OUTLINE_BUTTON_CLASS = "border-muted text-foreground hover:bg-muted";
-const TOOLBAR_CLASS_BY_TYPE = {
-  partner: "bg-warning hover:bg-warning/80 text-white",
-  customer: "bg-primary hover:bg-primary/80 text-white",
-  supplier: "bg-success hover:bg-success/80 text-white",
-  expense: "bg-destructive hover:bg-destructive/80 text-white",
-} as const;
 
 export default function AccountMovement() {
   const { accountId } = useParams<{ accountId: string }>();
@@ -220,85 +212,100 @@ export default function AccountMovement() {
     [ledger?.account_name, t],
   );
 
-  const toolbarButtons = useMemo(() => {
-    const commonPrint = (
-      <Button key="print" variant="outline" size="sm" className={OUTLINE_BUTTON_CLASS}>
-        <Printer className="w-4 h-4 ms-2 text-primary" />
-        {t("ledger.print", { namespace: "accounting",  })}
-      </Button>
-    );
-
+  const toolbarActions = useMemo<ResponsiveActionItem[]>(() => {
     const linkedEntityId = linkedEntity?.id;
     const linkedEntityName = linkedEntity?.name;
 
     switch (accountType) {
       case 'partner':
         return [
-          <Button key="drawings" size="sm" onClick={() => setIsVoucherOpen(true)} className={TOOLBAR_CLASS_BY_TYPE.partner}>
-            <PlusCircle className="w-4 h-4 ms-2" />
-            {t("ledger.createDrawings", { namespace: "accounting",  })}
-          </Button>
+          {
+            id: "ledger-drawings",
+            label: t("ledger.createDrawings", { namespace: "accounting" }),
+            icon: PlusCircle,
+            priority: "primary",
+            onClick: () => setIsVoucherOpen(true),
+          },
         ];
       case 'customer':
         return [
-          <Button key="receipt" size="sm" onClick={() => setIsVoucherOpen(true)} className={TOOLBAR_CLASS_BY_TYPE.customer}>
-            <PlusCircle className="w-4 h-4 ms-2" />
-            {t("ledger.createReceipt", { namespace: "accounting",  })}
-          </Button>,
-          commonPrint,
-          linkedEntityId && linkedEntityName ? (
-            <Button
-              key="sales"
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                openTab({
-                  id: `sales-cust-${linkedEntityId}`,
-                  title: t("ledger.salesTab", { namespace: "accounting", vars: { name: linkedEntityName },  }),
-                  path: `/sales-invoices?customerId=${linkedEntityId}`,
-                  closable: true
-                });
-              }}
-              className={OUTLINE_BUTTON_CLASS}
-            >
-              <ShoppingCart className="w-4 h-4 ms-2 text-primary" />
-              {t("ledger.salesFor", { namespace: "accounting", vars: { name: linkedEntityName },  })}
-            </Button>
-          ) : null
-        ].filter(Boolean);
+          {
+            id: "ledger-receipt",
+            label: t("ledger.createReceipt", { namespace: "accounting" }),
+            icon: PlusCircle,
+            priority: "primary",
+            onClick: () => setIsVoucherOpen(true),
+          },
+          {
+            id: "ledger-print",
+            label: t("ledger.print", { namespace: "accounting" }),
+            icon: Printer,
+            priority: "secondary",
+            variant: "outline",
+            onClick: () => window.print(),
+          },
+          ...(linkedEntityId && linkedEntityName
+            ? [{
+                id: "ledger-sales",
+                label: t("ledger.salesFor", { namespace: "accounting", vars: { name: linkedEntityName } }),
+                icon: ShoppingCart,
+                priority: "secondary" as const,
+                variant: "outline" as const,
+                onClick: () => {
+                  openTab({
+                    id: `sales-cust-${linkedEntityId}`,
+                    title: t("ledger.salesTab", { namespace: "accounting", vars: { name: linkedEntityName } }),
+                    path: `/sales-invoices?customerId=${linkedEntityId}`,
+                    closable: true
+                  });
+                },
+              }]
+            : []),
+        ];
       case 'supplier':
         return [
-          <Button key="payment" size="sm" onClick={() => setIsVoucherOpen(true)} className={TOOLBAR_CLASS_BY_TYPE.supplier}>
-            <PlusCircle className="w-4 h-4 ms-2" />
-            {t("ledger.createPayment", { namespace: "accounting",  })}
-          </Button>,
-          commonPrint,
-          linkedEntityId && linkedEntityName ? (
-            <Button
-              key="purchases"
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                openTab({
-                  id: `purchase-supp-${linkedEntityId}`,
-                  title: t("ledger.purchasesTab", { namespace: "accounting", vars: { name: linkedEntityName },  }),
-                  path: `/purchase-invoices?supplierId=${linkedEntityId}`,
-                  closable: true
-                });
-              }}
-              className={OUTLINE_BUTTON_CLASS}
-            >
-              <ShoppingCart className="w-4 h-4 ms-2 text-success" />
-              {t("ledger.purchasesFor", { namespace: "accounting", vars: { name: linkedEntityName },  })}
-            </Button>
-          ) : null
-        ].filter(Boolean);
+          {
+            id: "ledger-payment",
+            label: t("ledger.createPayment", { namespace: "accounting" }),
+            icon: PlusCircle,
+            priority: "primary",
+            onClick: () => setIsVoucherOpen(true),
+          },
+          {
+            id: "ledger-print",
+            label: t("ledger.print", { namespace: "accounting" }),
+            icon: Printer,
+            priority: "secondary",
+            variant: "outline",
+            onClick: () => window.print(),
+          },
+          ...(linkedEntityId && linkedEntityName
+            ? [{
+                id: "ledger-purchases",
+                label: t("ledger.purchasesFor", { namespace: "accounting", vars: { name: linkedEntityName } }),
+                icon: ShoppingCart,
+                priority: "secondary" as const,
+                variant: "outline" as const,
+                onClick: () => {
+                  openTab({
+                    id: `purchase-supp-${linkedEntityId}`,
+                    title: t("ledger.purchasesTab", { namespace: "accounting", vars: { name: linkedEntityName } }),
+                    path: `/purchase-invoices?supplierId=${linkedEntityId}`,
+                    closable: true
+                  });
+                },
+              }]
+            : []),
+        ];
       case 'expense':
         return [
-          <Button key="expense" size="sm" onClick={() => setIsVoucherOpen(true)} className={TOOLBAR_CLASS_BY_TYPE.expense}>
-            <PlusCircle className="w-4 h-4 ms-2" />
-            {t("ledger.createExpense", { namespace: "accounting",  })}
-          </Button>
+          {
+            id: "ledger-expense",
+            label: t("ledger.createExpense", { namespace: "accounting" }),
+            icon: PlusCircle,
+            priority: "primary",
+            onClick: () => setIsVoucherOpen(true),
+          },
         ];
       default:
         return [];
@@ -309,24 +316,21 @@ export default function AccountMovement() {
     <ErrorBoundary>
     <OperationalTableTemplate
       title={accountTitle}
-      toolbar={
-        <div className="flex items-center gap-2 flex-wrap">
-          {toolbarButtons}
-
-          <DateRangePicker
-            from={dateFilters.from_date}
-            to={dateFilters.to_date}
-            onFromChange={(v) => setDateFilters({ from_date: v })}
-            onToChange={(v) => setDateFilters({ to_date: v })}
-            showSeparator={toolbarButtons.length > 0}
-          />
-        </div>
+      toolbarActions={toolbarActions}
+      filterBar={
+        <DateRangePicker
+          from={dateFilters.from_date}
+          to={dateFilters.to_date}
+          onFromChange={(v) => setDateFilters({ from_date: v })}
+          onToChange={(v) => setDateFilters({ to_date: v })}
+          showSeparator={toolbarActions.length > 0}
+        />
       }
       tableContent={
         <div className="flex flex-col h-full">
           {/* Statistics Bar */}
           {ledger && (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 px-4 pt-4 pb-2">
+            <div className="grid grid-cols-2 gap-2 px-3 pt-3 pb-2 md:grid-cols-4">
               <StatCard label={t("ledger.stat.openingDebit", { namespace: "accounting",  })} value={formatCurrency(openingDebitTotal, symbol)} icon={ArrowUpRight} />
               <StatCard label={t("ledger.stat.openingCredit", { namespace: "accounting",  })} value={formatCurrency(openingCreditTotal, symbol)} icon={ArrowDownLeft} />
               <StatCard

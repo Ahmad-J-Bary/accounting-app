@@ -7,6 +7,7 @@ import {
   Tooltip,
   Legend,
 } from "recharts";
+import { useLocalization } from "@app/providers/LocalizationProvider";
 
 const COLORS = [
   "#3b82f6",
@@ -30,11 +31,13 @@ export function ChartCard({
   data,
   formatter,
 }: ChartCardProps) {
+  const { direction } = useLocalization();
+
   return (
-    <Card className="p-6 bg-white border-muted/70 shadow-sm rounded-2xl overflow-hidden group hover:shadow-md transition-all">
-      <div className="flex items-center justify-between mb-6">
+    <Card className="group overflow-hidden rounded-xl border border-border bg-card p-4 shadow-sm transition-all hover:shadow-md sm:p-5">
+      <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center text-primary">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-muted text-primary">
             <Icon className="w-5 h-5" />
           </div>
           <h3 className="font-black text-foreground">{title}</h3>
@@ -66,7 +69,7 @@ export function ChartCard({
                 borderRadius: "12px",
                 border: "none",
                 boxShadow: "0 10px 15px -3px rgba(0,0,0,0.1)",
-                direction: "rtl",
+                direction,
               }}
             />
             <Legend verticalAlign="bottom" height={36} iconType="circle" />

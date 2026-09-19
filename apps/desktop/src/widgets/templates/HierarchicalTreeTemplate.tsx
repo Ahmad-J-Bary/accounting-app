@@ -46,7 +46,7 @@ export function HierarchicalTreeTemplate({
         pinLabel={title}
       />
 
-      <div className="flex-1 flex overflow-hidden p-2 sm:p-3 md:p-4 gap-2 sm:gap-3 md:gap-4">
+      <div className="flex flex-1 overflow-hidden gap-1.5 p-1.5 sm:gap-2 sm:p-2 md:gap-3 md:p-2.5">
         {/* Tree Column */}
         <div className={cn(
           "flex flex-col overflow-hidden min-w-0",
@@ -54,10 +54,10 @@ export function HierarchicalTreeTemplate({
           sidePanel && isPanelOpen ? "max-lg:hidden" : "",
         )}>
           <aside
-            className="flex-1 rounded-xl border border-border bg-card shadow-sm flex flex-col overflow-hidden transition-all hover:shadow-md"
+            className="flex flex-1 flex-col overflow-hidden rounded-xl border border-border bg-card shadow-sm transition-all hover:shadow-md"
           >
             <div
-              className="px-3 sm:px-4 py-2.5 sm:py-3 border-b border-border bg-muted/30 flex items-center justify-between gap-2 shrink-0"
+              className="flex shrink-0 items-center justify-between gap-2 border-b border-border bg-muted/30 px-2.5 py-2.5 sm:px-3 sm:py-3"
             >
               <div className="flex items-center gap-2 min-w-0">
                 <div className="w-2 h-2 rounded-full bg-primary animate-pulse shrink-0" />
@@ -74,7 +74,7 @@ export function HierarchicalTreeTemplate({
               )}
             </div>
             <div
-              className="flex-1 overflow-auto p-2 sm:p-3 custom-scrollbar"
+              className="custom-scrollbar flex-1 overflow-auto p-1.5 sm:p-2"
             >
               {treeContent}
             </div>

@@ -48,10 +48,10 @@ export function OperationalTableTemplate({
         pinLabel={title}
       />
 
-      <div className="print-clean-parent relative flex-1 flex overflow-hidden p-2 sm:p-3 md:p-4 gap-2 sm:gap-3 md:gap-4">
+      <div className="print-clean-parent relative flex flex-1 overflow-hidden gap-1.5 p-1.5 sm:gap-2 sm:p-2 md:gap-3 md:p-2.5">
         
         {/* Main Column */}
-        <div className="flex-1 flex flex-col min-w-0 gap-2 sm:gap-3 overflow-hidden">
+        <div className="flex min-w-0 flex-1 flex-col gap-1.5 overflow-hidden sm:gap-2">
           
           {headerWidgets && (
             <div className="shrink-0">
@@ -65,7 +65,7 @@ export function OperationalTableTemplate({
             </div>
           )}
 
-          <div className="print-clean flex-1 flex flex-col bg-card rounded-xl border border-border shadow-sm overflow-hidden transition-all hover:shadow-md">
+          <div className="print-clean flex flex-1 flex-col overflow-hidden rounded-xl border border-border bg-card shadow-sm transition-all hover:shadow-md">
             <div className="flex-1 overflow-x-auto overflow-y-auto relative">
               {tableContent}
             </div>
@@ -78,7 +78,7 @@ export function OperationalTableTemplate({
           )}
 
           {summaryContent && (
-            <div className="bg-card rounded-xl border border-border shadow-sm px-3 sm:px-4 py-2 shrink-0 flex items-center justify-between transition-all hover:shadow-md">
+            <div className="flex shrink-0 items-center justify-between rounded-xl border border-border bg-card px-2.5 py-2 shadow-sm transition-all hover:shadow-md sm:px-3">
               {summaryContent}
             </div>
           )}

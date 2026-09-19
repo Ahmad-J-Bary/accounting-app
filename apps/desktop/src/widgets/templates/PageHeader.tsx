@@ -29,7 +29,7 @@ export function PageHeader({
   return (
     <header
       className={cn(
-        "no-print flex flex-col gap-2 px-3 py-2 sm:px-4 sm:py-2.5 md:px-6 bg-background/95 backdrop-blur-sm border-b border-border shrink-0 lg:flex-row lg:items-center lg:justify-between",
+        "no-print flex shrink-0 flex-col gap-2 border-b border-border bg-background/95 px-2.5 py-2 backdrop-blur-sm sm:px-3 sm:py-2.5 md:px-4 lg:flex-row lg:items-center lg:justify-between",
         sticky && "sticky top-0 z-20",
         className,
       )}

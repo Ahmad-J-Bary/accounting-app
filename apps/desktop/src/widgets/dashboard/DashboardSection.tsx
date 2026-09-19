@@ -27,19 +27,19 @@ export function DashboardSection({
   const cols = GRID_COLS[Math.min(items.length, 3)] || "grid-cols-3";
 
   return (
-    <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
-      <div className="px-8 py-6 border-b border-slate-100">
+    <div className="flex flex-col overflow-hidden rounded-3xl border border-border bg-card shadow-sm">
+      <div className="border-b border-border px-5 py-4 lg:px-6 lg:py-5">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-lg font-black text-slate-900">{title}</h2>
-            <p className="text-xs font-medium text-slate-400">{subtitle}</p>
+            <h2 className="text-lg font-black text-foreground">{title}</h2>
+            <p className="text-xs font-medium text-muted-foreground">{subtitle}</p>
           </div>
-          <div className="text-2xl font-black text-slate-900 tabular-nums">
+          <div className="text-2xl font-black tabular-nums text-foreground">
             {formatAmount(total, { mode: displayMode })}
           </div>
         </div>
       </div>
-      <div className={`grid ${cols} gap-4 p-6 flex-1`}>{children}</div>
+      <div className={`grid flex-1 ${cols} gap-3 p-4 sm:p-5`}>{children}</div>
     </div>
   );
 }

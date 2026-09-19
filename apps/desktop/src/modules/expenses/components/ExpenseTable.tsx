@@ -7,8 +7,9 @@ import { useLocalization } from "@app/providers/LocalizationProvider";
 import { useUnifiedColumns, useSortable, useTableColumns, useBaseCurrencyColumns } from "@shared/hooks";
 import { formatNumber } from "@shared/lib/format";
 import type { AccountDto } from "@erp/shared-types";
-import { NotebookText, Receipt } from "lucide-react";
+import { NotebookText, Receipt, Eye, Edit, Trash2 } from "lucide-react";
 import { TableActions } from "@widgets/table-shell/TableActions";
+import type { RowActionDescriptor } from "@shared/types/row-actions";
 
 
 interface ExpenseTableProps {
@@ -39,6 +40,58 @@ export function ExpenseTable({ expenses, loading, search, onSearchChange, onExpo
   const { currencies, formatAmount, toBase } = useCurrencyContext();
   const { isBaseCurrency, currencySuffix: cs } = useBaseCurrencyColumns();
   const { getAccountStatusColumn } = useTableColumns();
+  const rowActions = useMemo<RowActionDescriptor<AccountDto>[]>(() => {
+    const actions: RowActionDescriptor<AccountDto>[] = [
+      {
+        id: "view",
+        label: t("labels.viewDetails", { namespace: "common" }),
+        icon: Eye,
+        priority: "primary",
+        onClick: (row) => onView(row),
+      },
+      {
+        id: "edit",
+        label: t("labels.editData", { namespace: "common" }),
+        icon: Edit,
+        priority: "primary",
+        onClick: (row) => onEdit(row),
+      },
+    ];
+
+    if (onJournal) {
+      actions.push({
+        id: "journal",
+        label: t("expense.journal", { namespace: "invoicing" }),
+        icon: NotebookText,
+        priority: "secondary",
+        onClick: (row) => onJournal(row),
+      });
+    }
+
+    if (onDocument) {
+      actions.push({
+        id: "voucher",
+        label: t("expense.voucher", { namespace: "invoicing" }),
+        icon: Receipt,
+        priority: "tertiary",
+        onClick: (row) => onDocument(row),
+      });
+    }
+
+    if (onDelete) {
+      actions.push({
+        id: "delete",
+        label: t("labels.deleteRecord", { namespace: "common" }),
+        icon: Trash2,
+        priority: "overflow",
+        variant: "destructive",
+        destructive: true,
+        onClick: (row) => onDelete(row.id),
+      });
+    }
+
+    return actions;
+  }, [onDelete, onDocument, onEdit, onJournal, onView, t]);
 
   const { sortedData: sortedExpenses, sortField, sortDirection, handleSort } = useSortable({
     data: expenses,
@@ -74,9 +127,12 @@ export function ExpenseTable({ expenses, loading, search, onSearchChange, onExpo
         id: "name",
         header: t("expense.itemName", { namespace: "invoicing",  }),
         label: t("expense.itemName", { namespace: "invoicing",  }),
-        accessor: (c) => language === "ar" ? (c.name_ar || "") : (c.name_en || c.name_ar || ""),
+        accessor: (c) => (
+          <span className="font-bold text-foreground">
+            {language === "ar" ? (c.name_ar || "") : (c.name_en || c.name_ar || "")}
+          </span>
+        ),
         align: "left",
-        className: "font-bold text-foreground"
       },
     ];
 
@@ -108,19 +164,15 @@ export function ExpenseTable({ expenses, loading, search, onSearchChange, onExpo
       label: t("labels.actions", { namespace: "common",  }),
       accessor: (e) => (
         <TableActions
-          onView={() => onView(e)}
-          onEdit={() => onEdit(e)}
-          onDelete={onDelete ? () => onDelete(e.id) : undefined}
-          extraActions={[
-            ...(onJournal ? [{ label: t("expense.journal", { namespace: "invoicing",  }), icon: NotebookText, onClick: () => onJournal(e) }] : []),
-            ...(onDocument ? [{ label: t("expense.voucher", { namespace: "invoicing",  }), icon: Receipt, onClick: () => onDocument(e) }] : []),
-          ]}
+          actions={rowActions}
+          row={e}
         />
-      )
+      ),
+      align: "center",
     });
 
     return cols;
-  }, [currencies, formatAmount, toBase, parentCode, onView, onEdit, onDelete, onJournal, onDocument, getAccountStatusColumn, isBaseCurrency, cs, t, language]);
+  }, [currencies, formatAmount, toBase, parentCode, getAccountStatusColumn, isBaseCurrency, cs, t, language, rowActions]);
 
   // Default visible: only base currency's balance column is visible.
   // Secondary currency balances are hidden by default (user can toggle on).
@@ -147,7 +199,7 @@ export function ExpenseTable({ expenses, loading, search, onSearchChange, onExpo
 
   const summaryColumns = useMemo<SummaryColumn[]>(() => {
     const totalBal = sortedExpenses.reduce((sum, e) => sum + Number(e.balance || 0), 0);
-    const overallColor = totalBal > 0 ? 'text-red-600' : totalBal < 0 ? 'text-success' : 'text-muted-foreground';
+    const overallColor = totalBal > 0 ? 'text-destructive' : totalBal < 0 ? 'text-success' : 'text-muted-foreground';
 
     const baseTotal = sortedExpenses.reduce((sum, e) => {
       const effBal = (e.debit !== undefined && e.credit !== undefined)
@@ -160,7 +212,7 @@ export function ExpenseTable({ expenses, loading, search, onSearchChange, onExpo
     return enrichedColumns.map((col) => {
       const id = col.id;
       if (id === 'name') {
-        return { id: 'name_summary', columnId: 'name', label: '', value: t("expense.countItems", { namespace: "invoicing", vars: { count: sortedExpenses.length },  }), className: 'text-slate-600 font-medium' };
+        return { id: 'name_summary', columnId: 'name', label: '', value: t("expense.countItems", { namespace: "invoicing", vars: { count: sortedExpenses.length },  }), className: 'font-medium text-muted-foreground' };
       }
       if (id === 'code' || id === 'status' || id === 'actions') {
         return { id: `${id}_spacer`, columnId: id, label: '', value: '' };

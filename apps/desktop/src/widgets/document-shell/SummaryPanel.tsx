@@ -204,11 +204,11 @@ export function SummaryPanel({
 
   return (
     <div
-      className="bg-card border border-border rounded-lg shadow-sm p-4 select-none"
+      className="select-none rounded-lg border border-border bg-card p-3 shadow-sm sm:p-4"
       dir={direction}
     >
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="flex flex-wrap items-center gap-4 overflow-x-auto no-scrollbar py-1">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex flex-wrap items-center gap-3 overflow-x-auto py-1 no-scrollbar">
           {/* Currency Selector */}
           {availableCurrencies.length > 1 && (
             <div className="flex items-center gap-1.5 shrink-0 px-2.5 py-1 bg-muted rounded-md border border-border">
@@ -263,7 +263,7 @@ export function SummaryPanel({
                       type="number"
                       value={safeExtra}
                       onChange={(e) => onExtraCostsChange(e.target.value)}
-                      className="h-5.5 w-16 font-black text-[11px] border-primary/20 focus:ring-primary bg-white py-0 px-1 rounded-md border outline-none text-primary text-center"
+                    className="h-5.5 w-16 rounded-md border border-primary/20 bg-background px-1 py-0 text-center text-[11px] font-black text-primary outline-none focus:ring-primary"
                     />
                   ) : (
                     <span className="font-black tabular-nums">
@@ -299,7 +299,7 @@ export function SummaryPanel({
               {onPaymentMethodChange && (
                 <>
                   {/* Connection Indicator */}
-                  <div className="text-slate-300 font-light select-none shrink-0">
+                  <div className="shrink-0 select-none font-light text-border">
                     <svg className="w-3.5 h-6" viewBox="0 0 16 24" fill="none">
                       <path
                         d="M0 12H16"
@@ -348,7 +348,7 @@ export function SummaryPanel({
                                 handleInvoicePaymentMethodChange(e.target.value)
                               }
                               disabled={isReadOnly}
-                              className="h-5 px-1 bg-white border border-primary/20 rounded font-black text-3xs outline-none cursor-pointer text-primary focus:ring-0"
+                              className="h-5 cursor-pointer rounded border border-primary/20 bg-background px-1 text-3xs font-black text-primary outline-none focus:ring-0"
                             >
                               <option value="cash">{t('labels.cash', )}</option>
                               <option value="credit">{t('labels.credit', )}</option>
@@ -369,7 +369,7 @@ export function SummaryPanel({
                                 const valDoc = displayToDoc(clampedDisplay);
                                 onPaidAmountChange(valDoc.toFixed(2));
                               }}
-                              className="h-4.5 w-14 font-black text-2xs border-primary/20 focus:ring-primary bg-white py-0 px-1 rounded-md border outline-none text-center"
+                              className="h-4.5 w-14 rounded-md border border-primary/20 bg-background px-1 py-0 text-center text-2xs font-black outline-none focus:ring-primary"
                             />
                           ) : (
                             <span className="font-black text-2xs tabular-nums text-primary">
@@ -398,7 +398,7 @@ export function SummaryPanel({
                                 handleExtraPaymentMethodChange(e.target.value)
                               }
                               disabled={isReadOnly}
-                              className="h-5 px-1 bg-white border border-border rounded font-black text-3xs outline-none cursor-pointer text-accent-foreground focus:ring-0"
+                              className="h-5 cursor-pointer rounded border border-border bg-background px-1 text-3xs font-black text-accent-foreground outline-none focus:ring-0"
                             >
                               <option value="cash">{t('labels.cash', )}</option>
                               <option value="credit">{t('labels.credit', )}</option>
@@ -419,7 +419,7 @@ export function SummaryPanel({
                                 const valDoc = displayToDoc(clampedDisplay);
                                 onExtraPaidAmountChange(valDoc.toFixed(2));
                               }}
-                              className="h-4.5 w-14 font-black text-2xs border-border focus:ring-primary bg-white py-0 px-1 rounded-md border outline-none text-accent-foreground text-center"
+                              className="h-4.5 w-14 rounded-md border border-border bg-background px-1 py-0 text-center text-2xs font-black text-accent-foreground outline-none focus:ring-primary"
                             />
                           ) : (
                             <span className="font-black text-2xs tabular-nums text-accent-foreground">
@@ -435,7 +435,7 @@ export function SummaryPanel({
                   ) : (
                     <>
                       {/* Connection Indicator */}
-                      <div className="text-slate-300 font-light select-none shrink-0">
+                      <div className="shrink-0 select-none font-light text-border">
                         <svg
                           className="w-3.5 h-6"
                           viewBox="0 0 16 24"
@@ -466,7 +466,7 @@ export function SummaryPanel({
                               handleInvoicePaymentMethodChange(e.target.value)
                             }
                             disabled={isReadOnly}
-                            className="h-6 px-1 bg-transparent font-black text-2xs outline-none cursor-pointer border-none text-blue-700 focus:ring-0"
+                            className="h-6 cursor-pointer border-none bg-transparent px-1 text-2xs font-black text-primary outline-none focus:ring-0"
                           >
                             <option value="cash">{t('labels.cash', )}</option>
                             <option value="credit">{t('labels.credit', )}</option>
@@ -487,7 +487,7 @@ export function SummaryPanel({
                                 const valDoc = displayToDoc(clampedDisplay);
                                 onPaidAmountChange(valDoc.toFixed(2));
                               }}
-                              className="h-4.5 w-14 font-black text-2xs border-primary/20 focus:ring-primary bg-white py-0 px-1 rounded-md border outline-none text-center"
+                              className="h-4.5 w-14 rounded-md border border-primary/20 bg-background px-1 py-0 text-center text-2xs font-black outline-none focus:ring-primary"
                             />
                           ) : (
                             <span className="font-black text-2xs tabular-nums text-primary">
@@ -520,7 +520,7 @@ export function SummaryPanel({
               {invoiceType === "Sales" && onPaymentMethodChange && (
                 <>
                   {/* Connection Indicator */}
-                  <div className="text-slate-300 font-light select-none shrink-0">
+                  <div className="shrink-0 select-none font-light text-border">
                     <svg className="w-3.5 h-6" viewBox="0 0 16 24" fill="none">
                       <path
                         d="M0 12H16"
@@ -545,7 +545,7 @@ export function SummaryPanel({
                         value={paymentMethod || "cash"}
                         onChange={(e) => onPaymentMethodChange(e.target.value)}
                         disabled={isReadOnly}
-                        className="h-6 px-1 bg-transparent font-black text-[11px] outline-none cursor-pointer border-none text-foreground focus:ring-0"
+                        className="h-6 cursor-pointer border-none bg-transparent px-1 text-[11px] font-black text-foreground outline-none focus:ring-0"
                       >
                         <option value="cash">{t('labels.cash', )}</option>
                         <option value="credit">{t('labels.credit', )}</option>
@@ -555,7 +555,7 @@ export function SummaryPanel({
                   </div>
 
                   {/* Connection Indicator */}
-                  <div className="text-slate-300 font-light select-none shrink-0">
+                  <div className="shrink-0 select-none font-light text-border">
                     <svg className="w-3.5 h-6" viewBox="0 0 16 24" fill="none">
                       <path
                         d="M0 12H16"
@@ -583,7 +583,7 @@ export function SummaryPanel({
                             clampPaidSafe(e.target.value, net),
                           )
                         }
-                        className="h-5 w-16 font-black text-[11px] border-primary/20 focus:ring-primary bg-white py-0 px-1 rounded-md border outline-none text-center"
+                        className="h-5 w-16 rounded-md border border-primary/20 bg-background px-1 py-0 text-center text-[11px] font-black outline-none focus:ring-primary"
                       />
                     ) : (
                       <span className="font-black tabular-nums">
@@ -606,7 +606,7 @@ export function SummaryPanel({
 
         {/* Right Side: Remaining Balance */}
         {(invoiceType === "Sales" || invoiceType === "Purchase") && (
-          <div className="me-auto flex shrink-0 flex-col items-end rounded-md border border-border bg-muted px-4 py-1.5">
+          <div className="ms-auto flex shrink-0 self-start rounded-md border border-border bg-muted px-4 py-1.5 lg:self-auto">
             <span
               className={cn(
                 "text-3xs font-black uppercase tracking-widest mb-0.5",

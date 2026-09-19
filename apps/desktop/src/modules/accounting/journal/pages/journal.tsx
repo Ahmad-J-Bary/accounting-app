@@ -7,7 +7,6 @@ import { journalEntryService, type JournalFilters } from '@modules/accounting/ap
 import type { JournalEntryDto, JournalType } from "@erp/shared-types";
 import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTemplate";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
-import { Button } from "@shared/ui/button";
 import { DateRangePicker } from "@widgets/reports";
 import { ConfirmDialog } from "@shared/ui/confirm-dialog";
 import { ErrorBoundary } from "@shared/ui/ErrorBoundary";
@@ -16,6 +15,7 @@ import { toLocalDateStr } from "@shared/lib/format";
 import { JOURNAL_MUTATION_KEYS, invalidateKeys } from "@shared/hooks/queryClient";
 import { useTabs } from "@app/providers/TabContext";
 import { useLocalization } from "@app/providers/LocalizationProvider";
+import type { ResponsiveActionItem } from "@widgets/page-header/ResponsiveActions";
 
 // Refactored Components & Hooks
 import { useDataTable } from '@shared/hooks';
@@ -47,7 +47,7 @@ export default function Journal() {
   const queryClient = useQueryClient();
 
   // Reporting policy: the normal posted list NEVER contains reversed
-  // originals or their contra journals — those live in the separated audit
+  // originals or their contra journals ï¿½ those live in the separated audit
   // archive shown only when the toggle is on.
   const [showAudit, setShowAudit] = useState(false);
 
@@ -177,35 +177,34 @@ export default function Journal() {
     navigate("/journal/new");
   }, [navigate]);
 
+  const toolbarActions = useMemo<ResponsiveActionItem[]>(() => [
+    {
+      id: "new-journal-entry",
+      label: t("journal.newEntry", { namespace: "accounting" }),
+      icon: Plus,
+      priority: "primary",
+      onClick: handleNewEntry,
+    },
+  ], [handleNewEntry, t]);
+
   return (
     <ErrorBoundary>
       <OperationalTableTemplate
         title={journalTitle}
-        toolbar={
-          <div className="flex items-center gap-2 flex-wrap">
-            <Button
-              type="button"
-              onClick={handleNewEntry}
-              className="h-10 px-4 font-bold bg-primary hover:bg-primary/80 text-white"
-            >
-              <Plus className="w-4 h-4 ms-2" />
-              {t("journal.newEntry", { namespace: "accounting",  })}
-            </Button>
+        toolbarActions={toolbarActions}
+        filterBar={
+          <div className="flex flex-wrap items-center gap-2">
             <DateRangePicker
               from={dateFilters.from_date}
               to={dateFilters.to_date}
               onFromChange={(v) => setDateFilters({ from_date: v })}
               onToChange={(v) => setDateFilters({ to_date: v })}
             />
-          </div>
-        }
-        filterBar={
-          <div className="flex flex-wrap items-center gap-2">
             <Select
               value={journalType}
               onValueChange={(val) => setJournalType(val as JournalType)}
             >
-              <SelectTrigger className="w-[180px] h-10 bg-white font-bold shadow-sm border-muted">
+              <SelectTrigger className="h-10 w-[180px] border-border bg-card font-bold shadow-sm">
                 <Filter className="w-4 h-4 ms-2 text-muted-foreground" />
                 <SelectValue placeholder={t("journal.typePlaceholder", { namespace: "accounting",  })} />
               </SelectTrigger>
@@ -219,21 +218,21 @@ export default function Journal() {
             <button
               type="button"
               onClick={() => setShowAudit(v => !v)}
-              className={`px-3 py-2 rounded-lg text-sm font-bold border transition-colors ${
+              className={`rounded-lg border px-3 py-2 text-sm font-bold transition-colors ${
                 showAudit
-                  ? "bg-slate-800 text-white border-slate-800"
-                  : "bg-white text-slate-600 border-muted hover:bg-muted"
+                  ? "border-foreground bg-foreground text-background"
+                  : "border-border bg-card text-muted-foreground hover:bg-muted"
               }`}
               title={t("journal.audit.title", { namespace: "accounting",  })}
             >
               {showAudit ? t("journal.audit.hide", { namespace: "accounting",  }) : t("journal.audit.show", { namespace: "accounting",  })}
             </button>
 
-            <div className="flex items-center gap-1 border-muted border rounded-lg overflow-hidden">
+            <div className="flex items-center gap-1 overflow-hidden rounded-lg border border-border bg-card p-1">
               <button
                 type="button"
                 onClick={() => setDisplayMode("two-line")}
-                className={`p-2 transition-colors ${
+                className={`rounded-md p-2 transition-colors ${
                   displayMode === "two-line"
                     ? "bg-primary text-white"
                     : "text-muted-foreground hover:bg-muted"
@@ -245,7 +244,7 @@ export default function Journal() {
               <button
                 type="button"
                 onClick={() => setDisplayMode("one-line")}
-                className={`p-2 transition-colors ${
+                className={`rounded-md p-2 transition-colors ${
                   displayMode === "one-line"
                     ? "bg-primary text-white"
                     : "text-muted-foreground hover:bg-muted"

@@ -534,6 +534,11 @@ export function ReturnsEditor({ returnType, partyType, parties, materials, wareh
     : returnId
       ? `${t("return.editPrefix", { namespace: "invoicing",  })}${returnType === "SalesReturn" ? t("return.salesSheetTitle", { namespace: "invoicing",  }) : t("return.purchaseSheetTitle", { namespace: "invoicing",  })}${returnNumber ? ` - ${returnNumber}` : ""}`
       : returnType === "SalesReturn" ? t("return.newSalesReturn", { namespace: "invoicing",  }) : t("return.newPurchaseReturn", { namespace: "invoicing",  });
+  const settlementModeLabel = settlementMode === "deduct_from_debt"
+    ? t("return.settlementDeductFromDebt", { namespace: "invoicing" })
+    : settlementMode === "full_cash_return"
+    ? t("return.settlementFullCashReturn", { namespace: "invoicing" })
+    : t("return.settlementPartial", { namespace: "invoicing" });
 
   const toolbarActions = useMemo<ResponsiveActionItem[]>(() => [
     {
@@ -590,6 +595,13 @@ export function ReturnsEditor({ returnType, partyType, parties, materials, wareh
       toolbarActions={toolbarActions}
       headerFields={
         <>
+          <HeaderField
+            label={t("document.invoiceNumber", { namespace: "invoicing" })}
+            value={returnNumber || t("return.markNew", { namespace: "invoicing" })}
+            readOnly
+            inputClassName="font-mono font-bold"
+          />
+
           <HeaderField label={t("return.returnDateLabel", { namespace: "invoicing",  })} type="date" value={returnDate} onChange={setReturnDate} disabled={readOnly} inputClassName="font-bold" />
 
           <HeaderField label={isSales ? t("party.customer", { namespace: "partners",  }) : t("party.supplier", { namespace: "partners",  })} className="lg:col-span-2">
@@ -606,7 +618,21 @@ export function ReturnsEditor({ returnType, partyType, parties, materials, wareh
             />
           </HeaderField>
 
-          <HeaderField label={t("return.colNotes", { namespace: "invoicing",  })} value={notes} onChange={setNotes} disabled={readOnly} placeholder={t("return.notesAdditionalPlaceholder", { namespace: "invoicing",  })} className="lg:col-span-3" />
+          <HeaderField
+            label={t("return.settlementMethod", { namespace: "invoicing" })}
+            value={settlementModeLabel}
+            readOnly
+            inputClassName="font-bold"
+          />
+
+          <HeaderField
+            label={t("labels.currency")}
+            value={selectedCurrency}
+            readOnly
+            inputClassName="font-mono font-bold"
+          />
+
+          <HeaderField label={t("return.colNotes", { namespace: "invoicing",  })} value={notes} onChange={setNotes} disabled={readOnly} placeholder={t("return.notesAdditionalPlaceholder", { namespace: "invoicing",  })} className="lg:col-span-6" />
         </>
       }
       lineItemsGrid={

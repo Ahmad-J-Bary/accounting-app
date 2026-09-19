@@ -4,6 +4,8 @@ import { cn } from "@shared/lib/utils";
 interface GroupedEntrySharedCellProps {
   rowCount: number;
   columnPosition: number;
+  showDivider?: boolean;
+  dividerDirection?: "rtl" | "ltr";
   className?: string;
   borderClassName?: string;
   densityClassName?: string;
@@ -15,6 +17,8 @@ interface GroupedEntrySharedCellProps {
 export function GroupedEntrySharedCell({
   rowCount,
   columnPosition,
+  showDivider = false,
+  dividerDirection = "ltr",
   className,
   borderClassName,
   densityClassName,
@@ -36,10 +40,19 @@ export function GroupedEntrySharedCell({
     <div
       style={style}
       className={cn(
-        "min-h-full",
+        "relative min-h-full",
         borderClassName,
       )}
     >
+      {showDivider && (
+        <div
+          className="pointer-events-none absolute inset-y-0 z-10 w-px bg-border"
+          style={{
+            insetInlineStart: 0,
+            transform: dividerDirection === "rtl" ? "translateX(50%)" : "translateX(-50%)",
+          }}
+        />
+      )}
       <div
         className={cn(
           "flex h-full min-h-full items-center justify-center text-center leading-tight",

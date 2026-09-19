@@ -49,7 +49,7 @@ export default function AccountMovementsReport() {
           </SelectContent>
         </Select>
       }
-      toolbar={
+      filterBar={
         <ReportFilterBar
           filters={filters}
           onFiltersChange={setFilters}

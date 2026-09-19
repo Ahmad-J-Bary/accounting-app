@@ -8,7 +8,6 @@ import type { AccountTreeNode, ToggleNodeHandler } from "../lib/types";
 import { AccountTreeNodeItem } from "../components/AccountTreeNodeItem";
 import { BranchPanel, type PanelMode } from "../components/BranchPanel";
 import { HierarchicalTreeTemplate } from '@widgets/templates/HierarchicalTreeTemplate';
-import { Button } from "@shared/ui/button";
 import { ConfirmDialog } from "@shared/ui/confirm-dialog";
 import { ErrorBoundary } from "@shared/ui/ErrorBoundary";
 import { toast } from "sonner";
@@ -39,13 +38,14 @@ import { resolveAccountNavigation } from "@shared/tree/navigationResolver";
 import { findRouteById } from "@app/shell/routeRegistry";
 import { useCompanyInitState, useCompanyTypeSettings } from "@shared/hooks";
 import { companyTypeOf, hiddenNavIds } from "@modules/opening-balance/lib/company-lifecycle";
+import type { ResponsiveActionItem } from "@widgets/page-header/ResponsiveActions";
 
 const ROOT_ACCOUNT_ID = "__chart_of_accounts_root__";
 
 export default function Accounting() {
   const queryClient = useQueryClient();
   const { openTab } = useTabs();
-  const { t, language } = useLocalization();
+  const { t, language, isRTL } = useLocalization();
   const { currencies, rateMap, baseCurrency } = useCurrencyContext();
   const companySettings = useCompanyTypeSettings();
   const { initState, isReady } = useCompanyInitState();
@@ -481,6 +481,23 @@ export default function Accounting() {
     onDelete: handleDeleteRequest,
   });
 
+  const toolbarActions = useMemo<ResponsiveActionItem[]>(() =>
+    actionDescriptors.map((action) => ({
+      id: `chart-${action.key}`,
+      label: action.label,
+      icon: action.icon,
+      priority:
+        action.tone === "primary"
+          ? "primary"
+          : action.tone === "danger"
+          ? "overflow"
+          : "secondary",
+      variant: action.tone === "primary" ? undefined : "outline",
+      destructive: action.tone === "danger",
+      disabled: action.disabled,
+      onClick: action.onClick,
+    })), [actionDescriptors]);
+
   // TopBar / external "add new account" entry point
   useEffect(() => {
     const handler = () => handleOpenNew();
@@ -498,31 +515,7 @@ export default function Accounting() {
       title={t("chartOfAccounts.title", { namespace: "accounting",  })}
       treePresentation={treePresentation}
       treeHeaderTitle={treePresentation === "explorer" ? t("chartOfAccounts.tree.explorer", { namespace: "accounting",  }) : t("chartOfAccounts.tree.header", { namespace: "accounting",  })}
-      toolbar={
-        <>
-          {actionDescriptors.map((action) => {
-            const Icon = action.icon;
-            const toneClass =
-              action.tone === "primary"
-                ? "bg-primary hover:bg-primary/80 shadow-lg shadow-primary/20 text-white"
-                : action.tone === "danger"
-                  ? "bg-card border-destructive/20 text-destructive hover:bg-destructive/10"
-                  : "bg-card border-border text-foreground hover:bg-muted";
-            return (
-              <Button
-                key={action.key}
-                size="sm"
-                className={toneClass}
-                disabled={action.disabled}
-                onClick={action.onClick}
-              >
-                {Icon && <Icon className={`w-4 h-4 ms-2 ${action.tone === "primary" ? "" : action.tone === "danger" ? "text-destructive" : action.key === "ledger" ? "text-primary" : ""}`} />}
-                {action.label}
-              </Button>
-            );
-          })}
-        </>
-      }
+      toolbarActions={toolbarActions}
       treeHeaderActions={
         <>
           <div className="ms-2 flex items-center gap-1 rounded-lg border border-border bg-card p-1">
@@ -536,7 +529,7 @@ export default function Accounting() {
             <button
               type="button"
               onClick={() => setTreePresentation("explorer")}
-              className={`rounded-md px-2 py-1 text-[11px] font-bold transition-colors ${treePresentation === "explorer" ? "bg-background text-white" : "text-muted-foreground hover:bg-muted"}`}
+              className={`rounded-md px-2 py-1 text-[11px] font-bold transition-colors ${treePresentation === "explorer" ? "bg-foreground text-background" : "text-muted-foreground hover:bg-muted"}`}
             >
               Explorer
             </button>
@@ -545,13 +538,13 @@ export default function Accounting() {
             onClick={expandAll}
             className="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-bold text-muted-foreground hover:text-foreground hover:bg-muted/70 transition-colors"
           >
-            <ChevronLeft className="w-3 h-3" /> {t("chartOfAccounts.tree.expand", { namespace: "accounting",  })}
+            {isRTL ? <ChevronRight className="w-3 h-3" /> : <ChevronLeft className="w-3 h-3" />} {t("chartOfAccounts.tree.expand", { namespace: "accounting",  })}
           </button>
           <button
             onClick={collapseAll}
             className="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-bold text-muted-foreground hover:text-foreground hover:bg-muted/70 transition-colors"
           >
-            {t("chartOfAccounts.tree.collapse", { namespace: "accounting",  })} <ChevronRight className="w-3 h-3" />
+            {t("chartOfAccounts.tree.collapse", { namespace: "accounting",  })} {isRTL ? <ChevronLeft className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
           </button>
         </>
       }
@@ -610,7 +603,10 @@ export default function Accounting() {
         title={t("chartOfAccounts.confirmDelete.title", { namespace: "accounting",  })}
         description={
           selected
-            ? t("chartOfAccounts.confirmDelete.description", { namespace: "accounting", vars: { name: selected.name_ar },  })
+            ? t("chartOfAccounts.confirmDelete.description", {
+                namespace: "accounting",
+                vars: { name: language === "ar" ? selected.name_ar : selected.name_en || selected.name_ar },
+              })
             : undefined
         }
         confirmLabel={t("chartOfAccounts.confirmDelete.confirm", { namespace: "accounting",  })}

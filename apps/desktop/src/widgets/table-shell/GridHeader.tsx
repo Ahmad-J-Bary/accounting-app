@@ -1,7 +1,7 @@
 import React, { ReactNode } from 'react';
 import { cn } from '@shared/lib/utils';
 import { ChevronUp, ChevronDown } from 'lucide-react';
-import { getLeftBorderClass, getRowBorderClass } from '@shared/lib/table-utils';
+import { getCenteredDividerStyle, getLeftBorderClass, getRowBorderClass } from '@shared/lib/table-utils';
 
 import type { GridResizeOptions } from "@shared/hooks";
 
@@ -59,6 +59,7 @@ interface GridHeaderProps {
   sortField?: string;
   /** Current sort direction */
   sortDirection?: 'asc' | 'desc';
+  direction?: "rtl" | "ltr";
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -77,8 +78,9 @@ interface GridHeaderProps {
  * - Single-click → onHeaderCellClick (sorting only, handled by UnifiedTable)
  * - Double-click on resize handle → onAutoFit (full data-fit)
  *
- * RTL: fully supported — resize handles use `left: -4` which places them
- * between adjacent columns in both LTR and RTL flex/grid flows.
+ * RTL: fully supported — resize handles sit on the inline-end edge of the
+ * current column so the divider stays centered between adjacent columns in
+ * both LTR and RTL layouts.
  */
 export const GridHeader: React.FC<GridHeaderProps> = ({
   columns,
@@ -99,8 +101,10 @@ export const GridHeader: React.FC<GridHeaderProps> = ({
   gridTemplate,
   sortField,
   sortDirection,
+  direction = "ltr",
 }) => {
   const useGrid = !!gridTemplate;
+  const useCenteredDividers = borderStyle === "full";
 
   return (
     <div
@@ -121,9 +125,8 @@ export const GridHeader: React.FC<GridHeaderProps> = ({
           data-col-id={col.id}
           className={cn(
             getDensityPadding(),
-            'relative text-foreground font-black uppercase tracking-wider select-text flex items-center',
-            col.align === 'left' ? 'justify-start text-start' : col.align === 'right' ? 'justify-end text-end' : 'justify-center text-center',
-            getLeftBorderClass(borderStyle ?? ""),
+            'relative text-foreground font-black uppercase tracking-wider select-text flex items-center justify-center text-center',
+            !useCenteredDividers && getLeftBorderClass(borderStyle ?? ""),
             !useGrid && !columnWidths[col.id] && col.width,
           )}
           style={{
@@ -131,14 +134,20 @@ export const GridHeader: React.FC<GridHeaderProps> = ({
             fontSize: `${fontSize}px`,
             fontFamily: fontFamily || 'inherit',
             ...(useGrid ? { minWidth: 0 } : {}),
-            textAlign: col.align === 'left' ? 'start' : col.align === 'right' ? 'end' : 'center',
+            textAlign: 'center',
           }}
           onClick={() => onHeaderCellClick?.(col.id)}
         >
+          {useCenteredDividers && idx > 0 && (
+            <div
+              className="pointer-events-none absolute inset-y-0 z-10 w-px bg-border"
+              style={getCenteredDividerStyle(direction)}
+            />
+          )}
+
           <div
             className={cn(
-              'flex-1 min-w-0 whitespace-normal break-words leading-tight hyphens-auto',
-              col.align === 'left' ? 'text-start' : col.align === 'right' ? 'text-end' : 'text-center',
+              'flex-1 min-w-0 whitespace-normal break-words text-center leading-tight hyphens-auto',
             )}
             style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}
           >
@@ -158,7 +167,7 @@ export const GridHeader: React.FC<GridHeaderProps> = ({
           {enableResize && onResizeStart && idx < columns.length - 1 && (
             <div
               className="absolute top-0 bottom-0 w-2 cursor-col-resize z-20 hover:bg-primary/10 active:bg-primary/20 transition-colors flex items-center justify-center group/resize"
-              style={{ left: -4 }}
+              style={{ insetInlineEnd: -4 }}
               onMouseDown={(e) => {
                 e.stopPropagation();
                 onResizeStart(e, col.id);

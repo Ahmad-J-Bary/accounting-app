@@ -9,7 +9,7 @@ import { useExportSetup, useUnifiedColumns, useSortable, useBaseCurrencyColumns,
 import type { ExcelExportColumn, ExcelExportOptions } from "@shared/lib/excel";
 import { dateCol, executeExport, estimateExcelWidth, debitCreditAmountCols } from "@shared/lib/excel";
 import { cn } from "@shared/lib/utils";
-import { getLeftBorderClass, getRowBorderClass, getRowBackgroundClass } from "@shared/lib/table-utils";
+import { getCenteredDividerStyle, getLeftBorderClass, getRowBorderClass, getRowBackgroundClass } from "@shared/lib/table-utils";
 import type { AccountLedgerLineDto } from "@erp/shared-types";
 import { formatDateTime, formatNumber } from "@shared/lib/format";
 import { getHeaderText, getPrimitiveCellValue } from "@modules/accounting/journal/components/groupedTableUtils";
@@ -115,7 +115,7 @@ export function AccountMovementTable({
 }: AccountMovementTableProps) {
   const { isBaseCurrency, currencySuffix, hasSecondaryCurrencies } = useBaseCurrencyColumns();
   const { settings, getDensityPadding } = useTableSettings();
-  const { t } = useLocalization();
+  const { t, direction } = useLocalization();
   const containerRef = useRef<HTMLDivElement>(null);
 
   const { exportData, baseCurrency, rateMap, sortedCurrencies, formatAmount, baseCode, ratesSheet, currencyMode } = useExportSetup();
@@ -552,7 +552,8 @@ export function AccountMovementTable({
     filteredSummary?.length && settings.showSummary && tableData.length > 0
   );
 
-  const cellBorderClass = getLeftBorderClass(settings.borderStyle);
+  const useCenteredDividers = settings.borderStyle === "full";
+  const cellBorderClass = useCenteredDividers ? "" : getLeftBorderClass(settings.borderStyle);
 
   const handleHeaderCellClick = useCallback((colId: string) => {
     if (["entry_number", "journal_type", "date"].includes(colId)) {
@@ -567,14 +568,20 @@ export function AccountMovementTable({
           key={`skeleton-${idx}`}
           className={cn("animate-pulse", getRowBorderClass(settings.borderStyle))}
           style={{ display: "grid", gridTemplateColumns }}
-          dir="rtl"
+          dir={direction}
         >
-          {visibleColumns.map(col => (
+          {visibleColumns.map((col, colIdx) => (
             <div
               key={col.id}
-              className={cn(getDensityPadding(), cellBorderClass)}
+              className={cn("relative", getDensityPadding(), cellBorderClass)}
               style={{ minWidth: 0 }}
             >
+              {useCenteredDividers && colIdx > 0 && (
+                <div
+                  className="pointer-events-none absolute inset-y-0 z-10 w-px bg-border"
+                  style={getCenteredDividerStyle(direction)}
+                />
+              )}
               <Skeleton
                   className={cn(
                     "h-3.5 rounded",
@@ -613,7 +620,7 @@ export function AccountMovementTable({
           return (
             <div
               key={`group-${first.journal_id}-${groupIdx}`}
-              dir="rtl"
+              dir={direction}
               className={cn(
                 "transition-all duration-75",
                 getRowBorderClass(settings.borderStyle),
@@ -640,6 +647,8 @@ export function AccountMovementTable({
                       columnPosition={columnPosition}
                       densityClassName={getDensityPadding()}
                       borderClassName={cellBorderClass}
+                      showDivider={useCenteredDividers && colIdx > 0}
+                      dividerDirection={direction}
                       className={col.className}
                       fontSize={settings.fontSize}
                       fontFamily={settings.fontFamily}
@@ -669,12 +678,19 @@ export function AccountMovementTable({
                         fontFamily: settings.fontFamily,
                       }}
                       className={cn(
+                        "relative",
                         getDensityPadding(),
                         cellBorderClass,
                         "text-slate-600",
                         col.className,
                       )}
                     >
+                      {useCenteredDividers && colIdx > 0 && (
+                        <div
+                          className="pointer-events-none absolute inset-y-0 z-10 w-px bg-border"
+                          style={getCenteredDividerStyle(direction)}
+                        />
+                      )}
                       {val || ""}
                     </div>
                   );
@@ -719,6 +735,7 @@ export function AccountMovementTable({
           gridTemplate={gridTemplateColumns}
           sortField={sortField}
           sortDirection={sortDirection}
+          direction={direction}
         />
 
         {renderBody()}

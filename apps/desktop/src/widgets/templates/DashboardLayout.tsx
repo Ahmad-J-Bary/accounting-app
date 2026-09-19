@@ -30,7 +30,7 @@ export function DashboardLayout({
   const hasStructuredHeader = Boolean(title || description || icon || controls || actionItems?.length);
 
   return (
-    <div className={cn("min-h-screen bg-muted/30 p-3 sm:p-4 lg:p-8 space-y-5 sm:space-y-8", className)} dir={direction}>
+    <div className={cn("min-h-screen space-y-4 bg-muted/30 p-2.5 sm:space-y-6 sm:p-3 lg:space-y-7 lg:p-5", className)} dir={direction}>
       {hasStructuredHeader ? (
         <header className="flex flex-col gap-3 sm:gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="flex min-w-0 items-center gap-4">
@@ -61,7 +61,7 @@ export function DashboardLayout({
         </section>
       )}
 
-      <main className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 lg:gap-8">
+      <main className="grid grid-cols-1 gap-3 sm:gap-4 lg:grid-cols-12 lg:gap-5">
         {children}
       </main>
     </div>
@@ -87,14 +87,14 @@ export function DashboardCard({
 }) {
   return (
     <div className={cn(
-      "bg-card rounded-2xl sm:rounded-3xl border border-border shadow-sm overflow-hidden flex flex-col",
+      "flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-sm sm:rounded-3xl",
       span === 12 ? "lg:col-span-12" : 
       span === 8 ? "lg:col-span-8" : 
       span === 6 ? "lg:col-span-6" : 
       span === 4 ? "lg:col-span-4" : "lg:col-span-12",
       className
     )}>
-      <div className="px-4 sm:px-6 lg:px-8 py-4 sm:py-5 lg:py-6 border-b border-border flex items-center justify-between gap-2 bg-card">
+      <div className="flex items-center justify-between gap-2 border-b border-border bg-card px-4 py-4 sm:px-5 sm:py-5 lg:px-6">
         <div className="space-y-1 min-w-0">
           <h3 className="font-black text-foreground text-base sm:text-lg">{title}</h3>
           {subtitle && <p className="text-xs font-medium text-muted-foreground truncate">{subtitle}</p>}
@@ -105,7 +105,7 @@ export function DashboardCard({
           </div>
         ) : actions ? <div className="flex gap-2 shrink-0">{actions}</div> : null}
       </div>
-      <div className="p-4 sm:p-6 lg:p-8 flex-1">
+      <div className="flex-1 p-4 sm:p-5 lg:p-6">
         {children}
       </div>
     </div>

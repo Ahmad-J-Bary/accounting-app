@@ -8,7 +8,7 @@ import { DateRangePicker } from "./DateRangePicker";
 import type { ReportFilters } from "@shared/types/report";
 import { useLocalization } from "@app/providers/LocalizationProvider";
 
-type Currency = { code: string; symbol?: string; name_ar?: string; name?: string };
+type Currency = { code: string; symbol?: string; name_ar?: string; name_en?: string; name?: string };
 
 export interface ReportFilterBarProps {
   filters: ReportFilters;
@@ -24,10 +24,12 @@ export interface ReportFilterBarProps {
   lastLoadedAt?: Date | null;
 }
 
-function formatCurrencyLabel(c: Currency): string {
+function formatCurrencyLabel(c: Currency, language: "ar" | "en"): string {
   const parts = [c.code];
   if (c.symbol) parts.push(`(${c.symbol})`);
-  const displayName = c.name_ar || c.name || "";
+  const displayName = language === "ar"
+    ? c.name_ar || c.name_en || c.name || ""
+    : c.name_en || c.name_ar || c.name || "";
   if (displayName) parts.push(`- ${displayName}`);
   return parts.join(" ");
 }
@@ -46,7 +48,7 @@ export function ReportFilterBar({
   lastLoadedAt,
 }: ReportFilterBarProps) {
   const { baseCurrency } = useCurrencyContext();
-  const { t } = useLocalization();
+  const { t, language, locale } = useLocalization();
 
   const baseCode = useMemo(
     () => baseCurrencyCode || baseCurrency?.code || "",
@@ -62,7 +64,7 @@ export function ReportFilterBar({
     if (!showCurrencySelect) return [];
     const options = currencies.map((c) => ({
       code: c.code,
-      label: formatCurrencyLabel(c),
+      label: formatCurrencyLabel(c, language),
     }));
 
     const fallbackBase = baseCurrencyCode || baseCurrency?.code;
@@ -74,7 +76,7 @@ export function ReportFilterBar({
     }
 
     return options;
-  }, [currencies, baseCurrencyCode, baseCurrency, showCurrencySelect, t]);
+  }, [currencies, baseCurrencyCode, baseCurrency, showCurrencySelect, t, language]);
 
   const effectiveValue = useMemo(() => {
     if (!currentCurrency) return "";
@@ -91,7 +93,7 @@ export function ReportFilterBar({
       
       {showSelect && (
         <Select value={effectiveValue} onValueChange={onCurrencyChange}>
-          <SelectTrigger className="h-9 w-auto min-w-[130px] rounded-lg border-muted bg-white text-xs">
+          <SelectTrigger className="h-9 w-auto min-w-[130px] rounded-lg border-border bg-card text-xs">
             <SelectValue placeholder={t('labels.chooseCurrency', )} />
           </SelectTrigger>
           <SelectContent>
@@ -117,7 +119,7 @@ export function ReportFilterBar({
           type="button"
           variant="outline"
           size="sm"
-          className="h-9 gap-1.5 rounded-lg border-muted bg-white text-xs text-muted-foreground"
+          className="h-9 gap-1.5 rounded-lg border-border bg-card text-xs text-muted-foreground"
           onClick={() => void onRefresh()}
         >
           <RefreshCw className="h-3.5 w-3.5" />
@@ -125,7 +127,7 @@ export function ReportFilterBar({
         </Button>
       )}
       {refreshing && (
-        <span className="flex h-9 items-center gap-1.5 rounded-lg bg-white px-2.5 text-xs text-muted-foreground">
+        <span className="flex h-9 items-center gap-1.5 rounded-lg border border-border bg-card px-2.5 text-xs text-muted-foreground">
           <Loader2 className="h-3.5 w-3.5 animate-spin" />
           {t('states.refreshing', )}
         </span>
@@ -133,7 +135,7 @@ export function ReportFilterBar({
       {lastLoadedAt && !refreshing && (
         <span className="text-xs text-muted-foreground">
           {t('labels.lastUpdate', )}{" "}
-          {lastLoadedAt.toLocaleTimeString("ar-EG", {
+          {lastLoadedAt.toLocaleTimeString(locale || (language === "ar" ? "ar-SY" : "en-US"), {
             hour: "2-digit",
             minute: "2-digit",
           })}
