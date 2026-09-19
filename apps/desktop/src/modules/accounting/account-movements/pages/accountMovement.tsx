@@ -312,20 +312,28 @@ export default function AccountMovement() {
     }
   }, [accountType, linkedEntity, openTab, t]);
 
+  const pageContext = useMemo(
+    () => (
+      <DateRangePicker
+        from={dateFilters.from_date}
+        to={dateFilters.to_date}
+        onFromChange={(v) => setDateFilters({ from_date: v })}
+        onToChange={(v) => setDateFilters({ to_date: v })}
+        showSeparator={toolbarActions.length > 0}
+      />
+    ),
+    [dateFilters.from_date, dateFilters.to_date, setDateFilters, toolbarActions.length],
+  );
+
   return (
     <ErrorBoundary>
     <OperationalTableTemplate
       title={accountTitle}
+      pageContext={pageContext}
+      pageContextInline
+      pageContextSide="end"
+      pageHeaderSingleRow
       toolbarActions={toolbarActions}
-      filterBar={
-        <DateRangePicker
-          from={dateFilters.from_date}
-          to={dateFilters.to_date}
-          onFromChange={(v) => setDateFilters({ from_date: v })}
-          onToChange={(v) => setDateFilters({ to_date: v })}
-          showSeparator={toolbarActions.length > 0}
-        />
-      }
       tableContent={
         <div className="flex flex-col h-full">
           {/* Statistics Bar */}

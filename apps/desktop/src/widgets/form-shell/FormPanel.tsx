@@ -9,6 +9,9 @@ interface FormPanelProps {
   title: string;
   subtitle?: string;
   icon?: ReactNode;
+  headerContext?: ReactNode;
+  headerContextInline?: boolean;
+  headerActions?: ReactNode;
   onClose: () => void;
   onSave?: () => void;
   isSaving?: boolean;
@@ -25,6 +28,9 @@ export function FormPanel({
   title,
   subtitle,
   icon,
+  headerContext,
+  headerContextInline = false,
+  headerActions,
   onClose,
   onSave,
   isSaving = false,
@@ -40,7 +46,15 @@ export function FormPanel({
   const resolvedSaveLabel = saveLabel ?? t('actions.save', );
   return (
     <SidebarShell className={className} width={width} onClose={onClose} forceOverlay={forceOverlay}>
-      <SidebarHeader title={title} subtitle={subtitle} icon={icon} onClose={onClose} />
+      <SidebarHeader
+        title={title}
+        subtitle={subtitle}
+        icon={icon}
+        context={headerContext}
+        contextInline={headerContextInline}
+        actions={headerActions}
+        onClose={onClose}
+      />
       <div className="flex-1 overflow-y-auto custom-scrollbar"
         style={{
           padding: "var(--sidebar-container-py) var(--sidebar-container-px)",

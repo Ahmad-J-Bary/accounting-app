@@ -23,6 +23,6 @@ export * from './useForm';
 export * from './useResponsive';
 export * from './useResponsiveContext';
 export * from './useKeyboardNavigation';
+export * from './useUiPreferences';
 export { useMediaQuery, useIsMobile, useIsTablet, useIsLaptop, useIsDesktop, useIsWide, useContainerQuery } from './useResponsive';
 export type { ResponsiveMode, LegacyResponsiveMode } from './useResponsive';
-

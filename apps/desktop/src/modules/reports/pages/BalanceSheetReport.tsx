@@ -6,9 +6,9 @@ import { computeBalanceSheet } from "@modules/reports/lib/balanceSheet";
 import { useBalanceSheetReport } from "@modules/reports/hooks/useBalanceSheetReport";
 import { useBalanceSheet } from "@shared/hooks/queries/useReportQueries";
 import { BalanceSheetView } from "@modules/reports/components/BalanceSheetView";
-import { ReportFilterBar } from "@widgets/reports/ReportFilterBar";
 import { ReportLoadingSkeleton } from "@widgets/reports";
 import { useLocalization } from "@app/providers/LocalizationProvider";
+import { ReportPageContext } from "@widgets/reports/ReportPageHeader";
 
 export default function BalanceSheetReport() {
   const { baseCurrency, currencies, formatAmount, hasMultipleCurrencies } = useCurrencyContext();
@@ -23,12 +23,10 @@ export default function BalanceSheetReport() {
     new Date().toISOString().split("T")[0]
   );
 
-  const { isLoading: bsLoading, isRefetching: bsRefetching, data: bsData, dataUpdatedAt: bsUpdatedAt, refetch: bsRefetch } = useBalanceSheet();
+  const { isLoading: bsLoading, data: bsData } = useBalanceSheet();
   const { loading: enrichmentLoading, reportData } = useBalanceSheetReport(filters);
 
   const loading = bsLoading || enrichmentLoading;
-  const refreshing = bsRefetching;
-  const lastLoadedAt = bsUpdatedAt ? new Date(bsUpdatedAt) : null;
 
   const computed = useMemo(() => {
     if (!bsData) return null;
@@ -71,8 +69,11 @@ export default function BalanceSheetReport() {
   return (
     <OperationalTableTemplate
       title={t("balanceSheet.title", { namespace: "reports",  })}
-      filterBar={
-        <ReportFilterBar
+      pageContextInline
+      pageContextSide="end"
+      pageHeaderSingleRow
+      pageContext={
+        <ReportPageContext
           filters={filters}
           onFiltersChange={setFilters}
           showCurrencySelect={hasMultipleCurrencies}
@@ -80,9 +81,6 @@ export default function BalanceSheetReport() {
           onCurrencyChange={setSelectedCurrency}
           currencies={currencies}
           baseCurrencyCode={baseCurrency?.code}
-          refreshing={refreshing}
-          onRefresh={() => void bsRefetch()}
-          lastLoadedAt={lastLoadedAt}
         />
       }
       tableContent={

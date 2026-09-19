@@ -33,6 +33,7 @@ export interface ResponsiveActionItem {
 interface ResponsiveActionsProps {
   actions: ResponsiveActionItem[];
   className?: string;
+  compact?: boolean;
 }
 
 type MeasuredWidths = {
@@ -174,9 +175,11 @@ function ActionIcon({
 function InlineActionButton({
   action,
   mode,
+  compact = false,
 }: {
   action: ResponsiveActionItem;
   mode: ResponsiveActionMode;
+  compact?: boolean;
 }) {
   const iconOnly = mode === "compact";
   const accessibleName = action.accessibilityLabel ?? action.label;
@@ -191,8 +194,8 @@ function InlineActionButton({
       title={iconOnly ? action.tooltip ?? accessibleName : action.tooltip}
       onClick={action.onClick}
       className={cn(
-        "h-9 shrink-0 gap-1.5",
-        iconOnly && "w-9 px-0",
+        compact ? "h-8 shrink-0 gap-1.5 text-xs" : "h-9 shrink-0 gap-1.5",
+        iconOnly && (compact ? "w-8 px-0" : "w-9 px-0"),
         action.priority === "primary" && !iconOnly && "shadow-sm",
       )}
     >
@@ -203,7 +206,7 @@ function InlineActionButton({
   );
 }
 
-export function ResponsiveActions({ actions, className }: ResponsiveActionsProps) {
+export function ResponsiveActions({ actions, className, compact = false }: ResponsiveActionsProps) {
   const { t } = useLocalization();
   const containerRef = useRef<HTMLDivElement | null>(null);
   const measureRef = useRef<HTMLDivElement | null>(null);
@@ -300,6 +303,7 @@ export function ResponsiveActions({ actions, className }: ResponsiveActionsProps
             key={action.id}
             action={action}
             mode={layout.modes[action.id] ?? "full"}
+            compact={compact}
           />
         ))}
 
@@ -311,7 +315,7 @@ export function ResponsiveActions({ actions, className }: ResponsiveActionsProps
                 size="icon"
                 variant="outline"
                 aria-label={t("actions.more", { namespace: "common" })}
-                className="h-9 w-9 shrink-0"
+                className={cn("shrink-0", compact ? "h-8 w-8" : "h-9 w-9")}
               >
                 <MoreHorizontal className="h-4 w-4" aria-hidden="true" />
                 <span className="sr-only">{t("actions.more", { namespace: "common" })}</span>
@@ -347,18 +351,18 @@ export function ResponsiveActions({ actions, className }: ResponsiveActionsProps
       >
         {sortedActions.map((action) => (
           <div key={`${action.id}-full`} data-action-id={action.id} data-mode="full">
-            <InlineActionButton action={action} mode="full" />
+            <InlineActionButton action={action} mode="full" compact={compact} />
           </div>
         ))}
         {sortedActions
           .filter((action) => action.icon && action.allowIconOnly !== false)
           .map((action) => (
             <div key={`${action.id}-compact`} data-action-id={action.id} data-mode="compact">
-              <InlineActionButton action={action} mode="compact" />
+              <InlineActionButton action={action} mode="compact" compact={compact} />
             </div>
           ))}
         <div data-action-id="__more__" data-mode="more">
-          <Button type="button" size="icon" variant="outline" className="h-9 w-9 shrink-0">
+          <Button type="button" size="icon" variant="outline" className={cn("shrink-0", compact ? "h-8 w-8" : "h-9 w-9")}>
             <MoreHorizontal className="h-4 w-4" aria-hidden="true" />
             <span className="sr-only">{t("actions.more", { namespace: "common" })}</span>
           </Button>

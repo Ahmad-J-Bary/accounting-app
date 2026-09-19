@@ -1,51 +1,24 @@
-import React, { useState, useEffect, useCallback, ReactNode } from 'react';
-import { NavSidebarSettings, NavLayoutType, SidebarDensityPreset } from '@shared/types/sidebar-settings';
+import React, { useEffect, useCallback, ReactNode } from 'react';
+import { NavSidebarSettings, NavLayoutType } from '@shared/types/sidebar-settings';
 import { NavSidebarSettingsContext } from '@shared/context/NavSidebarSettingsContext';
 import { LAYOUT_PRESETS } from '@app/shell/sidebarConfig';
+import { useUiPreferences } from '@shared/hooks/useUiPreferences';
 
 const NAV_COLLAPSE_KEY = 'erp_nav_collapsed';
 
-const DEFAULT_SETTINGS: NavSidebarSettings = {
-  navLayoutType: 'vertical' as NavLayoutType,
-  navWidth: 256,
-  navCollapsed: false,
-  navIconOnly: false,
-  navFontSize: 13,
-  navDensity: 'comfortable' as SidebarDensityPreset,
-  navShowLabels: true,
-  navShowSectionHeaders: true,
-  navActiveBg: 'bg-blue-600',
-  navHoverBg: 'hover:bg-white/5 hover:text-white',
-  navBordered: false,
-  navRemembersState: true,
-  navAutoCollapse: false,
-  navBackground: 'bg-slate-900',
-  navGroupCollapseBehavior: 'free',
-  navGroupHeaderStyle: 'classic',
-};
-
 export const NavSidebarSettingsProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [settings, setSettings] = useState<NavSidebarSettings>(() => {
-    try {
-      const saved = localStorage.getItem('erp_nav_sidebar_settings');
-      const loaded = saved ? { ...DEFAULT_SETTINGS, ...JSON.parse(saved) } : DEFAULT_SETTINGS;
-      if (loaded.navRemembersState) {
-        const savedCollapsed = localStorage.getItem(NAV_COLLAPSE_KEY);
-        if (savedCollapsed !== null) {
-          loaded.navCollapsed = savedCollapsed === 'true';
-        }
-      }
-      return loaded;
-    } catch {
-      return DEFAULT_SETTINGS;
-    }
-  });
+  const { preferences, updateSidebarAppearance, resetSidebarAppearance } = useUiPreferences();
+  const settings: NavSidebarSettings = preferences.sidebarAppearance;
 
   useEffect(() => {
-    try {
-      localStorage.setItem('erp_nav_sidebar_settings', JSON.stringify(settings));
-    } catch { /* ignore storage errors */ }
-  }, [settings]);
+    if (!settings.navRemembersState) return;
+    const savedCollapsed = localStorage.getItem(NAV_COLLAPSE_KEY);
+    if (savedCollapsed === null) return;
+    const nextCollapsed = savedCollapsed === 'true';
+    if (nextCollapsed !== settings.navCollapsed) {
+      updateSidebarAppearance({ navCollapsed: nextCollapsed });
+    }
+  }, [settings.navCollapsed, settings.navRemembersState, updateSidebarAppearance]);
 
   // ── Sync with global layout changes dispatched by AppearanceProvider ──
   useEffect(() => {
@@ -53,32 +26,27 @@ export const NavSidebarSettingsProvider: React.FC<{ children: ReactNode }> = ({ 
       const { layoutType } = (e as CustomEvent<{ layoutType: NavLayoutType }>).detail;
       const preset = LAYOUT_PRESETS[layoutType];
       if (preset) {
-        setSettings(prev => ({ ...prev, ...preset }));
+        updateSidebarAppearance(preset);
       }
     };
     window.addEventListener('erp:layout-changed', handler);
     return () => window.removeEventListener('erp:layout-changed', handler);
-  }, []);
+  }, [updateSidebarAppearance]);
 
   const updateSetting = <K extends keyof NavSidebarSettings>(key: K, value: NavSidebarSettings[K]) => {
-    setSettings(prev => {
-      let next = { ...prev, [key]: value };
-      if (key === 'navLayoutType') {
-        const preset = LAYOUT_PRESETS[value as NavLayoutType];
-        if (preset) {
-          next = { ...next, ...preset };
-        }
-      }
-      if (key === 'navCollapsed' && prev.navRemembersState) {
-        try {
-          localStorage.setItem(NAV_COLLAPSE_KEY, String(value));
-        } catch { /* ignore */ }
-      }
-      return next;
-    });
+    const next: Partial<NavSidebarSettings> = { [key]: value } as Partial<NavSidebarSettings>;
+    if (key === 'navLayoutType') {
+      Object.assign(next, LAYOUT_PRESETS[value as NavLayoutType] ?? {});
+    }
+    if (key === 'navCollapsed' && settings.navRemembersState) {
+      try {
+        localStorage.setItem(NAV_COLLAPSE_KEY, String(value));
+      } catch { /* ignore */ }
+    }
+    updateSidebarAppearance(next);
   };
 
-  const resetSettings = () => setSettings(DEFAULT_SETTINGS);
+  const resetSettings = () => resetSidebarAppearance();
 
   const getNavWidth = useCallback(() => {
     if (settings.navCollapsed) {

@@ -3,12 +3,12 @@ import { useSearchParams } from "react-router-dom";
 import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTemplate";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
 import { useChartOfAccounts } from "@shared/hooks/queries/useAccountQueries";
-import { ReportFilterBar } from "@widgets/reports/ReportFilterBar";
 import { useReportFilters } from "@shared/hooks/useReportFilters";
 import { useAccountMovementsReport } from "../hooks/useAccountMovementsReport";
 import { AccountMovementView } from "../components/AccountMovementView";
 import type { AccountDto } from "@erp/shared-types";
 import { useLocalization } from "@app/providers/LocalizationProvider";
+import { ReportPageContext } from "@widgets/reports/ReportPageHeader";
 
 function getDescendantIds(accountId: string, accounts: AccountDto[]): string[] {
   const children = accounts.filter(a => a.parent_id === accountId);
@@ -28,7 +28,7 @@ export default function AccountMovementsReport() {
     return getDescendantIds(selectedAccountId, accounts);
   }, [selectedAccountId, accounts]);
 
-  const { loading, refreshing, lastLoadedAt, reportData, loadReportData } = useAccountMovementsReport(accountIds, filters);
+  const { loading, reportData } = useAccountMovementsReport(accountIds, filters);
 
   const symbol = baseCurrency?.symbol || baseCurrency?.code || "";
 
@@ -49,14 +49,13 @@ export default function AccountMovementsReport() {
           </SelectContent>
         </Select>
       }
-      filterBar={
-        <ReportFilterBar
+      pageContextInline
+      pageContextSide="end"
+      pageHeaderSingleRow
+      pageContext={
+        <ReportPageContext
           filters={filters}
           onFiltersChange={setFilters}
-          showCurrencySelect={false}
-          refreshing={refreshing}
-          onRefresh={() => void loadReportData()}
-          lastLoadedAt={lastLoadedAt}
         />
       }
       tableContent={

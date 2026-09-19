@@ -12,7 +12,6 @@ type IncomeStatementViewProps = {
     to_date: string;
   };
   selectedCurrencyLabel: string;
-  lastLoadedAt: Date | null;
   formatValue: (value: number) => string;
 };
 

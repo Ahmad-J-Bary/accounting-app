@@ -4,10 +4,10 @@ import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { useReportFilters } from "@shared/hooks/useReportFilters";
 import { useIncomeStatement } from "@shared/hooks/queries/useReportQueries";
 import { IncomeStatementView } from "@modules/reports/components/IncomeStatementView";
-import { ReportFilterBar } from "@widgets/reports/ReportFilterBar";
 import { ReportLoadingSkeleton } from "@widgets/reports";
 import type { IncomeStatementComputed, IncomeStatementSection, IncomeStatementRow } from "@modules/reports/lib/incomeStatement";
 import { useLocalization } from "@app/providers/LocalizationProvider";
+import { ReportPageContext } from "@widgets/reports/ReportPageHeader";
 
 export default function IncomeStatementReport() {
   const { baseCurrency, currencies, formatAmount, hasMultipleCurrencies } = useCurrencyContext();
@@ -22,12 +22,10 @@ export default function IncomeStatementReport() {
     new Date().toISOString().split("T")[0]
   );
 
-  const { isLoading, isRefetching, data: backendData, dataUpdatedAt, refetch } = useIncomeStatement({
+  const { isLoading, data: backendData } = useIncomeStatement({
     from_date: filters.from_date,
     to_date: filters.to_date,
   });
-
-  const lastLoadedAt = dataUpdatedAt ? new Date(dataUpdatedAt) : null;
 
   const computed: IncomeStatementComputed | null = useMemo(() => {
     if (!backendData) return null;
@@ -114,8 +112,11 @@ export default function IncomeStatementReport() {
   return (
     <OperationalTableTemplate
       title={t("incomeStatement.title", { namespace: "reports",  })}
-      filterBar={
-        <ReportFilterBar
+      pageContextInline
+      pageContextSide="end"
+      pageHeaderSingleRow
+      pageContext={
+        <ReportPageContext
           filters={filters}
           onFiltersChange={setFilters}
           showCurrencySelect={hasMultipleCurrencies}
@@ -123,9 +124,6 @@ export default function IncomeStatementReport() {
           onCurrencyChange={setSelectedCurrency}
           currencies={currencies}
           baseCurrencyCode={baseCurrency?.code}
-          refreshing={isRefetching}
-          onRefresh={() => void refetch()}
-          lastLoadedAt={lastLoadedAt}
         />
       }
       tableContent={
@@ -136,7 +134,6 @@ export default function IncomeStatementReport() {
             computed={computed}
             filters={filters}
             selectedCurrencyLabel={selectedCurrencyLabel}
-            lastLoadedAt={lastLoadedAt}
             formatValue={formatValue}
           />
         ) : null

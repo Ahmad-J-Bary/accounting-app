@@ -4,6 +4,7 @@ import { Toaster } from '@shared/ui/sonner';
 import { TooltipProvider } from '@shared/ui/tooltip';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { AppearanceProvider } from '@app/providers/AppearanceProvider';
+import { UiPreferencesProvider } from '@app/providers/UiPreferencesProvider';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AppLayout } from '@app/shell/AppLayout';
 import { TabProvider } from '@app/providers/TabProvider';
@@ -156,50 +157,52 @@ function NormalStartup() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <AppearanceProvider>
-        <LocalizationProvider>
-          <TooltipProvider>
-            <Toaster />
-            <BrowserRouter>
-              <Routes>
-                <Route path="/" element={<Index />} />
-                <Route path="/auth/callback" element={<AuthCallback />} />
-                <Route path="/auth/error" element={<AuthError />} />
-                <Route path="/setup" element={<SetupWizard />} />
+      <UiPreferencesProvider>
+        <AppearanceProvider>
+          <LocalizationProvider>
+            <TooltipProvider>
+              <Toaster />
+              <BrowserRouter>
+                <Routes>
+                  <Route path="/" element={<Index />} />
+                  <Route path="/auth/callback" element={<AuthCallback />} />
+                  <Route path="/auth/error" element={<AuthError />} />
+                  <Route path="/setup" element={<SetupWizard />} />
 
-                {/* ERP Routes with AppLayout */}
-                <Route path="/*" element={
-                  <CurrencyProvider>
-                    <ResponsiveProvider>
-                      <TableSettingsProvider>
-                        <SidePanelSettingsProvider>
-                          <NavSidebarSettingsProvider>
-                            <SidebarLayoutProvider>
-                              <TabProvider>
-                                <WindowProvider>
-                                  <CommandProvider>
-                                    <GlobalSearchProvider>
-                                      <VoiceProvider>
-                                        <BarcodeScannerProvider>
-                                          <AppLayout />
-                                        </BarcodeScannerProvider>
-                                      </VoiceProvider>
-                                    </GlobalSearchProvider>
-                                  </CommandProvider>
-                                </WindowProvider>
-                              </TabProvider>
-                            </SidebarLayoutProvider>
-                          </NavSidebarSettingsProvider>
-                        </SidePanelSettingsProvider>
-                      </TableSettingsProvider>
-                    </ResponsiveProvider>
-                  </CurrencyProvider>
-                } />
-              </Routes>
-            </BrowserRouter>
-          </TooltipProvider>
-        </LocalizationProvider>
-      </AppearanceProvider>
+                  {/* ERP Routes with AppLayout */}
+                  <Route path="/*" element={
+                    <CurrencyProvider>
+                      <ResponsiveProvider>
+                        <TableSettingsProvider>
+                          <SidePanelSettingsProvider>
+                            <NavSidebarSettingsProvider>
+                              <SidebarLayoutProvider>
+                                <TabProvider>
+                                  <WindowProvider>
+                                    <CommandProvider>
+                                      <GlobalSearchProvider>
+                                        <VoiceProvider>
+                                          <BarcodeScannerProvider>
+                                            <AppLayout />
+                                          </BarcodeScannerProvider>
+                                        </VoiceProvider>
+                                      </GlobalSearchProvider>
+                                    </CommandProvider>
+                                  </WindowProvider>
+                                </TabProvider>
+                              </SidebarLayoutProvider>
+                            </NavSidebarSettingsProvider>
+                          </SidePanelSettingsProvider>
+                        </TableSettingsProvider>
+                      </ResponsiveProvider>
+                    </CurrencyProvider>
+                  } />
+                </Routes>
+              </BrowserRouter>
+            </TooltipProvider>
+          </LocalizationProvider>
+        </AppearanceProvider>
+      </UiPreferencesProvider>
     </QueryClientProvider>
   );
 }

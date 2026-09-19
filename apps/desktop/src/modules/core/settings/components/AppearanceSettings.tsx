@@ -1,5 +1,4 @@
 import { useAppearance } from '@shared/hooks/useAppearance';
-import { useNavSidebarSettings } from '@shared/hooks/useNavSidebarSettings';
 import { THEME_LIST } from '@shared/config/themeRegistry';
 import { PRIMARY_COLORS } from '@shared/config/primaryColors';
 import { computeLayoutType } from '@shared/config/computeLayoutType';
@@ -40,7 +39,6 @@ function ToggleRow({
 export function AppearanceSettings() {
   const { t, direction } = useLocalization();
   const { settings, updateSettings, resetSettings } = useAppearance();
-  const { settings: navSettings, updateSetting: updateNav } = useNavSidebarSettings();
 
   const handleLayoutChange = (partial: {
     navMenuType?: NavMenuType;
@@ -302,45 +300,6 @@ export function AppearanceSettings() {
           <ToggleRow label={t("appearance.show.search", { namespace: "settings" })} desc={t("appearance.show.searchDesc", { namespace: "settings" })} checked={settings.show.search} onChange={v => updateSettings({ show: { ...settings.show, search: v } })} />
           <ToggleRow label={t("appearance.show.notifications", { namespace: "settings" })} desc={t("appearance.show.notificationsDesc", { namespace: "settings" })} checked={settings.show.notifications} onChange={v => updateSettings({ show: { ...settings.show, notifications: v } })} />
           <ToggleRow label={t("appearance.show.breadcrumbs", { namespace: "settings" })} desc={t("appearance.show.breadcrumbsDesc", { namespace: "settings" })} checked={settings.show.breadcrumbs} onChange={v => updateSettings({ show: { ...settings.show, breadcrumbs: v } })} />
-        </div>
-      </SettingsSection>
-
-      {/* ── Sidebar Overrides ── */}
-      <SettingsSection title={t("appearance.sidebarOverridesTitle", { namespace: "settings" })} description={t("appearance.sidebarOverridesDescription", { namespace: "settings" })}>
-        <div>
-          <ToggleRow label={t("appearance.sidebarOverrides.collapsed", { namespace: "settings" })} desc={t("appearance.sidebarOverrides.collapsedDesc", { namespace: "settings" })} checked={navSettings.navCollapsed} onChange={v => updateNav('navCollapsed', v)} />
-          <ToggleRow label={t("appearance.sidebarOverrides.groupHeaders", { namespace: "settings" })} desc={t("appearance.sidebarOverrides.groupHeadersDesc", { namespace: "settings" })} checked={navSettings.navShowSectionHeaders} onChange={v => updateNav('navShowSectionHeaders', v)} />
-          <ToggleRow label={t("appearance.sidebarOverrides.icons", { namespace: "settings" })} desc={t("appearance.sidebarOverrides.iconsDesc", { namespace: "settings" })} checked={!navSettings.navIconOnly} onChange={v => updateNav('navIconOnly', !v)} />
-        </div>
-
-        <div className="mt-2 pt-2 border-t border-border">
-          <span className="font-semibold text-[11px] text-foreground block mb-1.5">{t("appearance.sidebarBackground", { namespace: "settings" })}</span>
-          <div className="flex flex-wrap gap-1">
-            {[
-              { id: 'bg-slate-900', label: t("appearance.sidebarBackgrounds.dark", { namespace: "settings" }), color: '#0f172a' },
-              { id: 'bg-slate-950', label: t("appearance.sidebarBackgrounds.veryDark", { namespace: "settings" }), color: '#020617' },
-              { id: 'bg-slate-800', label: t("appearance.sidebarBackgrounds.darkGray", { namespace: "settings" }), color: '#1e293b' },
-              { id: 'bg-white', label: t("appearance.sidebarBackgrounds.white", { namespace: "settings" }), color: '#ffffff' },
-              { id: 'bg-slate-50', label: t("appearance.sidebarBackgrounds.lightGray", { namespace: "settings" }), color: '#f8fafc' },
-            ].map((opt) => {
-              const isActive = navSettings.navBackground === opt.id;
-              return (
-                <button
-                  key={opt.id}
-                  onClick={() => updateNav('navBackground', opt.id)}
-                  className={cn(
-                    "flex items-center gap-1 px-2 py-1 rounded-md border text-[9px] font-semibold transition-all",
-                    isActive
-                      ? "border-primary bg-primary/5 text-primary"
-                      : "border-border text-muted-foreground hover:border-border/80 hover:bg-accent"
-                  )}
-                >
-                  <span className="w-2.5 h-2.5 rounded-full border border-border shrink-0" style={{ backgroundColor: opt.color }} />
-                  {opt.label}
-                </button>
-              );
-            })}
-          </div>
         </div>
       </SettingsSection>
 

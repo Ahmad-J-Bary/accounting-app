@@ -1,23 +1,7 @@
-import React, { useState, useEffect, ReactNode } from 'react';
+import React, { useEffect, ReactNode } from 'react';
 import { SidePanelSettings, SidebarWidthPreset, SidebarDensity } from '@shared/types/sidebar-settings';
 import { SidePanelSettingsContext } from '@shared/context/SidePanelSettingsContext';
-
-const DEFAULT_SETTINGS: SidePanelSettings = {
-  widthPreset: 'standard',
-  customWidth: 500,
-  density: 'comfortable',
-  fontSize: 13,
-  paddingPreset: 'comfortable',
-  spacingPreset: 'comfortable',
-  background: 'bg-white',
-  borderStyle: 'left',
-  shadow: 'lg',
-  stickyHeaderFooter: true,
-  overlayVsInline: 'inline',
-  animationSpeed: 300,
-  closeButtonVisibility: true,
-  saveButtonPlacement: 'right',
-};
+import { useUiPreferences } from '@shared/hooks/useUiPreferences';
 
 const WIDTH_MAP: Record<SidebarWidthPreset, number> = {
   narrow: 380,
@@ -57,20 +41,8 @@ const DENSITY_VARS: Record<SidebarDensity, Record<string, string>> = {
 };
 
 export const SidePanelSettingsProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [settings, setSettings] = useState<SidePanelSettings>(() => {
-    try {
-      const saved = localStorage.getItem('erp_side_panel_settings');
-      return saved ? { ...DEFAULT_SETTINGS, ...JSON.parse(saved) } : DEFAULT_SETTINGS;
-    } catch {
-      return DEFAULT_SETTINGS;
-    }
-  });
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('erp_side_panel_settings', JSON.stringify(settings));
-    } catch { /* ignore storage errors */ }
-  }, [settings]);
+  const { preferences, updateOperationsPanel, resetOperationsPanel } = useUiPreferences();
+  const settings: SidePanelSettings = preferences.operationsPanel;
 
   useEffect(() => {
     const vars = DENSITY_VARS[settings.density];
@@ -93,16 +65,14 @@ export const SidePanelSettingsProvider: React.FC<{ children: ReactNode }> = ({ c
   }, [settings.density]);
 
   const updateSetting = <K extends keyof SidePanelSettings>(key: K, value: SidePanelSettings[K]) => {
-    setSettings(prev => {
-      const next = { ...prev, [key]: value };
-      if (key === 'widthPreset') {
-        next.customWidth = WIDTH_MAP[value as SidebarWidthPreset] ?? next.customWidth;
-      }
-      return next;
-    });
+    const next: Partial<SidePanelSettings> = { [key]: value } as Partial<SidePanelSettings>;
+    if (key === 'widthPreset') {
+      next.customWidth = WIDTH_MAP[value as SidebarWidthPreset] ?? settings.customWidth;
+    }
+    updateOperationsPanel(next);
   };
 
-  const resetSettings = () => setSettings(DEFAULT_SETTINGS);
+  const resetSettings = () => resetOperationsPanel();
 
   const getFontSizeClass = () => {
     switch (settings.fontSize) {

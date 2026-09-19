@@ -4,6 +4,12 @@ import { PageHeader } from "./PageHeader";
 import { TemplateDetailPanel } from "./TemplateDetailPanel";
 import { useLocalization } from "@app/providers/LocalizationProvider";
 import type { ResponsiveActionItem } from "@widgets/page-header/ResponsiveActions";
+import { useUiPreferences } from "@shared/hooks/useUiPreferences";
+import {
+  getPageTemplateGutterClass,
+  getPageTemplateRegionGapClass,
+  getTableShellRadiusClass,
+} from "@shared/lib/page-template-settings";
 
 interface FinancialDocumentTemplateProps {
   title: string;
@@ -25,6 +31,8 @@ export function FinancialDocumentTemplate({
   lineItemsGrid, summaryPanel, sidebar, isSidebarOpen = false, footer, className
 }: FinancialDocumentTemplateProps) {
   const { direction } = useLocalization();
+  const { preferences } = useUiPreferences();
+  const pageTemplate = preferences.pageTemplate;
   return (
     <div className={cn("flex flex-col h-full w-full bg-muted/30", className)} dir={direction}>
       <PageHeader
@@ -36,13 +44,13 @@ export function FinancialDocumentTemplate({
         pinAction
         pinLabel={title}
       />
-      <div className="flex flex-1 overflow-hidden gap-1.5 p-1.5 sm:gap-2 sm:p-2">
-        <div className="flex min-w-0 flex-1 flex-col gap-1.5 overflow-hidden sm:gap-2">
-          <div className="shrink-0 rounded-lg border border-border border-t-primary/5 bg-card p-1.5 shadow-sm border-t-2 sm:p-2">
+      <div className={cn("flex flex-1 overflow-hidden", getPageTemplateGutterClass(pageTemplate))}>
+        <div className={cn("flex min-w-0 flex-1 flex-col overflow-hidden", getPageTemplateRegionGapClass(pageTemplate))}>
+          <div className={cn("shrink-0 border border-border border-t-2 border-t-primary/5 bg-card p-1.5 shadow-sm sm:p-2", getTableShellRadiusClass(pageTemplate))}>
             <div className="grid auto-rows-min grid-cols-1 gap-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">{headerFields}</div>
           </div>
 
-          <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-border bg-card shadow-sm">
+          <div className={cn("flex min-h-0 flex-1 flex-col overflow-hidden border border-border bg-card shadow-sm", getTableShellRadiusClass(pageTemplate))}>
             <div className="flex-1 overflow-auto">{lineItemsGrid}</div>
             {footer && <div className="p-1.5 sm:p-2 border-t border-border bg-muted/20">{footer}</div>}
           </div>

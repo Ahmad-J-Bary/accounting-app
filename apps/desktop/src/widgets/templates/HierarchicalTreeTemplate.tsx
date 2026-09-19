@@ -4,6 +4,11 @@ import { PageHeader } from "./PageHeader";
 import { TemplateDetailPanel } from "./TemplateDetailPanel";
 import { useLocalization } from "@app/providers/LocalizationProvider";
 import type { ResponsiveActionItem } from "@widgets/page-header/ResponsiveActions";
+import { useUiPreferences } from "@shared/hooks/useUiPreferences";
+import {
+  getPageTemplateGutterClass,
+  getTableShellRadiusClass,
+} from "@shared/lib/page-template-settings";
 
 interface HierarchicalTreeTemplateProps {
   title: string;
@@ -34,7 +39,9 @@ export function HierarchicalTreeTemplate({
   children = "default",
 }: HierarchicalTreeTemplateProps) {
   const { t, direction } = useLocalization();
+  const { preferences } = useUiPreferences();
   const resolvedTreeHeaderTitle = treeHeaderTitle ?? t('labels.hierarchicalTree');
+  const pageTemplate = preferences.pageTemplate;
   return (
     <div className={cn("flex h-full w-full flex-col bg-muted/30", className)} dir={direction}>
       <PageHeader
@@ -46,7 +53,7 @@ export function HierarchicalTreeTemplate({
         pinLabel={title}
       />
 
-      <div className="flex flex-1 overflow-hidden gap-1.5 p-1.5 sm:gap-2 sm:p-2 md:gap-3 md:p-2.5">
+      <div className={cn("flex flex-1 overflow-hidden", getPageTemplateGutterClass(pageTemplate))}>
         {/* Tree Column */}
         <div className={cn(
           "flex flex-col overflow-hidden min-w-0",
@@ -54,7 +61,7 @@ export function HierarchicalTreeTemplate({
           sidePanel && isPanelOpen ? "max-lg:hidden" : "",
         )}>
           <aside
-            className="flex flex-1 flex-col overflow-hidden rounded-xl border border-border bg-card shadow-sm transition-all hover:shadow-md"
+            className={cn("flex flex-1 flex-col overflow-hidden border border-border bg-card shadow-sm transition-all hover:shadow-md", getTableShellRadiusClass(pageTemplate))}
           >
             <div
               className="flex shrink-0 items-center justify-between gap-2 border-b border-border bg-muted/30 px-2.5 py-2.5 sm:px-3 sm:py-3"

@@ -15,6 +15,8 @@ export interface SidebarHeaderProps {
   title: string;
   subtitle?: string;
   icon?: ReactNode;
+  context?: ReactNode;
+  contextInline?: boolean;
   onClose?: () => void;
   actions?: ReactNode;
   className?: string;

@@ -42,6 +42,8 @@ interface JournalTableProps {
   reversalContext?: ReversalContext;
   /** Click handler for entry number — opens detail view. */
   onEntryClick?: (entryId: string) => void;
+  startContent?: ReactNode;
+  endContent?: ReactNode;
 }
 
 type SortFieldTwoLine = "entry_number" | "created_at" | "journal_type" | "account";
@@ -95,6 +97,8 @@ export function JournalTable({
   reversingId,
   reversalContext,
   onEntryClick,
+  startContent,
+  endContent,
 }: JournalTableProps) {
   const { isBaseCurrency, currencySuffix: cs, hasSecondaryCurrencies } = useBaseCurrencyColumns();
   const { settings, getDensityPadding } = useTableSettings();
@@ -932,7 +936,7 @@ export function JournalTable({
     return (
       <div
         key={`${keyPrefix}-${first.group_key}-${groupIdx}`}
-        dir="rtl"
+        dir={direction}
         className={cn(
           "transition-all duration-75",
           getRowBorderClass(settings.borderStyle),
@@ -1066,6 +1070,8 @@ export function JournalTable({
       onColumnToggle={toggleColumn}
       onColumnsReset={resetToDefault}
       columnsModified={isModified}
+      startContent={startContent}
+      endContent={endContent}
       showToolbar={true}
       onExportExcel={handleExport}
     >

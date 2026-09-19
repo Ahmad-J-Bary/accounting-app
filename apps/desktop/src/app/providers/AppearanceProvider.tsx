@@ -1,6 +1,5 @@
-import React, { createContext, useState, useEffect, useCallback, useMemo } from 'react';
+import React, { createContext, useEffect, useCallback, useMemo } from 'react';
 import type {
-  AppearanceSettings,
   AppearanceContextType,
   LayoutType,
   ThemeId,
@@ -9,48 +8,18 @@ import type {
   UIScale,
   VisibilitySettings,
 } from '@shared/types/appearance';
-import { DEFAULT_APPEARANCE } from '@shared/types/appearance';
+import type { AppearanceSettings } from '@shared/types/appearance';
 import { getLayoutDefinition } from '@shared/config/layoutRegistry';
 import { getThemeDefinition } from '@shared/config/themeRegistry';
 import { getPrimaryColor, applyPrimaryColor } from '@shared/config/primaryColors';
-import { deriveCompoundFromLayout } from '@shared/config/computeLayoutType';
-
-const STORAGE_KEY = 'erp_appearance_settings';
-
-function loadSettings(): AppearanceSettings {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return DEFAULT_APPEARANCE;
-    const parsed = JSON.parse(raw);
-    // Migration: legacy settings lack new compound fields — derive them from layoutType
-    if (!('sidenavShape' in parsed)) {
-      const compound = deriveCompoundFromLayout(parsed.layoutType || DEFAULT_APPEARANCE.layoutType);
-      parsed.sidenavShape = compound.sidenavShape;
-      parsed.topnavShape = compound.topnavShape;
-      parsed.verticalNavbarAppearance = compound.verticalNavbarAppearance;
-      parsed.horizontalNavbarAppearance = compound.horizontalNavbarAppearance;
-      if (!parsed.navMenuType) {
-        parsed.navMenuType = compound.navMenuType;
-      }
-    }
-    return { ...DEFAULT_APPEARANCE, ...parsed };
-  } catch {
-    return DEFAULT_APPEARANCE;
-  }
-}
-
-function saveSettings(settings: AppearanceSettings) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
-}
+import { useUiPreferences } from '@shared/hooks/useUiPreferences';
 
 // eslint-disable-next-line react-refresh/only-export-components
 export const AppearanceContext = createContext<AppearanceContextType | undefined>(undefined);
 
 export const AppearanceProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [settings, setSettings] = useState<AppearanceSettings>(loadSettings);
-
-  // Persist on change
-  useEffect(() => { saveSettings(settings); }, [settings]);
+  const { preferences, updateGeneralAppearance, resetGeneralAppearance } = useUiPreferences();
+  const settings: AppearanceSettings = preferences.generalAppearance;
 
   // ── Resolve helpers ──
   const activeLayout = useMemo(() => getLayoutDefinition(settings.layoutType), [settings.layoutType]);
@@ -127,55 +96,54 @@ export const AppearanceProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     const mq = window.matchMedia('(prefers-color-scheme: dark)');
     const handler = () => {
       // Trigger re-render by reading isDark
-      setSettings(prev => ({ ...prev }));
+      updateGeneralAppearance({});
     };
     mq.addEventListener('change', handler);
     return () => mq.removeEventListener('change', handler);
-  }, [settings.mode]);
+  }, [settings.mode, updateGeneralAppearance]);
 
   // ── Setters ──
   const setLayoutType = useCallback((type: LayoutType) => {
-    setSettings(prev => ({ ...prev, layoutType: type }));
-  }, []);
+    updateGeneralAppearance({ layoutType: type });
+  }, [updateGeneralAppearance]);
 
   const setTheme = useCallback((theme: ThemeId) => {
-    setSettings(prev => ({ ...prev, theme }));
-  }, []);
+    updateGeneralAppearance({ theme });
+  }, [updateGeneralAppearance]);
 
   const setMode = useCallback((mode: ColorMode) => {
-    setSettings(prev => ({ ...prev, mode }));
-  }, []);
+    updateGeneralAppearance({ mode });
+  }, [updateGeneralAppearance]);
 
   const setPrimaryColor = useCallback((color: string) => {
-    setSettings(prev => ({ ...prev, primaryColor: color }));
-  }, []);
+    updateGeneralAppearance({ primaryColor: color });
+  }, [updateGeneralAppearance]);
 
   const setDensity = useCallback((density: DensityMode) => {
-    setSettings(prev => ({ ...prev, density }));
-  }, []);
+    updateGeneralAppearance({ density });
+  }, [updateGeneralAppearance]);
 
   const setUIScale = useCallback((uiScale: UIScale) => {
-    setSettings(prev => ({ ...prev, uiScale }));
-  }, []);
+    updateGeneralAppearance({ uiScale });
+  }, [updateGeneralAppearance]);
 
   const updateVisibility = useCallback((key: keyof VisibilitySettings, value: boolean) => {
-    setSettings(prev => ({
-      ...prev,
-      show: { ...prev.show, [key]: value },
-    }));
-  }, []);
+    updateGeneralAppearance({
+      show: { ...settings.show, [key]: value },
+    });
+  }, [settings.show, updateGeneralAppearance]);
 
   const updateSidebarSetting = useCallback(<K extends keyof AppearanceSettings>(key: K, value: AppearanceSettings[K]) => {
-    setSettings(prev => ({ ...prev, [key]: value }));
-  }, []);
+    updateGeneralAppearance({ [key]: value } as Partial<AppearanceSettings>);
+  }, [updateGeneralAppearance]);
 
   const updateSettings = useCallback((partial: Partial<AppearanceSettings>) => {
-    setSettings(prev => ({ ...prev, ...partial }));
-  }, []);
+    updateGeneralAppearance(partial);
+  }, [updateGeneralAppearance]);
 
   const resetSettings = useCallback(() => {
-    setSettings(DEFAULT_APPEARANCE);
-  }, []);
+    resetGeneralAppearance();
+  }, [resetGeneralAppearance]);
 
   // ── Context value ──
   const value = useMemo<AppearanceContextType>(() => ({

@@ -2,6 +2,8 @@ import React, { ReactNode } from 'react';
 import { TableToolbar } from './TableToolbar';
 import { useTableSettings } from '@shared/hooks';
 import { cn } from '@shared/lib/utils';
+import { useUiPreferences } from '@shared/hooks/useUiPreferences';
+import { getTableShellRadiusClass } from '@shared/lib/page-template-settings';
 
 export interface TableShellColumn {
   id: string;
@@ -18,6 +20,9 @@ export interface TableShellProps {
   onColumnToggle: (id: string) => void;
   onColumnsReset?: () => void;
   columnsModified?: boolean;
+  startContent?: ReactNode;
+  datasetContext?: ReactNode;
+  endContent?: ReactNode;
   actions?: ReactNode;
   children: ReactNode;
   footer?: ReactNode;
@@ -38,6 +43,9 @@ export const TableShell: React.FC<TableShellProps> = ({
   onColumnToggle,
   onColumnsReset,
   columnsModified = false,
+  startContent,
+  datasetContext,
+  endContent,
   actions,
   children,
   footer,
@@ -49,11 +57,14 @@ export const TableShell: React.FC<TableShellProps> = ({
   className,
 }) => {
   const { settings } = useTableSettings();
+  const { preferences } = useUiPreferences();
+  const tableRadiusClass = getTableShellRadiusClass(preferences.pageTemplate);
+  const dataHeaderSettings = preferences.dataHeader;
 
   return (
-    <div className={cn("flex flex-col h-full bg-card rounded-xl shadow-sm border border-border overflow-hidden", className)}>
+    <div className={cn("flex h-full flex-col overflow-hidden border border-border bg-card shadow-sm", tableRadiusClass, className)}>
       {showToolbar && settings.showToolbar && (
-        <div className="no-print border-b border-border bg-muted/20 px-3 py-2">
+        <div className={cn("no-print border-b border-border", dataHeaderSettings.sticky && "sticky top-0 z-10")}>
           <TableToolbar
             title={title}
             search={search}
@@ -63,6 +74,9 @@ export const TableShell: React.FC<TableShellProps> = ({
             onColumnToggle={onColumnToggle}
             onColumnsReset={onColumnsReset}
             columnsModified={columnsModified}
+            startContent={startContent}
+            datasetContext={datasetContext}
+            endContent={endContent}
             actions={actions}
             filterBar={filterBar}
             onExportExcel={onExportExcel}

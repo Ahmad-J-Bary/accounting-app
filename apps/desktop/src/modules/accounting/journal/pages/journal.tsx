@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
-import { useSearchParams, useNavigate } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
-import { Filter, LayoutList, LayoutGrid, Plus } from "lucide-react";
+import { Filter, LayoutList, LayoutGrid } from "lucide-react";
 import { toast } from "sonner";
 import { journalEntryService, type JournalFilters } from '@modules/accounting/api/journalEntryService';
 import type { JournalEntryDto, JournalType } from "@erp/shared-types";
@@ -15,7 +15,6 @@ import { toLocalDateStr } from "@shared/lib/format";
 import { JOURNAL_MUTATION_KEYS, invalidateKeys } from "@shared/hooks/queryClient";
 import { useTabs } from "@app/providers/TabContext";
 import { useLocalization } from "@app/providers/LocalizationProvider";
-import type { ResponsiveActionItem } from "@widgets/page-header/ResponsiveActions";
 
 // Refactored Components & Hooks
 import { useDataTable } from '@shared/hooks';
@@ -27,7 +26,6 @@ type DisplayMode = "two-line" | "one-line";
 
 export default function Journal() {
   const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
   const { openTab } = useTabs();
   const { t } = useLocalization();
   const typeParam = searchParams.get('type') as JournalType | null;
@@ -173,89 +171,96 @@ export default function Journal() {
     });
   }, [openTab, t]);
 
-  const handleNewEntry = useCallback(() => {
-    navigate("/journal/new");
-  }, [navigate]);
+  const pageContext = useMemo(
+    () => (
+      <div className="flex flex-wrap items-center gap-2">
+        <DateRangePicker
+          from={dateFilters.from_date}
+          to={dateFilters.to_date}
+          onFromChange={(v) => setDateFilters({ from_date: v })}
+          onToChange={(v) => setDateFilters({ to_date: v })}
+        />
+      </div>
+    ),
+    [dateFilters.from_date, dateFilters.to_date, setDateFilters],
+  );
 
-  const toolbarActions = useMemo<ResponsiveActionItem[]>(() => [
-    {
-      id: "new-journal-entry",
-      label: t("journal.newEntry", { namespace: "accounting" }),
-      icon: Plus,
-      priority: "primary",
-      onClick: handleNewEntry,
-    },
-  ], [handleNewEntry, t]);
+  const dataHeaderStart = useMemo(
+    () => (
+      <>
+        <Select
+          value={journalType}
+          onValueChange={(val) => setJournalType(val as JournalType)}
+        >
+          <SelectTrigger className="h-9 w-[180px] border-border bg-background font-bold shadow-sm">
+            <Filter className="ms-2 h-4 w-4 text-muted-foreground" />
+            <SelectValue placeholder={t("journal.typePlaceholder", { namespace: "accounting",  })} />
+          </SelectTrigger>
+          <SelectContent>
+            {JOURNAL_TYPES.map((jt) => (
+              <SelectItem key={jt.value} value={jt.value} className="font-bold">{t(journalTypeOptionKey(jt.value), { namespace: "accounting"})}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <button
+          type="button"
+          onClick={() => setShowAudit(v => !v)}
+          className={`rounded-lg border px-3 py-2 text-sm font-bold transition-colors ${
+            showAudit
+              ? "border-foreground bg-foreground text-background"
+              : "border-border bg-background text-muted-foreground hover:bg-muted"
+          }`}
+          title={t("journal.audit.title", { namespace: "accounting",  })}
+        >
+          {showAudit ? t("journal.audit.hide", { namespace: "accounting",  }) : t("journal.audit.show", { namespace: "accounting",  })}
+        </button>
+      </>
+    ),
+    [journalType, setJournalType, showAudit, t],
+  );
+
+  const dataHeaderEnd = useMemo(
+    () => (
+      <div className="flex items-center gap-1 overflow-hidden rounded-lg border border-border bg-background p-1">
+        <button
+          type="button"
+          onClick={() => setDisplayMode("two-line")}
+          className={`rounded-md p-2 transition-colors ${
+            displayMode === "two-line"
+              ? "bg-primary text-white"
+              : "text-muted-foreground hover:bg-muted"
+          }`}
+          title={t("journal.display.twoLine", { namespace: "accounting",  })}
+        >
+          <LayoutList className="h-4 w-4" />
+        </button>
+        <button
+          type="button"
+          onClick={() => setDisplayMode("one-line")}
+          className={`rounded-md p-2 transition-colors ${
+            displayMode === "one-line"
+              ? "bg-primary text-white"
+              : "text-muted-foreground hover:bg-muted"
+          }`}
+          title={t("journal.display.oneLine", { namespace: "accounting",  })}
+        >
+          <LayoutGrid className="h-4 w-4" />
+        </button>
+      </div>
+    ),
+    [displayMode, t],
+  );
 
   return (
     <ErrorBoundary>
       <OperationalTableTemplate
         title={journalTitle}
-        toolbarActions={toolbarActions}
-        filterBar={
-          <div className="flex flex-wrap items-center gap-2">
-            <DateRangePicker
-              from={dateFilters.from_date}
-              to={dateFilters.to_date}
-              onFromChange={(v) => setDateFilters({ from_date: v })}
-              onToChange={(v) => setDateFilters({ to_date: v })}
-            />
-            <Select
-              value={journalType}
-              onValueChange={(val) => setJournalType(val as JournalType)}
-            >
-              <SelectTrigger className="h-10 w-[180px] border-border bg-card font-bold shadow-sm">
-                <Filter className="w-4 h-4 ms-2 text-muted-foreground" />
-                <SelectValue placeholder={t("journal.typePlaceholder", { namespace: "accounting",  })} />
-              </SelectTrigger>
-              <SelectContent>
-                {JOURNAL_TYPES.map((jt) => (
-                  <SelectItem key={jt.value} value={jt.value} className="font-bold">{t(journalTypeOptionKey(jt.value), { namespace: "accounting"})}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <button
-              type="button"
-              onClick={() => setShowAudit(v => !v)}
-              className={`rounded-lg border px-3 py-2 text-sm font-bold transition-colors ${
-                showAudit
-                  ? "border-foreground bg-foreground text-background"
-                  : "border-border bg-card text-muted-foreground hover:bg-muted"
-              }`}
-              title={t("journal.audit.title", { namespace: "accounting",  })}
-            >
-              {showAudit ? t("journal.audit.hide", { namespace: "accounting",  }) : t("journal.audit.show", { namespace: "accounting",  })}
-            </button>
-
-            <div className="flex items-center gap-1 overflow-hidden rounded-lg border border-border bg-card p-1">
-              <button
-                type="button"
-                onClick={() => setDisplayMode("two-line")}
-                className={`rounded-md p-2 transition-colors ${
-                  displayMode === "two-line"
-                    ? "bg-primary text-white"
-                    : "text-muted-foreground hover:bg-muted"
-                }`}
-                title={t("journal.display.twoLine", { namespace: "accounting",  })}
-              >
-                <LayoutList className="w-4 h-4" />
-              </button>
-              <button
-                type="button"
-                onClick={() => setDisplayMode("one-line")}
-                className={`rounded-md p-2 transition-colors ${
-                  displayMode === "one-line"
-                    ? "bg-primary text-white"
-                    : "text-muted-foreground hover:bg-muted"
-                }`}
-                title={t("journal.display.oneLine", { namespace: "accounting",  })}
-              >
-                <LayoutGrid className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-        }
+        pageContext={pageContext}
+        pageContextInline
+        pageContextSide="end"
+        pageHeaderSingleRow
+        showPinAction={false}
         tableContent={
           <JournalTable
             key={`journal-table-${journalType || 'GeneralJournal'}-${displayMode}`}
@@ -270,6 +275,8 @@ export default function Journal() {
             reversingId={reversingId}
             reversalContext={reversalContext}
             onEntryClick={handleEntryClick}
+            startContent={dataHeaderStart}
+            endContent={dataHeaderEnd}
           />
         }
       >

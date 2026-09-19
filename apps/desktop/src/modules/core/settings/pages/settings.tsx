@@ -10,6 +10,7 @@ import { TableSettingsManager } from "../components/TableSettingsManager";
 import { NavbarSettingsManager } from "../components/NavbarSettingsManager";
 import { SidebarContentManager } from "../components/SidebarContentManager";
 import { PanelSettingsManager } from "../components/PanelSettingsManager";
+import { PageHeaderSettingsManager } from "../components/PageHeaderSettingsManager";
 import CurrencySettings from "@modules/core/currencies/pages/currencySettings";
 import { CompanySettings } from "../components/CompanySettings";
 import { PrefixSettings } from "../components/PrefixSettings";
@@ -39,7 +40,7 @@ export default function Settings() {
 
   const [appearanceExpanded, setAppearanceExpanded] = useState(() => {
     const active = localStorage.getItem('erp_settings_active_nav') || 'company';
-    return ['tables', 'navbar', 'sidebar-content', 'panel', 'appearance'].includes(active);
+    return ['tables', 'navbar', 'sidebar-content', 'panel', 'page-header', 'appearance'].includes(active);
   });
 
   useEffect(() => {
@@ -90,6 +91,7 @@ export default function Settings() {
     { id: "navbar", label: t("nav.navbar", { namespace: "settings" }), icon: PanelRightOpen },
     { id: "sidebar-content", label: t("nav.sidebarContent", { namespace: "settings" }), icon: Sliders },
     { id: "panel", label: t("nav.panel", { namespace: "settings" }), icon: PanelRightOpen },
+    { id: "page-header", label: "رأس الصفحة", icon: Palette },
     { id: "appearance", label: t("nav.appearance", { namespace: "settings" }), icon: Palette },
   ];
 
@@ -170,6 +172,8 @@ export default function Settings() {
         return <SidebarContentManager />;
       case "panel":
         return <PanelSettingsManager />;
+      case "page-header":
+        return <PageHeaderSettingsManager />;
       case "appearance":
         return <AppearanceSettings />;
       case "about":

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { AlertTriangle, Calculator, CheckCircle2, Coins, RefreshCw } from "lucide-react";
@@ -62,11 +62,12 @@ export function ProfitDistributionWorkflow({
   refetch,
 }: ProfitDistributionWorkflowProps) {
   const qc = useQueryClient();
-  const { t } = useLocalization();
+  const { t, locale } = useLocalization();
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [amount, setAmount] = useState("");
   const [idemKey, setIdemKey] = useState(() => crypto.randomUUID());
   const [postedResult, setPostedResult] = useState<NetProfitAllocationDto | null>(null);
+  const [lastRefreshedAt, setLastRefreshedAt] = useState(() => Date.now());
 
   // A NEW amount/source is a NEW distribution intent — regenerate the
   // idempotency key so only a retry of the SAME intent resolves the same
@@ -75,6 +76,12 @@ export function ProfitDistributionWorkflow({
     setIdemKey(crypto.randomUUID());
     setPostedResult(null);
   }, [source, amount]);
+
+  useEffect(() => {
+    if (!isLoading) {
+      setLastRefreshedAt(Date.now());
+    }
+  }, [isLoading, pool, source]);
 
   const { data: distributable, refetch: refetchDistributable } = useQuery({
     queryKey: QUERY_KEYS.distributableProfit(windowStart, windowEnd),
@@ -194,22 +201,61 @@ export function ProfitDistributionWorkflow({
     return null;
   };
 
-  const getSubtitle = () => {
-    if (step === 1) return sourceLabel;
-    if (step === 2)
-      return t("profitDistribution.subtitle.step2", {
-        namespace: "accounting",
-        });
-    return t("profitDistribution.subtitle.step3", {
-      namespace: "accounting",
-      });
-  };
+  const handleRefresh = useCallback(async () => {
+    await Promise.allSettled([refetch(), refetchDistributable()]);
+    setLastRefreshedAt(Date.now());
+  }, [refetch, refetchDistributable]);
+
+  const headerContext = useMemo(
+    () => (
+      <>
+        <span className="shrink-0">
+          {t("labels.from", { namespace: "common", fallback: "من" })}: {windowStart || "—"}
+        </span>
+        <span className="shrink-0">
+          {t("labels.to", { namespace: "common", fallback: "إلى" })}: {windowEnd || "—"}
+        </span>
+        <span className="shrink-0">
+          {sourceLabel || "—"}
+        </span>
+      </>
+    ),
+    [sourceLabel, t, windowEnd, windowStart],
+  );
+
+  const headerActions = useMemo(
+    () => (
+      <>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={handleRefresh}
+          className="h-8 rounded-lg border-border bg-background px-3 text-xs font-bold"
+        >
+          <RefreshCw className="me-1 h-3.5 w-3.5" />
+          {t("actions.refresh", { namespace: "common", fallback: "تحديث" })}
+        </Button>
+        <span className="shrink-0 text-[11px] font-semibold text-muted-foreground">
+          {t("labels.lastUpdated", { namespace: "common", fallback: "آخر تحديث" })}:{" "}
+          {new Date(lastRefreshedAt).toLocaleTimeString(locale, {
+            hour: "2-digit",
+            minute: "2-digit",
+          })}
+        </span>
+      </>
+    ),
+    [handleRefresh, lastRefreshedAt, locale, t],
+  );
 
   return (
     <FormPanel
       title={t("profitDistribution.title", { namespace: "accounting",  })}
-      subtitle={getSubtitle()}
+      subtitle={undefined}
       icon={<Coins className="w-5 h-5 text-primary" />}
+      headerContext={headerContext}
+      headerContextInline
+      headerActions={headerActions}
       onClose={onClose}
       footer={renderFooter()}
     >

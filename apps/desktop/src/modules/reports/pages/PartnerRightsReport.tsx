@@ -6,12 +6,12 @@ import { Coins, Users } from "lucide-react";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { PartnerProfitShareView } from "@modules/reports/components/PartnerProfitShareView";
 import { PartnerStatementView } from "@modules/reports/components/PartnerStatementView";
-import { ReportFilterBar } from "@widgets/reports/ReportFilterBar";
 import { ReportLoadingSkeleton, ReportErrorState } from "@widgets/reports";
 import { useReportFilters } from "@shared/hooks/useReportFilters";
 import { usePartnerRightsReport } from "@modules/reports/hooks/usePartnerRightsReport";
 import { ProfitDistributionSidePanel } from "@modules/accounting/profit-distribution/components/ProfitDistributionSidePanel";
 import { useLocalization } from "@app/providers/LocalizationProvider";
+import { ReportPageContext } from "@widgets/reports/ReportPageHeader";
 
 type ViewMode = "profit-share" | "statement";
 
@@ -22,7 +22,7 @@ export default function PartnerRightsReport() {
     new Date(new Date().getFullYear(), 0, 1).toISOString().split("T")[0],
     new Date().toISOString().split("T")[0]
   );
-  const { loading, refreshing, lastLoadedAt, error, loadReportData, computed } = usePartnerRightsReport(filters);
+  const { loading, error, computed, loadReportData } = usePartnerRightsReport(filters);
 
   const [showProfitDistribution, setShowProfitDistribution] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>("profit-share");
@@ -57,8 +57,11 @@ export default function PartnerRightsReport() {
   return (
     <OperationalTableTemplate
       title={t("partnerRights.title", { namespace: "reports",  })}
-      filterBar={
-        <ReportFilterBar
+      pageContextInline
+      pageContextSide="end"
+      pageHeaderSingleRow
+      pageContext={
+        <ReportPageContext
           filters={filters}
           onFiltersChange={setFilters}
           showCurrencySelect={hasMultipleCurrencies}
@@ -66,20 +69,18 @@ export default function PartnerRightsReport() {
           onCurrencyChange={setSelectedCurrency}
           currencies={currencies}
           baseCurrencyCode={baseCurrency?.code}
-          refreshing={refreshing}
-          onRefresh={() => void loadReportData()}
-          lastLoadedAt={lastLoadedAt}
-          extraFilters={
-            <Button
-              size="sm"
-              className="h-9 rounded-lg bg-white font-black text-slate-700 border border-slate-200 hover:bg-slate-50"
-              onClick={() => setShowProfitDistribution(true)}
-            >
-              <Coins className="me-2 h-4 w-4" />
-              {t("partnerRights.distributeButton", { namespace: "reports",  })}
-            </Button>
-          }
         />
+      }
+      toolbar={
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-9 rounded-lg border-border bg-background px-3 text-xs font-bold text-foreground shadow-sm hover:bg-muted"
+          onClick={() => setShowProfitDistribution(true)}
+        >
+          <Coins className="me-2 h-4 w-4" />
+          {t("partnerRights.distributeButton", { namespace: "reports",  })}
+        </Button>
       }
       tableContent={
         loading ? (

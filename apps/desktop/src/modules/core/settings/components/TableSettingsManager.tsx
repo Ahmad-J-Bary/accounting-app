@@ -1,5 +1,6 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useTableSettings } from '@shared/hooks';
+import { useUiPreferences } from '@shared/hooks/useUiPreferences';
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { TableDensity, TableBorderStyle } from '@shared/types/table-settings';
 import { Label } from "@shared/ui/label";
@@ -10,9 +11,11 @@ import {
   LayoutGrid, 
   Type, 
   Monitor,
-  Eye
+  Eye,
+  Filter,
 } from "lucide-react";
 import { UnifiedTable, type UnifiedColumn } from '@widgets/table-shell/UnifiedTable';
+import { TableShell } from '@widgets/table-shell/TableShell';
 import { SettingsManagerLayout, SettingsGroup } from '@widgets/templates/SettingsManagerLayout';
 import { useLocalization } from "@app/providers/LocalizationProvider";
 
@@ -29,7 +32,9 @@ interface PreviewRow {
 export const TableSettingsManager: React.FC = () => {
   const { t } = useLocalization();
   const { settings, updateSetting, resetSettings } = useTableSettings();
+  const { preferences, updateDataHeader } = useUiPreferences();
   const { baseCurrency, formatAmount } = useCurrencyContext();
+  const [previewSearch, setPreviewSearch] = useState("");
   const currSym = baseCurrency?.symbol || baseCurrency?.code || "";
 
   const activeLabel = t("tables.previewData.active", { namespace: "settings",  });
@@ -93,6 +98,14 @@ export const TableSettingsManager: React.FC = () => {
   ], [currSym, formatAmount, baseCurrency, t, activeLabel]);
 
   const previewColumnIds = useMemo(() => previewColumns.map(c => c.id), [previewColumns]);
+  const toolbarColumns = useMemo(
+    () => previewColumns.map((column) => ({
+      id: column.id,
+      label: typeof column.label === "string" ? column.label : column.id,
+      visible: true,
+    })),
+    [previewColumns],
+  );
 
   const summaryColumns = useMemo(() => {
     const colIds = previewColumnIds;
@@ -250,18 +263,83 @@ export const TableSettingsManager: React.FC = () => {
         </div>
       </SettingsGroup>
 
+      <SettingsGroup title="رأس البيانات / الجدول" icon={Filter} color="text-cyan-600">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="space-y-2">
+            <Label className="text-slate-600 font-semibold">الكثافة</Label>
+            <Select
+              value={preferences.dataHeader.density}
+              onValueChange={(value) => updateDataHeader({ density: value as typeof preferences.dataHeader.density })}
+            >
+              <SelectTrigger className="h-10 rounded-lg border-muted">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="compact">مضغوط</SelectItem>
+                <SelectItem value="standard">قياسي</SelectItem>
+                <SelectItem value="comfortable">مريح</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label className="text-slate-600 font-semibold">السطح</Label>
+            <Select
+              value={preferences.dataHeader.surface}
+              onValueChange={(value) => updateDataHeader({ surface: value as typeof preferences.dataHeader.surface })}
+            >
+              <SelectTrigger className="h-10 rounded-lg border-muted">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="flat">مسطح</SelectItem>
+                <SelectItem value="subtle">هادئ</SelectItem>
+                <SelectItem value="card">بطاقة</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex items-center justify-between p-3 rounded-xl border border-muted bg-muted/30">
+            <div className="space-y-0.5">
+              <Label className="text-foreground font-semibold">تثبيت رأس البيانات</Label>
+            </div>
+            <Switch
+              checked={preferences.dataHeader.sticky}
+              onCheckedChange={(value) => updateDataHeader({ sticky: value })}
+            />
+          </div>
+        </div>
+      </SettingsGroup>
+
       {/* Live Preview */}
       <SettingsGroup title={t("tables.previewTitle", { namespace: "settings",  })} icon={Eye} color="text-violet-600">
         <div className="border border-muted rounded-xl overflow-hidden">
-          <UnifiedTable
-            data={PREVIEW_DATA}
-            columns={previewColumns}
-            summary={summaryColumns}
-            idKey="id"
-            tableId="table-settings-preview"
-            emptyMessage={t("tables.empty", { namespace: "settings",  })}
-            enableResize
-          />
+          <TableShell
+            search={previewSearch}
+            onSearchChange={setPreviewSearch}
+            columns={toolbarColumns}
+            onColumnToggle={() => undefined}
+            datasetContext={
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="rounded-md border border-border bg-background px-2.5 py-1.5 text-xs font-semibold text-muted-foreground">
+                  يومية عامة
+                </div>
+                <div className="rounded-md border border-border bg-background px-2.5 py-1.5 text-xs font-semibold text-muted-foreground">
+                  أرشيف التدقيق
+                </div>
+              </div>
+            }
+          >
+            <UnifiedTable
+              data={PREVIEW_DATA}
+              columns={previewColumns}
+              summary={summaryColumns}
+              idKey="id"
+              tableId="table-settings-preview"
+              emptyMessage={t("tables.empty", { namespace: "settings",  })}
+              enableResize
+            />
+          </TableShell>
         </div>
       </SettingsGroup>
     </SettingsManagerLayout>

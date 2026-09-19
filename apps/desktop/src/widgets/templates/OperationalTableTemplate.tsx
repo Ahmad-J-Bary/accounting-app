@@ -4,10 +4,23 @@ import { PageHeader } from "./PageHeader";
 import { TemplateDetailPanel } from "./TemplateDetailPanel";
 import { useLocalization } from "@app/providers/LocalizationProvider";
 import type { ResponsiveActionItem } from "@widgets/page-header/ResponsiveActions";
+import { useUiPreferences } from "@shared/hooks/useUiPreferences";
+import {
+  getPageTemplateGutterClass,
+  getPageTemplateRegionGapClass,
+  getTableShellRadiusClass,
+} from "@shared/lib/page-template-settings";
 
 interface OperationalTableTemplateProps {
   title: string;
   badge?: ReactNode;
+  breadcrumbs?: import("./PageHeader").PageHeaderCrumb[];
+  subtitle?: string;
+  pageContext?: ReactNode;
+  pageContextInline?: boolean;
+  pageContextSide?: "start" | "end";
+  pageHeaderSingleRow?: boolean;
+  showPinAction?: boolean;
   toolbar?: ReactNode;
   toolbarActions?: ResponsiveActionItem[];
   filterBar?: ReactNode;
@@ -24,6 +37,13 @@ interface OperationalTableTemplateProps {
 export function OperationalTableTemplate({
   title,
   badge,
+  breadcrumbs,
+  subtitle,
+  pageContext,
+  pageContextInline = false,
+  pageContextSide = "start",
+  pageHeaderSingleRow = false,
+  showPinAction = true,
   toolbar,
   toolbarActions,
   filterBar,
@@ -37,21 +57,32 @@ export function OperationalTableTemplate({
   children
 }: OperationalTableTemplateProps) {
   const { direction } = useLocalization();
+  const { preferences } = useUiPreferences();
+  const pageTemplate = preferences.pageTemplate;
+  const outerGutterClass = getPageTemplateGutterClass(pageTemplate);
+  const regionGapClass = getPageTemplateRegionGapClass(pageTemplate);
+  const tableRadiusClass = getTableShellRadiusClass(pageTemplate);
   return (
     <div className={cn("flex flex-col h-full w-full bg-background", className)} dir={direction}>
       <PageHeader
         title={title}
+        subtitle={subtitle}
         badge={badge}
+        breadcrumbs={breadcrumbs}
+        context={pageContext}
+        contextInline={pageContextInline}
+        contextSide={pageContextSide}
         actions={toolbar}
         actionItems={toolbarActions}
-        pinAction
+        pinAction={showPinAction}
         pinLabel={title}
+        singleRow={pageHeaderSingleRow}
       />
 
-      <div className="print-clean-parent relative flex flex-1 overflow-hidden gap-1.5 p-1.5 sm:gap-2 sm:p-2 md:gap-3 md:p-2.5">
+      <div className={cn("print-clean-parent relative flex flex-1 overflow-hidden", outerGutterClass)}>
         
         {/* Main Column */}
-        <div className="flex min-w-0 flex-1 flex-col gap-1.5 overflow-hidden sm:gap-2">
+        <div className={cn("flex min-w-0 flex-1 flex-col overflow-hidden", regionGapClass)}>
           
           {headerWidgets && (
             <div className="shrink-0">
@@ -65,7 +96,7 @@ export function OperationalTableTemplate({
             </div>
           )}
 
-          <div className="print-clean flex flex-1 flex-col overflow-hidden rounded-xl border border-border bg-card shadow-sm transition-all hover:shadow-md">
+          <div className={cn("print-clean flex flex-1 flex-col overflow-hidden border border-border bg-card shadow-sm transition-all hover:shadow-md", tableRadiusClass)}>
             <div className="flex-1 overflow-x-auto overflow-y-auto relative">
               {tableContent}
             </div>
@@ -78,7 +109,7 @@ export function OperationalTableTemplate({
           )}
 
           {summaryContent && (
-            <div className="flex shrink-0 items-center justify-between rounded-xl border border-border bg-card px-2.5 py-2 shadow-sm transition-all hover:shadow-md sm:px-3">
+            <div className={cn("flex shrink-0 items-center justify-between border border-border bg-card px-2.5 py-2 shadow-sm transition-all hover:shadow-md sm:px-3", tableRadiusClass)}>
               {summaryContent}
             </div>
           )}

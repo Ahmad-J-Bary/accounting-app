@@ -19,10 +19,12 @@ import {
   DropdownMenuRadioItem,
 } from "@shared/ui/dropdown-menu";
 import { useTableSettings } from '@shared/hooks';
+import { useUiPreferences } from '@shared/hooks/useUiPreferences';
 import { TableDensity } from '@shared/types/table-settings';
 import { cn } from '@shared/lib/utils';
 import { useLocalization } from "@app/providers/LocalizationProvider";
 import { ExportExcelButton } from "./ExportExcelButton";
+import { getDataHeaderShellClasses } from "@shared/lib/page-template-settings";
 
 export interface ToolbarColumn {
   id: string;
@@ -39,6 +41,9 @@ interface TableToolbarProps {
   onColumnToggle?: (id: string) => void;
   onColumnsReset?: () => void;
   columnsModified?: boolean;
+  startContent?: React.ReactNode;
+  datasetContext?: React.ReactNode;
+  endContent?: React.ReactNode;
   actions?: React.ReactNode;
   showViewOptions?: boolean;
   showColumns?: boolean;
@@ -57,6 +62,9 @@ export const TableToolbar: React.FC<TableToolbarProps> = ({
   onColumnToggle,
   onColumnsReset,
   columnsModified = false,
+  startContent,
+  datasetContext,
+  endContent,
   actions,
   showViewOptions = true,
   showColumns,
@@ -67,7 +75,9 @@ export const TableToolbar: React.FC<TableToolbarProps> = ({
   exportDisabled = false,
 }) => {
   const { settings, updateSetting, resetSettings } = useTableSettings();
+  const { preferences } = useUiPreferences();
   const { t, direction, isRTL } = useLocalization();
+  const dataHeaderSettings = preferences.dataHeader;
   const resolvedSearchPlaceholder = searchPlaceholder ?? t('labels.placeholder', );
   const visibleCount = columns.filter((c) => c.visible).length;
   const totalCount = columns.length;
@@ -79,34 +89,43 @@ export const TableToolbar: React.FC<TableToolbarProps> = ({
   const shouldShowColumns = (showColumns ?? showViewOptions) && hasColumns && onColumnToggle !== undefined;
   const shouldShowExport = !!onExportExcel;
 
-  const hasAnyUtilities = shouldShowDensity || shouldShowColumns || shouldShowExport || !!actions;
-  const hasSearchOrFilter = onSearchChange !== undefined || !!filterBar;
+  const resolvedStartContent = startContent ?? datasetContext;
+  const resolvedEndContent = endContent ?? actions;
+  const hasAnyUtilities = shouldShowDensity || shouldShowColumns || shouldShowExport || !!resolvedEndContent;
+  const hasSearchOrFilter = onSearchChange !== undefined || !!filterBar || !!resolvedStartContent;
 
   if (!hasAnyUtilities && !hasSearchOrFilter) {
     return null;
   }
 
   return (
-    <div className="mb-2 flex flex-wrap items-center gap-2" dir={direction}>
-      {(onSearchChange !== undefined) && (
-        <div className="relative flex-[2] min-w-[160px] max-w-[320px]">
-          <Search className="pointer-events-none absolute end-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={search}
-            onChange={(e) => onSearchChange(e.target.value)}
-            placeholder={resolvedSearchPlaceholder}
-            className="h-8 w-full bg-background pe-8 ps-3 text-sm transition-all border-border focus:bg-background"
-          />
-        </div>
-      )}
-      {filterBar && (
-        <div className="flex items-center gap-2 flex-1 min-w-0">
-          {filterBar}
-        </div>
-      )}
+    <div className={cn("flex flex-wrap items-center gap-2", getDataHeaderShellClasses(dataHeaderSettings))} dir={direction}>
+      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+        {(onSearchChange !== undefined) && (
+          <div className="relative min-w-[180px] flex-1 max-w-[320px]">
+            <Search className="pointer-events-none absolute end-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={search}
+              onChange={(e) => onSearchChange(e.target.value)}
+              placeholder={resolvedSearchPlaceholder}
+              className="h-8 w-full bg-background pe-8 ps-3 text-sm transition-all border-border focus:bg-background"
+            />
+          </div>
+        )}
+        {resolvedStartContent && (
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            {resolvedStartContent}
+          </div>
+        )}
+        {filterBar && (
+          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+            {filterBar}
+          </div>
+        )}
+      </div>
       {hasAnyUtilities && (
         <div className="ms-auto flex items-center gap-1.5">
-          {actions}
+          {resolvedEndContent}
           {shouldShowDensity && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
