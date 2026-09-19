@@ -11,7 +11,7 @@ interface StatsCardProps {
 
 export function StatsCard({ label, value, icon, iconClassName, className }: StatsCardProps) {
   return (
-    <div className={cn("flex items-center gap-3 rounded-2xl border border-muted bg-white p-4 shadow-sm", className)}>
+    <div className={cn("flex items-center gap-3 rounded-2xl border border-border bg-card p-4 shadow-sm", className)}>
       {icon && (
         <div className={cn("flex h-11 w-11 items-center justify-center rounded-xl bg-muted text-muted-foreground", iconClassName)}>
           {icon}

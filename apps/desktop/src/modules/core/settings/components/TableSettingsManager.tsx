@@ -53,7 +53,7 @@ export const TableSettingsManager: React.FC = () => {
       header: t("tables.columns.code", { namespace: "settings",  }),
       label: t("tables.columns.code", { namespace: "settings",  }),
       accessor: "code",
-      className: "font-black text-slate-900 text-center"
+      className: "text-center font-black text-foreground"
     },
     {
       id: "name",
@@ -126,7 +126,7 @@ export const TableSettingsManager: React.FC = () => {
       <SettingsGroup title={t("tables.groupTitle", { namespace: "settings",  })} icon={LayoutGrid}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-2">
-            <Label className="text-slate-600 font-semibold">{t("tables.rowDensity", { namespace: "settings",  })}</Label>
+            <Label className="font-semibold text-muted-foreground">{t("tables.rowDensity", { namespace: "settings",  })}</Label>
             <Select 
               value={settings.density} 
               onValueChange={(v) => updateSetting('density', v as TableDensity)}
@@ -143,7 +143,7 @@ export const TableSettingsManager: React.FC = () => {
           </div>
 
           <div className="space-y-2">
-            <Label className="text-slate-600 font-semibold">{t("tables.borderStyle", { namespace: "settings",  })}</Label>
+            <Label className="font-semibold text-muted-foreground">{t("tables.borderStyle", { namespace: "settings",  })}</Label>
             <Select 
               value={settings.borderStyle} 
               onValueChange={(v) => updateSetting('borderStyle', v as TableBorderStyle)}
@@ -166,7 +166,7 @@ export const TableSettingsManager: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-3">
             <div className="flex justify-between items-center">
-              <Label className="text-slate-600 font-semibold">{t("tables.fontSize", { namespace: "settings", vars: { size: settings.fontSize } })}</Label>
+              <Label className="font-semibold text-muted-foreground">{t("tables.fontSize", { namespace: "settings", vars: { size: settings.fontSize } })}</Label>
             </div>
             <Slider
               value={[settings.fontSize]}
@@ -179,7 +179,7 @@ export const TableSettingsManager: React.FC = () => {
           </div>
 
           <div className="space-y-2">
-            <Label className="text-slate-600 font-semibold">{t("tables.fontFamily", { namespace: "settings",  })}</Label>
+            <Label className="font-semibold text-muted-foreground">{t("tables.fontFamily", { namespace: "settings",  })}</Label>
             <Select 
               value={settings.fontFamily} 
               onValueChange={(v) => updateSetting('fontFamily', v)}
@@ -263,10 +263,10 @@ export const TableSettingsManager: React.FC = () => {
         </div>
       </SettingsGroup>
 
-      <SettingsGroup title="رأس البيانات / الجدول" icon={Filter} color="text-cyan-600">
+      <SettingsGroup title={t("dataHeader.title", { namespace: "settings" })} icon={Filter} color="text-cyan-600">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="space-y-2">
-            <Label className="text-slate-600 font-semibold">الكثافة</Label>
+            <Label className="font-semibold text-muted-foreground">{t("dataHeader.density", { namespace: "settings" })}</Label>
             <Select
               value={preferences.dataHeader.density}
               onValueChange={(value) => updateDataHeader({ density: value as typeof preferences.dataHeader.density })}
@@ -275,15 +275,15 @@ export const TableSettingsManager: React.FC = () => {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="compact">مضغوط</SelectItem>
-                <SelectItem value="standard">قياسي</SelectItem>
-                <SelectItem value="comfortable">مريح</SelectItem>
+                <SelectItem value="compact">{t("dataHeader.densities.compact", { namespace: "settings" })}</SelectItem>
+                <SelectItem value="standard">{t("dataHeader.densities.standard", { namespace: "settings" })}</SelectItem>
+                <SelectItem value="comfortable">{t("dataHeader.densities.comfortable", { namespace: "settings" })}</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           <div className="space-y-2">
-            <Label className="text-slate-600 font-semibold">السطح</Label>
+            <Label className="font-semibold text-muted-foreground">{t("dataHeader.surface", { namespace: "settings" })}</Label>
             <Select
               value={preferences.dataHeader.surface}
               onValueChange={(value) => updateDataHeader({ surface: value as typeof preferences.dataHeader.surface })}
@@ -292,16 +292,16 @@ export const TableSettingsManager: React.FC = () => {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="flat">مسطح</SelectItem>
-                <SelectItem value="subtle">هادئ</SelectItem>
-                <SelectItem value="card">بطاقة</SelectItem>
+                <SelectItem value="flat">{t("dataHeader.surfaces.flat", { namespace: "settings" })}</SelectItem>
+                <SelectItem value="subtle">{t("dataHeader.surfaces.subtle", { namespace: "settings" })}</SelectItem>
+                <SelectItem value="card">{t("dataHeader.surfaces.card", { namespace: "settings" })}</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           <div className="flex items-center justify-between p-3 rounded-xl border border-muted bg-muted/30">
             <div className="space-y-0.5">
-              <Label className="text-foreground font-semibold">تثبيت رأس البيانات</Label>
+              <Label className="text-foreground font-semibold">{t("dataHeader.sticky", { namespace: "settings" })}</Label>
             </div>
             <Switch
               checked={preferences.dataHeader.sticky}
@@ -322,10 +322,10 @@ export const TableSettingsManager: React.FC = () => {
             datasetContext={
               <div className="flex flex-wrap items-center gap-2">
                 <div className="rounded-md border border-border bg-background px-2.5 py-1.5 text-xs font-semibold text-muted-foreground">
-                  يومية عامة
+                  {t("dataHeader.preview.journal", { namespace: "settings" })}
                 </div>
                 <div className="rounded-md border border-border bg-background px-2.5 py-1.5 text-xs font-semibold text-muted-foreground">
-                  أرشيف التدقيق
+                  {t("dataHeader.preview.auditArchive", { namespace: "settings" })}
                 </div>
               </div>
             }

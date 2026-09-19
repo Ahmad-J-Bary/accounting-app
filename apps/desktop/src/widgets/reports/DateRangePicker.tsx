@@ -14,21 +14,19 @@ export function DateRangePicker({ from, to, onFromChange, onToChange, showSepara
   return (
     <div className="me-auto flex items-center gap-2">
       {showSeparator && (
-        <span className="inline-block w-px h-5 bg-slate-300 mx-2" />
+        <span className="mx-2 inline-block h-5 w-px bg-border" />
       )}
-      <span className="text-xs font-bold text-slate-400">{t("labels.from", { namespace: "common" })}</span>
+      <span className="text-xs font-bold text-muted-foreground">{t("labels.from", { namespace: "common" })}</span>
       <DatePicker
         value={from}
         onChange={onFromChange}
-        className="h-9 w-36 text-xs rounded-lg bg-white"
-        placeholder=""
+        className="h-9 w-36 rounded-lg bg-background text-xs"
       />
-      <span className="text-xs font-bold text-slate-400">{t("labels.to", { namespace: "common" })}</span>
+      <span className="text-xs font-bold text-muted-foreground">{t("labels.to", { namespace: "common" })}</span>
       <DatePicker
         value={to}
         onChange={onToChange}
-        className="h-9 w-36 text-xs rounded-lg bg-white"
-        placeholder=""
+        className="h-9 w-36 rounded-lg bg-background text-xs"
       />
     </div>
   );

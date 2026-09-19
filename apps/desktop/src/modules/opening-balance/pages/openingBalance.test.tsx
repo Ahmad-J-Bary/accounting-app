@@ -9,6 +9,8 @@ import { SidePanelSettingsContext } from "@shared/context/SidePanelSettingsConte
 import { SidebarLayoutProvider } from "@app/providers/SidebarLayoutProvider";
 import { TabContext } from "@app/providers/TabContext";
 import { TableSettingsContext } from "@shared/context/TableSettingsContext";
+import { LocalizationProvider } from "@app/providers/LocalizationProvider";
+import { UiPreferencesProvider } from "@app/providers/UiPreferencesProvider";
 import { settingsService } from "@modules/core/api/settingsService";
 import { openingBalanceService } from "@modules/accounting/api/openingBalanceService";
 import { START_MODE_EXISTING, START_MODE_NEW } from "@modules/opening-balance/lib/wizard-types";
@@ -106,34 +108,39 @@ const tabValue = {
 };
 
 function renderPage() {
+  localStorage.setItem("erp_language", "ar");
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
   return render(
     <MemoryRouter initialEntries={["/opening-balance"]}>
       <QueryClientProvider client={qc}>
-        <CurrencyContext.Provider value={currencyValue}>
-          <SidePanelSettingsContext.Provider value={sidePanelValue}>
-            <SidebarLayoutProvider>
-              <TabContext.Provider value={tabValue}>
-                <TableSettingsContext.Provider
-                  value={{
-                    settings: {} as never,
-                    updateSetting: vi.fn(),
-                    resetSettings: vi.fn(),
-                    getDensityPadding: () => "",
-                    getRowHeight: () => "",
-                  }}
-                >
-                  <Routes>
-                    <Route path="/opening-balance" element={<OpeningBalance />} />
-                    <Route path="/dashboard" element={<div>DASHBOARD_ROOT</div>} />
-                  </Routes>
-                </TableSettingsContext.Provider>
-              </TabContext.Provider>
-            </SidebarLayoutProvider>
-          </SidePanelSettingsContext.Provider>
-        </CurrencyContext.Provider>
+        <UiPreferencesProvider>
+          <LocalizationProvider>
+            <CurrencyContext.Provider value={currencyValue}>
+              <SidePanelSettingsContext.Provider value={sidePanelValue}>
+                <SidebarLayoutProvider>
+                  <TabContext.Provider value={tabValue}>
+                    <TableSettingsContext.Provider
+                      value={{
+                        settings: {} as never,
+                        updateSetting: vi.fn(),
+                        resetSettings: vi.fn(),
+                        getDensityPadding: () => "",
+                        getRowHeight: () => "",
+                      }}
+                    >
+                      <Routes>
+                        <Route path="/opening-balance" element={<OpeningBalance />} />
+                        <Route path="/dashboard" element={<div>DASHBOARD_ROOT</div>} />
+                      </Routes>
+                    </TableSettingsContext.Provider>
+                  </TabContext.Provider>
+                </SidebarLayoutProvider>
+              </SidePanelSettingsContext.Provider>
+            </CurrencyContext.Provider>
+          </LocalizationProvider>
+        </UiPreferencesProvider>
       </QueryClientProvider>
     </MemoryRouter>,
   );
@@ -142,6 +149,7 @@ function renderPage() {
 describe("openingBalance (فاتورة أول المدة) company-type gate", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    localStorage.removeItem("erp_language");
   });
 
   it("redirects a NEW company to /dashboard (no opening invoice page at all)", async () => {
@@ -158,7 +166,7 @@ describe("openingBalance (فاتورة أول المدة) company-type gate", ()
       accounting_start_mode: START_MODE_EXISTING,
     } as never);
     renderPage();
-    expect(await screen.findByText("openingBalance.title")).toBeInTheDocument();
+    expect(await screen.findByText("بضاعة أول المدة")).toBeInTheDocument();
   });
 
   it("redirects an EXISTING company away once the migration is Locked (OPENING_LOCKED)", async () => {

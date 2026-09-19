@@ -2,13 +2,20 @@ import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { TableToolbar } from "./TableToolbar";
 import { TableSettingsProvider } from "@app/providers/TableSettingsProvider";
+import { UiPreferencesProvider } from "@app/providers/UiPreferencesProvider";
+import { LocalizationProvider } from "@app/providers/LocalizationProvider";
 import React from "react";
 
 function renderWithProviders(ui: React.ReactElement) {
+  localStorage.setItem("erp_language", "ar");
   return render(
-    <TableSettingsProvider>
-      {ui}
-    </TableSettingsProvider>
+    <UiPreferencesProvider>
+      <LocalizationProvider>
+        <TableSettingsProvider>
+          {ui}
+        </TableSettingsProvider>
+      </LocalizationProvider>
+    </UiPreferencesProvider>
   );
 }
 

@@ -31,16 +31,17 @@ export const ExportExcelButton: React.FC<ExportExcelButtonProps> = ({
       size={size}
       onClick={onClick}
       disabled={disabled || loading}
+      aria-label={t("labels.exportExcel", { namespace: "common" })}
       title={t("labels.exportExcel", { namespace: "common" })}
       className={cn(
-        "h-8 px-2 border-slate-200 bg-white text-slate-600 hover:text-slate-900 transition-colors",
+        "h-8 border-border bg-background px-2 text-muted-foreground transition-colors hover:text-foreground",
         className
       )}
     >
       {loading ? (
-        <Loader2 className="ms-1 h-3.5 w-3.5 animate-spin text-slate-400" />
+        <Loader2 className="ms-1 h-3.5 w-3.5 animate-spin text-muted-foreground" />
       ) : (
-        <Download className="ms-1 h-3.5 w-3.5 text-slate-500" />
+        <Download className="ms-1 h-3.5 w-3.5 text-muted-foreground" />
       )}
       {showLabel && (
         <span className="text-xs">{t("labels.exportExcel", { namespace: "common" })}</span>

@@ -27,15 +27,15 @@ export function SectionCard({
   className,
 }: SectionCardProps) {
   return (
-    <Card className={cn("border-slate-200 shadow-sm", className)}>
+    <Card className={cn("border-border shadow-sm", className)}>
       <CardHeader className="py-3">
         <div className="flex items-center justify-between gap-2">
-          <CardTitle className="text-base font-bold text-slate-800 flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 text-base font-bold text-foreground">
             {icon} {title}
           </CardTitle>
           {action}
         </div>
-        {description && <p className="text-xs text-slate-500">{description}</p>}
+        {description && <p className="text-xs text-muted-foreground">{description}</p>}
       </CardHeader>
       <CardContent className={cn("space-y-3", contentClassName)}>{children}</CardContent>
     </Card>

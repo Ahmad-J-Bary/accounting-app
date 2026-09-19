@@ -51,12 +51,12 @@ export function DatePicker({ value, onChange, className, placeholder }: DatePick
         <Button
           variant="outline"
           className={cn(
-            "h-11 w-full justify-start gap-2 rounded-xl border-slate-200 bg-slate-50/50 pe-3 font-bold",
-            !date && "text-slate-400",
+            "h-11 w-full justify-start gap-2 rounded-xl border-border bg-background pe-3 font-bold",
+            !date && "text-muted-foreground",
             className
           )}
         >
-          <CalendarIcon className="w-4 h-4 text-slate-400 shrink-0" />
+          <CalendarIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
           <span className="truncate">{date ? formatDate(date) : resolvedPlaceholder}</span>
         </Button>
       </PopoverTrigger>

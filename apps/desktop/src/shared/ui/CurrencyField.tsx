@@ -52,7 +52,7 @@ export function CurrencyField({
       step={step}
       min={min}
       disabled={disabled}
-      className={`bg-white border-slate-200 h-9 text-xs tabular-nums ${inputClassName}`}
+      className={`h-9 border-border bg-background text-xs tabular-nums ${inputClassName}`}
     />
   );
 
@@ -70,7 +70,7 @@ export function CurrencyField({
       <div className="space-y-1.5">
         <FieldLabel>{t("currencies.currencyField", { namespace: "settings" })}</FieldLabel>
         <Select dir={direction} value={currency} onValueChange={onCurrencyChange} disabled={disabled}>
-          <SelectTrigger className="h-9 w-full bg-white text-start text-xs border-slate-200">
+          <SelectTrigger className="h-9 w-full border-border bg-background text-start text-xs">
             <SelectValue placeholder={t("currencies.selectCurrency", { namespace: "settings" })} />
           </SelectTrigger>
           <SelectContent>

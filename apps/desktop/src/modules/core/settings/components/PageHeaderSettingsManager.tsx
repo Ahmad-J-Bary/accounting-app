@@ -21,7 +21,7 @@ export function PageHeaderSettingsManager() {
     },
     {
       id: "preview-export",
-      label: t("labels.exportExcel"),
+      label: t("labels.exportExcel", { namespace: "common" }),
       priority: "secondary" as const,
     },
     {
@@ -36,103 +36,103 @@ export function PageHeaderSettingsManager() {
       resetPageHeader();
       resetPageTemplate();
     }}>
-      <SettingsGroup title="إعدادات رأس الصفحة" icon={LayoutTemplate}>
+      <SettingsGroup title={t("pageHeader.title", { namespace: "settings" })} icon={LayoutTemplate}>
         <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
           <div className="space-y-2">
-            <Label className="font-semibold text-muted-foreground">الـ preset</Label>
+            <Label className="font-semibold text-muted-foreground">{t("pageHeader.preset", { namespace: "settings" })}</Label>
             <Select value={settings.preset} onValueChange={(value) => updatePageHeader({ preset: value as typeof settings.preset })}>
               <SelectTrigger className="h-10 rounded-lg border-muted">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="compact">مضغوط / Slim</SelectItem>
-                <SelectItem value="standard">قياسي</SelectItem>
-                <SelectItem value="spacious">مريح / Spacious</SelectItem>
+                <SelectItem value="compact">{t("pageHeader.presets.compact", { namespace: "settings" })}</SelectItem>
+                <SelectItem value="standard">{t("pageHeader.presets.standard", { namespace: "settings" })}</SelectItem>
+                <SelectItem value="spacious">{t("pageHeader.presets.spacious", { namespace: "settings" })}</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           <div className="space-y-2">
-            <Label className="font-semibold text-muted-foreground">النمط</Label>
+            <Label className="font-semibold text-muted-foreground">{t("pageHeader.style", { namespace: "settings" })}</Label>
             <Select value={settings.style} onValueChange={(value) => updatePageHeader({ style: value as typeof settings.style })}>
               <SelectTrigger className="h-10 rounded-lg border-muted">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="standard">قياسي</SelectItem>
-                <SelectItem value="slim">نحيف</SelectItem>
-                <SelectItem value="wide">عريض</SelectItem>
-                <SelectItem value="compact">مضغوط</SelectItem>
-                <SelectItem value="elevated">مرتفع</SelectItem>
-                <SelectItem value="flat">مسطح</SelectItem>
+                <SelectItem value="standard">{t("pageHeader.styles.standard", { namespace: "settings" })}</SelectItem>
+                <SelectItem value="slim">{t("pageHeader.styles.slim", { namespace: "settings" })}</SelectItem>
+                <SelectItem value="wide">{t("pageHeader.styles.wide", { namespace: "settings" })}</SelectItem>
+                <SelectItem value="compact">{t("pageHeader.styles.compact", { namespace: "settings" })}</SelectItem>
+                <SelectItem value="elevated">{t("pageHeader.styles.elevated", { namespace: "settings" })}</SelectItem>
+                <SelectItem value="flat">{t("pageHeader.styles.flat", { namespace: "settings" })}</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           <div className="space-y-2">
-            <Label className="font-semibold text-muted-foreground">الارتفاع</Label>
+            <Label className="font-semibold text-muted-foreground">{t("pageHeader.height", { namespace: "settings" })}</Label>
             <Select value={settings.height} onValueChange={(value) => updatePageHeader({ height: value as typeof settings.height })}>
               <SelectTrigger className="h-10 rounded-lg border-muted">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="compact">مضغوط</SelectItem>
-                <SelectItem value="standard">قياسي</SelectItem>
-                <SelectItem value="spacious">مريح</SelectItem>
+                <SelectItem value="compact">{t("pageHeader.heights.compact", { namespace: "settings" })}</SelectItem>
+                <SelectItem value="standard">{t("pageHeader.heights.standard", { namespace: "settings" })}</SelectItem>
+                <SelectItem value="spacious">{t("pageHeader.heights.spacious", { namespace: "settings" })}</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           <div className="space-y-2">
-            <Label className="font-semibold text-muted-foreground">الكثافة</Label>
+            <Label className="font-semibold text-muted-foreground">{t("pageHeader.density", { namespace: "settings" })}</Label>
             <Select value={settings.density} onValueChange={(value) => updatePageHeader({ density: value as typeof settings.density })}>
               <SelectTrigger className="h-10 rounded-lg border-muted">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="compact">مضغوطة</SelectItem>
-                <SelectItem value="standard">قياسية</SelectItem>
-                <SelectItem value="spacious">مريحة</SelectItem>
+                <SelectItem value="compact">{t("pageHeader.densities.compact", { namespace: "settings" })}</SelectItem>
+                <SelectItem value="standard">{t("pageHeader.densities.standard", { namespace: "settings" })}</SelectItem>
+                <SelectItem value="spacious">{t("pageHeader.densities.spacious", { namespace: "settings" })}</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           <div className="space-y-2">
-            <Label className="font-semibold text-muted-foreground">السطح</Label>
+            <Label className="font-semibold text-muted-foreground">{t("pageHeader.surface", { namespace: "settings" })}</Label>
             <Select value={settings.surface} onValueChange={(value) => updatePageHeader({ surface: value as typeof settings.surface })}>
               <SelectTrigger className="h-10 rounded-lg border-muted">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="transparent">شفاف</SelectItem>
-                <SelectItem value="background">خلفية الصفحة</SelectItem>
-                <SelectItem value="surface">سطح/بطاقة</SelectItem>
+                <SelectItem value="transparent">{t("pageHeader.surfaces.transparent", { namespace: "settings" })}</SelectItem>
+                <SelectItem value="background">{t("pageHeader.surfaces.background", { namespace: "settings" })}</SelectItem>
+                <SelectItem value="surface">{t("pageHeader.surfaces.surface", { namespace: "settings" })}</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           <div className="space-y-2">
-            <Label className="font-semibold text-muted-foreground">محاذاة الأكشنات</Label>
+            <Label className="font-semibold text-muted-foreground">{t("pageHeader.actionAlignment", { namespace: "settings" })}</Label>
             <Select value={settings.actionAlignment} onValueChange={(value) => updatePageHeader({ actionAlignment: value as typeof settings.actionAlignment })}>
               <SelectTrigger className="h-10 rounded-lg border-muted">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="end">إلى النهاية</SelectItem>
-                <SelectItem value="split">مقسمة مع المحتوى</SelectItem>
+                <SelectItem value="end">{t("pageHeader.alignments.end", { namespace: "settings" })}</SelectItem>
+                <SelectItem value="split">{t("pageHeader.alignments.split", { namespace: "settings" })}</SelectItem>
               </SelectContent>
             </Select>
           </div>
         </div>
       </SettingsGroup>
 
-      <SettingsGroup title="سلوك ومحتوى الرأس" icon={SlidersHorizontal} color="text-cyan-600">
+      <SettingsGroup title={t("pageHeader.behaviorTitle", { namespace: "settings" })} icon={SlidersHorizontal} color="text-cyan-600">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           {[
-            { key: "showBreadcrumbs", label: "إظهار المسار" },
-            { key: "showSubtitle", label: "إظهار الوصف الفرعي" },
-            { key: "sticky", label: "تثبيت الرأس" },
-            { key: "compactButtons", label: "أزرار أكثر إحكامًا" },
+            { key: "showBreadcrumbs", label: t("pageHeader.behavior.showBreadcrumbs", { namespace: "settings" }) },
+            { key: "showSubtitle", label: t("pageHeader.behavior.showSubtitle", { namespace: "settings" }) },
+            { key: "sticky", label: t("pageHeader.behavior.sticky", { namespace: "settings" }) },
+            { key: "compactButtons", label: t("pageHeader.behavior.compactButtons", { namespace: "settings" }) },
           ].map((item) => (
             <div key={item.key} className="flex items-center justify-between rounded-xl border border-muted bg-muted/30 p-3">
               <Label className="font-semibold text-foreground">{item.label}</Label>
@@ -145,22 +145,22 @@ export function PageHeaderSettingsManager() {
         </div>
       </SettingsGroup>
 
-      <SettingsGroup title="المعاينة الحية" icon={Eye} color="text-violet-600">
+      <SettingsGroup title={t("pageHeader.livePreviewTitle", { namespace: "settings" })} icon={Eye} color="text-violet-600">
         <div className="space-y-4 rounded-2xl border border-border bg-muted/20 p-3">
           <div className="overflow-hidden rounded-xl border border-border bg-background">
             <PageHeader
-              title="اليومية العامة"
-              subtitle="قيد العمليات اليومية مع فصل واضح بين سياق الصفحة وأدوات الجدول"
+              title={t("pageHeader.preview.title", { namespace: "settings" })}
+              subtitle={t("pageHeader.preview.subtitle", { namespace: "settings" })}
               breadcrumbs={[
-                { label: "الرئيسية", to: "/dashboard" },
-                { label: "المحاسبة العامة", to: "/accounting" },
-                { label: "اليومية العامة" },
+                { label: t("pageHeader.preview.home", { namespace: "settings" }), to: "/dashboard" },
+                { label: t("pageHeader.preview.accounting", { namespace: "settings" }), to: "/accounting" },
+                { label: t("pageHeader.preview.journal", { namespace: "settings" }) },
               ]}
-              badge={<Badge variant="secondary">Posted</Badge>}
+              badge={<Badge variant="secondary">{t("status.posted", { namespace: "common" })}</Badge>}
               context={
                 <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                  <span className="rounded-md border border-border bg-card px-2 py-1">من 2026-01-01</span>
-                  <span className="rounded-md border border-border bg-card px-2 py-1">إلى 2026-12-31</span>
+                  <span className="rounded-md border border-border bg-card px-2 py-1">{t("pageHeader.preview.from", { namespace: "settings" })}</span>
+                  <span className="rounded-md border border-border bg-card px-2 py-1">{t("pageHeader.preview.to", { namespace: "settings" })}</span>
                 </div>
               }
               actionItems={previewActions}
@@ -168,15 +168,15 @@ export function PageHeaderSettingsManager() {
           </div>
 
           <div className="rounded-xl border border-dashed border-border bg-card/70 p-3 text-xs text-muted-foreground">
-            الصف الأول في كل صفحة تشغيلية يجب أن يحمل الهوية + سياق الصفحة + الأكشن الرئيسي فقط. أدوات الجدول والبحث والأعمدة والتصدير تبقى في صف البيانات الثاني.
+            {t("pageHeader.note", { namespace: "settings" })}
           </div>
         </div>
       </SettingsGroup>
 
-      <SettingsGroup title="صلة القالب" icon={Rows3} color="text-amber-600">
+      <SettingsGroup title={t("pageHeader.templateLinkTitle", { namespace: "settings" })} icon={Rows3} color="text-amber-600">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           <div className="space-y-2">
-            <Label className="font-semibold text-muted-foreground">الحواف الجانبية</Label>
+            <Label className="font-semibold text-muted-foreground">{t("pageHeader.template.pageGutter", { namespace: "settings" })}</Label>
             <Select
               value={preferences.pageTemplate.pageGutter}
               onValueChange={(value) => updatePageTemplate({ pageGutter: value as typeof preferences.pageTemplate.pageGutter })}
@@ -185,15 +185,15 @@ export function PageHeaderSettingsManager() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="compact">قليلة</SelectItem>
-                <SelectItem value="standard">قياسية</SelectItem>
-                <SelectItem value="comfortable">مريحة</SelectItem>
+                <SelectItem value="compact">{t("pageHeader.template.gutters.compact", { namespace: "settings" })}</SelectItem>
+                <SelectItem value="standard">{t("pageHeader.template.gutters.standard", { namespace: "settings" })}</SelectItem>
+                <SelectItem value="comfortable">{t("pageHeader.template.gutters.comfortable", { namespace: "settings" })}</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           <div className="space-y-2">
-            <Label className="font-semibold text-muted-foreground">الفجوة بين المناطق</Label>
+            <Label className="font-semibold text-muted-foreground">{t("pageHeader.template.regionGap", { namespace: "settings" })}</Label>
             <Select
               value={preferences.pageTemplate.regionGap}
               onValueChange={(value) => updatePageTemplate({ regionGap: value as typeof preferences.pageTemplate.regionGap })}
@@ -202,15 +202,15 @@ export function PageHeaderSettingsManager() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="compact">قليلة</SelectItem>
-                <SelectItem value="standard">قياسية</SelectItem>
-                <SelectItem value="comfortable">مريحة</SelectItem>
+                <SelectItem value="compact">{t("pageHeader.template.gaps.compact", { namespace: "settings" })}</SelectItem>
+                <SelectItem value="standard">{t("pageHeader.template.gaps.standard", { namespace: "settings" })}</SelectItem>
+                <SelectItem value="comfortable">{t("pageHeader.template.gaps.comfortable", { namespace: "settings" })}</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           <div className="space-y-2">
-            <Label className="font-semibold text-muted-foreground">استدارة منطقة الجدول</Label>
+            <Label className="font-semibold text-muted-foreground">{t("pageHeader.template.tableShellRadius", { namespace: "settings" })}</Label>
             <Select
               value={preferences.pageTemplate.tableShellRadius}
               onValueChange={(value) => updatePageTemplate({ tableShellRadius: value as typeof preferences.pageTemplate.tableShellRadius })}
@@ -219,8 +219,8 @@ export function PageHeaderSettingsManager() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="lg">خفيفة</SelectItem>
-                <SelectItem value="xl">أكبر</SelectItem>
+                <SelectItem value="lg">{t("pageHeader.template.radii.lg", { namespace: "settings" })}</SelectItem>
+                <SelectItem value="xl">{t("pageHeader.template.radii.xl", { namespace: "settings" })}</SelectItem>
               </SelectContent>
             </Select>
           </div>

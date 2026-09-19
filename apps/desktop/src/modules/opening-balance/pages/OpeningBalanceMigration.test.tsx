@@ -5,6 +5,7 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { QUERY_KEYS } from "@shared/hooks/queryClient";
 import OpeningBalanceMigration from "@modules/opening-balance/pages/openingBalanceMigration";
+import { UiPreferencesProvider } from "@app/providers/UiPreferencesProvider";
 import { SidePanelSettingsProvider } from "@app/providers/SidePanelSettingsProvider";
 import { SidebarLayoutProvider } from "@app/providers/SidebarLayoutProvider";
 import { TabProvider } from "@app/providers/TabProvider";
@@ -75,18 +76,20 @@ function renderPage(initialPath = "/opening-balance-migration") {
   const ui = render(
     <MemoryRouter initialEntries={[initialPath]}>
       <QueryClientProvider client={qc}>
-        <LocalizationProvider>
-          <TabProvider>
-            <SidePanelSettingsProvider>
-              <SidebarLayoutProvider>
-                <Routes>
-                  <Route path="/opening-balance-migration" element={<OpeningBalanceMigration />} />
-                  <Route path="/dashboard" element={<div>DASHBOARD_ROOT</div>} />
-                </Routes>
-              </SidebarLayoutProvider>
-            </SidePanelSettingsProvider>
-          </TabProvider>
-        </LocalizationProvider>
+        <UiPreferencesProvider>
+          <LocalizationProvider>
+            <TabProvider>
+              <SidePanelSettingsProvider>
+                <SidebarLayoutProvider>
+                  <Routes>
+                    <Route path="/opening-balance-migration" element={<OpeningBalanceMigration />} />
+                    <Route path="/dashboard" element={<div>DASHBOARD_ROOT</div>} />
+                  </Routes>
+                </SidebarLayoutProvider>
+              </SidePanelSettingsProvider>
+            </TabProvider>
+          </LocalizationProvider>
+        </UiPreferencesProvider>
       </QueryClientProvider>
     </MemoryRouter>,
   );

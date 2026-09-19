@@ -58,6 +58,7 @@ export const common: Record<AppLanguage, TranslationTree> = {
     status: {
       paid: "مدفوع",
       draft: "مسودة",
+      posted: "مرحل",
       overdue: "متأخر",
       partial: "جزئي",
     },
@@ -213,8 +214,10 @@ export const common: Record<AppLanguage, TranslationTree> = {
     accessibility: {
       close: "إغلاق",
       pagination: "ترقيم الصفحات",
+      goToFirstPage: "الانتقال إلى الصفحة الأولى",
       goToPreviousPage: "الانتقال إلى الصفحة السابقة",
       goToNextPage: "الانتقال إلى الصفحة التالية",
+      goToLastPage: "الانتقال إلى الصفحة الأخيرة",
       morePages: "صفحات إضافية",
       moreNavigation: "مزيد من عناصر التنقل",
       toggleSidebar: "تبديل الشريط الجانبي",
@@ -307,6 +310,7 @@ export const common: Record<AppLanguage, TranslationTree> = {
     status: {
       paid: "Paid",
       draft: "Draft",
+      posted: "Posted",
       overdue: "Overdue",
       partial: "Partial",
     },
@@ -458,8 +462,10 @@ export const common: Record<AppLanguage, TranslationTree> = {
     accessibility: {
       close: "Close",
       pagination: "Pagination",
+      goToFirstPage: "Go to first page",
       goToPreviousPage: "Go to previous page",
       goToNextPage: "Go to next page",
+      goToLastPage: "Go to last page",
       morePages: "More pages",
       moreNavigation: "More navigation items",
       toggleSidebar: "Toggle sidebar",

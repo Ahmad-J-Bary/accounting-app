@@ -85,8 +85,8 @@ export function AppLayout({ title, subtitle }: AppLayoutProps) {
             <div className="flex-1 p-3 md:p-6 overflow-auto">
               {(title || subtitle) && tab.active && (
                 <div className="mb-6">
-                  {title && <h1 className="text-2xl font-bold text-gray-900 mb-1">{title}</h1>}
-                  {subtitle && <p className="text-sm text-gray-500">{subtitle}</p>}
+                  {title && <h1 className="mb-1 text-2xl font-bold text-foreground">{title}</h1>}
+                  {subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}
                 </div>
               )}
               <TabLocationContext.Provider value={tab.path}><ErrorBoundary key={tab.id}><ErpRoutes location={tab.path} /></ErrorBoundary></TabLocationContext.Provider>
@@ -107,7 +107,7 @@ export function AppLayout({ title, subtitle }: AppLayoutProps) {
     // Mobile: simplified layout with bottom nav
     if (isMobile) {
       return (
-        <div className="min-h-screen bg-gray-50 overflow-hidden" dir={direction} data-tab-style={settings.tabStyle}>
+        <div className="min-h-screen overflow-hidden bg-background" dir={direction} data-tab-style={settings.tabStyle}>
           <div className="flex flex-col h-screen pb-14">
             {content}
           </div>
@@ -123,7 +123,7 @@ export function AppLayout({ title, subtitle }: AppLayoutProps) {
     switch (activeLayout.shellVariant) {
       case 'topnav':
         return (
-          <div className="min-h-screen bg-gray-50 overflow-hidden" dir={direction} data-tab-style={settings.tabStyle}>
+          <div className="min-h-screen overflow-hidden bg-background" dir={direction} data-tab-style={settings.tabStyle}>
             <TopNavLayout isExchangeVisible={isExchangeVisible} onToggleExchange={toggleExchange}>
               {content}
             </TopNavLayout>
@@ -131,7 +131,7 @@ export function AppLayout({ title, subtitle }: AppLayoutProps) {
         );
       case 'horizontal':
         return (
-          <div className="min-h-screen bg-gray-50 overflow-hidden" dir={direction} data-tab-style={settings.tabStyle}>
+          <div className="min-h-screen overflow-hidden bg-background" dir={direction} data-tab-style={settings.tabStyle}>
             <HorizontalLayout isExchangeVisible={isExchangeVisible} onToggleExchange={toggleExchange}>
               {content}
             </HorizontalLayout>
@@ -139,7 +139,7 @@ export function AppLayout({ title, subtitle }: AppLayoutProps) {
         );
       case 'combo':
         return (
-          <div className="min-h-screen bg-gray-50 overflow-hidden" dir={direction} data-tab-style={settings.tabStyle}>
+          <div className="min-h-screen overflow-hidden bg-background" dir={direction} data-tab-style={settings.tabStyle}>
             <ComboLayout sidebarOpen={effectiveSidebarOpen} onToggleSidebar={handleToggleSidebar} isExchangeVisible={isExchangeVisible} onToggleExchange={toggleExchange}>
               {content}
             </ComboLayout>
@@ -148,7 +148,7 @@ export function AppLayout({ title, subtitle }: AppLayoutProps) {
       case 'vertical':
       default:
         return (
-          <div className="min-h-screen bg-gray-50 overflow-hidden" dir={direction} data-tab-style={settings.tabStyle}>
+          <div className="min-h-screen overflow-hidden bg-background" dir={direction} data-tab-style={settings.tabStyle}>
             <VerticalLayout sidebarOpen={effectiveSidebarOpen} onToggleSidebar={handleToggleSidebar} isExchangeVisible={isExchangeVisible} onToggleExchange={toggleExchange}>
               {content}
             </VerticalLayout>

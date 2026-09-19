@@ -54,7 +54,7 @@ export const TablePagination: React.FC<TablePaginationProps> = ({
           className="h-8 w-8 border-border bg-background hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
           onClick={() => onPageChange(1)}
           disabled={currentPage === 1}
-          aria-label="First page"
+          aria-label={t("accessibility.goToFirstPage", { namespace: "common" })}
         >
           <FirstIcon className="h-4 w-4" />
         </Button>
@@ -64,7 +64,7 @@ export const TablePagination: React.FC<TablePaginationProps> = ({
           className="h-8 w-8 border-border bg-background hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
           onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage === 1}
-          aria-label="Previous page"
+          aria-label={t("accessibility.goToPreviousPage", { namespace: "common" })}
         >
           <PrevIcon className="h-4 w-4" />
         </Button>
@@ -81,7 +81,7 @@ export const TablePagination: React.FC<TablePaginationProps> = ({
           className="h-8 w-8 border-border bg-background hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
           onClick={() => onPageChange(currentPage + 1)}
           disabled={currentPage === totalPages}
-          aria-label="Next page"
+          aria-label={t("accessibility.goToNextPage", { namespace: "common" })}
         >
           <NextIcon className="h-4 w-4" />
         </Button>
@@ -91,7 +91,7 @@ export const TablePagination: React.FC<TablePaginationProps> = ({
           className="h-8 w-8 border-border bg-background hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
           onClick={() => onPageChange(totalPages)}
           disabled={currentPage === totalPages}
-          aria-label="Last page"
+          aria-label={t("accessibility.goToLastPage", { namespace: "common" })}
         >
           <LastIcon className="h-4 w-4" />
         </Button>

@@ -68,8 +68,8 @@ export function TreeSidebar({
             </Button>
             <Button
               size="sm"
-              variant="outline"
-              className="text-red-600 hover:text-red-700 border-red-200 hover:bg-red-50 whitespace-nowrap"
+              variant="destructive"
+              className="whitespace-nowrap"
               onClick={onDelete}
               disabled={!canDelete}
             >
@@ -83,7 +83,7 @@ export function TreeSidebar({
       {formMode ? (
         <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 space-y-4">
           <div className="flex items-center justify-between">
-            <h4 className="font-semibold text-sm text-slate-700">
+            <h4 className="text-sm font-semibold text-foreground">
               {formMode === "edit" ? t("labels.editData") : t("actions.add")}
             </h4>
           </div>
@@ -92,9 +92,9 @@ export function TreeSidebar({
       ) : (
         <>
           <div className="flex items-center justify-between">
-            <h3 className="text-base font-semibold text-slate-700">{title}</h3>
+            <h3 className="text-base font-semibold text-foreground">{title}</h3>
             {level !== undefined && (
-              <span className="text-xs text-slate-400">{t("labels.level")} {level}</span>
+              <span className="text-xs text-muted-foreground">{t("labels.level")} {level}</span>
             )}
           </div>
           <div className="grid gap-3">
