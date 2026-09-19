@@ -38,7 +38,7 @@ interface AppLayoutProps {
 
 export function AppLayout({ title, subtitle }: AppLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const { tabs } = useTabs();
+  const { tabs, activeTabId } = useTabs();
   const { activeLayout, settings } = useAppearance();
   const { isMobile, isTablet } = useResponsiveContext();
   const { hasMultipleCurrencies } = useCurrencyContext();
@@ -79,23 +79,23 @@ export function AppLayout({ title, subtitle }: AppLayoutProps) {
   }, []);
 
   const workspaceContent = useMemo(() => (
-    <main className="relative flex-1 overflow-hidden bg-muted">
+    <main className="relative min-h-0 flex-1 overflow-hidden bg-muted">
       {tabs.map((tab) => (
         <div
           key={tab.id}
           className={cn(
-            'absolute inset-0 flex flex-col transition-opacity duration-200',
-            tab.active ? 'z-10 opacity-100' : 'pointer-events-none z-0 opacity-0',
+            'absolute inset-0 min-h-0 flex-col',
+            tab.id === activeTabId ? 'z-10 flex' : 'pointer-events-none z-0 hidden',
           )}
         >
-          <div className="flex-1 overflow-auto p-3 md:p-6">
-            {(title || subtitle) && tab.active && (
+          <div className="min-h-0 flex-1 overflow-auto p-3 md:p-6">
+            {(title || subtitle) && tab.id === activeTabId && (
               <div className="mb-6">
                 {title && <h1 className="mb-1 text-2xl font-bold text-foreground">{title}</h1>}
                 {subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}
               </div>
             )}
-            <WorkspaceTabContext.Provider value={{ tabId: tab.id, path: tab.path, active: tab.active }}>
+            <WorkspaceTabContext.Provider value={{ tabId: tab.id, path: tab.path, active: tab.id === activeTabId }}>
               <TabLocationContext.Provider value={tab.path}>
                 <ErrorBoundary key={tab.id}>
                   <ErpRoutes location={tab.path} />
@@ -106,7 +106,7 @@ export function AppLayout({ title, subtitle }: AppLayoutProps) {
         </div>
       ))}
     </main>
-  ), [subtitle, tabs, title]);
+  ), [activeTabId, subtitle, tabs, title]);
 
   const sharedOverlays = useMemo(() => (
     <>

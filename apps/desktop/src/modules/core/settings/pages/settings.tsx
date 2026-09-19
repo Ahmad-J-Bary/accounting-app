@@ -19,6 +19,7 @@ import { AboutSettings } from "../components/AboutSettings";
 import { UnderDevelopmentSection } from "../components/UnderDevelopmentSection";
 import { WarehouseSettings } from "../components/WarehouseSettings";
 import { AppearanceSettings } from "../components/AppearanceSettings";
+import { TabsSettings } from "../components/TabsSettings";
 import { LocalizationSettings } from "../components/LocalizationSettings";
 import { ExportSettings } from "../components/ExportSettings";
 import { DataBackupSection } from "@modules/core/backups/components/DataBackupSection";
@@ -40,7 +41,7 @@ export default function Settings() {
 
   const [appearanceExpanded, setAppearanceExpanded] = useState(() => {
     const active = localStorage.getItem('erp_settings_active_nav') || 'company';
-    return ['tables', 'navbar', 'sidebar-content', 'panel', 'page-header', 'appearance'].includes(active);
+    return ['tables', 'navbar', 'sidebar-content', 'panel', 'page-header', 'appearance', 'tabs'].includes(active);
   });
 
   useEffect(() => {
@@ -93,6 +94,7 @@ export default function Settings() {
     { id: "panel", label: t("nav.panel", { namespace: "settings" }), icon: PanelRightOpen },
     { id: "page-header", label: "رأس الصفحة", icon: Palette },
     { id: "appearance", label: t("nav.appearance", { namespace: "settings" }), icon: Palette },
+    { id: "tabs", label: t("nav.tabs", { namespace: "settings" }), icon: Palette },
   ];
 
   const allItems = [...sidebarItems, ...appearanceItems];
@@ -176,6 +178,8 @@ export default function Settings() {
         return <PageHeaderSettingsManager />;
       case "appearance":
         return <AppearanceSettings />;
+      case "tabs":
+        return <TabsSettings />;
       case "about":
         return <AboutSettings />;
       case "localization":

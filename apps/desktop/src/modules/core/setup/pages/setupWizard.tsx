@@ -11,6 +11,7 @@ import { RadioGroup, RadioGroupItem } from "@shared/ui/radio-group";
 import { Badge } from "@shared/ui/badge";
 import { CheckCircle2, Search, Loader2, ArrowRight, Building2 } from "lucide-react";
 import { useLocalization } from "@app/providers/LocalizationProvider";
+import { StartupWindowShell } from "@app/shell/StartupWindowShell";
 
 export default function SetupWizard() {
   const navigate = useNavigate();
@@ -140,29 +141,46 @@ export default function SetupWizard() {
 
   if (step === "loading") {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
+      <StartupWindowShell
+        title={t("welcome.title", { namespace: "setup" })}
+        subtitle={t("welcome.descCurrencies", { namespace: "setup" })}
+        direction={direction}
+      >
+        <div className="flex min-h-full items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </StartupWindowShell>
     );
   }
 
   if (step === "done") {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100">
-        <Card className="w-full max-w-md text-center">
-          <CardHeader>
-            <CheckCircle2 className="w-16 h-16 text-success mx-auto mb-2" />
-            <CardTitle className="text-2xl">{t("done.title", { namespace: "setup" })}</CardTitle>
-            <CardDescription>{t("done.loading", { namespace: "setup" })}</CardDescription>
-          </CardHeader>
-        </Card>
-      </div>
+      <StartupWindowShell
+        title={t("done.title", { namespace: "setup" })}
+        subtitle={t("done.loading", { namespace: "setup" })}
+        direction={direction}
+      >
+        <div className="flex min-h-full items-center justify-center px-4 py-10">
+          <Card className="w-full max-w-md text-center">
+            <CardHeader>
+              <CheckCircle2 className="mx-auto mb-2 h-16 w-16 text-success" />
+              <CardTitle className="text-2xl">{t("done.title", { namespace: "setup" })}</CardTitle>
+              <CardDescription>{t("done.loading", { namespace: "setup" })}</CardDescription>
+            </CardHeader>
+          </Card>
+        </div>
+      </StartupWindowShell>
     );
   }
 
   if (step === "welcome") {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 p-4" dir={direction}>
+      <StartupWindowShell
+        title={t("welcome.title", { namespace: "setup" })}
+        subtitle={t("welcome.descCurrencies", { namespace: "setup" })}
+        direction={direction}
+      >
+        <div className="flex min-h-full items-center justify-center p-4" dir={direction}>
         <Card className="w-full max-w-lg text-center">
           <CardHeader>
             <CardTitle className="text-3xl">{t("welcome.title", { namespace: "setup" })}</CardTitle>
@@ -252,12 +270,18 @@ export default function SetupWizard() {
             )}
           </CardContent>
         </Card>
-      </div>
+        </div>
+      </StartupWindowShell>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-start justify-center bg-gradient-to-br from-slate-50 to-slate-100 p-4 pt-12" dir={direction}>
+    <StartupWindowShell
+      title={t("currency.title", { namespace: "setup" })}
+      subtitle={t("currency.desc", { namespace: "setup" })}
+      direction={direction}
+    >
+    <div className="flex min-h-full items-start justify-center p-4 pt-12" dir={direction}>
       <Card className="w-full max-w-2xl">
         <CardHeader>
           <CardTitle>{t("currency.title", { namespace: "setup" })}</CardTitle>
@@ -338,5 +362,6 @@ export default function SetupWizard() {
         </CardContent>
       </Card>
     </div>
+    </StartupWindowShell>
   );
 }

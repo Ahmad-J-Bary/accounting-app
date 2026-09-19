@@ -18,7 +18,7 @@ export function TopNavLayout({ children }: TopNavLayoutProps) {
           horizontalAppearance={settings.horizontalNavbarAppearance}
         />
       )}
-      <div className="flex-1 overflow-auto">
+      <div className="min-h-0 flex-1 overflow-hidden">
         {children}
       </div>
     </div>

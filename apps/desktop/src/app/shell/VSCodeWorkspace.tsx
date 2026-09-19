@@ -11,12 +11,11 @@ import { Button } from "@shared/ui/button";
 import { findRouteByPath, resolveGroupLabel, resolveRouteLabel, SYSTEM_ROUTE_GROUPS } from "./routeRegistry";
 import { ICON_MAP } from "./sidebarConfig";
 import { WindowControls } from "./WindowControls";
-import { useDesktopWindowState } from "./useDesktopWindowState";
 import { TabBar } from "./TabBar";
 import { useCompanyTypeSettings, useCompanyInitState } from "@shared/hooks";
 import { companyTypeOf, hiddenNavIds } from "@modules/opening-balance/lib/company-lifecycle";
-import { settingsService } from "@modules/core/api/settingsService";
-import type { CompanySettings } from "@erp/shared-types";
+import { WindowSurface } from "./WindowSurface";
+import { useWindowChromeData } from "./useWindowChromeData";
 
 interface VSCodeWorkspaceProps {
   content: React.ReactNode;
@@ -41,12 +40,6 @@ export function VSCodeWorkspace({
   const { settings } = useAppearance();
   const companySettings = useCompanyTypeSettings();
   const { initState, isReady } = useCompanyInitState();
-  const windowState = useDesktopWindowState();
-  const [resolvedCompany, setResolvedCompany] = useState<CompanySettings | null>(null);
-
-  useEffect(() => {
-    settingsService.getSettings().then(setResolvedCompany).catch(() => {});
-  }, []);
 
   const activeTab = useMemo(
     () => tabs.find((tab) => tab.id === activeTabId) ?? tabs.find((tab) => tab.active) ?? tabs[0],
@@ -70,6 +63,8 @@ export function VSCodeWorkspace({
   const activeRoute = activeTab ? findRouteByPath(activeTab.path) : undefined;
   const inferredActiveGroupId = activeRoute?.groupId ?? visibleGroups[0]?.id;
   const [selectedGroupId, setSelectedGroupId] = useState<string | undefined>(inferredActiveGroupId);
+  const titleText = activeTab?.title || t("topbar.brandName", { namespace: "shell" });
+  const chrome = useWindowChromeData({ windowTitle: titleText });
 
   useEffect(() => {
     if (inferredActiveGroupId) {
@@ -78,8 +73,7 @@ export function VSCodeWorkspace({
   }, [inferredActiveGroupId]);
 
   const selectedGroup = visibleGroups.find((group) => group.id === (selectedGroupId || inferredActiveGroupId)) ?? visibleGroups[0];
-  const titleText = activeTab?.title || t("topbar.brandName", { namespace: "shell" });
-  const companyText = resolvedCompany?.company_name || t("topbar.companyFallback", { namespace: "shell" });
+  const companyText = chrome.companyLabel;
   const recents = recent.slice(0, 3);
 
   const handleGroupSelect = (groupId: string) => {
@@ -105,67 +99,69 @@ export function VSCodeWorkspace({
     );
   }
 
-  const handleTitleBarDoubleClick = () => {
-    if (!windowState.isTauriWindow) return;
-    void windowState.toggleMaximize();
-  };
-
-  return (
-    <div className="flex h-full min-h-0 flex-col overflow-hidden bg-[#1f2430] text-white" dir="ltr" data-testid="vscode-workbench">
+  const titleBar = (
+    <div
+      className={cn(
+        "grid min-h-11 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 border-b border-white/10 bg-[#181c25] px-3",
+        chrome.windowState.isFocused ? "shadow-sm" : "opacity-95",
+      )}
+      data-testid="vscode-titlebar"
+    >
       <div
-        className={cn(
-          "grid min-h-11 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 border-b border-white/10 bg-[#181c25] px-3",
-          windowState.isFocused ? "shadow-sm" : "opacity-95",
-        )}
-        data-testid="vscode-titlebar"
+        data-tauri-drag-region={chrome.windowState.isTauriWindow ? true : undefined}
+        onDoubleClick={chrome.handleTitleBarDoubleClick}
+        className="flex min-w-0 items-center gap-3 select-none"
+        dir={direction}
       >
-        <div
-          data-tauri-drag-region={windowState.isTauriWindow ? true : undefined}
-          onDoubleClick={handleTitleBarDoubleClick}
-          className="flex min-w-0 items-center gap-3 select-none"
-          dir={direction}
-        >
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/20 text-primary">
-            <Sparkles className="h-4 w-4" />
-          </div>
-          <div className="min-w-0">
-            <div className="truncate text-xs font-semibold text-white">{titleText}</div>
-            <div className="truncate text-[10px] text-white/60">{companyText}</div>
-          </div>
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/20 text-primary">
+          <Sparkles className="h-4 w-4" />
         </div>
-
-        <div
-          data-tauri-drag-region={windowState.isTauriWindow ? true : undefined}
-          onDoubleClick={handleTitleBarDoubleClick}
-          className="flex min-w-0 items-center justify-center px-2"
-        >
-          <button
-            type="button"
-            onClick={openSearch}
-            className="flex h-8 w-full max-w-[34rem] items-center gap-2 rounded-md border border-white/10 bg-white/5 px-3 text-start text-xs text-white/70 transition-colors hover:bg-white/10"
-            dir={direction}
-            aria-label={t("globalSearch", { namespace: "shell" })}
-          >
-            <Search className="h-3.5 w-3.5 shrink-0 text-white/60" />
-            <span className="truncate">
-              {activeTab?.path || t("globalSearch", { namespace: "shell" })}
-            </span>
-            <span className="ms-auto shrink-0 rounded bg-white/10 px-1.5 py-0.5 text-[10px] text-white/50">Ctrl+K</span>
-          </button>
-        </div>
-
-        <div className="flex justify-end">
-          <WindowControls
-            isMaximized={windowState.isMaximized || windowState.isFullscreen}
-            disabled={!windowState.ready}
-            variant="vscode"
-            onMinimize={windowState.minimize}
-            onToggleMaximize={windowState.toggleMaximize}
-            onClose={windowState.close}
-          />
+        <div className="min-w-0">
+          <div className="truncate text-xs font-semibold text-white">{titleText}</div>
+          <div className="truncate text-[10px] text-white/60">{companyText}</div>
         </div>
       </div>
 
+      <div
+        data-tauri-drag-region={chrome.windowState.isTauriWindow ? true : undefined}
+        onDoubleClick={chrome.handleTitleBarDoubleClick}
+        className="flex min-w-0 items-center justify-center px-2"
+      >
+        <button
+          type="button"
+          onClick={openSearch}
+          className="flex h-8 w-full max-w-[34rem] items-center gap-2 rounded-md border border-white/10 bg-white/5 px-3 text-start text-xs text-white/70 transition-colors hover:bg-white/10"
+          dir={direction}
+          aria-label={t("globalSearch", { namespace: "shell" })}
+        >
+          <Search className="h-3.5 w-3.5 shrink-0 text-white/60" />
+          <span className="truncate">
+            {activeTab?.path || t("globalSearch", { namespace: "shell" })}
+          </span>
+          <span className="ms-auto shrink-0 rounded bg-white/10 px-1.5 py-0.5 text-[10px] text-white/50">Ctrl+K</span>
+        </button>
+      </div>
+
+      <div className="flex justify-end">
+        <WindowControls
+          isMaximized={chrome.windowState.isMaximized || chrome.windowState.isFullscreen}
+          disabled={!chrome.windowState.ready}
+          variant="vscode"
+          onMinimize={chrome.windowState.minimize}
+          onToggleMaximize={chrome.windowState.toggleMaximize}
+          onClose={chrome.windowState.close}
+        />
+      </div>
+    </div>
+  );
+
+  return (
+    <WindowSurface
+      chrome={titleBar}
+      className="bg-[#1f2430] text-white"
+      direction="ltr"
+      testId="vscode-workbench"
+    >
       <div className="min-h-0 flex flex-1 overflow-hidden">
         <aside className="flex w-12 shrink-0 flex-col items-center gap-2 border-e border-white/10 bg-[#181c25] py-3" data-testid="vscode-activitybar">
           {visibleGroups.map((group) => {
@@ -239,8 +235,13 @@ export function VSCodeWorkspace({
             <TabBar />
           </div>
 
-          <div className="min-h-0 flex-1 overflow-hidden bg-background text-foreground">
-            {content}
+          <div
+            className="min-h-0 flex flex-1 flex-col overflow-hidden bg-background text-foreground"
+            data-testid="vscode-editor-content"
+          >
+            <div className="min-h-0 flex-1 overflow-hidden">
+              {content}
+            </div>
           </div>
 
           <div className="grid min-h-16 grid-cols-[minmax(0,1fr)_auto] items-stretch border-t border-white/10 bg-[#252b39]" data-testid="vscode-panel">
@@ -290,7 +291,6 @@ export function VSCodeWorkspace({
           <span>{settings.motion}</span>
         </div>
       </div>
-
-    </div>
+    </WindowSurface>
   );
 }

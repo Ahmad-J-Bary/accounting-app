@@ -1,4 +1,5 @@
 import { DefaultWindowChrome } from "./DefaultWindowChrome";
+import { WindowSurface } from "./WindowSurface";
 
 interface DefaultWorkspaceProps {
   children: React.ReactNode;
@@ -6,9 +7,8 @@ interface DefaultWorkspaceProps {
 
 export function DefaultWorkspace({ children }: DefaultWorkspaceProps) {
   return (
-    <div className="min-h-0 flex-1 overflow-hidden" data-testid="default-workspace">
-      <DefaultWindowChrome />
+    <WindowSurface chrome={<DefaultWindowChrome />} testId="default-workspace">
       {children}
-    </div>
+    </WindowSurface>
   );
 }

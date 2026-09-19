@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ArrowLeft, ArrowRight, Bell, Building2, ChevronDown, Clock3, DollarSign, Mic, RefreshCw, Search, Settings as SettingsIcon, Star, Zap } from "lucide-react";
-import type { CompanySettings } from "@erp/shared-types";
 import type { GlobalSearchResult } from "@shared/types/navigation";
 import { useAppearance } from "@shared/hooks/useAppearance";
 import { cn } from "@shared/lib/utils";
@@ -20,11 +19,11 @@ import { useLocalization } from "@app/providers/LocalizationProvider";
 import { useTabs } from "@app/providers/TabContext";
 import { useVoice } from "@app/providers/VoiceProvider";
 import { useCommands } from "@app/providers/useCommands";
-import { settingsService } from "@modules/core/api/settingsService";
 import { NotificationsPanel } from "./NotificationsPanel";
 import { TabBar } from "./TabBar";
 import { WindowControls } from "./WindowControls";
 import { useDesktopWindowState } from "./useDesktopWindowState";
+import { useWindowChromeData } from "./useWindowChromeData";
 
 interface BrowserChromeProps {
   isExchangeVisible?: boolean;
@@ -100,8 +99,6 @@ function useShellChromeModel({
   const { tabs, openTab, switchTab } = useTabs();
   const voice = useVoice();
   const { executeCommand } = useCommands();
-  const windowState = useDesktopWindowState();
-  const [companySettings, setCompanySettings] = useState<CompanySettings | null>(null);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [favorites, setFavorites] = useState<BrowserFavorite[]>(loadBrowserFavorites);
 
@@ -119,17 +116,12 @@ function useShellChromeModel({
     return activeTab ? `${activeTab.title} - ${brand}` : brand;
   }, [activeTab, t]);
 
-  useEffect(() => {
-    settingsService.getSettings().then(setCompanySettings).catch(() => {});
-  }, []);
+  const chrome = useWindowChromeData({ windowTitle: appTitle });
+  const windowState = chrome.windowState;
 
   useEffect(() => {
     window.localStorage.setItem(BROWSER_FAVORITES_KEY, JSON.stringify(favorites));
   }, [favorites]);
-
-  useEffect(() => {
-    void windowState.setWindowTitle(appTitle);
-  }, [appTitle, windowState]);
 
   const createEntityTab = useCallback((idPrefix: string, titleKey: string, path: string, eventName: string) => {
     openTab({
@@ -149,11 +141,6 @@ function useShellChromeModel({
       closable: true,
     });
   }, [openTab, t]);
-
-  const handleTitleBarDoubleClick = useCallback(() => {
-    if (!windowState.isTauriWindow) return;
-    void windowState.toggleMaximize();
-  }, [windowState]);
 
   const activePath = activeTab?.path || "/dashboard";
   const isFavorite = favorites.some((favorite) => favorite.path === activePath);
@@ -256,7 +243,7 @@ function useShellChromeModel({
     activeTabTitle: activeTab?.title || appTitle,
     activeTabDirty: Boolean(activeTab?.dirty),
     activePath,
-    companyLabel: companySettings?.company_name || t("topbar.companyFallback", { namespace: "shell" }),
+    companyLabel: chrome.companyLabel,
     hasMultipleCurrencies,
     isExchangeVisible,
     notificationsOpen,
@@ -281,7 +268,7 @@ function useShellChromeModel({
     closeNotifications: () => setNotificationsOpen(false),
     openSettingsTab,
     toggleLanguage: () => setLanguage(language === "ar" ? "en" : "ar"),
-    handleTitleBarDoubleClick,
+    handleTitleBarDoubleClick: chrome.handleTitleBarDoubleClick,
     renderQuickActions,
   };
 }

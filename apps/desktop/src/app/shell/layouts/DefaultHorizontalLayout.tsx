@@ -39,7 +39,7 @@ export function DefaultHorizontalLayout({ children, isExchangeVisible, onToggleE
           />
         )}
         {showTabs && <TabBar />}
-        <div className="flex flex-1 flex-col overflow-auto">
+        <div className="min-h-0 flex flex-1 flex-col overflow-hidden">
           {children}
         </div>
       </div>
@@ -57,7 +57,7 @@ export function DefaultHorizontalLayout({ children, isExchangeVisible, onToggleE
         mergedSlim={activeLayout.navbarMode === 'slim'}
       />
       {showTabs && <TabBar />}
-      <div className="flex flex-1 flex-col overflow-auto">
+      <div className="min-h-0 flex flex-1 flex-col overflow-hidden">
         {children}
       </div>
     </div>

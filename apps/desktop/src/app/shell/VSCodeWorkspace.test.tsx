@@ -84,6 +84,7 @@ vi.mock("./useDesktopWindowState", () => ({
     minimize: vi.fn(),
     toggleMaximize: vi.fn(),
     close: vi.fn(),
+    setWindowTitle: vi.fn(),
   }),
 }));
 
@@ -108,6 +109,7 @@ describe("VSCodeWorkspace", () => {
     expect(screen.getByTestId("vscode-activitybar")).toBeInTheDocument();
     expect(screen.getByTestId("vscode-sidebar")).toBeInTheDocument();
     expect(screen.getByTestId("vscode-editor-tabs")).toBeInTheDocument();
+    expect(screen.getByTestId("vscode-editor-content")).toBeInTheDocument();
     expect(screen.getByTestId("vscode-panel")).toBeInTheDocument();
     expect(screen.getByTestId("vscode-statusbar")).toBeInTheDocument();
     expect(screen.getByTestId("window-controls-vscode")).toBeInTheDocument();

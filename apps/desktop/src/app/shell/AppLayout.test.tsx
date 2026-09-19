@@ -5,13 +5,16 @@ import { AppLayout } from "./AppLayout";
 
 let currentTabStyle: "default" | "browser" | "vscode" = "default";
 let currentShellVariant: "vertical" | "topnav" | "horizontal" | "combo" = "vertical";
+let currentActiveTabId = "dashboard";
+let currentTabs = [
+  { id: "dashboard", title: "Dashboard", path: "/dashboard", active: true },
+  { id: "journal", title: "Journal", path: "/journal", active: false },
+];
 
 vi.mock("@app/providers/TabContext", () => ({
   useTabs: () => ({
-    tabs: [
-      { id: "dashboard", title: "Dashboard", path: "/dashboard", active: true },
-      { id: "journal", title: "Journal", path: "/journal", active: false },
-    ],
+    tabs: currentTabs,
+    activeTabId: currentActiveTabId,
   }),
 }));
 
@@ -157,6 +160,11 @@ describe("AppLayout presentation switching", () => {
   beforeEach(() => {
     currentTabStyle = "default";
     currentShellVariant = "vertical";
+    currentActiveTabId = "dashboard";
+    currentTabs = [
+      { id: "dashboard", title: "Dashboard", path: "/dashboard", active: true },
+      { id: "journal", title: "Journal", path: "/journal", active: false },
+    ];
   });
 
   it("uses the standard shell family for default and browser modes, then switches to vscode workbench cleanly", async () => {
@@ -205,5 +213,20 @@ describe("AppLayout presentation switching", () => {
     expect(screen.getByTestId("default-layout-vertical")).toBeInTheDocument();
     expect(screen.queryByTestId("layout-vertical")).not.toBeInTheDocument();
     expect(screen.queryByTestId("vscode-workbench")).not.toBeInTheDocument();
+  });
+
+  it("renders the active tab route even when tab.active flags are stale", async () => {
+    currentTabStyle = "vscode";
+    currentActiveTabId = "journal";
+    currentTabs = [
+      { id: "dashboard", title: "Dashboard", path: "/dashboard", active: false },
+      { id: "journal", title: "Journal", path: "/journal", active: false },
+    ];
+
+    await act(async () => {
+      render(<AppLayout />);
+    });
+
+    expect(screen.getByTestId("route-/journal")).toBeInTheDocument();
   });
 });

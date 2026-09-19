@@ -7,7 +7,7 @@ import { AppearanceProvider } from '@app/providers/AppearanceProvider';
 import { UiPreferencesProvider } from '@app/providers/UiPreferencesProvider';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AppLayout } from '@app/shell/AppLayout';
-import { TabProvider } from '@app/providers/TabProvider';
+import { TabProvider } from './app/providers/TabProvider';
 import { CurrencyProvider } from '@app/providers/CurrencyProvider';
 import { TableSettingsProvider } from '@app/providers/TableSettingsProvider';
 import { SidePanelSettingsProvider } from '@app/providers/SidePanelSettingsProvider';
@@ -30,6 +30,7 @@ import { ResponsiveProvider } from '@app/providers/ResponsiveProvider';
 import { LanguageSelector } from '@modules/core/setup/components/LanguageSelector';
 import { isValidLanguage, type AppLanguage } from '@shared/types/i18n';
 import { currencyService } from '@modules/core/api/currencyService';
+import { StartupWindowShell } from '@app/shell/StartupWindowShell';
 
 const LANGUAGE_KEY = "erp_language";
 
@@ -98,9 +99,11 @@ const App = () => {
 
   if (!checkedSetup) {
     return (
-      <div className="min-h-screen w-full flex items-center justify-center bg-muted">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
+      <StartupWindowShell title="المواكب" subtitle="جاري التحقق من الإعدادات">
+        <div className="flex min-h-full w-full items-center justify-center bg-muted">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </StartupWindowShell>
     );
   }
 
@@ -145,9 +148,11 @@ function NormalStartup() {
 
   if (!checked) {
     return (
-      <div className="min-h-screen w-full flex items-center justify-center bg-muted">
-        <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
-      </div>
+      <StartupWindowShell title="المواكب" subtitle="جاري تشغيل التطبيق">
+        <div className="flex min-h-full w-full items-center justify-center bg-muted">
+          <div className="h-12 w-12 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
+        </div>
+      </StartupWindowShell>
     );
   }
 

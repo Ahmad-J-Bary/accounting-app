@@ -2,6 +2,7 @@ import { AlertTriangle, RefreshCw } from "lucide-react";
 import { isValidLanguage } from "@shared/types/i18n";
 import { I18N_RESOURCES } from "@shared/i18n/resources";
 import type { StartupBlockInfo } from "@modules/core/api/backupService";
+import { StartupWindowShell } from "@app/shell/StartupWindowShell";
 
 interface Props {
   block: StartupBlockInfo;
@@ -32,8 +33,13 @@ export default function UpdateRequiredScreen({ block }: Props) {
   const dir = getStoredLang() === "en" ? "ltr" : "rtl";
 
   return (
-    <div dir={dir} className="min-h-screen w-full flex items-center justify-center bg-slate-50 p-6">
-      <div className="w-full max-w-md rounded-2xl border border-amber-200 bg-white shadow-sm p-8 text-center">
+    <StartupWindowShell
+      title={t("updateRequired.title")}
+      subtitle={t("updateRequired.description")}
+      direction={dir}
+    >
+      <div dir={dir} className="flex min-h-full w-full items-center justify-center p-6">
+      <div className="w-full max-w-md rounded-2xl border border-amber-200 bg-white p-8 text-center shadow-sm">
         <div className="mx-auto w-14 h-14 rounded-2xl bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center mb-4">
           <AlertTriangle className="w-7 h-7" />
         </div>
@@ -55,6 +61,7 @@ export default function UpdateRequiredScreen({ block }: Props) {
           {t("updateRequired.instruction")}
         </div>
       </div>
-    </div>
+      </div>
+    </StartupWindowShell>
   );
 }

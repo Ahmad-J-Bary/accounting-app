@@ -1,4 +1,5 @@
 import { BrowserChrome } from "./BrowserChrome";
+import { WindowSurface } from "./WindowSurface";
 
 interface BrowserWorkspaceProps {
   children: React.ReactNode;
@@ -12,11 +13,11 @@ export function BrowserWorkspace({
   onToggleExchange,
 }: BrowserWorkspaceProps) {
   return (
-    <>
-      <BrowserChrome isExchangeVisible={isExchangeVisible} onToggleExchange={onToggleExchange} />
-      <div className="min-h-0 flex-1 overflow-hidden" data-testid="browser-workspace">
-        {children}
-      </div>
-    </>
+    <WindowSurface
+      chrome={<BrowserChrome isExchangeVisible={isExchangeVisible} onToggleExchange={onToggleExchange} />}
+      testId="browser-workspace"
+    >
+      {children}
+    </WindowSurface>
   );
 }

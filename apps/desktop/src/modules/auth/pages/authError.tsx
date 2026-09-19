@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { Button } from '@shared/ui/button';
 import { AlertCircle } from 'lucide-react';
 import { useLocalization } from '@app/providers/LocalizationProvider';
+import { StartupWindowShell } from '@app/shell/StartupWindowShell';
 
 export default function AuthErrorPage() {
   const { t } = useLocalization();
@@ -35,8 +36,13 @@ export default function AuthErrorPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-gray-50 to-blue-50 p-6 text-center">
-      <div className="space-y-6 max-w-md">
+    <StartupWindowShell
+      title={t("error.title", { namespace: "auth" })}
+      subtitle={errorMessage}
+      direction="rtl"
+    >
+      <div className="flex min-h-full flex-col items-center justify-center bg-gradient-to-br from-gray-50 to-blue-50 p-6 text-center">
+      <div className="max-w-md space-y-6">
         <div className="space-y-4">
           {/* Error icon */}
           <div className="flex justify-center">
@@ -82,6 +88,7 @@ export default function AuthErrorPage() {
           </Button>
         </div>
       </div>
-    </div>
+      </div>
+    </StartupWindowShell>
   );
 }

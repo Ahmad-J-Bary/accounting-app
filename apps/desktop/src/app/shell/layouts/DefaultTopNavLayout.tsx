@@ -26,7 +26,7 @@ export function DefaultTopNavLayout({ children, isExchangeVisible, onToggleExcha
         mergedSlim
       />
       {showTabs && <TabBar />}
-      <div className="flex flex-1 flex-col overflow-auto">
+      <div className="min-h-0 flex flex-1 flex-col overflow-hidden">
         {children}
       </div>
     </div>

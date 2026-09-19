@@ -28,6 +28,7 @@ export const settings: Record<AppLanguage, TranslationTree> = {
       sidebarContent: "محتوى وترتيب القائمة",
       panel: "لوحة العمليات والنماذج",
       appearance: "المظهر العام",
+      tabs: "التبويبات",
     },
     toasts: {
       saved: "تم الحفظ",
@@ -93,6 +94,8 @@ export const settings: Record<AppLanguage, TranslationTree> = {
       },
       tabsMotionTitle: "أسلوب التبويبات والحركة",
       tabsMotionDescription: "اختر طريقة عرض التبويبات ومستوى الحركة المرئية",
+      tabsPageTitle: "التبويبات",
+      tabsPageDescription: "تحكم في أسلوب العرض، الحركة، والهوية البصرية للتبويبات وبيئة العمل.",
       tabStyleLabel: "أسلوب التبويبات",
       tabStyleCardsTitle: "نماذج العرض",
       tabStyles: {
@@ -812,6 +815,7 @@ export const settings: Record<AppLanguage, TranslationTree> = {
       sidebarContent: "Sidebar Content & Order",
       panel: "Operations & Forms Panel",
       appearance: "General Appearance",
+      tabs: "Tabs",
     },
     toasts: {
       saved: "Saved",
@@ -877,6 +881,8 @@ export const settings: Record<AppLanguage, TranslationTree> = {
       },
       tabsMotionTitle: "Tab Style & Motion",
       tabsMotionDescription: "Choose how tabs are displayed and the level of visual motion",
+      tabsPageTitle: "Tabs",
+      tabsPageDescription: "Control the presentation style, motion, and visual identity of tabs and the workspace.",
       tabStyleLabel: "Tab Style",
       tabStyleCardsTitle: "Presentation Modes",
       tabStyles: {

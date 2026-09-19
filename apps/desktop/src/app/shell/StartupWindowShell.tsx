@@ -1,34 +1,35 @@
-import { useMemo } from "react";
 import { Building2 } from "lucide-react";
-import { useLocalization } from "@app/providers/LocalizationProvider";
-import { useTabs } from "@app/providers/TabContext";
 import { cn } from "@shared/lib/utils";
 import { WindowControls } from "./WindowControls";
+import { WindowSurface } from "./WindowSurface";
 import { useWindowChromeData } from "./useWindowChromeData";
 
-export function DefaultWindowChrome() {
-  const { t, direction } = useLocalization();
-  const { tabs } = useTabs();
+interface StartupWindowShellProps {
+  title: string;
+  subtitle?: string;
+  direction?: "rtl" | "ltr";
+  children: React.ReactNode;
+}
 
-  const activeTab = useMemo(
-    () => tabs.find((tab) => tab.active) ?? tabs[0],
-    [tabs],
-  );
+export function StartupWindowShell({
+  title,
+  subtitle,
+  direction = "rtl",
+  children,
+}: StartupWindowShellProps) {
+  const chrome = useWindowChromeData({
+    windowTitle: title,
+    brandLabelOverride: "المواكب",
+    companyLabelOverride: subtitle || "نظام المحاسبة والمخزون",
+  });
 
-  const appTitle = useMemo(() => {
-    const brand = t("topbar.brandName", { namespace: "shell" });
-    return activeTab ? `${activeTab.title} - ${brand}` : brand;
-  }, [activeTab, t]);
-
-  const chrome = useWindowChromeData({ windowTitle: appTitle });
-
-  return (
+  const titleBar = (
     <div
       className={cn(
         "border-b border-border/80 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/85",
         chrome.windowState.isFocused ? "shadow-sm" : "opacity-95",
       )}
-      data-testid="default-window-chrome"
+      data-testid="startup-window-chrome"
     >
       <div
         className={cn(
@@ -42,18 +43,14 @@ export function DefaultWindowChrome() {
           onDoubleClick={chrome.handleTitleBarDoubleClick}
           className="flex min-w-0 items-center gap-3 select-none"
           dir={direction}
-          title={appTitle}
+          title={title}
         >
           <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
             <Building2 className="h-4 w-4" />
           </div>
           <div className="min-w-0">
-            <div className="truncate text-sm font-bold text-foreground">
-              {chrome.brandLabel}
-            </div>
-            <div className="truncate text-[11px] text-muted-foreground">
-              {chrome.companyLabel}
-            </div>
+            <div className="truncate text-sm font-bold text-foreground">{chrome.brandLabel}</div>
+            <div className="truncate text-[11px] text-muted-foreground">{chrome.companyLabel}</div>
           </div>
         </div>
 
@@ -63,9 +60,7 @@ export function DefaultWindowChrome() {
           className="min-w-0 select-none px-2 text-center"
           dir={direction}
         >
-          <div className="truncate text-sm font-semibold text-foreground">
-            {activeTab?.title || t("dashboard", { namespace: "shell" })}
-          </div>
+          <div className="truncate text-sm font-semibold text-foreground">{title}</div>
         </div>
 
         <div className="flex justify-end">
@@ -80,5 +75,16 @@ export function DefaultWindowChrome() {
         </div>
       </div>
     </div>
+  );
+
+  return (
+    <WindowSurface
+      chrome={titleBar}
+      direction={direction}
+      contentClassName="overflow-auto bg-gradient-to-br from-slate-50 via-white to-slate-100"
+      testId="startup-window-surface"
+    >
+      {children}
+    </WindowSurface>
   );
 }

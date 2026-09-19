@@ -16,8 +16,8 @@ describe("FirstLaunchLanguageGate — LanguageSelector", () => {
 
   it("renders bilingual title", () => {
     render(<LanguageSelector onComplete={() => {}} />);
-    expect(screen.getByText("اختر اللغة")).toBeInTheDocument();
-    expect(screen.getByText("Choose Language")).toBeInTheDocument();
+    expect(screen.getAllByText("اختر اللغة").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Choose Language").length).toBeGreaterThan(0);
   });
 
   it("renders Arabic, English buttons and Next button", () => {

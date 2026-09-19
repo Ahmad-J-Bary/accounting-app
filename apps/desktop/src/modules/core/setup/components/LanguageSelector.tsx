@@ -6,6 +6,7 @@ import {
 } from "@shared/i18n/resources";
 import { setup } from "@shared/i18n/resources/setup";
 import type { AppLanguage } from "@shared/types/i18n";
+import { StartupWindowShell } from "@app/shell/StartupWindowShell";
 
 interface LanguageSelectorProps {
   /** Initial VISUAL default — never auto-persisted. The user must
@@ -32,70 +33,76 @@ export function LanguageSelector({
     getNestedTranslation(setup[selected], key) ?? fallback;
 
   return (
-    <div dir={direction} className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-slate-100">
-      <div className="w-full max-w-sm mx-4">
-        <div className="text-center mb-8">
-          <div className="mx-auto w-16 h-16 rounded-2xl bg-primary text-white flex items-center justify-center mb-5 shadow-lg shadow-primary/20">
-            <Globe className="w-8 h-8" />
+    <StartupWindowShell
+      title={text("language.title", "اختر اللغة")}
+      subtitle={text("language.subtitle", "Choose Language")}
+      direction={direction}
+    >
+      <div dir={direction} className="flex min-h-full w-full items-center justify-center px-4 py-10">
+        <div className="w-full max-w-sm">
+          <div className="mb-8 text-center">
+            <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary text-white shadow-lg shadow-primary/20">
+              <Globe className="h-8 w-8" />
+            </div>
+            <h1 className="mb-1 text-2xl font-black text-foreground">{text("language.title", "اختر اللغة")}</h1>
+            <p className="text-sm font-medium text-muted-foreground">{text("language.subtitle", "Choose Language")}</p>
           </div>
-          <h1 className="text-2xl font-black text-foreground mb-1">{text("language.title", "اختر اللغة")}</h1>
-          <p className="text-sm text-muted-foreground font-medium">{text("language.subtitle", "Choose Language")}</p>
-        </div>
 
-        <div className="space-y-3">
+          <div className="space-y-3">
+            <button
+              type="button"
+              onClick={() => setSelected("ar")}
+              disabled={committing}
+              className={`group relative flex h-16 w-full cursor-pointer items-center justify-center gap-3 rounded-2xl border-2 transition-all hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ${
+                selected === "ar"
+                  ? "border-primary bg-primary/10 shadow-sm shadow-primary/10"
+                  : "border-border bg-card hover:border-primary/80 hover:bg-primary/10"
+              }`}
+            >
+              <span className="text-2xl">🇸🇦</span>
+              <span className="text-lg font-bold text-foreground">{text("language.arabic", "العربية")}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setSelected("en")}
+              disabled={committing}
+              className={`group relative flex h-16 w-full cursor-pointer items-center justify-center gap-3 rounded-2xl border-2 transition-all hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ${
+                selected === "en"
+                  ? "border-primary bg-primary/10 shadow-sm shadow-primary/10"
+                  : "border-border bg-card hover:border-primary/80 hover:bg-primary/10"
+              }`}
+            >
+              <span className="text-2xl">🇬🇧</span>
+              <span className="text-lg font-bold text-foreground">{text("language.english", "English")}</span>
+            </button>
+          </div>
+
           <button
             type="button"
-            onClick={() => setSelected("ar")}
+            onClick={handleNext}
             disabled={committing}
-            className={`w-full group relative flex items-center justify-center gap-3 h-16 rounded-2xl border-2 transition-all hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none cursor-pointer ${
-              selected === "ar"
-                ? "border-primary bg-primary/10 shadow-sm shadow-primary/10"
-                : "border-border bg-card hover:border-primary/80 hover:bg-primary/10"
-            }`}
+            className="mt-6 flex h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-2xl bg-primary text-base font-bold text-white shadow-lg shadow-primary/20 transition-all hover:bg-primary/80 hover:shadow-xl hover:shadow-primary/30 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
           >
-            <span className="text-2xl">🇸🇦</span>
-            <span className="font-bold text-lg text-foreground">{text("language.arabic", "العربية")}</span>
+            {committing ? (
+              <Loader2 className="h-5 w-5 animate-spin" />
+            ) : (
+              <>
+                {text("language.continue", isRtl ? "التالي" : "Next")}
+                {isRtl ? (
+                  <ArrowLeft className="h-4 w-4" />
+                ) : (
+                  <ArrowRight className="h-4 w-4" />
+                )}
+              </>
+            )}
           </button>
 
-          <button
-            type="button"
-            onClick={() => setSelected("en")}
-            disabled={committing}
-            className={`w-full group relative flex items-center justify-center gap-3 h-16 rounded-2xl border-2 transition-all hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none cursor-pointer ${
-              selected === "en"
-                ? "border-primary bg-primary/10 shadow-sm shadow-primary/10"
-                : "border-border bg-card hover:border-primary/80 hover:bg-primary/10"
-            }`}
-          >
-            <span className="text-2xl">🇬🇧</span>
-            <span className="font-bold text-lg text-foreground">{text("language.english", "English")}</span>
-          </button>
+          <p className="mt-6 text-center text-[11px] text-muted-foreground">
+            {text("language.changeLaterHint", "You can change this later in Settings")}
+          </p>
         </div>
-
-        <button
-          type="button"
-          onClick={handleNext}
-          disabled={committing}
-          className="w-full mt-6 h-12 rounded-2xl bg-primary hover:bg-primary/80 text-white font-bold text-base transition-all shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center gap-2 cursor-pointer"
-        >
-          {committing ? (
-            <Loader2 className="w-5 h-5 animate-spin" />
-          ) : (
-            <>
-              {text("language.continue", isRtl ? "التالي" : "Next")}
-              {isRtl ? (
-                <ArrowLeft className="w-4 h-4" />
-              ) : (
-                <ArrowRight className="w-4 h-4" />
-              )}
-            </>
-          )}
-        </button>
-
-        <p className="text-center text-[11px] text-muted-foreground mt-6">
-          {text("language.changeLaterHint", "You can change this later in Settings")}
-        </p>
       </div>
-    </div>
+    </StartupWindowShell>
   );
 }
