@@ -119,9 +119,13 @@ export function findRouteByTo(to: string): SystemRouteEntry | undefined {
 
 export function findRouteByPath(path: string): SystemRouteEntry | undefined {
   const normalizedPath = path.split("?")[0];
+  const candidates = ALL_SYSTEM_ROUTES.filter((route) => !route.isSeparator && route.to);
+
   return (
-    ALL_SYSTEM_ROUTES.find((route) => route.to === normalizedPath) ||
-    ALL_SYSTEM_ROUTES.find((route) => normalizedPath.startsWith(route.to) && route.to.length > 1)
+    candidates.find((route) => route.to === normalizedPath) ||
+    [...candidates]
+      .sort((left, right) => right.to.length - left.to.length)
+      .find((route) => route.to.length > 1 && normalizedPath.startsWith(route.to))
   );
 }
 

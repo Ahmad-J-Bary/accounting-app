@@ -9,15 +9,18 @@ export interface NavigationDestination {
   entity?: string;
   entityId?: string;
   closable?: boolean;
+  pinned?: boolean;
   dirty?: boolean;
   context?: Record<string, unknown>;
   permissions?: string[];
   presentationMode?: TabPresentationMode;
+  restoreKey?: string;
+  openedAt?: number;
+  order?: number;
 }
 
 export interface WorkspaceItem extends NavigationDestination {
   active: boolean;
-  restoreKey?: string;
   parentId?: string;
   windowId?: string;
 }

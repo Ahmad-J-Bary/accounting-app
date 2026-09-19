@@ -7,6 +7,16 @@ export const shell: Record<AppLanguage, TranslationTree> = {
     newTab: "تبويب جديد",
     voice: "المساعد الصوتي",
     windows: "النوافذ",
+    workspace: {
+      unsavedChanges: {
+        titleSingle: "إغلاق تبويب يحتوي على تغييرات غير محفوظة",
+        titleMultiple: "إغلاق تبويبات تحتوي على تغييرات غير محفوظة",
+        descriptionSingle: "لدى التبويب \"{{title}}\" تغييرات غير محفوظة. هل تريد إغلاقه على أي حال؟",
+        descriptionMultiple: "هناك {{count}} تبويبات تحتوي على تغييرات غير محفوظة. هل تريد إغلاقها على أي حال؟",
+        confirmClose: "إغلاق التبويب",
+        cancel: "إلغاء",
+      },
+    },
     tabs: {
       default: "افتراضي",
       browser: "مشابه للمتصفح",
@@ -135,6 +145,16 @@ export const shell: Record<AppLanguage, TranslationTree> = {
     newTab: "New Tab",
     voice: "Voice Assistant",
     windows: "Windows",
+    workspace: {
+      unsavedChanges: {
+        titleSingle: "Close tab with unsaved changes",
+        titleMultiple: "Close tabs with unsaved changes",
+        descriptionSingle: "The tab \"{{title}}\" has unsaved changes. Do you want to close it anyway?",
+        descriptionMultiple: "There are {{count}} tabs with unsaved changes. Do you want to close them anyway?",
+        confirmClose: "Close tab",
+        cancel: "Cancel",
+      },
+    },
     tabs: {
       default: "Default",
       browser: "Browser",

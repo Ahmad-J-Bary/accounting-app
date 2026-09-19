@@ -12,7 +12,7 @@ function createTabId(prefix: string) {
 
 export function CommandProvider({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
-  const { openTab, openDashboardTab } = useTabs();
+  const { openTab, openDashboardTab, closeTab, nextTab, prevTab, reopenLastClosedTab, activeTabId } = useTabs();
   const { t } = useLocalization();
 
   const commands = useMemo<AppCommand[]>(() => {
@@ -37,6 +37,41 @@ export function CommandProvider({ children }: { children: React.ReactNode }) {
         keywords: ["dashboard", "tab", "home"],
         group: "workspace",
         run: () => openDashboardTab(),
+      },
+      {
+        id: "workspace-close-active-tab",
+        title: t("closeActiveTab", { namespace: "commands" }),
+        icon: "X",
+        shortcut: ["Ctrl", "W"],
+        keywords: ["tab", "close", "workspace"],
+        group: "workspace",
+        run: () => closeTab(activeTabId),
+      },
+      {
+        id: "workspace-next-tab",
+        title: t("nextTab", { namespace: "commands" }),
+        icon: "ChevronRight",
+        shortcut: ["Ctrl", "Tab"],
+        keywords: ["tab", "next", "workspace"],
+        group: "workspace",
+        run: () => nextTab(),
+      },
+      {
+        id: "workspace-previous-tab",
+        title: t("previousTab", { namespace: "commands" }),
+        icon: "ChevronLeft",
+        shortcut: ["Ctrl", "Shift", "Tab"],
+        keywords: ["tab", "previous", "workspace"],
+        group: "workspace",
+        run: () => prevTab(),
+      },
+      {
+        id: "workspace-reopen-last-tab",
+        title: t("reopenLastTab", { namespace: "commands" }),
+        icon: "History",
+        keywords: ["tab", "reopen", "workspace"],
+        group: "workspace",
+        run: () => reopenLastClosedTab(),
       },
       {
         id: "open-settings",
@@ -83,7 +118,7 @@ export function CommandProvider({ children }: { children: React.ReactNode }) {
         run: () => openRouteInTab("opening-balance", resolveRouteLabel("opening-balance", t)),
       },
     ];
-  }, [navigate, openDashboardTab, openTab, t]);
+  }, [activeTabId, closeTab, navigate, nextTab, openDashboardTab, openTab, prevTab, reopenLastClosedTab, t]);
 
   const value = useMemo<CommandContextValue>(
     () => ({

@@ -9,6 +9,10 @@ export const commands: Record<AppLanguage, TranslationTree> = {
     newJournalEntry: "قيد يومية جديد",
     newOpeningBalance: "فاتورة أول المدة جديدة",
     openSettings: "فتح الإعدادات",
+    closeActiveTab: "إغلاق التبويب النشط",
+    nextTab: "الانتقال إلى التبويب التالي",
+    previousTab: "الانتقال إلى التبويب السابق",
+    reopenLastTab: "إعادة فتح آخر تبويب مغلق",
   },
   en: {
     openSearch: "Open Search",
@@ -18,5 +22,9 @@ export const commands: Record<AppLanguage, TranslationTree> = {
     newJournalEntry: "New Journal Entry",
     newOpeningBalance: "New Opening Balance",
     openSettings: "Open Settings",
+    closeActiveTab: "Close Active Tab",
+    nextTab: "Next Tab",
+    previousTab: "Previous Tab",
+    reopenLastTab: "Reopen Last Closed Tab",
   },
 };
