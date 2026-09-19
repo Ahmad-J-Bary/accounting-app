@@ -21,6 +21,8 @@ import {
 } from 'lucide-react';
 import { LayoutSettings } from './layout/LayoutSettings';
 import { useLocalization } from "@app/providers/LocalizationProvider";
+import { WorkspaceTabStrip } from "@app/shell/WorkspaceTabStrip";
+import type { Tab } from "@shared/types/tabs";
 
 function ToggleRow({
   label, desc, checked, onChange,
@@ -39,6 +41,12 @@ function ToggleRow({
 export function AppearanceSettings() {
   const { t, direction } = useLocalization();
   const { settings, updateSettings, resetSettings } = useAppearance();
+  const previewTabs: Tab[] = [
+    { id: "main-tab", title: t("dashboard", { namespace: "shell" }), path: "/dashboard", active: false, closable: false, pinned: true },
+    { id: "journal", title: t("nav.journal", { namespace: "shell" }), path: "/journal", active: false, closable: true, icon: "FileText" },
+    { id: "sales", title: t("nav.sales-invoices", { namespace: "shell" }), path: "/sales-invoices", active: true, closable: true, dirty: true, icon: "Receipt" },
+    { id: "ledger", title: t("nav.report-ledger", { namespace: "shell" }), path: "/accounting/reports/ledger", active: false, closable: true, pinned: true, icon: "BookOpen" },
+  ];
 
   const handleLayoutChange = (partial: {
     navMenuType?: NavMenuType;
@@ -289,6 +297,25 @@ export function AppearanceSettings() {
               ))}
             </div>
           </div>
+        </div>
+
+        <div className="mt-3 overflow-hidden rounded-xl border border-border bg-card/70">
+          <WorkspaceTabStrip
+            tabs={previewTabs}
+            tabStyle={settings.tabStyle}
+            onActivate={() => undefined}
+            onClose={() => undefined}
+            onNewTab={() => undefined}
+            onCloseOthers={() => undefined}
+            onCloseToRight={() => undefined}
+            onCloseToLeft={() => undefined}
+            onCloseAll={() => undefined}
+            onReopenLastClosed={() => undefined}
+            onDuplicate={() => undefined}
+            onPin={() => undefined}
+            onUnpin={() => undefined}
+            alwaysVisible
+          />
         </div>
       </SettingsSection>
 
